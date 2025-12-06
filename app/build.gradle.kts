@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -32,6 +34,27 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+    }
+
+    val keyStoreFile = file("key.jks")
+    val keyPropertiesFile = file("key.properties")
+    val keyProperties = Properties()
+
+    if (keyStoreFile.exists() && keyPropertiesFile.exists()) {
+        keyProperties.load(keyPropertiesFile.inputStream())
+        signingConfigs {
+            create("release") {
+                storeFile = keyStoreFile
+                storePassword = keyProperties["storePassword"] as String?
+                keyAlias = keyProperties["keyAlias"] as String?
+                keyPassword = keyProperties["keyPassword"] as String?
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     buildTypes {
