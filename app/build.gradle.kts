@@ -23,13 +23,15 @@ plugins {
 }
 
 android {
-    namespace = "top.ltfan.knowmad"
+    val packageName = "top.ltfan.knowmad"
+
+    namespace = packageName
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "top.ltfan.knowmad"
+        applicationId = packageName
         minSdk = 26
         targetSdk = 36
         versionCode = 1
