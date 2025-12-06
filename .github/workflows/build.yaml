@@ -28,6 +28,11 @@ jobs:
       - name: Set gradlew executable
         run: chmod +x gradlew
 
+      - name: Write signing files
+        run: |
+          echo ${{ secrets.KEY_FILE }} | base64 --decode > app/key.jks
+          echo ${{ secrets.KEY_PROPERTIES }} | base64 --decode > app/key.properties
+
       - name: Build
         run: |
           ./gradlew assembleRelease
