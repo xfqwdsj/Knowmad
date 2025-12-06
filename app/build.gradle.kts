@@ -19,6 +19,8 @@
 import java.util.Properties
 
 plugins {
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.android.application)
 }
 
@@ -72,7 +74,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
+    implementation(libs.bundles.kotlinx.serialization)
+    implementation(libs.bundles.androidx)
+    implementation(platform(libs.compose))
+    implementation(libs.bundles.compose)
 }
