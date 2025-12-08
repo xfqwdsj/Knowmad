@@ -21,7 +21,9 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -86,12 +88,16 @@ kotlin {
     }
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.kotlin.reflect)
     implementation(libs.bundles.kotlinx.serialization)
     implementation(libs.bundles.androidx)
     implementation(platform(libs.compose))
     implementation(libs.bundles.compose)
-    implementation(libs.dslUtilities)
-    implementation(libs.capsule)
+    implementation(libs.bundles.ltfan)
+    ksp(libs.room.compiler)
 }
