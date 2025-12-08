@@ -80,9 +80,18 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+    }
+}
+
 dependencies {
+    implementation(libs.kotlin.reflect)
     implementation(libs.bundles.kotlinx.serialization)
     implementation(libs.bundles.androidx)
     implementation(platform(libs.compose))
     implementation(libs.bundles.compose)
+    implementation(libs.dslUtilities)
+    implementation(libs.capsule)
 }
