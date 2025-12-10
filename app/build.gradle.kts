@@ -98,6 +98,8 @@ dependencies {
     implementation(libs.bundles.androidx)
     implementation(platform(libs.compose))
     implementation(libs.bundles.compose)
+    implementation(libs.bundles.ktor)
+    implementation(libs.bundles.koog)
     implementation(libs.bundles.ltfan)
     ksp(libs.room.compiler)
 }

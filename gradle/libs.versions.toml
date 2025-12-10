@@ -2,13 +2,15 @@
 kotlin = "2.2.21"
 kotlinx-serialization = "1.9.0"
 ksp = "2.3.3"
-agp = "9.0.0-beta03"
+agp = "9.0.0-beta04"
 room = "2.8.4"
 activity = "1.12.1"
 compose = "2025.12.00"
 material3-adaptive-nav3 = "1.3.0-alpha05"
 nav3 = "1.0.0"
 lifecycle-viewmodel-nav3 = "2.10.0"
+ktor = "3.3.3"
+koog = "0.5.4"
 dslUtilities = "1.0.2"
 capsule = "1.0.2"
 
@@ -31,6 +33,8 @@ compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:ada
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3" }
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3" }
 lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle-viewmodel-nav3" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+koog = { module = "ai.koog:koog-agents", version.ref = "koog" }
 dslUtilities = { module = "top.ltfan.dslutilities:dsl-utilities", version.ref = "dslUtilities" }
 capsule = { module = "top.ltfan.capsule:capsule", version.ref = "capsule" }
 
@@ -55,6 +59,12 @@ compose = [
     "navigation3-runtime",
     "navigation3-ui",
     "lifecycle-viewmodel-navigation3"
+]
+ktor = [
+    "ktor-client-cio"
+]
+koog = [
+    "koog"
 ]
 ltfan = [
     "dslUtilities",
