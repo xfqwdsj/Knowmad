@@ -60,12 +60,12 @@ abstract class BackStackRoute(
     val backStack: NavBackStack<Route>,
 ) : Route()
 
-val NavBackStack<Route>.expended: SnapshotStateList<Page>
+val NavBackStack<Route>.expanded: SnapshotStateList<Page>
     @Composable get() = buildList {
-        for (entry in this@expended) {
+        for (entry in this@expanded) {
             when (entry) {
                 is Page -> add(entry)
-                is BackStackRoute -> addAll(entry.backStack.expended)
+                is BackStackRoute -> addAll(entry.backStack.expanded)
             }
         }
     }.toMutableStateList()
