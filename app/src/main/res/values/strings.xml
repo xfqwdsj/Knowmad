@@ -18,4 +18,23 @@
 
 <resources>
     <string name="app_name">Knowmad</string>
+    <string name="label_skip_for_now">Skip for now</string>
+    <string name="label_next">Next</string>
+    <string name="label_finish">Finish</string>
+    <string name="label_back">Back</string>
+    <string name="setup_wizard_welcome_label">Welcome</string>
+    <string name="setup_wizard_welcome_title">Welcome to Knowmad!</string>
+    <string name="setup_wizard_welcome_message">Let\'s set up your knowledge companion in a few easy steps.</string>
+    <string name="setup_wizard_provider_label">Provider</string>
+    <string name="setup_wizard_provider_title">Choose your Provider</string>
+    <string name="setup_wizard_provider_message">Select the language model provider you want to configure.</string>
+    <string name="setup_wizard_model_label">Model</string>
+    <string name="setup_wizard_model_title">Configure the Model</string>
+    <string name="setup_wizard_model_message">Choose and set up the language model you want to use.</string>
+    <string name="setup_wizard_advanced_label">Advanced</string>
+    <string name="setup_wizard_finish_label">Finish</string>
+    <string name="llm_provider_deepseek_label">DeepSeek AI</string>
+    <string name="llm_provider_deepseek_description">deepseek-chat and deepseek-reasoner</string>
+    <string name="llm_provider_openai_label">OpenAI</string>
+    <string name="llm_provider_openai_description">GPT series and other models from OpenAI</string>
 </resources>

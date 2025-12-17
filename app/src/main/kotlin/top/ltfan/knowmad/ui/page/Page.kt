@@ -28,22 +28,48 @@ import kotlinx.serialization.Transient
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 
 @Serializable
-sealed class Route : NavKey {
-    @Transient
-    open var parent: BackStackRoute? = null
-}
+sealed class Route : NavKey
 
-@Serializable
-sealed class Page : Route() {
-    @Transient
-    open val metadata: Map<String, Any> = emptyMap()
+sealed interface PageInterface {
+    val metadata: Map<String, Any>
 
     @Composable
     context(contentPadding: PaddingValues)
-    abstract fun AppViewModel.Content()
+    fun AppViewModel.Content()
+}
+
+/** A page in the navigation hierarchy. */
+@Serializable
+sealed class Page : Route(), PageInterface {
+    @Transient
+    override val metadata: Map<String, Any> = emptyMap()
 
     context(viewModel: AppViewModel)
-    fun navEntry(contentPadding: PaddingValues) = NavEntry(
+    fun navEntry(
+        contentPadding: PaddingValues = PaddingValues(),
+    ) = NavEntry(
+        key = this,
+        metadata = metadata,
+    ) {
+        context(contentPadding) {
+            viewModel.Content()
+        }
+    }
+}
+
+/**
+ * A page managed by a parent route. This page will not appear in the
+ * top-level navigation stack.
+ */
+@Serializable
+sealed class SubPage : Route(), PageInterface {
+    @Transient
+    override val metadata: Map<String, Any> = emptyMap()
+
+    context(viewModel: AppViewModel)
+    fun navEntry(
+        contentPadding: PaddingValues = PaddingValues(),
+    ) = NavEntry(
         key = this,
         metadata = metadata,
     ) {
@@ -64,6 +90,9 @@ val NavBackStack<Route>.expanded: List<Page>
             when (entry) {
                 is Page -> add(entry)
                 is BackStackRoute -> addAll(entry.backStack.expanded)
+                is SubPage -> {
+                    // Ignore SubPage entries at the top level
+                }
             }
         }
     }

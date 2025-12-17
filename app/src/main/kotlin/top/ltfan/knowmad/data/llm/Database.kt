@@ -16,13 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.ui.viewmodel
+package top.ltfan.knowmad.data.llm
 
-import androidx.lifecycle.ViewModel
-import androidx.navigation3.runtime.NavBackStack
-import top.ltfan.knowmad.ui.page.Route
-import top.ltfan.knowmad.ui.page.WizardPage
+import androidx.room.Database
+import androidx.room.RoomDatabase
 
-class AppViewModel : ViewModel() {
-    val backStack = NavBackStack<Route>(WizardPage())
+@Database(
+    entities = [LLMProviderConfigEntity::class, LLMEntity::class],
+    version = 1,
+)
+abstract class LLMDatabase : RoomDatabase() {
+    abstract fun dao(): LLMConfigDao
 }

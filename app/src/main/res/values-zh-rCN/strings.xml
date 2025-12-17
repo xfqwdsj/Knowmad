@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="app_name">知行</string>
+    <string name="label_skip_for_now">暂时跳过</string>
+    <string name="label_next">下一步</string>
+    <string name="label_finish">完成</string>
+    <string name="label_back">返回</string>
+    <string name="setup_wizard_welcome_label">欢迎</string>
+    <string name="setup_wizard_welcome_title">欢迎使用知行！</string>
+    <string name="setup_wizard_welcome_message">让我们通过几个简单的步骤来设置您的知识助手。</string>
+    <string name="setup_wizard_provider_label">提供商</string>
+    <string name="setup_wizard_provider_title">选择您的提供商</string>
+    <string name="setup_wizard_provider_message">选择您想要配置的语言模型提供商。</string>
+    <string name="setup_wizard_model_label">模型</string>
+    <string name="setup_wizard_model_title">配置模型</string>
+    <string name="setup_wizard_model_message">选择并设置您想要使用的语言模型。</string>
+    <string name="setup_wizard_advanced_label">高级</string>
+    <string name="setup_wizard_finish_label">完成</string>
+    <string name="llm_provider_deepseek_label">深度求索</string>
+    <string name="llm_provider_deepseek_description">deepseek-chat和deepseek-reasoner</string>
+    <string name="llm_provider_openai_label">OpenAI</string>
+    <string name="llm_provider_openai_description">来自OpenAI的GPT系列和其他模型</string>
+</resources>
