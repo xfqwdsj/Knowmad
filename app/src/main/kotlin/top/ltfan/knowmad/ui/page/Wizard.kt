@@ -22,15 +22,23 @@ import ai.koog.prompt.llm.LLMProvider
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,36 +54,55 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.EnhancedEncryption
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.NoEncryption
 import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.Upcoming
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.Morph
+import androidx.graphics.shapes.toPath
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.component.StepItem
@@ -84,6 +111,7 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
+import top.ltfan.knowmad.util.CryptoManager
 
 @Serializable
 class WizardPage(
@@ -117,33 +145,63 @@ class WizardPage(
                         .padding(horizontalPadding)
                         .padding(horizontal = 8.dp),
                     shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    color = MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    NavDisplay(
-                        backStack = backStack,
-                        modifier = Modifier.fillMaxSize(),
-                        transitionSpec = {
-                            ContentTransform(
-                                targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> fullWidth },
-                                initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> -fullWidth },
+                    Column {
+                        AnimatedContent(
+                            targetState = messageItems,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        ) { messageItems ->
+                            val hasMessages = messageItems.any { it.second }
+                            Column(
+                                Modifier.fillMaxWidth().padding(horizontal = 24.dp).run {
+                                    if (hasMessages) padding(vertical = 8.dp)
+                                    else this
+                                },
+                                verticalArrangement = if (hasMessages) Arrangement.spacedBy(8.dp) else Arrangement.Top,
+                            ) {
+                                for ((item, show) in messageItems) {
+                                    if (show) {
+                                        Message(
+                                            imageVector = item.icon,
+                                            message = stringResource(item.message),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.extraLarge,
+                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        ) {
+                            NavDisplay(
+                                backStack = backStack,
+                                modifier = Modifier.fillMaxSize(),
+                                transitionSpec = {
+                                    ContentTransform(
+                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> fullWidth },
+                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> -fullWidth },
+                                    )
+                                },
+                                popTransitionSpec = {
+                                    ContentTransform(
+                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
+                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
+                                    )
+                                },
+                                predictivePopTransitionSpec = {
+                                    ContentTransform(
+                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
+                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
+                                    )
+                                },
+                                entryProvider = @Suppress("UNCHECKED_CAST") {
+                                    it.navEntry() as NavEntry<WizardSubPage>
+                                },
                             )
-                        },
-                        popTransitionSpec = {
-                            ContentTransform(
-                                targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
-                                initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
-                            )
-                        },
-                        predictivePopTransitionSpec = {
-                            ContentTransform(
-                                targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
-                                initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
-                            )
-                        },
-                        entryProvider = @Suppress("UNCHECKED_CAST") {
-                            it.navEntry() as NavEntry<WizardSubPage>
-                        },
-                    )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -183,6 +241,39 @@ class WizardPage(
         }
     }
 
+    @Composable
+    fun Message(imageVector: ImageVector, message: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+
+    var cryptoInitializationError by mutableStateOf<Boolean>(false)
+    var isUsingPlaintext by mutableStateOf<Boolean>(false)
+
+    val messageItems
+        inline get() = listOf(
+            WizardMessageItem(
+                icon = Icons.Default.Error,
+                message = R.string.crypto_key_initialization_error_message,
+            ) to cryptoInitializationError,
+            WizardMessageItem(
+                icon = Icons.Default.Warning,
+                message = R.string.crypto_use_plaintext_warning,
+            ) to isUsingPlaintext,
+        )
+
     var selectedProvider by mutableStateOf<LLMProvider?>(null)
 
     val steps
@@ -213,7 +304,14 @@ class WizardPage(
     }
 }
 
+@Immutable
+data class WizardMessageItem(
+    val icon: ImageVector,
+    @param:StringRes val message: Int,
+)
+
 @Serializable
+@Immutable
 data class LLMProviderItem(
     @param:DrawableRes val icon: Int,
     @param:StringRes val label: Int,
@@ -224,8 +322,7 @@ data class LLMProviderItem(
 private data object WelcomePage : WizardSubPage() {
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -269,8 +366,7 @@ private data object WelcomePage : WizardSubPage() {
 private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -301,7 +397,7 @@ private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 stringResource(R.string.setup_wizard_provider_message),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(36.dp))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -401,8 +497,210 @@ private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+        val mainIconShapeMatrix = remember { Matrix() }
+        val mainIconShapeMorph =
+            remember { Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Cookie9Sided) }
+        val mainIconShapeProgress by animateFloatAsState(
+            if (isInitialized) 1f else 0f,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        )
+        val mainIconShapeRotation by animateFloatAsState(
+            if (isInitialized) 0f else 135f,
+            animationSpec = spring(stiffness = Spring.StiffnessVeryLow),
+        )
+        val mainIconShapeColor by animateColorAsState(
+            if (isInitialized) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.errorContainer,
+        )
+
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(contentPadding + PaddingValues(16.dp)),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier.drawWithCache {
+                    mainIconShapeMatrix.reset()
+                    mainIconShapeMatrix.translate(size.width / 2f, size.height / 2f)
+                    mainIconShapeMatrix.rotateZ(mainIconShapeRotation)
+                    mainIconShapeMatrix.scale(size.width, size.height)
+                    mainIconShapeMatrix.translate(-0.5f, -0.5f)
+
+                    val path =
+                        mainIconShapeMorph.toPath(progress = mainIconShapeProgress).asComposePath()
+                    path.transform(mainIconShapeMatrix)
+
+                    onDrawBehind {
+                        drawPath(
+                            path = path,
+                            color = mainIconShapeColor,
+                        )
+                    }
+                },
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides contentColorFor(mainIconShapeColor),
+                ) {
+                    AnimatedContent(
+                        targetState = isInitialized,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        contentAlignment = Alignment.Center,
+                    ) { isInitialized ->
+                        Icon(
+                            if (isInitialized) Icons.Default.Token else Icons.Default.Error,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .size(48.dp),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(32.dp))
+            AnimatedContent(
+                targetState = isInitialized,
+                transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
+            ) { isInitialized ->
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (!isInitialized) {
+                        ErrorElements()
+                        return@AnimatedContent
+                    }
+                    Text(
+                        stringResource(R.string.setup_wizard_model_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.setup_wizard_model_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(36.dp))
+                    SecureTextField(
+                        state = apiKeyTextFieldState,
+                        modifier = Modifier
+                            .widthIn(max = 320.dp)
+                            .fillMaxWidth(),
+                        label = {
+                            Text(stringResource(R.string.llm_api_key_label))
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (wizardPage.isUsingPlaintext) Icons.Default.NoEncryption else Icons.Default.EnhancedEncryption,
+                                contentDescription = null,
+                            )
+                        },
+                        supportingText = {
+                            Row {
+                                AnimatedContent(
+                                    targetState = wizardPage.isUsingPlaintext,
+                                    modifier = Modifier.weight(1f),
+                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                ) { isUsingPlaintext ->
+                                    Text(
+                                        stringResource(
+                                            if (isUsingPlaintext) R.string.llm_api_key_message_unsecure
+                                            else R.string.llm_api_key_message_secure,
+                                        ),
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = wizardPage.isUsingPlaintext,
+                                    enter = fadeIn() + expandHorizontally(
+                                        expandFrom = Alignment.Start,
+                                        clip = false,
+                                    ),
+                                    exit = fadeOut() + shrinkHorizontally(
+                                        shrinkTowards = Alignment.Start,
+                                        clip = false,
+                                    ),
+                                ) {
+                                    Row {
+                                        Spacer(Modifier.width(8.dp))
+                                        TextButton(
+                                            onClick = ::initializeCrypto,
+                                        ) {
+                                            Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    )
+                    
+                    Button({ this@ModelSetupPage.isInitialized = false }) {}
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    fun ErrorElements() {
+        Text(
+            stringResource(R.string.crypto_key_initialization_error_title),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.crypto_key_initialization_error_message),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = ::initializeCrypto,
+            contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
+        ) {
+            Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
+        }
+        Spacer(Modifier.height(16.dp))
+        TextButton(
+            onClick = {
+                wizardPage.isUsingPlaintext = true
+                isInitialized = true
+            },
+        ) {
+            Text(stringResource(R.string.crypto_use_plaintext_label))
+        }
+    }
+
+    var isInitialized by mutableStateOf(!wizardPage.cryptoInitializationError)
+
+    @Transient
+    val apiKeyTextFieldState = TextFieldState()
+    val apiKey inline get() = apiKeyTextFieldState.text.toString()
+
+    init {
+        initializeCrypto()
+    }
+
+    fun initializeCrypto() {
+        CryptoManager.LLMApiKey.generateKey()
+        wizardPage.cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
+        isInitialized = !wizardPage.cryptoInitializationError
+        if (!wizardPage.cryptoInitializationError) {
+            wizardPage.isUsingPlaintext = false
+        }
+    }
+
+    override var canContinue by mutableStateOf(false)
+    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
+        wizardPage.backStack.add(AdvancedSettingsPage(wizardPage))
+    }
+}
+
+@Serializable
+private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage() {
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -425,29 +723,12 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
             }
             Spacer(Modifier.height(32.dp))
             Text(
-                stringResource(R.string.setup_wizard_model_title),
+                stringResource(R.string.setup_wizard_advanced_label),
                 style = MaterialTheme.typography.headlineMedium,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.setup_wizard_model_message),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Spacer(Modifier.height(24.dp))
+
         }
-    }
-
-    override var canContinue by mutableStateOf(false)
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(AdvancedSettingsPage(wizardPage))
-    }
-}
-
-@Serializable
-private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage() {
-    @Composable
-    context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
-
     }
 
     override val canContinue = true
@@ -459,8 +740,7 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 @Serializable
 private data object FinishPage : WizardSubPage() {
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
 
     }
 

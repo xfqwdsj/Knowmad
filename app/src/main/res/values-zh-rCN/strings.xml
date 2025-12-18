@@ -22,6 +22,7 @@
     <string name="label_next">下一步</string>
     <string name="label_finish">完成</string>
     <string name="label_back">返回</string>
+    <string name="label_retry">重试</string>
     <string name="setup_wizard_welcome_label">欢迎</string>
     <string name="setup_wizard_welcome_title">欢迎使用知行！</string>
     <string name="setup_wizard_welcome_message">让我们通过几个简单的步骤来设置您的知识助手。</string>
@@ -33,8 +34,17 @@
     <string name="setup_wizard_model_message">选择并设置您想要使用的语言模型。</string>
     <string name="setup_wizard_advanced_label">高级</string>
     <string name="setup_wizard_finish_label">完成</string>
+    <string name="llm_api_key_label">API Key</string>
+    <string name="llm_api_key_guidance_get">如何获取API Key？</string>
+    <string name="llm_api_key_message_secure">您的API Key将安全地存储在您的设备上，不会与任何第三方共享。</string>
+    <string name="llm_api_key_message_unsecure">您的API Key将以明文形式存储在您的设备上。这可能会带来安全风险，但我们不会与任何第三方共享它。</string>
     <string name="llm_provider_deepseek_label">深度求索</string>
     <string name="llm_provider_deepseek_description">deepseek-chat和deepseek-reasoner</string>
-    <string name="llm_provider_openai_label">OpenAI</string>
-    <string name="llm_provider_openai_description">来自OpenAI的GPT系列和其他模型</string>
+    <string name="llm_provider_openai_label">OpenAI（和OpenAI-compatible）</string>
+    <string name="llm_provider_openai_description">来自OpenAI的GPT系列和其他模型，或与OpenAI兼容的提供商</string>
+    <string name="crypto_key_initialization_error_title">加密密钥初始化错误</string>
+    <string name="crypto_key_initialization_error_message">初始化加密密钥失败，请重试。</string>
+    <string name="crypto_key_initialization_error_retry_label">重试加密</string>
+    <string name="crypto_use_plaintext_label">使用明文存储</string>
+    <string name="crypto_use_plaintext_warning">您正在对敏感数据使用明文存储，这可能会带来安全风险。建议启用加密。</string>
 </resources>

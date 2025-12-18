@@ -39,6 +39,7 @@ data class LLMProviderConfigEntity(
     val id: Long = 0,
     val provider: LLMProvider,
     val apiKey: List<Byte>,
+    val iv: List<Byte>?,
     val order: Int = 0,
     val baseUrl: String? = null,
     val chatCompletionsPath: String? = null,
@@ -60,12 +61,12 @@ data class LLMProviderConfigEntity(
         }
 
         @TypeConverter
-        fun fromApiKey(apiKey: List<Byte>): ByteArray {
-            return apiKey.toByteArray()
+        fun fromByteList(list: List<Byte>): ByteArray {
+            return list.toByteArray()
         }
 
         @TypeConverter
-        fun toApiKey(data: ByteArray): List<Byte> {
+        fun toByteList(data: ByteArray): List<Byte> {
             return data.toList()
         }
     }
