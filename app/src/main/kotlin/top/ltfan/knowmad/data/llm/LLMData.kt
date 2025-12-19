@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.data.llm
 
-import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
@@ -47,17 +46,11 @@ val SupportedLLMProviders = mapOf(
             DeepSeekModels.DeepSeekChat,
             DeepSeekModels.DeepSeekReasoner,
         ),
-    ) { entity ->
+    ) { apiKey, baseUrl ->
         DeepSeekLLMClient(
-            apiKey = entity.decryptedApiKey,
+            apiKey = apiKey,
             settings = DeepSeekClientSettings(
-                baseUrl = entity.baseUrl ?: "https://api.deepseek.com",
-                chatCompletionsPath = entity.chatCompletionsPath ?: "chat/completions",
-                timeoutConfig = ConnectionTimeoutConfig(
-                    requestTimeoutMillis = entity.requestTimeoutMillis ?: 900_000,
-                    connectTimeoutMillis = entity.connectTimeoutMillis ?: 60_000,
-                    socketTimeoutMillis = entity.socketTimeoutMillis ?: 900_000,
-                ),
+                baseUrl = baseUrl ?: "https://api.deepseek.com",
             ),
         )
     },
@@ -68,17 +61,11 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://api.openai.com",
         defaultChatCompletionsPath = "v1/chat/completions",
         platformUrl = "https://platform.openai.com",
-    ) { entity ->
+    ) { apiKey, baseUrl ->
         OpenAILLMClient(
-            apiKey = entity.decryptedApiKey,
+            apiKey = apiKey,
             settings = OpenAIClientSettings(
-                baseUrl = entity.baseUrl ?: "https://api.openai.com",
-                chatCompletionsPath = entity.chatCompletionsPath ?: "v1/chat/completions",
-                timeoutConfig = ConnectionTimeoutConfig(
-                    requestTimeoutMillis = entity.requestTimeoutMillis ?: 900_000,
-                    connectTimeoutMillis = entity.connectTimeoutMillis ?: 60_000,
-                    socketTimeoutMillis = entity.socketTimeoutMillis ?: 900_000,
-                ),
+                baseUrl = baseUrl ?: "https://api.openai.com",
             ),
         )
     },
@@ -94,7 +81,7 @@ data class LLMProviderItem(
     val defaultChatCompletionsPath: String,
     val platformUrl: String,
     val predefinedModels: Set<LLModel> = emptySet(),
-    val convertToClient: (entity: LLMProviderConfigEntity) -> LLMClient,
+    val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
 )
 
 @Suppress("UnstableApiUsage")
@@ -234,7 +221,7 @@ sealed interface LLMCapabilityItem {
 }
 
 fun LLMProviderConfigEntity.toClient() = SupportedLLMProviders[provider]
-    ?.convertToClient(this) ?: error("Unsupported LLM Provider: $provider")
+    ?.convertToClient(decryptedApiKey, baseUrl) ?: error("Unsupported LLM Provider: $provider")
 
 val LLMProviderConfigEntity.decryptedApiKey: String
     inline get() {

@@ -44,10 +44,6 @@ data class LLMProviderConfigEntity(
     val iv: List<Byte>?,
     val order: Int = 0,
     val baseUrl: String? = null,
-    val chatCompletionsPath: String? = null,
-    val requestTimeoutMillis: Long? = null,
-    val connectTimeoutMillis: Long? = null,
-    val socketTimeoutMillis: Long? = null,
 ) {
     object Converters {
         @OptIn(ExperimentalSerializationApi::class)
