@@ -95,6 +95,7 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -119,11 +120,14 @@ import androidx.graphics.shapes.toPath
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
+import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
 import top.ltfan.knowmad.ui.util.AppWindowInsets
@@ -289,6 +293,8 @@ class WizardPage(
         )
 
     var selectedProvider by mutableStateOf<LLMProvider?>(null)
+    val currentProviderItem inline get() = SupportedLLMProviders[selectedProvider]
+
     var baseUrl by mutableStateOf<String>("")
     var apiKey by mutableStateOf<String>("")
 
@@ -520,7 +526,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                 contentDescription = null,
                             )
                         },
-                        trailingIcon = SupportedLLMProviders[wizardPage.selectedProvider]?.let { providerItem ->
+                        trailingIcon = wizardPage.currentProviderItem?.let { providerItem ->
                             {
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -598,7 +604,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                         label = {
                             Text(stringResource(R.string.llm_api_base_url_input_label))
                         },
-                        placeholder = SupportedLLMProviders[wizardPage.selectedProvider]?.let { providerItem ->
+                        placeholder = wizardPage.currentProviderItem?.let { providerItem ->
                             {
                                 Text(providerItem.defaultBaseUrl)
                             }
@@ -660,7 +666,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
         wizardPage.apiKey = apiKey
         if (wizardPage.baseUrl.isEmpty()) {
-            SupportedLLMProviders[wizardPage.selectedProvider]?.let { providerItem ->
+            wizardPage.currentProviderItem?.let { providerItem ->
                 wizardPage.baseUrl = providerItem.defaultBaseUrl
             }
         }
@@ -708,8 +714,45 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     },
                 )
             }
+            selectedModel?.let { model ->
+                ModelCapabilitiesFlow(
+                    model.capabilities,
+                    { selectedModel = model.copy(capabilities = model.capabilities + it) },
+                    { selectedModel = model.copy(capabilities = model.capabilities - it) },
+                )
+            }
+        }
+
+        LaunchedEffect(wizardPage.selectedProvider) {
+            wizardPage.selectedProvider?.let { provider ->
+                withContext(Dispatchers.IO) {
+                    try {
+                        client?.models()?.forEach { id ->
+                            if (id !in knownModelIds) {
+                                knownModels.add(LLModel(provider, id, listOf(), 0))
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+
+        LaunchedEffect(modelId) {
+            if (modelId.isEmpty()) {
+                selectedModel = null
+                return@LaunchedEffect
+            }
+            val model = knownModels.find { it.id == modelId }
+            selectedModel = model
         }
     }
+
+    val client = wizardPage.currentProviderItem?.convertToClient(
+        wizardPage.apiKey,
+        wizardPage.baseUrl,
+    )
 
     @Transient
     val knownModels = mutableStateListOf<LLModel>()
@@ -719,8 +762,10 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     val modelTextFieldState = TextFieldState()
     val modelId inline get() = modelTextFieldState.text.toString()
 
+    var selectedModel by mutableStateOf<LLModel?>(null)
+
     init {
-        SupportedLLMProviders[wizardPage.selectedProvider]?.predefinedModels?.let { models ->
+        wizardPage.currentProviderItem?.predefinedModels?.let { models ->
             knownModels.addAll(models)
         }
     }
@@ -781,7 +826,7 @@ sealed class WizardSubPage : SubPage() {
 }
 
 @Composable
-fun StaticTitle(
+private fun StaticTitle(
     icon: @Composable () -> Unit,
     @StringRes title: Int,
     @StringRes message: Int,
@@ -792,13 +837,13 @@ fun StaticTitle(
 }
 
 @Composable
-fun IconTitleSpacer() {
+private fun IconTitleSpacer() {
     Spacer(Modifier.height(32.dp))
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun StaticBackgroundIcon(
+private fun StaticBackgroundIcon(
     icon: @Composable () -> Unit,
 ) {
     Surface(
@@ -809,7 +854,7 @@ fun StaticBackgroundIcon(
 }
 
 @Composable
-fun AnimatedBackgroundIcon(
+private fun AnimatedBackgroundIcon(
     shape1: RoundedPolygon,
     color1: Color,
     rotation1: Float,
@@ -869,7 +914,7 @@ fun AnimatedBackgroundIcon(
 }
 
 @Composable
-fun TitleText(
+private fun TitleText(
     @StringRes title: Int,
     @StringRes message: Int,
 ) {
@@ -894,7 +939,7 @@ fun TitleText(
 }
 
 @Composable
-fun TitleIcon(
+private fun TitleIcon(
     imageVector: ImageVector,
 ) {
     Icon(
@@ -907,6 +952,6 @@ fun TitleIcon(
 }
 
 @Composable
-fun TitleContentSpacer() {
+private fun TitleContentSpacer() {
     Spacer(Modifier.height(36.dp))
 }

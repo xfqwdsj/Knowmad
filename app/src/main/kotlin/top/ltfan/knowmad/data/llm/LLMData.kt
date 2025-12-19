@@ -24,6 +24,8 @@ import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
+import ai.koog.prompt.executor.clients.openrouter.OpenRouterClientSettings
+import ai.koog.prompt.executor.clients.openrouter.OpenRouterLLMClient
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
@@ -66,6 +68,21 @@ val SupportedLLMProviders = mapOf(
             apiKey = apiKey,
             settings = OpenAIClientSettings(
                 baseUrl = baseUrl ?: "https://api.openai.com",
+            ),
+        )
+    },
+    LLMProvider.OpenRouter to LLMProviderItem(
+        icon = R.drawable.ic_llm_provider_openrouter,
+        label = R.string.llm_provider_openrouter_label,
+        description = R.string.llm_provider_openrouter_description,
+        defaultBaseUrl = "https://openrouter.ai",
+        defaultChatCompletionsPath = "api/v1/chat/completions",
+        platformUrl = "https://openrouter.ai/keys",
+    ) { apiKey, baseUrl ->
+        OpenRouterLLMClient(
+            apiKey = apiKey,
+            settings = OpenRouterClientSettings(
+                baseUrl = baseUrl ?: "https://openrouter.ai",
             ),
         )
     },

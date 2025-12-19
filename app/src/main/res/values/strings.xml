@@ -23,6 +23,7 @@
     <string name="label_finish">Finish</string>
     <string name="label_back">Back</string>
     <string name="label_retry">Retry</string>
+    <string name="label_help">Help</string>
     <string name="setup_wizard_welcome_label">Welcome</string>
     <string name="setup_wizard_welcome_title">Welcome to Knowmad</string>
     <string name="setup_wizard_welcome_message">Let\'s set up your knowledge companion in a few easy steps</string>
@@ -93,6 +94,8 @@
     <string name="llm_provider_deepseek_description">deepseek-chat and deepseek-reasoner</string>
     <string name="llm_provider_openai_label">OpenAI (and compatible)</string>
     <string name="llm_provider_openai_description">GPT series and other models from OpenAI, or OpenAI-compatible providers</string>
+    <string name="llm_provider_openrouter_label">OpenRouter</string>
+    <string name="llm_provider_openrouter_description">Access various models through the OpenRouter platform</string>
     <string name="crypto_key_initialization_error_title">Crypto Key Initialization Error</string>
     <string name="crypto_key_initialization_error_message">Failed to initialize the cryptographic key. Please try again</string>
     <string name="crypto_key_initialization_error_retry_label">Retry Encryption</string>

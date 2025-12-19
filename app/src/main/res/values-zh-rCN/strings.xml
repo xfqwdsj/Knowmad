@@ -93,6 +93,8 @@
     <string name="llm_provider_deepseek_description">deepseek-chat和deepseek-reasoner</string>
     <string name="llm_provider_openai_label">OpenAI（和OpenAI-compatible）</string>
     <string name="llm_provider_openai_description">来自OpenAI的GPT系列和其他模型，或与OpenAI兼容的提供商</string>
+    <string name="llm_provider_openrouter_label">OpenRouter</string>
+    <string name="llm_provider_openrouter_description">通过OpenRouter平台访问各种模型</string>
     <string name="crypto_key_initialization_error_title">加密密钥初始化错误</string>
     <string name="crypto_key_initialization_error_message">初始化加密密钥失败，请重试</string>
     <string name="crypto_key_initialization_error_retry_label">重试加密</string>
