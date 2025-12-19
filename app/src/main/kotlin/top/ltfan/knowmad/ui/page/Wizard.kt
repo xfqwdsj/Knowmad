@@ -786,16 +786,9 @@ fun StaticTitle(
     @StringRes title: Int,
     @StringRes message: Int,
 ) {
-    Column(
-        Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        StaticBackgroundIcon(icon)
-        IconTitleSpacer()
-        TitleText(title, message)
-    }
+    StaticBackgroundIcon(icon)
+    IconTitleSpacer()
+    TitleText(title, message)
 }
 
 @Composable
@@ -880,17 +873,24 @@ fun TitleText(
     @StringRes title: Int,
     @StringRes message: Int,
 ) {
-    Text(
-        stringResource(title),
-        style = MaterialTheme.typography.headlineMedium,
-        textAlign = TextAlign.Center,
-    )
-    Spacer(Modifier.height(8.dp))
-    Text(
-        stringResource(message),
-        style = MaterialTheme.typography.bodyMedium,
-        textAlign = TextAlign.Center,
-    )
+    Column(
+        Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(title),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(message),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable
