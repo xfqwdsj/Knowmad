@@ -479,11 +479,11 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 color2 = MaterialTheme.colorScheme.primaryContainer,
                 rotation2 = 0f,
                 icon2 = { TitleIcon(Icons.Default.Key) },
-                displayShape2 = isInitialized,
+                displayShape2 = isReady,
             )
             IconTitleSpacer()
             AnimatedContent(
-                targetState = isInitialized,
+                targetState = isReady,
                 transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
             ) { isInitialized ->
                 Column(
@@ -575,7 +575,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             }
                         },
                     )
-                    Button({ this@ApiSetupPage.isInitialized = false }) {}
+                    Button({ this@ApiSetupPage.isReady = false }) {}
                 }
             }
         }
@@ -599,14 +599,14 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
         TextButton(
             onClick = {
                 wizardPage.isUsingPlaintext = true
-                isInitialized = true
+                isReady = true
             },
         ) {
             Text(stringResource(R.string.crypto_use_plaintext_label))
         }
     }
 
-    var isInitialized by mutableStateOf(!wizardPage.cryptoInitializationError)
+    var isReady by mutableStateOf(!wizardPage.cryptoInitializationError)
 
     @Transient
     val apiKeyTextFieldState = TextFieldState(wizardPage.apiKey)
@@ -619,7 +619,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     fun initializeCrypto() {
         CryptoManager.LLMApiKey.generateKey()
         wizardPage.cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
-        isInitialized = !wizardPage.cryptoInitializationError
+        isReady = !wizardPage.cryptoInitializationError
         if (!wizardPage.cryptoInitializationError) {
             wizardPage.isUsingPlaintext = false
         }
