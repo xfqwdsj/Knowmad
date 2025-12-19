@@ -73,6 +73,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -102,6 +103,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
@@ -503,7 +505,12 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                         state = apiKeyTextFieldState,
                         modifier = Modifier
                             .widthIn(max = 320.dp)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (!it.isFocused) {
+                                    wizardPage.apiKey = apiKey
+                                }
+                            },
                         label = {
                             Text(stringResource(R.string.llm_api_key_label))
                         },
@@ -575,7 +582,31 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             }
                         },
                     )
-                    Button({ this@ApiSetupPage.isReady = false }) {}
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(
+                        Modifier
+                            .widthIn(max = 380.dp)
+                            .fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    TextField(
+                        value = wizardPage.baseUrl,
+                        onValueChange = { wizardPage.baseUrl = it },
+                        modifier = Modifier
+                            .widthIn(max = 320.dp)
+                            .fillMaxWidth(),
+                        label = {
+                            Text(stringResource(R.string.llm_api_base_url_input_label))
+                        },
+                        placeholder = SupportedLLMProviders[wizardPage.selectedProvider]?.let { providerItem ->
+                            {
+                                Text(providerItem.defaultBaseUrl)
+                            }
+                        },
+                        supportingText = {
+                            Text(stringResource(R.string.llm_api_base_url_input_message))
+                        },
+                    )
                 }
             }
         }

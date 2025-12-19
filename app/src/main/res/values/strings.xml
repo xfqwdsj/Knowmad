@@ -39,6 +39,9 @@
     <string name="setup_wizard_advanced_title">Advanced Settings</string>
     <string name="setup_wizard_advanced_message">Configure advanced options for the model and API connection</string>
     <string name="setup_wizard_finish_label">Finish</string>
+    <string name="llm_api_base_url_label">Base URL</string>
+    <string name="llm_api_base_url_input_label">Base URL (optional)</string>
+    <string name="llm_api_base_url_input_message">Leave blank to use the default URL for the selected provider</string>
     <string name="llm_api_key_label">API Key</string>
     <string name="llm_api_key_guidance_get">How to get an API Key?</string>
     <string name="llm_api_key_message_secure">Your API Key will be stored securely on your device and will not be shared with any third parties</string>

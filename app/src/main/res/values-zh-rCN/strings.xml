@@ -39,6 +39,9 @@
     <string name="setup_wizard_advanced_title">高级设置</string>
     <string name="setup_wizard_advanced_message">配置模型和API连接的高级选项</string>
     <string name="setup_wizard_finish_label">完成</string>
+    <string name="llm_api_base_url_label">Base URL</string>
+    <string name="llm_api_base_url_input_label">Base URL（可选）</string>
+    <string name="llm_api_base_url_input_message">留空以使用所选提供商的默认URL</string>
     <string name="llm_api_key_label">API Key</string>
     <string name="llm_api_key_guidance_get">如何获取API Key？</string>
     <string name="llm_api_key_message_secure">您的API Key将安全地存储在您的设备上，不会与任何第三方共享</string>
