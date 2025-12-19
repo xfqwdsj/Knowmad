@@ -28,10 +28,12 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 
+@Serializable
 @Entity
 @TypeConverters(LLMProviderConfigEntity.Converters::class)
 data class LLMProviderConfigEntity(

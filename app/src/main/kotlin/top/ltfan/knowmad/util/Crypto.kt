@@ -20,6 +20,7 @@ package top.ltfan.knowmad.util
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.compose.runtime.Immutable
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -69,13 +70,12 @@ open class CryptoManager private constructor(private val keyAlias: String) {
         return keyStore.getKey(keyAlias, null) as SecretKey
     }
 
-    fun encrypt(data: ByteArray): Pair<ByteArray, ByteArray> {
-        // Returns (Ciphertext, IV)
+    fun encrypt(data: ByteArray): EncryptedData {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getKey())
         val iv = cipher.iv
         val ciphertext = cipher.doFinal(data)
-        return ciphertext to iv
+        return EncryptedData(ciphertext, iv)
     }
 
     fun decrypt(ciphertext: ByteArray, iv: ByteArray): ByteArray {
@@ -83,5 +83,33 @@ open class CryptoManager private constructor(private val keyAlias: String) {
         val spec = GCMParameterSpec(128, iv)
         cipher.init(Cipher.DECRYPT_MODE, getKey(), spec)
         return cipher.doFinal(ciphertext)
+    }
+
+    fun decrypt(encryptedData: EncryptedData): ByteArray {
+        return decrypt(encryptedData.ciphertext, encryptedData.iv)
+    }
+}
+
+@Immutable
+data class EncryptedData(
+    val ciphertext: ByteArray,
+    val iv: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as EncryptedData
+
+        if (!ciphertext.contentEquals(other.ciphertext)) return false
+        if (!iv.contentEquals(other.iv)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = ciphertext.contentHashCode()
+        result = 31 * result + iv.contentHashCode()
+        return result
     }
 }

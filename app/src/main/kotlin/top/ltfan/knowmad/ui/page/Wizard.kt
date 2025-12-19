@@ -19,11 +19,11 @@
 package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -57,6 +57,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EnhancedEncryption
@@ -70,20 +71,27 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -93,6 +101,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -119,7 +128,8 @@ class WizardPage(
 ) : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
         val backStack = this@WizardPage.backStack
         val currentPage = backStack.last()
 
@@ -179,22 +189,16 @@ class WizardPage(
                                 backStack = backStack,
                                 modifier = Modifier.fillMaxSize(),
                                 transitionSpec = {
-                                    ContentTransform(
-                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> fullWidth },
-                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> -fullWidth },
-                                    )
+                                    fadeIn() + slideInHorizontally { it } togetherWith
+                                            fadeOut() + slideOutHorizontally { -it }
                                 },
                                 popTransitionSpec = {
-                                    ContentTransform(
-                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
-                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
-                                    )
+                                    fadeIn() + slideInHorizontally { -it } togetherWith
+                                            fadeOut() + slideOutHorizontally { it }
                                 },
                                 predictivePopTransitionSpec = {
-                                    ContentTransform(
-                                        targetContentEnter = fadeIn() + slideInHorizontally { fullWidth -> -fullWidth },
-                                        initialContentExit = fadeOut() + slideOutHorizontally { fullWidth -> fullWidth },
-                                    )
+                                    fadeIn() + slideInHorizontally { -it } togetherWith
+                                            fadeOut() + slideOutHorizontally { it }
                                 },
                                 entryProvider = @Suppress("UNCHECKED_CAST") {
                                     it.navEntry() as NavEntry<WizardSubPage>
@@ -284,24 +288,6 @@ class WizardPage(
             StepItem(stringResource(R.string.setup_wizard_advanced_label)),
             StepItem(stringResource(R.string.setup_wizard_finish_label)),
         )
-
-    val providers = SupportedLLMProviders.associateWith {
-        when (it) {
-            LLMProvider.DeepSeek -> LLMProviderItem(
-                icon = R.drawable.ic_llm_provider_deepseek,
-                label = R.string.llm_provider_deepseek_label,
-                description = R.string.llm_provider_deepseek_description,
-            )
-
-            LLMProvider.OpenAI -> LLMProviderItem(
-                icon = R.drawable.ic_llm_provider_openai,
-                label = R.string.llm_provider_openai_label,
-                description = R.string.llm_provider_openai_description,
-            )
-
-            else -> error("Unsupported LLM provider: $it")
-        }
-    }
 }
 
 @Immutable
@@ -311,18 +297,11 @@ data class WizardMessageItem(
 )
 
 @Serializable
-@Immutable
-data class LLMProviderItem(
-    @param:DrawableRes val icon: Int,
-    @param:StringRes val label: Int,
-    @param:StringRes val description: Int,
-)
-
-@Serializable
 private data object WelcomePage : WizardSubPage() {
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -366,7 +345,8 @@ private data object WelcomePage : WizardSubPage() {
 private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -402,7 +382,7 @@ private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                for ((provider, item) in wizardPage.providers.entries) {
+                for ((provider, item) in SupportedLLMProviders) {
                     Provider(
                         modifier = Modifier
                             .widthIn(max = 360.dp)
@@ -495,9 +475,10 @@ private class ProviderSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 
 @Serializable
 private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
         val mainIconShapeMatrix = remember { Matrix() }
         val mainIconShapeMorph =
             remember { Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Cookie9Sided) }
@@ -597,6 +578,31 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                 contentDescription = null,
                             )
                         },
+                        trailingIcon = SupportedLLMProviders[wizardPage.selectedProvider]?.let { providerItem ->
+                            {
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Above,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip { Text(stringResource(R.string.llm_api_key_guidance_get)) }
+                                    },
+                                    state = rememberTooltipState(),
+                                ) {
+                                    val uriHandler = LocalUriHandler.current
+                                    IconButton(
+                                        onClick = {
+                                            uriHandler.openUri(providerItem.platformUrl)
+                                        },
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Default.Help,
+                                            contentDescription = stringResource(R.string.llm_api_key_guidance_get),
+                                        )
+                                    }
+                                }
+                            }
+                        },
                         supportingText = {
                             Row {
                                 AnimatedContent(
@@ -634,7 +640,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             }
                         },
                     )
-                    
+
                     Button({ this@ModelSetupPage.isInitialized = false }) {}
                 }
             }
@@ -677,8 +683,14 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     val apiKeyTextFieldState = TextFieldState()
     val apiKey inline get() = apiKeyTextFieldState.text.toString()
 
+    @Transient
+    val predefinedModels = mutableStateListOf<LLModel>()
+
     init {
         initializeCrypto()
+        SupportedLLMProviders[wizardPage.selectedProvider]?.predefinedModels?.let { models ->
+            predefinedModels.addAll(models)
+        }
     }
 
     fun initializeCrypto() {
@@ -700,7 +712,8 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -740,7 +753,8 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 @Serializable
 private data object FinishPage : WizardSubPage() {
     @Composable
-    context(contentPadding: PaddingValues) override fun AppViewModel.Content() {
+    context(contentPadding: PaddingValues)
+    override fun AppViewModel.Content() {
 
     }
 

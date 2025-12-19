@@ -22,30 +22,89 @@ import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
+import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
+import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
+import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.R
+import top.ltfan.knowmad.util.CryptoManager
 
-val SupportedLLMProviders = listOf(
-    LLMProvider.DeepSeek,
-    LLMProvider.OpenAI,
-)
-
-fun LLMProviderConfigEntity.toClient(): LLMClient {
-    return when (provider) {
-        LLMProvider.DeepSeek -> toDeepSeekClient()
-        else -> error("Unsupported LLM provider: $provider")
-    }
-}
-
-fun LLMProviderConfigEntity.toDeepSeekClient() = DeepSeekLLMClient(
-    apiKey = apiKey.toByteArray()
-        .decodeToString(), // TODO: Implement secure storage for API keys
-    settings = DeepSeekClientSettings(
-        baseUrl = baseUrl ?: "https://api.deepseek.com",
-        chatCompletionsPath = chatCompletionsPath ?: "chat/completions",
-        timeoutConfig = ConnectionTimeoutConfig(
-            requestTimeoutMillis = requestTimeoutMillis ?: 900_000,
-            connectTimeoutMillis = connectTimeoutMillis ?: 60_000,
-            socketTimeoutMillis = socketTimeoutMillis ?: 900_000,
+val SupportedLLMProviders = mapOf(
+    LLMProvider.DeepSeek to LLMProviderItem(
+        icon = R.drawable.ic_llm_provider_deepseek,
+        label = R.string.llm_provider_deepseek_label,
+        description = R.string.llm_provider_deepseek_description,
+        platformUrl = "https://platform.deepseek.com",
+        predefinedModels = setOf(
+            DeepSeekModels.DeepSeekChat,
+            DeepSeekModels.DeepSeekReasoner,
         ),
-    ),
+    ) { entity ->
+        DeepSeekLLMClient(
+            apiKey = entity.decryptedApiKey,
+            settings = DeepSeekClientSettings(
+                baseUrl = entity.baseUrl ?: "https://api.deepseek.com",
+                chatCompletionsPath = entity.chatCompletionsPath ?: "chat/completions",
+                timeoutConfig = ConnectionTimeoutConfig(
+                    requestTimeoutMillis = entity.requestTimeoutMillis ?: 900_000,
+                    connectTimeoutMillis = entity.connectTimeoutMillis ?: 60_000,
+                    socketTimeoutMillis = entity.socketTimeoutMillis ?: 900_000,
+                ),
+            ),
+        )
+    },
+    LLMProvider.OpenAI to LLMProviderItem(
+        icon = R.drawable.ic_llm_provider_openai,
+        label = R.string.llm_provider_openai_label,
+        description = R.string.llm_provider_openai_description,
+        platformUrl = "https://platform.openai.com",
+    ) { entity ->
+        OpenAILLMClient(
+            apiKey = entity.decryptedApiKey,
+            settings = OpenAIClientSettings(
+                baseUrl = entity.baseUrl ?: "https://api.openai.com",
+                chatCompletionsPath = entity.chatCompletionsPath ?: "v1/chat/completions",
+                timeoutConfig = ConnectionTimeoutConfig(
+                    requestTimeoutMillis = entity.requestTimeoutMillis ?: 900_000,
+                    connectTimeoutMillis = entity.connectTimeoutMillis ?: 60_000,
+                    socketTimeoutMillis = entity.socketTimeoutMillis ?: 900_000,
+                ),
+            ),
+        )
+    },
 )
+
+@Serializable
+@Immutable
+data class LLMProviderItem(
+    @param:DrawableRes val icon: Int,
+    @param:StringRes val label: Int,
+    @param:StringRes val description: Int,
+    val platformUrl: String,
+    val predefinedModels: Set<LLModel> = emptySet(),
+    val convertToClient: (entity: LLMProviderConfigEntity) -> LLMClient,
+)
+
+fun LLMProviderConfigEntity.toClient() = SupportedLLMProviders[provider]
+    ?.convertToClient(this) ?: error("Unsupported LLM Provider: $provider")
+
+val LLMProviderConfigEntity.decryptedApiKey: String
+    inline get() {
+        if (iv == null) {
+            return apiKey.toByteArray().decodeToString()
+        }
+        val manager = CryptoManager.LLMApiKey
+        if (!manager.isKeyInitialized()) {
+            return apiKey.toByteArray().decodeToString()
+        }
+        val decryptedBytes = manager.decrypt(
+            ciphertext = apiKey.toByteArray(),
+            iv = iv.toByteArray(),
+        )
+        return decryptedBytes.decodeToString()
+    }
