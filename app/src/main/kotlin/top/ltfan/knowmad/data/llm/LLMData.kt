@@ -19,6 +19,10 @@
 package top.ltfan.knowmad.data.llm
 
 import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings
+import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
+import ai.koog.prompt.executor.clients.dashscope.DashscopeClientSettings
+import ai.koog.prompt.executor.clients.dashscope.DashscopeLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
@@ -73,6 +77,22 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
+    LLMProvider.Anthropic to LLMProviderInfo(
+        icon = R.drawable.ic_llm_provider_anthropic,
+        label = R.string.llm_provider_anthropic_label,
+        description = R.string.llm_provider_anthropic_description,
+        defaultBaseUrl = "https://api.anthropic.com",
+        defaultChatCompletionsPath = "",
+        platformUrl = "https://console.anthropic.com",
+        getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
+    ) { apiKey, baseUrl ->
+        AnthropicLLMClient(
+            apiKey = apiKey,
+            settings = AnthropicClientSettings(
+                baseUrl = baseUrl ?: "https://api.anthropic.com",
+            ),
+        )
+    },
     LLMProvider.OpenRouter to LLMProviderInfo(
         icon = R.drawable.ic_llm_provider_openrouter,
         label = R.string.llm_provider_openrouter_label,
@@ -86,6 +106,22 @@ val SupportedLLMProviders = mapOf(
             apiKey = apiKey,
             settings = OpenRouterClientSettings(
                 baseUrl = baseUrl ?: "https://openrouter.ai",
+            ),
+        )
+    },
+    LLMProvider.Alibaba to LLMProviderInfo(
+        icon = R.drawable.ic_llm_provider_alibaba,
+        label = R.string.llm_provider_alibaba_label,
+        description = R.string.llm_provider_alibaba_description,
+        defaultBaseUrl = "https://dashscope.aliyuncs.com/",
+        defaultChatCompletionsPath = "compatible-mode/v1/chat/completions",
+        platformUrl = "https://dashscope.aliyun.com/",
+        getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
+    ) { apiKey, baseUrl ->
+        DashscopeLLMClient(
+            apiKey = apiKey,
+            settings = DashscopeClientSettings(
+                baseUrl = baseUrl ?: "https://dashscope.aliyuncs.com/",
             ),
         )
     },
