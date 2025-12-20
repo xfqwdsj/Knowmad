@@ -131,6 +131,7 @@ import top.ltfan.knowmad.ui.component.LLMProviderItem
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
+import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.ListItemMaxWidth
 import top.ltfan.knowmad.ui.util.TextFieldMaxWidth
@@ -231,35 +232,40 @@ class WizardPage(
                         .horizontalScroll(rememberScrollState())
                         .padding(horizontalPadding),
                 ) {
-                    Spacer(Modifier.width(16.dp))
-                    TextButton(
-                        onClick = {},
-                    ) {
-                        Text(stringResource(R.string.label_skip_for_now))
-                    }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(
-                        onClick = {
-                            backStack.removeLastOrNull()
-                        },
-                        enabled = backStack.size > 1,
-                    ) {
-                        Text(stringResource(R.string.label_back))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            currentPage.nextPage?.invoke(this@WizardPage) // TODO: handle finish
-                        },
-                        enabled = currentPage.canContinue,
-                    ) {
-                        if (currentPage.nextPage != null) {
-                            Text(stringResource(R.string.label_next))
-                        } else {
-                            Text(stringResource(R.string.label_finish))
+                    ProvideCompatibleShapes {
+                        Spacer(Modifier.width(16.dp))
+                        TextButton(
+                            onClick = {},
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.label_skip_for_now))
                         }
+                        Spacer(Modifier.weight(1f))
+                        OutlinedButton(
+                            onClick = {
+                                backStack.removeLastOrNull()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                            enabled = backStack.size > 1,
+                        ) {
+                            Text(stringResource(R.string.label_back))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                currentPage.nextPage?.invoke(this@WizardPage) // TODO: handle finish
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                            enabled = currentPage.canContinue,
+                        ) {
+                            if (currentPage.nextPage != null) {
+                                Text(stringResource(R.string.label_next))
+                            } else {
+                                Text(stringResource(R.string.label_finish))
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
                     }
-                    Spacer(Modifier.width(16.dp))
                 }
                 Spacer(Modifier.height(16.dp))
             }

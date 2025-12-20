@@ -139,3 +139,12 @@ fun AppTheme(
         content = content,
     )
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ProvideCompatibleShapes(content: @Composable () -> Unit) {
+    MaterialExpressiveTheme(
+        shapes = AppShapesCompatible,
+        content = content,
+    )
+}

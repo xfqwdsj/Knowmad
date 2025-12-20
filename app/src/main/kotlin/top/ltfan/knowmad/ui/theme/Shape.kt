@@ -18,24 +18,30 @@
 
 package top.ltfan.knowmad.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 import com.kyant.capsule.ContinuousRoundedRectangle
 
 val AppRadiusExtraSmall = 8.dp
 val AppExtraSmallShape = ContinuousRoundedRectangle(AppRadiusExtraSmall)
+val AppExtraSmallShapeCompatible = RoundedCornerShape(AppRadiusExtraSmall)
 
 val AppRadiusSmall = 12.dp
 val AppSmallShape = ContinuousRoundedRectangle(AppRadiusSmall)
+val AppSmallShapeCompatible = RoundedCornerShape(AppRadiusSmall)
 
 val AppRadiusMedium = 16.dp
 val AppMediumShape = ContinuousRoundedRectangle(AppRadiusMedium)
+val AppMediumShapeCompatible = RoundedCornerShape(AppRadiusMedium)
 
 val AppRadiusLarge = 24.dp
 val AppLargeShape = ContinuousRoundedRectangle(AppRadiusLarge)
+val AppLargeShapeCompatible = RoundedCornerShape(AppRadiusLarge)
 
 val AppRadiusExtraLarge = 36.dp
 val AppExtraLargeShape = ContinuousRoundedRectangle(AppRadiusExtraLarge)
+val AppExtraLargeShapeCompatible = RoundedCornerShape(AppRadiusExtraLarge)
 
 val AppShapes = Shapes(
     extraSmall = AppExtraSmallShape,
@@ -43,4 +49,12 @@ val AppShapes = Shapes(
     medium = AppMediumShape,
     large = AppLargeShape,
     extraLarge = AppExtraLargeShape,
+)
+
+val AppShapesCompatible = Shapes(
+    extraSmall = AppExtraSmallShapeCompatible,
+    small = AppSmallShapeCompatible,
+    medium = AppMediumShapeCompatible,
+    large = AppLargeShapeCompatible,
+    extraLarge = AppExtraLargeShapeCompatible,
 )
