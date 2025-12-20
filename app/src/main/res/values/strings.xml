@@ -105,6 +105,8 @@
     <string name="llm_provider_openai_description">GPT series and other models from OpenAI, or OpenAI-compatible providers</string>
     <string name="llm_provider_anthropic_label">Anthropic</string>
     <string name="llm_provider_anthropic_description">Claude series and other models from Anthropic.</string>
+    <string name="llm_provider_google_label">Google</string>
+    <string name="llm_provider_google_description">Gemini series from Google</string>
     <string name="llm_provider_openrouter_label">OpenRouter</string>
     <string name="llm_provider_openrouter_description">Access various models through the OpenRouter platform</string>
     <string name="llm_provider_alibaba_label">DashScope (Alibaba)</string>

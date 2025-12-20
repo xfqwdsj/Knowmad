@@ -103,8 +103,10 @@
     <string name="llm_provider_deepseek_description">deepseek-chat和deepseek-reasoner</string>
     <string name="llm_provider_openai_label">OpenAI（和OpenAI-compatible）</string>
     <string name="llm_provider_openai_description">来自OpenAI的GPT系列和其他模型，或与OpenAI兼容的提供商</string>
-    <string name="llm_provider_anthropic_label">Anthropic（和Anthropic-compatible）</string>
-    <string name="llm_provider_anthropic_description">来自Anthropic的Claude系列模型，或与Anthropic兼容的提供商</string>
+    <string name="llm_provider_anthropic_label">Anthropic</string>
+    <string name="llm_provider_anthropic_description">来自Anthropic的Claude系列模型</string>
+    <string name="llm_provider_google_label">Google</string>
+    <string name="llm_provider_google_description">来自Google的Gemini系列模型</string>
     <string name="llm_provider_openrouter_label">OpenRouter</string>
     <string name="llm_provider_openrouter_description">通过OpenRouter平台访问各种模型</string>
     <string name="llm_provider_alibaba_label">阿里云</string>

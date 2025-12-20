@@ -26,6 +26,8 @@ import ai.koog.prompt.executor.clients.dashscope.DashscopeLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
+import ai.koog.prompt.executor.clients.google.GoogleClientSettings
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterClientSettings
@@ -90,6 +92,22 @@ val SupportedLLMProviders = mapOf(
             apiKey = apiKey,
             settings = AnthropicClientSettings(
                 baseUrl = baseUrl ?: "https://api.anthropic.com",
+            ),
+        )
+    },
+    LLMProvider.Google to LLMProviderInfo(
+        icon = R.drawable.ic_llm_provider_google,
+        label = R.string.llm_provider_google_label,
+        description = R.string.llm_provider_google_description,
+        defaultBaseUrl = "https://generativelanguage.googleapis.com",
+        defaultChatCompletionsPath = "",
+        platformUrl = "https://aistudio.google.com/",
+        getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
+    ) { apiKey, baseUrl ->
+        GoogleLLMClient(
+            apiKey = apiKey,
+            settings = GoogleClientSettings(
+                baseUrl = baseUrl ?: "https://generativelanguage.googleapis.com",
             ),
         )
     },
