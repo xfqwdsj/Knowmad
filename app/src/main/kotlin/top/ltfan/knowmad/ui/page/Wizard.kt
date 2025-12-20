@@ -1038,6 +1038,7 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                         },
                         model = model,
                     )
+                    wizardPage.firstMessage = ""
                     response.collect {
                         when (it) {
                             is StreamFrame.Append -> {
