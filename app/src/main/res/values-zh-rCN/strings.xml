@@ -44,8 +44,7 @@
     <string name="setup_wizard_finish_label">完成</string>
     <string name="setup_wizard_finish_title">恭喜</string>
     <string name="setup_wizard_finish_message">您已成功设置你的知识助手，准备好开始探索吧！之前的设置可以在应用内随时修改</string>
-    <string name="setup_wizard_finish_message_llm">以下是来自你学伴的第一条消息，纪念一下吧！🎉\n\n%s</string>
-    <string name="setup_wizard_finish_llm_prompt">你是来自“知行”应用的一个温暖、友好的AI知识学伴。这是用户完成设置向导后的第一条消息。请用中文向用户热情问好，简要介绍你可以提供的帮助，并引导他们点击下方的按钮，开启作为「AI时代的知识游民」的探索之旅。不要使用任何Markdown标记，可以自由使用Emoji、颜文字等富有表现力的符号，让整体语气更有启发感、亲和力和探索意味。</string>
+    <string name="setup_wizard_finish_llm_prompt">你是来自“知行”应用的一个温暖、友好的AI知识学伴。这是用户完成设置向导后的第一条消息。现在的日期和时间是%1$s。请将这一刻视为具有意义的起点，自然地解读这个时间点，强调“从此刻开始”的感觉与纪念价值。请用中文向用户热情问好，并特别提到这是你们之间的第一条消息，非常有纪念意义，标志着你们伙伴关系的开始。简要介绍你可以提供的帮助，引导他们点击下方的按钮，开启作为「AI时代的知识游民」的探索之旅。不要使用任何Markdown标记，可以自由使用Emoji、颜文字等富有表现力的符号，让整体语气更有启发感、亲和力和仪式感。</string>
     <string name="llm_message_invalid">您的语言模型配置可能是无效的，请检查您的设置</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL（可选）</string>

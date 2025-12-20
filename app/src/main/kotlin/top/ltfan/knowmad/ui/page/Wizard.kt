@@ -137,6 +137,11 @@ import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
@@ -1042,10 +1047,7 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                     ) { firstMessage ->
                         if (firstMessage.isNotEmpty()) {
                             Text(
-                                stringResource(
-                                    R.string.setup_wizard_finish_message_llm,
-                                    wizardPage.firstMessage,
-                                ),
+                                wizardPage.firstMessage,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         } else {
@@ -1091,7 +1093,10 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                 try {
                     val response = client.executeStreaming(
                         prompt = prompt("first-message") {
-                            system(prompt)
+                            val datetime =
+                                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                                    .format(LocalDateTime.Formats.ISO)
+                            system(prompt.format(datetime))
                         },
                         model = model,
                     )
