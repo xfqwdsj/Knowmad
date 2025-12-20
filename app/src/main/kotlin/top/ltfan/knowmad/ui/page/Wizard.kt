@@ -289,6 +289,7 @@ class WizardPage(
 
     var cryptoInitializationError by mutableStateOf<Boolean>(false)
     var isUsingPlaintext by mutableStateOf<Boolean>(false)
+    var apiConfigurationError by mutableStateOf<Boolean>(false)
 
     val messageItems
         inline get() = listOf(
@@ -296,6 +297,10 @@ class WizardPage(
                 icon = Icons.Default.Error,
                 message = R.string.crypto_key_initialization_error_message,
             ) to cryptoInitializationError,
+            WizardMessageItem(
+                icon = Icons.Default.Error,
+                message = R.string.llm_message_invalid,
+            ) to apiConfigurationError,
             WizardMessageItem(
                 icon = Icons.Default.Warning,
                 message = R.string.crypto_use_plaintext_warning,
@@ -738,7 +743,9 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                 knownModels.add(LLModel(provider, id, listOf(), 0))
                             }
                         }
+                        wizardPage.apiConfigurationError = false
                     } catch (e: Throwable) {
+                        wizardPage.apiConfigurationError = true
                         e.printStackTrace()
                     }
                 }
