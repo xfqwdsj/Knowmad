@@ -58,6 +58,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -65,6 +66,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Key
@@ -105,6 +107,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,6 +117,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -125,6 +129,7 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -405,6 +410,7 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
                         wizardPage.selectedProvider = provider
                         wizardPage.baseUrl = info.defaultBaseUrl
                         wizardPage.apiKey = ""
+                        wizardPage.selectedModel = null
                     }
                 }
             }
@@ -479,27 +485,61 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                 contentDescription = null,
                             )
                         },
-                        trailingIcon = wizardPage.currentProviderInfo?.let { providerInfo ->
-                            {
+                        trailingIcon = {
+                            Row {
+                                val coroutineScope = rememberCoroutineScope()
+                                val clipboard = LocalClipboard.current
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                                         TooltipAnchorPosition.Above,
                                     ),
                                     tooltip = {
-                                        PlainTooltip { Text(stringResource(R.string.llm_api_key_guidance_get)) }
+                                        PlainTooltip { Text(stringResource(R.string.label_paste)) }
                                     },
                                     state = rememberTooltipState(),
                                 ) {
-                                    val uriHandler = LocalUriHandler.current
                                     IconButton(
                                         onClick = {
-                                            uriHandler.openUri(providerInfo.platformUrl)
+                                            coroutineScope.launch {
+                                                val data = clipboard.getClipEntry()?.clipData
+                                                if (data?.itemCount == 0) {
+                                                    return@launch
+                                                }
+                                                data?.getItemAt(0)?.text?.toString()?.let {
+                                                    apiKeyTextFieldState
+                                                        .setTextAndPlaceCursorAtEnd(it)
+                                                }
+                                            }
                                         },
                                     ) {
                                         Icon(
-                                            Icons.AutoMirrored.Default.OpenInNew,
-                                            contentDescription = stringResource(R.string.llm_api_key_guidance_get),
+                                            Icons.Default.ContentPaste,
+                                            contentDescription = stringResource(R.string.label_paste),
                                         )
+                                    }
+                                }
+                                wizardPage.currentProviderInfo?.let { providerInfo ->
+                                    Spacer(Modifier.width(4.dp))
+                                    TooltipBox(
+                                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                            TooltipAnchorPosition.Above,
+                                        ),
+                                        tooltip = {
+                                            PlainTooltip { Text(stringResource(R.string.llm_api_key_guidance_get)) }
+                                        },
+                                        state = rememberTooltipState(),
+                                    ) {
+                                        val uriHandler = LocalUriHandler.current
+                                        IconButton(
+                                            onClick = {
+                                                uriHandler.openUri(providerInfo.platformUrl)
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.AutoMirrored.Default.OpenInNew,
+                                                contentDescription = stringResource(R.string.llm_api_key_guidance_get),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -875,7 +915,6 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(16.dp))
                     Text(
@@ -883,8 +922,6 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                             R.string.setup_wizard_finish_message_llm,
                             wizardPage.firstMessage,
                         ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -903,9 +940,7 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                 ProvideCompatibleShapes {
                     val size = ButtonDefaults.MediumContainerHeight
                     Button(
-                        onClick = {
-                            // TODO: handle finish
-                        },
+                        onClick = ::finish,
                         shapes = ButtonDefaults.shapesFor(size),
                         contentPadding = ButtonDefaults.contentPaddingFor(size),
                     ) {
@@ -935,12 +970,12 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                         when (it) {
                             is StreamFrame.Append -> {
                                 wizardPage.firstMessage += it.text
-                                wizardPage.apiConfigurationError = false
                             }
 
                             is StreamFrame.End -> {}
                             is StreamFrame.ToolCall -> {}
                         }
+                        wizardPage.apiConfigurationError = false
                     }
                     wizardPage.apiConfigurationError = false
                 } catch (e: Throwable) {
@@ -951,8 +986,12 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
         }
     }
 
-    override val canContinue = false
-    override val nextPage: ((wizardPage: WizardPage) -> Unit)? = null
+    fun finish() {
+
+    }
+
+    override val canContinue = true
+    override val nextPage: (wizardPage: WizardPage) -> Unit = { finish() }
 }
 
 @Serializable

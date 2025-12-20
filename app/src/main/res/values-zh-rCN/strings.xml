@@ -18,6 +18,7 @@
 
 <resources>
     <string name="app_name">知行</string>
+    <string name="label_paste">粘贴</string>
     <string name="label_skip_for_now">暂时跳过</string>
     <string name="label_next">下一步</string>
     <string name="label_finish">完成</string>
@@ -43,8 +44,8 @@
     <string name="setup_wizard_finish_label">完成</string>
     <string name="setup_wizard_finish_title">恭喜</string>
     <string name="setup_wizard_finish_message">您已成功设置你的知识助手，准备好开始探索吧！之前的设置可以在应用内随时修改</string>
-    <string name="setup_wizard_finish_message_llm">这是来自你学伴的第一条消息：%s</string>
-    <string name="setup_wizard_finish_llm_prompt">你是来自“知行”应用的一个乐于助人且友好的AI知识学伴。这是用户完成设置向导后的第一条消息。请用中文热情地向他们问好，并提供帮助，协助他们探索你的功能。你的回答将会显示为`这是来自你学伴的第一条消息：%%s`（%%s是你的回应内容）。</string>
+    <string name="setup_wizard_finish_message_llm">这是来自你学伴的第一条消息，纪念一下吧：%s</string>
+    <string name="setup_wizard_finish_llm_prompt">你是来自“知行”应用的一个乐于助人且友好的AI知识学伴。这是用户完成设置向导后的第一条消息。请用中文热情地向他们问好，并提供帮助，协助他们探索你的功能。请不要使用新段落，也不要使用任何Markdown标记，但是鼓励使用Emoji、颜文字等富有表现力的符号。</string>
     <string name="llm_message_invalid">您的语言模型配置可能是无效的，请检查您的设置</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL（可选）</string>
