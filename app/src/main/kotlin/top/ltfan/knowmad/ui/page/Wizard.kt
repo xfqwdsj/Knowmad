@@ -168,6 +168,12 @@ class WizardPage(
         val insets = AppWindowInsets + contentPadding
         val horizontalPadding = insets.only { horizontal }.asPaddingValues()
 
+        val hasMessages = messageItems.any { it.second }
+        val messagesBackgroundColor by animateColorAsState(
+            if (hasMessages) MaterialTheme.colorScheme.errorContainer
+            else Color.Transparent,
+        )
+
         Surface {
             Column(
                 Modifier
@@ -187,7 +193,7 @@ class WizardPage(
                         .padding(horizontalPadding)
                         .padding(horizontal = 8.dp),
                     shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.errorContainer,
+                    color = messagesBackgroundColor,
                 ) {
                     Column {
                         AnimatedContent(
