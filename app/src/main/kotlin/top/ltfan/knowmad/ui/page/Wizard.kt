@@ -32,9 +32,11 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -83,6 +85,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialShapes
@@ -961,20 +964,37 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                 )
             }
             AnimatedVisibility(
-                visible = wizardPage.firstMessage.isNotEmpty(),
+                visible = !wizardPage.apiConfigurationError,
+                enter = fadeIn() + expandVertically(
+                    expandFrom = Alignment.Top,
+                    clip = false,
+                ),
+                exit = fadeOut() + shrinkVertically(
+                    shrinkTowards = Alignment.Top,
+                    clip = false,
+                ),
             ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        stringResource(
-                            R.string.setup_wizard_finish_message_llm,
-                            wizardPage.firstMessage,
-                        ),
-                    )
+                Column {
+                    Spacer(Modifier.height(24.dp))
+                    AnimatedContent(
+                        targetState = wizardPage.firstMessage,
+                        modifier = Modifier.fillMaxWidth(),
+                        transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
+                        contentAlignment = Alignment.TopCenter,
+                        contentKey = { it.isEmpty() },
+                    ) { firstMessage ->
+                        if (firstMessage.isNotEmpty()) {
+                            Text(
+                                stringResource(
+                                    R.string.setup_wizard_finish_message_llm,
+                                    wizardPage.firstMessage,
+                                ),
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        } else {
+                            LoadingIndicator()
+                        }
+                    }
                 }
             }
             TitleContentSpacer()
