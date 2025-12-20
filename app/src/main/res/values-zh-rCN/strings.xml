@@ -40,6 +40,8 @@
     <string name="setup_wizard_advanced_title">高级设置</string>
     <string name="setup_wizard_advanced_message">配置模型和API连接的高级选项</string>
     <string name="setup_wizard_finish_label">完成</string>
+    <string name="setup_wizard_finish_title">恭喜</string>
+    <string name="setup_wizard_finish_message">您已成功设置你的知识助手，准备好开始探索吧！之前的设置可以在应用内随时修改</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL（可选）</string>
     <string name="llm_api_base_url_input_message">留空以使用所选提供商的默认URL</string>

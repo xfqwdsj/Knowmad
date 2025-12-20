@@ -60,6 +60,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.EnhancedEncryption
@@ -252,7 +253,11 @@ class WizardPage(
                         },
                         enabled = currentPage.canContinue,
                     ) {
-                        Text(stringResource(R.string.label_next))
+                        if (currentPage.nextPage != null) {
+                            Text(stringResource(R.string.label_next))
+                        } else {
+                            Text(stringResource(R.string.label_finish))
+                        }
                     }
                     Spacer(Modifier.width(16.dp))
                 }
@@ -865,7 +870,6 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
                 title = R.string.setup_wizard_advanced_title,
                 message = R.string.setup_wizard_advanced_message,
             )
-            TitleContentSpacer()
         }
     }
 
@@ -880,7 +884,22 @@ private data object FinishPage : WizardSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun AppViewModel.Content() {
-
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(contentPadding + PaddingValues(16.dp)),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            StaticTitle(
+                icon = {
+                    TitleIcon(Icons.Default.Celebration)
+                },
+                title = R.string.setup_wizard_finish_title,
+                message = R.string.setup_wizard_finish_message,
+            )
+        }
     }
 
     override val canContinue = true

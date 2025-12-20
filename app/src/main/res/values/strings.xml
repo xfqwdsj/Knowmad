@@ -40,6 +40,8 @@
     <string name="setup_wizard_advanced_title">Advanced Settings</string>
     <string name="setup_wizard_advanced_message">Configure advanced options for the model and API connection</string>
     <string name="setup_wizard_finish_label">Finish</string>
+    <string name="setup_wizard_finish_title">Congratulations</string>
+    <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL (optional)</string>
     <string name="llm_api_base_url_input_message">Leave blank to use the default URL for the selected provider</string>
