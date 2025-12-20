@@ -57,6 +57,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Celebration
@@ -253,16 +254,12 @@ class WizardPage(
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                currentPage.nextPage?.invoke(this@WizardPage) // TODO: handle finish
+                                currentPage.nextPage?.invoke(this@WizardPage)
                             },
                             shapes = ButtonDefaults.shapes(),
                             enabled = currentPage.canContinue,
                         ) {
-                            if (currentPage.nextPage != null) {
-                                Text(stringResource(R.string.label_next))
-                            } else {
-                                Text(stringResource(R.string.label_finish))
-                            }
+                            Text(stringResource(R.string.label_next))
                         }
                         Spacer(Modifier.width(16.dp))
                     }
@@ -817,6 +814,7 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 
 @Serializable
 private data object FinishPage : WizardSubPage() {
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun AppViewModel.Content() {
@@ -835,10 +833,39 @@ private data object FinishPage : WizardSubPage() {
                 title = R.string.setup_wizard_finish_title,
                 message = R.string.setup_wizard_finish_message,
             )
+            TitleContentSpacer()
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                    TooltipAnchorPosition.Above,
+                ),
+                tooltip = {
+                    PlainTooltip {
+                        Text(stringResource(R.string.label_finish))
+                    }
+                },
+                state = rememberTooltipState(),
+            ) {
+                ProvideCompatibleShapes {
+                    val size = ButtonDefaults.ExtraLargeContainerHeight
+                    Button(
+                        onClick = {
+                            // TODO: handle finish
+                        },
+                        shapes = ButtonDefaults.shapesFor(size),
+                        contentPadding = ButtonDefaults.contentPaddingFor(size),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Default.ArrowForward,
+                            contentDescription = stringResource(R.string.label_finish),
+                            modifier = Modifier.size(ButtonDefaults.iconSizeFor(size)),
+                        )
+                    }
+                }
+            }
         }
     }
 
-    override val canContinue = true
+    override val canContinue = false
     override val nextPage: ((wizardPage: WizardPage) -> Unit)? = null
 }
 
