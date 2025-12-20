@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMCapabilities
-import top.ltfan.knowmad.data.llm.LLMCapabilityItem
+import top.ltfan.knowmad.data.llm.LLMCapabilityInfo
 import top.ltfan.knowmad.ui.util.SharedTransitionScopes
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -123,7 +123,7 @@ fun ModelCapabilitiesList(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun CapabilityToggleButton(
-    item: LLMCapabilityItem.Capability,
+    item: LLMCapabilityInfo.Capability,
     enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
@@ -201,14 +201,14 @@ private fun CapabilityToggleButton(
 @Composable
 private fun CapabilityListItem(
     capabilities: List<LLMCapability>,
-    item: LLMCapabilityItem,
+    item: LLMCapabilityInfo,
     enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
     sharedTransitionScopes: SharedTransitionScopes? = null,
 ) {
     when (item) {
-        is LLMCapabilityItem.Category -> {
+        is LLMCapabilityInfo.Category -> {
             ListCategory(
                 capabilities = capabilities,
                 item = item,
@@ -219,7 +219,7 @@ private fun CapabilityListItem(
             )
         }
 
-        is LLMCapabilityItem.Capability -> {
+        is LLMCapabilityInfo.Capability -> {
             val isSelected = item.capability in capabilities
             CapabilityItem(
                 item = item,
@@ -238,7 +238,7 @@ private fun CapabilityListItem(
 @Composable
 private fun ListCategory(
     capabilities: List<LLMCapability>,
-    item: LLMCapabilityItem.Category,
+    item: LLMCapabilityInfo.Category,
     enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
@@ -269,7 +269,7 @@ private fun ListCategory(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CapabilityItem(
-    item: LLMCapabilityItem.Capability,
+    item: LLMCapabilityInfo.Capability,
     enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
@@ -306,12 +306,12 @@ private fun CapabilityItem(
     }
 }
 
-private fun getAllCapabilities(items: List<LLMCapabilityItem>): List<LLMCapabilityItem.Capability> {
-    val result = mutableListOf<LLMCapabilityItem.Capability>()
+private fun getAllCapabilities(items: List<LLMCapabilityInfo>): List<LLMCapabilityInfo.Capability> {
+    val result = mutableListOf<LLMCapabilityInfo.Capability>()
     for (item in items) {
         when (item) {
-            is LLMCapabilityItem.Capability -> result.add(item)
-            is LLMCapabilityItem.Category -> result.addAll(getAllCapabilities(item.items))
+            is LLMCapabilityInfo.Capability -> result.add(item)
+            is LLMCapabilityInfo.Category -> result.addAll(getAllCapabilities(item.items))
         }
     }
     return result
@@ -319,11 +319,11 @@ private fun getAllCapabilities(items: List<LLMCapabilityItem>): List<LLMCapabili
 
 @Immutable
 private interface SharedKey {
-    val item: LLMCapabilityItem.Capability
+    val item: LLMCapabilityInfo.Capability
 
     @Immutable
-    data class Label(override val item: LLMCapabilityItem.Capability) : SharedKey
+    data class Label(override val item: LLMCapabilityInfo.Capability) : SharedKey
 
     @Immutable
-    data class Container(override val item: LLMCapabilityItem.Capability) : SharedKey
+    data class Container(override val item: LLMCapabilityInfo.Capability) : SharedKey
 }

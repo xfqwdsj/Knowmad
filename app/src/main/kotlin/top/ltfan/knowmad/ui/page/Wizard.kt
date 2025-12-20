@@ -20,7 +20,6 @@ package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -61,7 +60,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Celebration
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Error
@@ -113,7 +111,6 @@ import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -130,10 +127,13 @@ import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
+import top.ltfan.knowmad.ui.component.LLMProviderItem
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.ListItemMaxWidth
+import top.ltfan.knowmad.ui.util.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -300,7 +300,7 @@ class WizardPage(
         )
 
     var selectedProvider by mutableStateOf<LLMProvider?>(null)
-    val currentProviderItem inline get() = SupportedLLMProviders[selectedProvider]
+    val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
 
     var baseUrl by mutableStateOf<String>("")
     var apiKey by mutableStateOf<String>("")
@@ -380,88 +380,18 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                for ((provider, item) in SupportedLLMProviders) {
-                    Provider(
+                for ((provider, info) in SupportedLLMProviders) {
+                    LLMProviderItem(
+                        info = info,
                         modifier = Modifier
-                            .widthIn(max = 360.dp)
+                            .widthIn(max = ListItemMaxWidth)
                             .fillMaxWidth(),
-                        icon = item.icon,
-                        label = item.label,
-                        description = item.description,
                         selected = wizardPage.selectedProvider == provider,
-                        onSelect = {
-                            wizardPage.selectedProvider = provider
-                            wizardPage.baseUrl = item.defaultBaseUrl
-                            wizardPage.apiKey = ""
-                        },
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    fun Provider(
-        modifier: Modifier = Modifier,
-        @DrawableRes icon: Int,
-        @StringRes label: Int,
-        @StringRes description: Int,
-        selected: Boolean,
-        onSelect: () -> Unit,
-    ) {
-        val background by animateColorAsState(
-            if (selected) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceContainerLow,
-        )
-        Surface(
-            modifier = modifier.padding(vertical = 8.dp),
-            shape = MaterialTheme.shapes.large,
-            color = background,
-            onClick = onSelect,
-        ) {
-            Row(
-                Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    AnimatedContent(
-                        targetState = selected,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        contentAlignment = Alignment.Center,
-                    ) { selected ->
-                        if (selected) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(36.dp),
-                            )
-                        } else {
-                            Icon(
-                                painterResource(icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(36.dp),
-                            )
-                        }
+                    ) {
+                        wizardPage.selectedProvider = provider
+                        wizardPage.baseUrl = info.defaultBaseUrl
+                        wizardPage.apiKey = ""
                     }
-                }
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(
-                        stringResource(label),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        stringResource(description),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                 }
             }
         }
@@ -519,7 +449,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     SecureTextField(
                         state = apiKeyTextFieldState,
                         modifier = Modifier
-                            .widthIn(max = 320.dp)
+                            .widthIn(max = TextFieldMaxWidth)
                             .fillMaxWidth()
                             .onFocusChanged {
                                 if (!it.isFocused) {
@@ -535,7 +465,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                 contentDescription = null,
                             )
                         },
-                        trailingIcon = wizardPage.currentProviderItem?.let { providerItem ->
+                        trailingIcon = wizardPage.currentProviderInfo?.let { providerInfo ->
                             {
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -549,7 +479,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                     val uriHandler = LocalUriHandler.current
                                     IconButton(
                                         onClick = {
-                                            uriHandler.openUri(providerItem.platformUrl)
+                                            uriHandler.openUri(providerInfo.platformUrl)
                                         },
                                     ) {
                                         Icon(
@@ -602,14 +532,14 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                         value = wizardPage.baseUrl,
                         onValueChange = { wizardPage.baseUrl = it },
                         modifier = Modifier
-                            .widthIn(max = 320.dp)
+                            .widthIn(max = TextFieldMaxWidth)
                             .fillMaxWidth(),
                         label = {
                             Text(stringResource(R.string.llm_api_base_url_input_label))
                         },
-                        placeholder = wizardPage.currentProviderItem?.let { providerItem ->
+                        placeholder = wizardPage.currentProviderInfo?.let { providerInfo ->
                             {
-                                Text(providerItem.defaultBaseUrl)
+                                Text(providerInfo.defaultBaseUrl)
                             }
                         },
                         supportingText = {
@@ -669,8 +599,8 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
         wizardPage.apiKey = apiKey
         if (wizardPage.baseUrl.isEmpty()) {
-            wizardPage.currentProviderItem?.let { providerItem ->
-                wizardPage.baseUrl = providerItem.defaultBaseUrl
+            wizardPage.currentProviderInfo?.let { providerInfo ->
+                wizardPage.baseUrl = providerInfo.defaultBaseUrl
             }
         }
         wizardPage.backStack.add(ModelSetupPage(wizardPage))
@@ -709,7 +639,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 TextField(
                     state = modelTextFieldState,
                     modifier = Modifier
-                        .widthIn(max = 320.dp)
+                        .widthIn(max = TextFieldMaxWidth)
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
                     label = {
@@ -757,9 +687,9 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                         if (model == null) {
                                             return@IconButton
                                         }
-                                        wizardPage.currentProviderItem?.let { providerItem ->
+                                        wizardPage.currentProviderInfo?.let { providerInfo ->
                                             uriHandler.openUri(
-                                                providerItem.getModelCapabilitiesUrl(model.id),
+                                                providerInfo.getModelCapabilitiesUrl(model.id),
                                             )
                                         }
                                     },
@@ -824,7 +754,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
         }
     }
 
-    val client = wizardPage.currentProviderItem?.convertToClient(
+    val client = wizardPage.currentProviderInfo?.convertToClient(
         wizardPage.apiKey,
         wizardPage.baseUrl,
     )
@@ -838,7 +768,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     val modelId inline get() = modelTextFieldState.text.toString()
 
     init {
-        wizardPage.currentProviderItem?.predefinedModels?.let { models ->
+        wizardPage.currentProviderInfo?.predefinedModels?.let { models ->
             knownModels.addAll(models)
         }
     }
