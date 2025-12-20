@@ -407,10 +407,14 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
                             .fillMaxWidth(),
                         selected = wizardPage.selectedProvider == provider,
                     ) {
+                        if (wizardPage.selectedProvider == provider) {
+                            return@LLMProviderItem
+                        }
                         wizardPage.selectedProvider = provider
                         wizardPage.baseUrl = info.defaultBaseUrl
                         wizardPage.apiKey = ""
                         wizardPage.selectedModel = null
+                        wizardPage.apiConfigurationError = false
                     }
                 }
             }
