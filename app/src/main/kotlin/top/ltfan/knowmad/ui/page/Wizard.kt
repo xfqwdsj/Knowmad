@@ -18,8 +18,11 @@
 
 package top.ltfan.knowmad.ui.page
 
+import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.streaming.StreamFrame
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -287,9 +290,9 @@ class WizardPage(
         }
     }
 
-    var cryptoInitializationError by mutableStateOf<Boolean>(false)
-    var isUsingPlaintext by mutableStateOf<Boolean>(false)
-    var apiConfigurationError by mutableStateOf<Boolean>(false)
+    var cryptoInitializationError by mutableStateOf(false)
+    var isUsingPlaintext by mutableStateOf(false)
+    var apiConfigurationError by mutableStateOf(false)
 
     val messageItems
         inline get() = listOf(
@@ -310,10 +313,13 @@ class WizardPage(
     var selectedProvider by mutableStateOf<LLMProvider?>(null)
     val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
 
-    var baseUrl by mutableStateOf<String>("")
-    var apiKey by mutableStateOf<String>("")
+    var baseUrl by mutableStateOf("")
+    var apiKey by mutableStateOf("")
 
     var selectedModel by mutableStateOf<LLModel?>(null)
+
+    var client: LLMClient? = null
+    var firstMessage by mutableStateOf("")
 
     val steps
         @Composable inline get() = listOf(
@@ -738,7 +744,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
             wizardPage.selectedProvider?.let { provider ->
                 withContext(Dispatchers.IO) {
                     try {
-                        client?.models()?.forEach { id ->
+                        wizardPage.client?.models()?.forEach { id ->
                             if (id !in knownModelIds) {
                                 knownModels.add(LLModel(provider, id, listOf(), 0))
                             }
@@ -757,17 +763,15 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 wizardPage.selectedModel = null
                 return@LaunchedEffect
             }
+            if (wizardPage.selectedModel?.capabilities?.isNotEmpty() == true) {
+                return@LaunchedEffect
+            }
             val model = knownModels.find { it.id == modelId }
             wizardPage.selectedModel = model ?: wizardPage.selectedProvider?.let { provider ->
                 LLModel(provider, modelId, listOf(), 0)
             }
         }
     }
-
-    val client = wizardPage.currentProviderInfo?.convertToClient(
-        wizardPage.apiKey,
-        wizardPage.baseUrl,
-    )
 
     @Transient
     val knownModels = mutableStateListOf<LLModel>()
@@ -778,6 +782,10 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     val modelId inline get() = modelTextFieldState.text.toString()
 
     init {
+        wizardPage.client = wizardPage.currentProviderInfo?.convertToClient(
+            wizardPage.apiKey,
+            wizardPage.baseUrl,
+        )
         wizardPage.currentProviderInfo?.predefinedModels?.let { models ->
             knownModels.addAll(models)
         }
@@ -815,12 +823,13 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 
     override val canContinue = true
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(FinishPage)
+        wizardPage.firstMessage = ""
+        wizardPage.backStack.add(FinishPage(wizardPage))
     }
 }
 
 @Serializable
-private data object FinishPage : WizardSubPage() {
+private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -833,13 +842,52 @@ private data object FinishPage : WizardSubPage() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            StaticTitle(
-                icon = {
-                    TitleIcon(Icons.Default.Celebration)
-                },
-                title = R.string.setup_wizard_finish_title,
-                message = R.string.setup_wizard_finish_message,
+            AnimatedBackgroundIcon(
+                shape1 = MaterialShapes.Cookie9Sided,
+                color1 = MaterialTheme.colorScheme.primaryContainer,
+                rotation1 = 0f,
+                icon1 = { TitleIcon(Icons.Default.Celebration) },
+                shape2 = MaterialShapes.Cookie12Sided,
+                color2 = MaterialTheme.colorScheme.errorContainer,
+                rotation2 = 135f,
+                icon2 = { TitleIcon(Icons.Default.Error) },
+                displayShape2 = wizardPage.apiConfigurationError,
             )
+            IconTitleSpacer()
+            AnimatedContent(
+                targetState = wizardPage.apiConfigurationError,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                contentAlignment = Alignment.Center,
+            ) { apiConfigurationError ->
+                TitleText(
+                    title =
+                        if (!apiConfigurationError) R.string.setup_wizard_finish_title
+                        else R.string.label_need_attention,
+                    message =
+                        if (!apiConfigurationError) R.string.setup_wizard_finish_message
+                        else R.string.llm_message_invalid,
+                )
+            }
+            AnimatedVisibility(
+                visible = wizardPage.firstMessage.isNotEmpty(),
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(
+                            R.string.setup_wizard_finish_message_llm,
+                            wizardPage.firstMessage,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
             TitleContentSpacer()
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -853,7 +901,7 @@ private data object FinishPage : WizardSubPage() {
                 state = rememberTooltipState(),
             ) {
                 ProvideCompatibleShapes {
-                    val size = ButtonDefaults.ExtraLargeContainerHeight
+                    val size = ButtonDefaults.MediumContainerHeight
                     Button(
                         onClick = {
                             // TODO: handle finish
@@ -867,6 +915,37 @@ private data object FinishPage : WizardSubPage() {
                             modifier = Modifier.size(ButtonDefaults.iconSizeFor(size)),
                         )
                     }
+                }
+            }
+        }
+
+        val prompt = stringResource(R.string.setup_wizard_finish_llm_prompt)
+        LaunchedEffect(Unit) {
+            val client = wizardPage.client ?: return@LaunchedEffect
+            val model = wizardPage.selectedModel ?: return@LaunchedEffect
+            withContext(Dispatchers.IO) {
+                try {
+                    val response = client.executeStreaming(
+                        prompt = prompt("first-message") {
+                            system(prompt)
+                        },
+                        model = model,
+                    )
+                    response.collect {
+                        when (it) {
+                            is StreamFrame.Append -> {
+                                wizardPage.firstMessage += it.text
+                                wizardPage.apiConfigurationError = false
+                            }
+
+                            is StreamFrame.End -> {}
+                            is StreamFrame.ToolCall -> {}
+                        }
+                    }
+                    wizardPage.apiConfigurationError = false
+                } catch (e: Throwable) {
+                    wizardPage.apiConfigurationError = true
+                    e.printStackTrace()
                 }
             }
         }

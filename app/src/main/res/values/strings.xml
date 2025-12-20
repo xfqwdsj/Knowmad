@@ -24,6 +24,7 @@
     <string name="label_back">Back</string>
     <string name="label_retry">Retry</string>
     <string name="label_help">Help</string>
+    <string name="label_need_attention">Needs Attention</string>
     <string name="setup_wizard_welcome_label">Welcome</string>
     <string name="setup_wizard_welcome_title">Welcome to Knowmad</string>
     <string name="setup_wizard_welcome_message">Let\'s set up your knowledge companion in a few easy steps</string>
@@ -42,6 +43,8 @@
     <string name="setup_wizard_finish_label">Finish</string>
     <string name="setup_wizard_finish_title">Congratulations</string>
     <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
+    <string name="setup_wizard_finish_message_llm">This is the first message from your companion: %s</string>
+    <string name="setup_wizard_finish_llm_prompt">You are a helpful and friendly AI knowledge companion from the app Knowmad. This is your first message to the user after they have completed the setup wizard. Greet them warmly and offer assistance in exploring your capabilities in English. Your response will be displayed as `This is the first message from your companion: %%s` (%%s is your response content).</string>
     <string name="llm_message_invalid">The selected model configuration seems invalid. Please review your settings</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL (optional)</string>
