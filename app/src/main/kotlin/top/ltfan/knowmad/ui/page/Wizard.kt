@@ -802,12 +802,15 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
             }
         }
 
+        var isFirstTimeLaunchedByModelId by remember { mutableStateOf(true) }
         LaunchedEffect(modelId) {
-            if (modelId.isEmpty()) {
-                wizardPage.selectedModel = null
+            if (isFirstTimeLaunchedByModelId) {
+                isFirstTimeLaunchedByModelId = false
                 return@LaunchedEffect
             }
-            if (wizardPage.selectedModel?.capabilities?.isNotEmpty() == true) {
+
+            if (modelId.isEmpty()) {
+                wizardPage.selectedModel = null
                 return@LaunchedEffect
             }
             val model = knownModels.find { it.id == modelId }
