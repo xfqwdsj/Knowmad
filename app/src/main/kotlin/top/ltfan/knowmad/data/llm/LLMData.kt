@@ -48,7 +48,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_deepseek_label,
         description = R.string.llm_provider_deepseek_description,
         defaultBaseUrl = "https://api.deepseek.com",
-        defaultChatCompletionsPath = "chat/completions",
         platformUrl = "https://platform.deepseek.com",
         predefinedModels = setOf(
             DeepSeekModels.DeepSeekChat,
@@ -68,7 +67,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_openai_label,
         description = R.string.llm_provider_openai_description,
         defaultBaseUrl = "https://api.openai.com",
-        defaultChatCompletionsPath = "v1/chat/completions",
         platformUrl = "https://platform.openai.com",
         getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
     ) { apiKey, baseUrl ->
@@ -84,7 +82,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_anthropic_label,
         description = R.string.llm_provider_anthropic_description,
         defaultBaseUrl = "https://api.anthropic.com",
-        defaultChatCompletionsPath = "",
         platformUrl = "https://console.anthropic.com",
         getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
     ) { apiKey, baseUrl ->
@@ -100,7 +97,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_google_label,
         description = R.string.llm_provider_google_description,
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
-        defaultChatCompletionsPath = "",
         platformUrl = "https://aistudio.google.com/",
         getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
     ) { apiKey, baseUrl ->
@@ -116,7 +112,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_openrouter_label,
         description = R.string.llm_provider_openrouter_description,
         defaultBaseUrl = "https://openrouter.ai",
-        defaultChatCompletionsPath = "api/v1/chat/completions",
         platformUrl = "https://openrouter.ai/keys",
         getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
     ) { apiKey, baseUrl ->
@@ -132,7 +127,6 @@ val SupportedLLMProviders = mapOf(
         label = R.string.llm_provider_alibaba_label,
         description = R.string.llm_provider_alibaba_description,
         defaultBaseUrl = "https://dashscope.aliyuncs.com/",
-        defaultChatCompletionsPath = "compatible-mode/v1/chat/completions",
         platformUrl = "https://dashscope.aliyun.com/",
         getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
     ) { apiKey, baseUrl ->
@@ -152,7 +146,6 @@ data class LLMProviderInfo(
     @param:StringRes val label: Int,
     @param:StringRes val description: Int,
     val defaultBaseUrl: String,
-    val defaultChatCompletionsPath: String,
     val platformUrl: String,
     val predefinedModels: Set<LLModel> = emptySet(),
     val getModelCapabilitiesUrl: (id: String) -> String,
