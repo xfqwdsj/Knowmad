@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -77,6 +78,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -297,6 +299,8 @@ class WizardPage(
 
     var baseUrl by mutableStateOf<String>("")
     var apiKey by mutableStateOf<String>("")
+
+    var selectedModel by mutableStateOf<LLModel?>(null)
 
     val steps
         @Composable inline get() = listOf(
@@ -588,13 +592,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             }
                         },
                     )
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(
-                        Modifier
-                            .widthIn(max = 380.dp)
-                            .fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(32.dp))
+                    Divider()
                     TextField(
                         value = wizardPage.baseUrl,
                         onValueChange = { wizardPage.baseUrl = it },
@@ -714,12 +712,32 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     },
                 )
             }
-            selectedModel?.let { model ->
-                ModelCapabilitiesFlow(
-                    model.capabilities,
-                    { selectedModel = model.copy(capabilities = model.capabilities + it) },
-                    { selectedModel = model.copy(capabilities = model.capabilities - it) },
-                )
+            AnimatedContent(
+                targetState = wizardPage.selectedModel,
+                modifier = Modifier.fillMaxWidth(),
+                transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
+            ) { model ->
+                if (model == null) {
+                    return@AnimatedContent
+                }
+
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Divider { Text(stringResource(R.string.llm_capability_label)) }
+                    ModelCapabilitiesFlow(
+                        capabilities = model.capabilities,
+                        onAdd = {
+                            wizardPage.selectedModel =
+                                model.copy(capabilities = model.capabilities + it)
+                        },
+                        onRemove = {
+                            wizardPage.selectedModel =
+                                model.copy(capabilities = model.capabilities - it)
+                        },
+                    )
+                }
             }
         }
 
@@ -741,11 +759,13 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 
         LaunchedEffect(modelId) {
             if (modelId.isEmpty()) {
-                selectedModel = null
+                wizardPage.selectedModel = null
                 return@LaunchedEffect
             }
             val model = knownModels.find { it.id == modelId }
-            selectedModel = model
+            wizardPage.selectedModel = model ?: wizardPage.selectedProvider?.let { provider ->
+                LLModel(provider, modelId, listOf(), 0)
+            }
         }
     }
 
@@ -759,10 +779,8 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     val knownModelIds inline get() = knownModels.map { it.id }
 
     @Transient
-    val modelTextFieldState = TextFieldState()
+    val modelTextFieldState = TextFieldState(wizardPage.selectedModel?.id ?: "")
     val modelId inline get() = modelTextFieldState.text.toString()
-
-    var selectedModel by mutableStateOf<LLModel?>(null)
 
     init {
         wizardPage.currentProviderItem?.predefinedModels?.let { models ->
@@ -954,4 +972,31 @@ private fun TitleIcon(
 @Composable
 private fun TitleContentSpacer() {
     Spacer(Modifier.height(36.dp))
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun Divider(
+    label: @Composable (RowScope.() -> Unit)? = null,
+) {
+    Column {
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(
+            Modifier
+                .widthIn(max = 380.dp)
+                .fillMaxWidth(),
+        )
+        if (label != null) {
+            Spacer(Modifier.height(8.dp))
+            CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.labelLargeEmphasized) {
+                Row {
+                    Spacer(Modifier.width(16.dp))
+                    label()
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        } else {
+            Spacer(Modifier.height(32.dp))
+        }
+    }
 }

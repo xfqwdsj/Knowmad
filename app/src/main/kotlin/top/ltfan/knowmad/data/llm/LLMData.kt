@@ -161,8 +161,8 @@ val LLMCapabilities = listOf(
     ),
     LLMCapabilityItem.Capability(
         capability = LLMCapability.Completion,
-        label = R.string.llm_capability_openai_endpoint_completion_label,
-        description = R.string.llm_capability_openai_endpoint_completion_description,
+        label = R.string.llm_capability_completion_label,
+        description = R.string.llm_capability_completion_description,
     ),
     LLMCapabilityItem.Capability(
         capability = LLMCapability.PromptCaching,
@@ -202,8 +202,8 @@ val LLMCapabilities = listOf(
         items = listOf(
             LLMCapabilityItem.Capability(
                 capability = LLMCapability.OpenAIEndpoint.Completions,
-                label = R.string.llm_capability_openai_endpoint_completion_label,
-                description = R.string.llm_capability_openai_endpoint_completion_description,
+                label = R.string.llm_capability_openai_endpoint_chat_completions_label,
+                description = R.string.llm_capability_openai_endpoint_chat_completions_description,
             ),
             LLMCapabilityItem.Capability(
                 capability = LLMCapability.OpenAIEndpoint.Responses,
