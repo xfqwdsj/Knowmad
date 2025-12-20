@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -120,6 +121,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
@@ -706,6 +708,45 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     lineLimits = TextFieldLineLimits.SingleLine,
                 )
             }
+            Spacer(Modifier.height(16.dp))
+            TextField(
+                value = wizardPage.selectedModel?.contextLength?.toString()
+                    .takeIf { it != "0" } ?: "",
+                onValueChange = {
+                    wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                        contextLength = it.toLongOrNull() ?: 0,
+                    )
+                },
+                modifier = Modifier
+                    .widthIn(max = TextFieldMaxWidth)
+                    .fillMaxWidth(),
+                label = {
+                    Text(stringResource(R.string.llm_context_length_label))
+                },
+                placeholder = { Text("0") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                ),
+            )
+            Spacer(Modifier.height(16.dp))
+            TextField(
+                value = wizardPage.selectedModel?.maxOutputTokens?.toString() ?: "",
+                onValueChange = {
+                    wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                        maxOutputTokens = it.toLongOrNull(),
+                    )
+                },
+                modifier = Modifier
+                    .widthIn(max = TextFieldMaxWidth)
+                    .fillMaxWidth(),
+                label = {
+                    Text(stringResource(R.string.llm_max_output_tokens_label))
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                ),
+                singleLine = true,
+            )
             AnimatedContent(
                 targetState = wizardPage.selectedModel == null,
                 modifier = Modifier.fillMaxWidth(),
@@ -815,7 +856,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
             }
             val model = knownModels.find { it.id == modelId }
             wizardPage.selectedModel = model ?: wizardPage.selectedProvider?.let { provider ->
-                LLModel(provider, modelId, listOf(), 0)
+                LLModel(provider, modelId, listOf(), contextLength, maxOutputTokens)
             }
         }
     }
@@ -827,6 +868,10 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @Transient
     val modelTextFieldState = TextFieldState(wizardPage.selectedModel?.id ?: "")
     val modelId inline get() = modelTextFieldState.text.toString()
+
+    val contextLength inline get() = wizardPage.selectedModel?.contextLength ?: 0
+
+    val maxOutputTokens inline get() = wizardPage.selectedModel?.maxOutputTokens
 
     init {
         wizardPage.client = wizardPage.currentProviderInfo?.convertToClient(

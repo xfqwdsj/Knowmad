@@ -55,6 +55,8 @@
     <string name="llm_api_key_message_secure">Your API Key will be stored securely on your device and will not be shared with any third parties</string>
     <string name="llm_api_key_message_unsecure">Your API Key will be stored in plaintext on your device. This may pose security risks, but we will not share it with any third parties</string>
     <string name="llm_model_id_label">Model ID</string>
+    <string name="llm_context_length_label">Context Length</string>
+    <string name="llm_max_output_tokens_label">Max Output Tokens</string>
     <string name="llm_capability_label">Capabilities</string>
     <string name="llm_capability_guidance_query">How do I know the model capabilities?</string>
     <string name="llm_capability_speculation_label">Speculative Reasoning</string>

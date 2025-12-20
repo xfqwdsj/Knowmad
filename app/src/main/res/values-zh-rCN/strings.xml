@@ -55,6 +55,8 @@
     <string name="llm_api_key_message_secure">您的API Key将安全地存储在您的设备上，不会与任何第三方共享</string>
     <string name="llm_api_key_message_unsecure">您的API Key将以明文形式存储在您的设备上。这可能会带来安全风险，但我们不会与任何第三方共享它</string>
     <string name="llm_model_id_label">模型ID</string>
+    <string name="llm_context_length_label">上下文长度</string>
+    <string name="llm_max_output_tokens_label">最大输出Token数</string>
     <string name="llm_capability_label">模型能力</string>
     <string name="llm_capability_guidance_query">如何查询模型能力？</string>
     <string name="llm_capability_speculation_label">推测推理</string>
