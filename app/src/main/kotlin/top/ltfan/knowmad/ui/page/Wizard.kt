@@ -58,7 +58,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
@@ -548,7 +548,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                         },
                                     ) {
                                         Icon(
-                                            Icons.AutoMirrored.Default.Help,
+                                            Icons.AutoMirrored.Default.OpenInNew,
                                             contentDescription = stringResource(R.string.llm_api_key_guidance_get),
                                         )
                                     }
@@ -761,7 +761,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                                     modifier = Modifier.size(24.dp),
                                 ) {
                                     Icon(
-                                        Icons.AutoMirrored.Default.Help,
+                                        Icons.AutoMirrored.Default.OpenInNew,
                                         contentDescription = stringResource(R.string.llm_capability_guidance_query),
                                     )
                                 }
