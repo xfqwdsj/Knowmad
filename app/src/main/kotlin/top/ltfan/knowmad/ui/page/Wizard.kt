@@ -331,15 +331,24 @@ class WizardPage(
     var client: LLMClient? = null
     var firstMessage by mutableStateOf("")
 
-    val steps
-        @Composable inline get() = listOf(
-            StepItem(stringResource(R.string.setup_wizard_welcome_label)),
-            StepItem(stringResource(R.string.setup_wizard_provider_label)),
-            StepItem(stringResource(R.string.setup_wizard_api_label)),
-            StepItem(stringResource(R.string.setup_wizard_model_label)),
-            StepItem(stringResource(R.string.setup_wizard_advanced_label)),
-            StepItem(stringResource(R.string.setup_wizard_finish_label)),
-        )
+    @Transient
+    private lateinit var _steps: List<StepItem>
+
+    val steps: List<StepItem>
+        @Composable get() {
+            if (::_steps.isInitialized) {
+                return _steps
+            }
+            val list = mutableListOf<StepItem>()
+            list.add(WelcomePage.stepItem)
+            var currentInfo: WizardSubPageInfo? = WelcomePage.nextInfo
+            while (currentInfo != null) {
+                list.add(currentInfo.stepItem)
+                currentInfo = currentInfo.nextInfo
+            }
+            _steps = list
+            return _steps
+        }
 }
 
 @Immutable
@@ -348,8 +357,17 @@ data class WizardMessageItem(
     @param:StringRes val message: Int,
 )
 
+interface WizardSubPageInfo {
+    val stepItem: StepItem @Composable get
+    val nextInfo: WizardSubPageInfo?
+}
+
 @Serializable
-private data object WelcomePage : WizardSubPage() {
+private data object WelcomePage : WizardSubPage(), WizardSubPageInfo {
+    override val stepItem
+        @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
+    override val nextInfo: WizardSubPageInfo = ProviderPage
+
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -380,6 +398,12 @@ private data object WelcomePage : WizardSubPage() {
 
 @Serializable
 private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem: StepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_provider_label))
+        override val nextInfo: WizardSubPageInfo = ApiSetupPage
+    }
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -434,6 +458,12 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
 
 @Serializable
 private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem: StepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_api_label))
+        override val nextInfo: WizardSubPageInfo = ModelSetupPage
+    }
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -672,6 +702,12 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 
 @Serializable
 private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem: StepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_model_label))
+        override val nextInfo: WizardSubPageInfo = AdvancedSettingsPage
+    }
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -894,6 +930,12 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 
 @Serializable
 private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem: StepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_advanced_label))
+        override val nextInfo: WizardSubPageInfo = FinishPage
+    }
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
@@ -925,6 +967,12 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 
 @Serializable
 private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem: StepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))
+        override val nextInfo: WizardSubPageInfo? = null
+    }
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
