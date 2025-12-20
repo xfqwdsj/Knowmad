@@ -41,6 +41,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -983,10 +984,12 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun AppViewModel.Content() {
+        val scrollState = rememberScrollState()
+
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(contentPadding + PaddingValues(16.dp)),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1109,6 +1112,24 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                     wizardPage.apiConfigurationError = true
                     e.printStackTrace()
                 }
+            }
+        }
+
+        var shouldFollow by remember { mutableStateOf(false) }
+        val isScrolling by scrollState.interactionSource.collectIsDraggedAsState()
+
+        LaunchedEffect(isScrolling) {
+            if (!isScrolling) {
+                shouldFollow = scrollState.value >= scrollState.maxValue - 100
+            }
+        }
+
+        LaunchedEffect(scrollState.maxValue) {
+            if (shouldFollow) {
+                scrollState.animateScrollTo(
+                    scrollState.maxValue,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                )
             }
         }
     }
