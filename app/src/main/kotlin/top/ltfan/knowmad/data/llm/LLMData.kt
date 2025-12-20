@@ -48,6 +48,7 @@ val SupportedLLMProviders = mapOf(
             DeepSeekModels.DeepSeekChat,
             DeepSeekModels.DeepSeekReasoner,
         ),
+        getModelCapabilitiesUrl = { "https://api-docs.deepseek.com/quick_start/pricing" },
     ) { apiKey, baseUrl ->
         DeepSeekLLMClient(
             apiKey = apiKey,
@@ -63,6 +64,7 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://api.openai.com",
         defaultChatCompletionsPath = "v1/chat/completions",
         platformUrl = "https://platform.openai.com",
+        getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
     ) { apiKey, baseUrl ->
         OpenAILLMClient(
             apiKey = apiKey,
@@ -78,6 +80,7 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://openrouter.ai",
         defaultChatCompletionsPath = "api/v1/chat/completions",
         platformUrl = "https://openrouter.ai/keys",
+        getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
     ) { apiKey, baseUrl ->
         OpenRouterLLMClient(
             apiKey = apiKey,
@@ -98,6 +101,7 @@ data class LLMProviderItem(
     val defaultChatCompletionsPath: String,
     val platformUrl: String,
     val predefinedModels: Set<LLModel> = emptySet(),
+    val getModelCapabilitiesUrl: (id: String) -> String,
     val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
 )
 

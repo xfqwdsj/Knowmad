@@ -49,6 +49,7 @@
     <string name="llm_api_key_message_unsecure">您的API Key将以明文形式存储在您的设备上。这可能会带来安全风险，但我们不会与任何第三方共享它</string>
     <string name="llm_model_id_label">模型ID</string>
     <string name="llm_capability_label">模型能力</string>
+    <string name="llm_capability_guidance_query">如何查询模型能力？</string>
     <string name="llm_capability_speculation_label">推测推理</string>
     <string name="llm_capability_speculation_description">表示模型在缺乏精确或可验证答案时，是否能够生成推测性、假设性或非确定性的响应。该能力通常用于探索、头脑风暴或不确定条件下的推理</string>
     <string name="llm_capability_temperature_label">温度控制</string>

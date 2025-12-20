@@ -49,6 +49,7 @@
     <string name="llm_api_key_message_unsecure">Your API Key will be stored in plaintext on your device. This may pose security risks, but we will not share it with any third parties</string>
     <string name="llm_model_id_label">Model ID</string>
     <string name="llm_capability_label">Capabilities</string>
+    <string name="llm_capability_guidance_query">How do I know the model capabilities?</string>
     <string name="llm_capability_speculation_label">Speculative Reasoning</string>
     <string name="llm_capability_speculation_description">Indicates whether the model can generate speculative, hypothetical, or non-deterministic responses when exact or verified answers are unavailable This capability is typically used for exploration, brainstorming, or reasoning under uncertainty</string>
     <string name="llm_capability_temperature_label">Temperature Control</string>

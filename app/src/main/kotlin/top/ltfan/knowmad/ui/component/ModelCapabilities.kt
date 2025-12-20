@@ -68,6 +68,7 @@ fun ModelCapabilitiesFlow(
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     sharedTransitionScopes: SharedTransitionScopes? = null,
 ) {
     val allItems = remember { getAllCapabilities(LLMCapabilities) }
@@ -82,6 +83,7 @@ fun ModelCapabilitiesFlow(
             val isSelected = item.capability in capabilities
             CapabilityToggleButton(
                 item = item,
+                enabled = enabled,
                 selected = isSelected,
                 onSelectedChange = { selected ->
                     if (selected) onAdd(item.capability) else onRemove(item.capability)
@@ -98,6 +100,7 @@ fun ModelCapabilitiesList(
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     sharedTransitionScopes: SharedTransitionScopes? = null,
 ) {
     Column(
@@ -108,6 +111,7 @@ fun ModelCapabilitiesList(
             CapabilityListItem(
                 capabilities = capabilities,
                 item = item,
+                enabled = enabled,
                 onAdd = onAdd,
                 onRemove = onRemove,
                 sharedTransitionScopes = sharedTransitionScopes,
@@ -120,6 +124,7 @@ fun ModelCapabilitiesList(
 @Composable
 private fun CapabilityToggleButton(
     item: LLMCapabilityItem.Capability,
+    enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
     sharedTransitionScopes: SharedTransitionScopes? = null,
@@ -145,6 +150,7 @@ private fun CapabilityToggleButton(
                             )
                         }
                     },
+                enabled = enabled,
                 shapes = SplitButtonDefaults.leadingButtonShapesFor(size),
                 colors = colors,
                 border = border,
@@ -196,6 +202,7 @@ private fun CapabilityToggleButton(
 private fun CapabilityListItem(
     capabilities: List<LLMCapability>,
     item: LLMCapabilityItem,
+    enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
     sharedTransitionScopes: SharedTransitionScopes? = null,
@@ -205,6 +212,7 @@ private fun CapabilityListItem(
             ListCategory(
                 capabilities = capabilities,
                 item = item,
+                enabled = enabled,
                 onAdd = onAdd,
                 onRemove = onRemove,
                 sharedTransitionScopes = sharedTransitionScopes,
@@ -215,6 +223,7 @@ private fun CapabilityListItem(
             val isSelected = item.capability in capabilities
             CapabilityItem(
                 item = item,
+                enabled = enabled,
                 selected = isSelected,
                 onSelectedChange = { selected ->
                     if (selected) onAdd(item.capability) else onRemove(item.capability)
@@ -230,6 +239,7 @@ private fun CapabilityListItem(
 private fun ListCategory(
     capabilities: List<LLMCapability>,
     item: LLMCapabilityItem.Category,
+    enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
     sharedTransitionScopes: SharedTransitionScopes? = null,
@@ -245,6 +255,7 @@ private fun ListCategory(
                     CapabilityListItem(
                         capabilities = capabilities,
                         item = child,
+                        enabled = enabled,
                         onAdd = onAdd,
                         onRemove = onRemove,
                         sharedTransitionScopes = sharedTransitionScopes,
@@ -259,6 +270,7 @@ private fun ListCategory(
 @Composable
 private fun CapabilityItem(
     item: LLMCapabilityItem.Capability,
+    enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
     sharedTransitionScopes: SharedTransitionScopes? = null,
@@ -276,6 +288,7 @@ private fun CapabilityItem(
                 )
             }
         },
+        enabled = enabled,
         supportingContent = { Text(stringResource(item.description)) },
     ) {
         Text(

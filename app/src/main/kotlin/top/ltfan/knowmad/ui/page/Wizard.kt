@@ -43,7 +43,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +54,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -710,32 +710,82 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     label = {
                         Text(stringResource(R.string.llm_model_id_label))
                     },
+                    lineLimits = TextFieldLineLimits.SingleLine,
                 )
             }
             AnimatedContent(
-                targetState = wizardPage.selectedModel,
+                targetState = wizardPage.selectedModel == null,
                 modifier = Modifier.fillMaxWidth(),
-                transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
-            ) { model ->
-                if (model == null) {
+                transitionSpec = {
+                    fadeIn() togetherWith fadeOut() using SizeTransform(clip = false)
+                },
+                contentAlignment = Alignment.TopCenter,
+            ) { modelNotSelected ->
+                if (modelNotSelected) {
                     return@AnimatedContent
                 }
 
+                val model = wizardPage.selectedModel
                 Column(
                     Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Divider { Text(stringResource(R.string.llm_capability_label)) }
+                    Divider {
+                        Row(Modifier.fillMaxWidth()) {
+                            Spacer(Modifier.width(16.dp))
+                            Text(stringResource(R.string.llm_capability_label))
+                            Spacer(Modifier.weight(1f))
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Above,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(R.string.llm_capability_guidance_query))
+                                    }
+                                },
+                                state = rememberTooltipState(),
+                            ) {
+                                val uriHandler = LocalUriHandler.current
+                                IconButton(
+                                    onClick = {
+                                        if (model == null) {
+                                            return@IconButton
+                                        }
+                                        wizardPage.currentProviderItem?.let { providerItem ->
+                                            uriHandler.openUri(
+                                                providerItem.getModelCapabilitiesUrl(model.id),
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp),
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Default.Help,
+                                        contentDescription = stringResource(R.string.llm_capability_guidance_query),
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(16.dp))
+                        }
+                    }
                     ModelCapabilitiesFlow(
-                        capabilities = model.capabilities,
+                        capabilities = model?.capabilities ?: emptyList(),
                         onAdd = {
+                            if (model == null) {
+                                return@ModelCapabilitiesFlow
+                            }
                             wizardPage.selectedModel =
                                 model.copy(capabilities = model.capabilities + it)
                         },
                         onRemove = {
+                            if (model == null) {
+                                return@ModelCapabilitiesFlow
+                            }
                             wizardPage.selectedModel =
                                 model.copy(capabilities = model.capabilities - it)
                         },
+                        enabled = model != null,
                     )
                 }
             }
@@ -977,22 +1027,19 @@ private fun TitleContentSpacer() {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Divider(
-    label: @Composable (RowScope.() -> Unit)? = null,
+    label: @Composable (() -> Unit)? = null,
 ) {
-    Column {
+    Column(
+        Modifier
+            .widthIn(max = 380.dp)
+            .fillMaxWidth(),
+    ) {
         Spacer(Modifier.height(16.dp))
-        HorizontalDivider(
-            Modifier
-                .widthIn(max = 380.dp)
-                .fillMaxWidth(),
-        )
+        HorizontalDivider()
         if (label != null) {
             Spacer(Modifier.height(8.dp))
             CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.labelLargeEmphasized) {
-                Row {
-                    Spacer(Modifier.width(16.dp))
-                    label()
-                }
+                label()
             }
             Spacer(Modifier.height(16.dp))
         } else {
