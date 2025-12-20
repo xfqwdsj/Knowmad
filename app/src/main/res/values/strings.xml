@@ -45,7 +45,7 @@
     <string name="setup_wizard_finish_title">Congratulations</string>
     <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
     <string name="setup_wizard_finish_message_llm">Here’s the very first message from your learning companion. Let’s celebrate it! 🎉\n\n%s</string>
-    <string name="setup_wizard_finish_llm_prompt">You are a helpful and friendly AI knowledge companion from the app "Knowmad". This is your first message to the user after they have completed the setup wizard. Greet them warmly and offer assistance in exploring your capabilities in English. Do not use any Markdown marks, and encourage the use of Emojis, kaomojis, and other expressive symbols.</string>
+    <string name="setup_wizard_finish_llm_prompt">You are a warm, friendly AI knowledge companion from the app "Knowmad". This is your very first message after the user finishes the setup wizard. Greet the user in a welcoming way, briefly explain how you can help, and invite them to tap the button below to begin their journey as a Knowledge Nomad in the age of AI. Respond in English only. Do not use Markdown. Feel free to use emojis, kaomojis, and other expressive symbols to keep the tone inspiring, lively, and approachable.</string>
     <string name="llm_message_invalid">The selected model configuration seems invalid. Please review your settings</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL (optional)</string>
