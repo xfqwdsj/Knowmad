@@ -19,8 +19,29 @@
 package top.ltfan.knowmad.application
 
 import android.app.Application
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import top.ltfan.knowmad.data.llm.LLMDatabase
 
+@Serializable(with = KnowmadApplicationFakeSerializer::class)
 class KnowmadApplication : Application() {
     val llmDatabase by lazy { LLMDatabase.buildDatabase() }
+}
+
+class KnowmadApplicationFakeSerializer : KSerializer<KnowmadApplication> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("KnowmadApplication", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: KnowmadApplication) {
+        encoder.encodeString("KnowmadApplication")
+    }
+
+    override fun deserialize(decoder: Decoder): KnowmadApplication {
+        error("KnowmadApplicationFakeSerializer cannot be deserialized")
+    }
 }

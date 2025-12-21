@@ -32,7 +32,7 @@ import top.ltfan.knowmad.ui.page.WizardPage
 
 @Serializable(with = AppViewModelFakeSerializer::class)
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
-    val backStack = NavBackStack<Route>(WizardPage())
+    val backStack = NavBackStack<Route>(WizardPage(this))
 }
 
 class AppViewModelFakeSerializer() : KSerializer<AppViewModel> {

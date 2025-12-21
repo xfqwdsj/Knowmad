@@ -168,12 +168,12 @@ import top.ltfan.knowmad.util.CryptoManager
 
 @Serializable
 class WizardPage(
-    val backStack: NavBackStack<WizardSubPage> = NavBackStack(WelcomePage),
+    override val appViewModel: AppViewModel,
 ) : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         val backStack = this@WizardPage.backStack
         val currentPage = backStack.last()
 
@@ -424,6 +424,8 @@ class WizardPage(
             _steps = list
             return _steps
         }
+
+    val backStack: NavBackStack<WizardSubPage> = NavBackStack(WelcomePage(appViewModel))
 }
 
 @Immutable
@@ -439,16 +441,22 @@ interface WizardSubPageInfo {
 }
 
 @Serializable
-private data object WelcomePage : WizardSubPage(), WizardSubPageInfo {
-    override val stepItem
-        @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
-    override val nextInfo: WizardSubPageInfo = ProviderPage
-    override val scrollState = ScrollState(0)
+private class WelcomePage(
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
+    companion object : WizardSubPageInfo {
+        override val stepItem
+            @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
+        override val nextInfo: WizardSubPageInfo = ProviderPage
+
+        @Transient
+        override val scrollState = ScrollState(0)
+    }
 
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -469,12 +477,15 @@ private data object WelcomePage : WizardSubPage(), WizardSubPageInfo {
 
     override val canContinue = true
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(ProviderPage(wizardPage))
+        wizardPage.backStack.add(ProviderPage(wizardPage, viewModel))
     }
 }
 
 @Serializable
-private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
+private class ProviderPage(
+    val wizardPage: WizardPage,
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_provider_label))
@@ -485,7 +496,7 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -526,12 +537,15 @@ private class ProviderPage(val wizardPage: WizardPage) : WizardSubPage() {
 
     override val canContinue get() = wizardPage.selectedProvider != null
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(ApiSetupPage(wizardPage))
+        wizardPage.backStack.add(ApiSetupPage(wizardPage, viewModel))
     }
 }
 
 @Serializable
-private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
+private class ApiSetupPage(
+    val wizardPage: WizardPage,
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_api_label))
@@ -542,7 +556,7 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -732,12 +746,15 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                 wizardPage.baseUrl = providerInfo.defaultBaseUrl
             }
         }
-        wizardPage.backStack.add(ModelSetupPage(wizardPage))
+        wizardPage.backStack.add(ModelSetupPage(wizardPage, viewModel))
     }
 }
 
 @Serializable
-private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
+private class ModelSetupPage(
+    val wizardPage: WizardPage,
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_model_label))
@@ -748,7 +765,7 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -965,12 +982,15 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
 
     override val canContinue get() = modelId.isNotEmpty()
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(AdvancedSettingsPage(wizardPage))
+        wizardPage.backStack.add(AdvancedSettingsPage(wizardPage, viewModel))
     }
 }
 
 @Serializable
-private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage() {
+private class AdvancedSettingsPage(
+    val wizardPage: WizardPage,
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_advanced_label))
@@ -981,7 +1001,7 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         Column(
             Modifier
                 .fillMaxSize()
@@ -1002,12 +1022,15 @@ private class AdvancedSettingsPage(val wizardPage: WizardPage) : WizardSubPage()
 
     override val canContinue = true
     override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(FinishPage(wizardPage))
+        wizardPage.backStack.add(FinishPage(wizardPage, viewModel))
     }
 }
 
 @Serializable
-private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
+private data class FinishPage(
+    val wizardPage: WizardPage,
+    override val viewModel: AppViewModel,
+) : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))
@@ -1020,7 +1043,7 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
-    override fun AppViewModel.Content() {
+    override fun Content() {
         val coroutineScope = rememberCoroutineScope()
         val prompt = stringResource(R.string.setup_wizard_finish_llm_prompt)
         val firstMessage by wizardPage.firstMessageFlow.collectAsState()

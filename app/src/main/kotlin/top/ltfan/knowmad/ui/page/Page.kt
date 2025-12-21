@@ -25,21 +25,22 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 
 @Serializable
 sealed class Route : NavKey
 
 @Serializable
-sealed class PageRoute<R : Any?, K : Route> : Route() {
+sealed class PageRoute<K : Route> : Route() {
     @Transient
     open val metadata: Map<String, Any> = emptyMap()
 
     @Composable
     context(contentPadding: PaddingValues)
-    abstract fun R.Content()
+    abstract fun Content()
 
-    context(receiver: R)
     fun navEntry(
         contentPadding: PaddingValues = PaddingValues(),
     ) = @Suppress("UNCHECKED_CAST") NavEntry(
@@ -47,21 +48,25 @@ sealed class PageRoute<R : Any?, K : Route> : Route() {
         metadata = metadata,
     ) {
         context(contentPadding) {
-            receiver.Content()
+            Content()
         }
     }
 }
 
 /** A page in the navigation hierarchy. */
 @Serializable
-sealed class Page : PageRoute<AppViewModel, Page>()
+sealed class Page : PageRoute<Page>() {
+    abstract val appViewModel: AppViewModel
+}
 
 /**
  * A page managed by a parent route. This page will not appear in the
  * top-level navigation stack.
  */
 @Serializable
-sealed class SubPage<R : Any?> : PageRoute<R, SubPage<R>>()
+sealed class SubPage<T : AndroidViewModel<KnowmadApplication>> : PageRoute<SubPage<T>>() {
+    abstract val viewModel: T
+}
 
 @Serializable
 abstract class BackStackRoute(
