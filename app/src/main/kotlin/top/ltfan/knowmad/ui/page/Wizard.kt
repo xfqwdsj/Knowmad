@@ -152,10 +152,13 @@ import top.ltfan.knowmad.ui.component.Markdown
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
+import top.ltfan.knowmad.ui.theme.ContentContainerColor
+import top.ltfan.knowmad.ui.theme.ContentContainerPadding
+import top.ltfan.knowmad.ui.theme.ContentContainerShape
+import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
+import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.ui.util.ListItemMaxWidth
-import top.ltfan.knowmad.ui.util.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -193,13 +196,13 @@ class WizardPage(
                     currentStep = backStack.size - 1,
                     contentPadding = horizontalPadding,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(ContentContainerPadding))
                 Surface(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontalPadding)
-                        .padding(horizontal = 8.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
+                        .padding(horizontal = ContentContainerPadding),
+                    shape = ContentContainerShape,
                     color = messagesBackgroundColor,
                 ) {
                     Column {
@@ -227,8 +230,8 @@ class WizardPage(
                         }
                         Surface(
                             modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.extraLarge,
-                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                            shape = ContentContainerShape,
+                            color = ContentContainerColor,
                         ) {
                             NavDisplay(
                                 backStack = backStack,
@@ -252,7 +255,7 @@ class WizardPage(
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(ContentContainerPadding))
                 Row(
                     Modifier
                         .fillMaxWidth()

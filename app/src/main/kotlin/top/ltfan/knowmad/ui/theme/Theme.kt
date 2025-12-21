@@ -22,6 +22,7 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -30,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -148,3 +150,11 @@ fun ProvideCompatibleShapes(content: @Composable () -> Unit) {
         content = content,
     )
 }
+
+val ContentContainerPadding = 8.dp
+val ContentContainerShape @Composable inline get() = MaterialTheme.shapes.extraLarge
+val ContentContainerColor @Composable inline get() = MaterialTheme.colorScheme.surfaceContainerLowest
+
+val ListItemMaxWidth = 360.dp
+
+val TextFieldMaxWidth = 320.dp
