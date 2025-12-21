@@ -148,6 +148,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.LLMProviderItem
+import top.ltfan.knowmad.ui.component.Markdown
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
@@ -1046,8 +1047,8 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
                         contentKey = { it.isEmpty() },
                     ) { firstMessage ->
                         if (firstMessage.isNotEmpty()) {
-                            Text(
-                                wizardPage.firstMessage,
+                            Markdown(
+                                firstMessage,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         } else {

@@ -111,5 +111,6 @@ dependencies {
     implementation(libs.bundles.ktor)
     implementation(libs.bundles.koog)
     implementation(libs.bundles.ltfan)
+    implementation(libs.bundles.markdown)
     ksp(libs.room.compiler)
 }
