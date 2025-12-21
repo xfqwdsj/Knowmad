@@ -15,6 +15,7 @@ koog = "0.5.4"
 dslUtilities = "1.0.2"
 capsule = "1.0.2"
 markdown = "0.39.0"
+calendar = "2.9.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
@@ -43,6 +44,7 @@ dslUtilities = { module = "top.ltfan.dslutilities:dsl-utilities", version.ref = 
 capsule = { module = "top.ltfan.capsule:capsule", version.ref = "capsule" }
 markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer-android", version.ref = "markdown" }
 markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "markdown" }
+calendar = { module = "com.kizitonwose.calendar:compose", version.ref = "calendar" }
 
 [bundles]
 kotlinx-serialization = [
@@ -81,6 +83,9 @@ ltfan = [
 markdown = [
     "markdown-renderer",
     "markdown-renderer-m3"
+]
+calendar = [
+    "calendar"
 ]
 
 [plugins]
