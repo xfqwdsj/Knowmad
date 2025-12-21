@@ -22,8 +22,12 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.runtime.remember
+import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
+import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -31,103 +35,21 @@ import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 class MainActivity : KnowmadActivity() {
     private val viewModel: AppViewModel by viewModels()
 
+    @OptIn(ExperimentalMaterial3AdaptiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             with(viewModel) {
                 AppTheme {
+                    val dialogStrategy = remember { DialogSceneStrategy<Page>() }
+
                     NavDisplay(
                         backStack = backStack.expanded,
+                        sceneStrategy = dialogStrategy,
                         entryProvider = { it.navEntry(PaddingValues()) },
                     )
                 }
-//                AppTheme {
-//                    val testStack = remember { mutableStateListOf(1) }
-//                    NavDisplay(
-//                        backStack = SnapshotStateList<Int>().apply {
-//                            addAll(testStack)
-//                        },
-//                        entryProvider = entryProvider {
-//                            entry<Int> { key ->
-//                                Column(
-//                                    modifier = Modifier
-//                                        .fillMaxSize()
-//                                        .background(Color.White)
-//                                        .windowInsetsPadding(AppWindowInsets),
-//                                ) {
-//                                    Text("Test Page: $key")
-//                                    Button(
-//                                        onClick = {
-//                                            testStack.add(key + 1)
-//                                        },
-//                                    ) {
-//                                        Text("Add Page")
-//                                    }
-////                                    val testSubStack = remember { mutableStateListOf(1) }
-////                                    NavDisplay(
-////                                        backStack = testSubStack,
-////                                        entryProvider = entryProvider {
-////                                            entry<Int> { subKey ->
-////                                                Column(Modifier.background(Color.Blue)) {
-////                                                    Text("  Sub Page: $subKey")
-////                                                    Button(
-////                                                        onClick = {
-////                                                            testSubStack.add(subKey + 1)
-////                                                        },
-////                                                    ) {
-////                                                        Text("  Add Sub Page")
-////                                                    }
-////                                                }
-////                                            }
-////                                        },
-////                                    )
-//                                    val steps = listOf(
-//                                        StepItem("Welcome"),
-//                                        StepItem("Provider", "Select one"),
-//                                        StepItem("Credentials", "Setup key"),
-//                                        StepItem("Verify", "Check info"),
-//                                        StepItem("Verify", "Check info"),
-//                                        StepItem("Verify", "Check info"),
-//                                        StepItem(
-//                                            "Verify",
-//                                            "Check info info info info info info info info info info info info",
-//                                        ),
-//                                        StepItem("Finish"),
-//                                    )
-//
-//                                    // 模拟状态
-//                                    var currentStep by remember { mutableIntStateOf(2) }
-//
-//                                    Stepper(
-//                                        steps = steps,
-//                                        currentStep = currentStep,
-//                                        allowUserScroll = true, // 允许用户手动滑动查看
-//                                    )
-//
-//                                    Spacer(modifier = Modifier.height(40.dp))
-//
-//                                    // 控制按钮
-//                                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-//                                        OutlinedButton(
-//                                            onClick = { if (currentStep > 0) currentStep-- },
-//                                            enabled = currentStep > 0,
-//                                        ) {
-//                                            Text("Back")
-//                                        }
-//
-//                                        Button(
-//                                            onClick = { if (currentStep < steps.size - 1) currentStep++ },
-//                                            enabled = currentStep < steps.size - 1,
-//                                        ) {
-//                                            Text("Next")
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        },
-//                    )
-//                }
             }
         }
     }
