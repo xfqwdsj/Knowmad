@@ -22,15 +22,22 @@ import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
@@ -77,10 +84,11 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
                 _selectedProvider = value
                 baseUrl = currentProviderInfo?.defaultBaseUrl ?: ""
                 apiKey = ""
-                selectedModel = null
+                model = ""
                 apiConfigurationError = false
             }
         }
+
     val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
 
     private var _baseUrl by mutableStateOf("")
@@ -95,16 +103,55 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
         }
 
     val apiKeyTextFieldState = TextFieldState()
-
-    private var _apiKey by mutableStateOf("")
     var apiKey: String
-        get() = _apiKey
-        set(value) {
-            if (_apiKey != value) {
-                _apiKey = value
-                apiConfigurationError = false
-                resetFirstMessage()
+        inline get() = apiKeyTextFieldState.text.toString()
+        inline set(value) {
+            apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(value)
+        }
+
+    val knownModelsMap = mutableStateMapOf<String, LLModel>()
+    val knownModelIds inline get() = knownModelsMap.keys.toList()
+    val knownModels inline get() = knownModelsMap.values.toList()
+
+    suspend fun fetchKnownModels() {
+        val provider = selectedProvider
+        val client = client
+        val info = SupportedLLMProviders[provider]
+        if (provider == null || client == null || provider != client.llmProvider() || info == null) {
+            return
+        }
+
+        val apiModelIds = withContext(Dispatchers.IO) {
+            try {
+                client.models().also {
+                    apiConfigurationError = false
+                }
+            } catch (e: Throwable) {
+                apiConfigurationError = true
+                e.printStackTrace()
+                emptyList()
             }
+        }
+
+        knownModelsMap.clear()
+        knownModelsMap.putAll(
+            apiModelIds.associateWith {
+                LLModel(
+                    provider = provider,
+                    id = it,
+                    capabilities = listOf(),
+                    contextLength = 0,
+                )
+            },
+        )
+        knownModelsMap.putAll(info.predefinedModels)
+    }
+
+    val modelTextFieldState = TextFieldState()
+    var model: String
+        inline get() = modelTextFieldState.text.toString()
+        inline set(value) {
+            modelTextFieldState.setTextAndPlaceCursorAtEnd(value)
         }
 
     private var _selectedModel by mutableStateOf<LLModel?>(null)
@@ -127,5 +174,39 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
         firstMessageFlow.value = ""
         firstMessageGenerationStarted = false
         firstMessageGenerated = false
+    }
+
+    init {
+        viewModelScope.launch {
+            snapshotFlow { apiKeyTextFieldState.text }
+                .collect {
+                    apiConfigurationError = false
+                    resetFirstMessage()
+                }
+        }
+
+        viewModelScope.launch {
+            snapshotFlow { modelTextFieldState.text }
+                .collect { text ->
+                    val modelId = text.toString()
+                    if (modelId.isEmpty()) {
+                        selectedModel = null
+                        return@collect
+                    }
+                    val currentContextLength = selectedModel?.contextLength ?: 0
+                    val currentMaxOutputTokens = selectedModel?.maxOutputTokens
+                    val model = knownModelsMap[modelId]
+                    selectedModel =
+                        model ?: selectedProvider?.let { provider ->
+                            LLModel(
+                                provider = provider,
+                                id = modelId,
+                                capabilities = listOf(),
+                                contextLength = currentContextLength,
+                                maxOutputTokens = currentMaxOutputTokens,
+                            )
+                        }
+                }
+        }
     }
 }

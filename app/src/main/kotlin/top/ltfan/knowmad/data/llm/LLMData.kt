@@ -147,10 +147,30 @@ data class LLMProviderInfo(
     @param:StringRes val description: Int,
     val defaultBaseUrl: String,
     val platformUrl: String,
-    val predefinedModels: Set<LLModel> = emptySet(),
+    val predefinedModels: Map<String, LLModel> = emptyMap(),
     val getModelCapabilitiesUrl: (id: String) -> String,
     val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
-)
+) {
+    constructor(
+        @DrawableRes icon: Int,
+        @StringRes label: Int,
+        @StringRes description: Int,
+        defaultBaseUrl: String,
+        platformUrl: String,
+        predefinedModels: Set<LLModel>,
+        getModelCapabilitiesUrl: (id: String) -> String,
+        convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
+    ) : this(
+        icon = icon,
+        label = label,
+        description = description,
+        defaultBaseUrl = defaultBaseUrl,
+        platformUrl = platformUrl,
+        predefinedModels = predefinedModels.associateBy { it.id },
+        getModelCapabilitiesUrl = getModelCapabilitiesUrl,
+        convertToClient = convertToClient,
+    )
+}
 
 @Suppress("UnstableApiUsage")
 val LLMCapabilities = listOf(

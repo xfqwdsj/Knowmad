@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
@@ -60,7 +59,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -104,9 +102,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -114,7 +110,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
@@ -509,13 +504,7 @@ private class ApiSetupPage : WizardSubPage() {
                         state = viewModel.apiKeyTextFieldState,
                         modifier = Modifier
                             .widthIn(max = TextFieldMaxWidth)
-                            .fillMaxWidth()
-                            .onFocusChanged {
-                                if (!it.isFocused) {
-                                    viewModel.apiKey =
-                                        viewModel.apiKeyTextFieldState.text.toString()
-                                }
-                            },
+                            .fillMaxWidth(),
                         label = {
                             Text(stringResource(R.string.llm_api_key_label))
                         },
@@ -652,11 +641,10 @@ private class ApiSetupPage : WizardSubPage() {
     }
 
     override fun canContinue(viewModel: WizardPageViewModel): Boolean {
-        return viewModel.apiKeyTextFieldState.text.isNotEmpty()
+        return viewModel.apiKey.isNotEmpty()
     }
 
     override fun nextPage(viewModel: WizardPageViewModel) {
-        viewModel.apiKey = viewModel.apiKeyTextFieldState.text.toString()
         if (viewModel.baseUrl.isEmpty()) {
             viewModel.currentProviderInfo?.let { providerInfo ->
                 viewModel.baseUrl = providerInfo.defaultBaseUrl
@@ -685,22 +673,6 @@ private class ModelSetupPage : WizardSubPage() {
     override fun Content() {
         val viewModel = viewModel<WizardPageViewModel>()
 
-        val knownModels = remember {
-            mutableStateListOf<LLModel>().also { list ->
-                viewModel.currentProviderInfo?.predefinedModels?.let {
-                    list.addAll(it)
-                }
-            }
-        }
-
-        val knownModelIds by remember(knownModels) {
-            derivedStateOf {
-                knownModels.map { it.id }
-            }
-        }
-
-        val modelTextFieldState = rememberTextFieldState(viewModel.selectedModel?.id ?: "")
-
         Column(
             Modifier
                 .fillMaxSize()
@@ -719,13 +691,13 @@ private class ModelSetupPage : WizardSubPage() {
             TitleContentSpacer()
             var modelMenuExpanded by remember { mutableStateOf(false) }
             AutoSuggestTextField(
-                state = modelTextFieldState,
-                options = knownModelIds,
+                state = viewModel.modelTextFieldState,
+                options = viewModel.knownModelIds,
                 allowExpand = modelMenuExpanded,
                 onExpandedChange = { modelMenuExpanded = it },
             ) {
                 TextField(
-                    state = modelTextFieldState,
+                    state = viewModel.modelTextFieldState,
                     modifier = Modifier
                         .widthIn(max = TextFieldMaxWidth)
                         .fillMaxWidth()
@@ -736,7 +708,7 @@ private class ModelSetupPage : WizardSubPage() {
                     trailingIcon = {
                         PasteIconButton(
                             onPaste = {
-                                modelTextFieldState.setTextAndPlaceCursorAtEnd(it)
+                                viewModel.modelTextFieldState.setTextAndPlaceCursorAtEnd(it)
                             },
                         )
                     },
@@ -857,43 +829,8 @@ private class ModelSetupPage : WizardSubPage() {
             }
         }
 
-        LaunchedEffect(viewModel.selectedProvider) {
-            viewModel.selectedProvider?.let { provider ->
-                withContext(Dispatchers.IO) {
-                    try {
-                        viewModel.client?.models()?.forEach { id ->
-                            if (id !in knownModelIds) {
-                                knownModels.add(LLModel(provider, id, listOf(), 0))
-                            }
-                        }
-                        viewModel.apiConfigurationError = false
-                    } catch (e: Throwable) {
-                        viewModel.apiConfigurationError = true
-                        e.printStackTrace()
-                    }
-                }
-            }
-        }
-
-        val modelId = modelTextFieldState.text.toString()
-        val contextLength = viewModel.selectedModel?.contextLength ?: 0
-        val maxOutputTokens = viewModel.selectedModel?.maxOutputTokens
-
-        var isFirstTimeLaunchedByModelId by remember { mutableStateOf(true) }
-        LaunchedEffect(modelId) {
-            if (isFirstTimeLaunchedByModelId) {
-                isFirstTimeLaunchedByModelId = false
-                return@LaunchedEffect
-            }
-
-            if (modelId.isEmpty()) {
-                viewModel.selectedModel = null
-                return@LaunchedEffect
-            }
-            val model = knownModels.find { it.id == modelId }
-            viewModel.selectedModel = model ?: viewModel.selectedProvider?.let { provider ->
-                LLModel(provider, modelId, listOf(), contextLength, maxOutputTokens)
-            }
+        LaunchedEffect(Unit) {
+            viewModel.fetchKnownModels()
         }
     }
 
