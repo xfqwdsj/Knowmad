@@ -16,30 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.data.llm
+package top.ltfan.knowmad.data
 
-import androidx.room.Database
-import androidx.room.Room.databaseBuilder
+import android.app.Application
 import androidx.room.RoomDatabase
-import top.ltfan.knowmad.data.DatabaseCompanion
 
-@Database(
-    entities = [LLMProviderConfigEntity::class, LLMEntity::class],
-    version = 1,
-)
-abstract class LLMDatabase : RoomDatabase() {
-    abstract fun dao(): LLMConfigDao
+interface DatabaseCompanion<T : RoomDatabase> {
+    val databaseName: String
 
-    companion object : DatabaseCompanion<LLMDatabase> {
-        override val databaseName = "llm_database"
-
-        context(application: android.app.Application)
-        override fun buildDatabase(): LLMDatabase {
-            return databaseBuilder(
-                application,
-                LLMDatabase::class.java,
-                databaseName,
-            ).build()
-        }
-    }
+    context(application: Application)
+    fun buildDatabase(): T
 }

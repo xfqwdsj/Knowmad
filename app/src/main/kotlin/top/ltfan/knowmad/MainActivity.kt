@@ -24,16 +24,24 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
+import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 
 class MainActivity : KnowmadActivity() {
-    private val viewModel: AppViewModel by viewModels()
+    private val viewModel: AppViewModel by viewModels {
+        viewModelFactory {
+            addInitializer(AppViewModel::class) {
+                AppViewModel(application as KnowmadApplication)
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3AdaptiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {

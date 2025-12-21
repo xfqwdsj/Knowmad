@@ -1248,7 +1248,7 @@ private data class FinishPage(val wizardPage: WizardPage) : WizardSubPage() {
 }
 
 @Serializable
-sealed class WizardSubPage : SubPage() {
+sealed class WizardSubPage : SubPage<AppViewModel>() {
     abstract val canContinue: Boolean
     abstract val nextPage: ((wizardPage: WizardPage) -> Unit)?
 }

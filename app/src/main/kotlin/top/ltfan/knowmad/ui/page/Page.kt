@@ -30,54 +30,38 @@ import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 @Serializable
 sealed class Route : NavKey
 
-sealed interface PageInterface {
-    val metadata: Map<String, Any>
+@Serializable
+sealed class PageRoute<R : Any?, K : Route> : Route() {
+    @Transient
+    open val metadata: Map<String, Any> = emptyMap()
 
     @Composable
     context(contentPadding: PaddingValues)
-    fun AppViewModel.Content()
+    abstract fun R.Content()
+
+    context(receiver: R)
+    fun navEntry(
+        contentPadding: PaddingValues = PaddingValues(),
+    ) = @Suppress("UNCHECKED_CAST") NavEntry(
+        key = this as K,
+        metadata = metadata,
+    ) {
+        context(contentPadding) {
+            receiver.Content()
+        }
+    }
 }
 
 /** A page in the navigation hierarchy. */
 @Serializable
-sealed class Page : Route(), PageInterface {
-    @Transient
-    override val metadata: Map<String, Any> = emptyMap()
-
-    context(viewModel: AppViewModel)
-    fun navEntry(
-        contentPadding: PaddingValues = PaddingValues(),
-    ) = NavEntry(
-        key = this,
-        metadata = metadata,
-    ) {
-        context(contentPadding) {
-            viewModel.Content()
-        }
-    }
-}
+sealed class Page : PageRoute<AppViewModel, Page>()
 
 /**
  * A page managed by a parent route. This page will not appear in the
  * top-level navigation stack.
  */
 @Serializable
-sealed class SubPage : Route(), PageInterface {
-    @Transient
-    override val metadata: Map<String, Any> = emptyMap()
-
-    context(viewModel: AppViewModel)
-    fun navEntry(
-        contentPadding: PaddingValues = PaddingValues(),
-    ) = NavEntry(
-        key = this,
-        metadata = metadata,
-    ) {
-        context(contentPadding) {
-            viewModel.Content()
-        }
-    }
-}
+sealed class SubPage<R : Any?> : PageRoute<R, SubPage<R>>()
 
 @Serializable
 abstract class BackStackRoute(
@@ -90,7 +74,7 @@ val NavBackStack<Route>.expanded: List<Page>
             when (entry) {
                 is Page -> add(entry)
                 is BackStackRoute -> addAll(entry.backStack.expanded)
-                is SubPage -> {
+                is SubPage<*> -> {
                     // Ignore SubPage entries at the top level
                 }
             }
