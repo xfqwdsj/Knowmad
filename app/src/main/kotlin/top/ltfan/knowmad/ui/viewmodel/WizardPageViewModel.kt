@@ -18,9 +18,11 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.streaming.StreamFrame
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
@@ -38,6 +40,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
@@ -174,6 +181,52 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
         firstMessageFlow.value = ""
         firstMessageGenerationStarted = false
         firstMessageGenerated = false
+    }
+
+    suspend fun generateFirstMessage(prompt: String) {
+        val client = client ?: return
+        val model = selectedModel ?: return
+        if (firstMessageGenerationStarted) {
+            return
+        }
+        firstMessageGenerationStarted = true
+
+        withContext(Dispatchers.IO) {
+            try {
+                val response = client.executeStreaming(
+                    prompt = prompt("first-message") {
+                        val datetime =
+                            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                                .format(LocalDateTime.Formats.ISO)
+                        system(prompt.format(datetime))
+                    },
+                    model = model,
+                )
+                firstMessageGenerated = false
+                firstMessageFlow.value = ""
+                response.collect {
+                    when (it) {
+                        is StreamFrame.Append -> {
+                            firstMessageFlow.value += it.text
+                        }
+
+                        is StreamFrame.End -> {
+                            firstMessageGenerated = true
+                        }
+
+                        is StreamFrame.ToolCall -> {}
+                    }
+                    apiConfigurationError = false
+                }
+                firstMessageGenerated = true
+                apiConfigurationError = false
+            } catch (e: Throwable) {
+                apiConfigurationError = true
+                e.printStackTrace()
+            } finally {
+                firstMessageGenerationStarted = false
+            }
+        }
     }
 
     init {

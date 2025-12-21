@@ -18,8 +18,6 @@
 
 package top.ltfan.knowmad.ui.page
 
-import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.streaming.StreamFrame
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -125,14 +123,7 @@ import androidx.graphics.shapes.toPath
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
@@ -990,7 +981,7 @@ private class FinishPage : WizardSubPage() {
                         RetryIconButton(
                             onRetry = {
                                 coroutineScope.launch {
-                                    generateFirstMessage(viewModel, prompt)
+                                    viewModel.generateFirstMessage(prompt)
                                 }
                             },
                             enabled = !viewModel.firstMessageGenerationStarted,
@@ -1048,7 +1039,7 @@ private class FinishPage : WizardSubPage() {
 
         LaunchedEffect(Unit) {
             if (!viewModel.firstMessageGenerated) {
-                generateFirstMessage(viewModel, prompt)
+                viewModel.generateFirstMessage(prompt)
             }
         }
 
@@ -1071,52 +1062,6 @@ private class FinishPage : WizardSubPage() {
             }
             if (shouldFollow) {
                 scrollState.scrollTo(scrollState.maxValue)
-            }
-        }
-    }
-
-    suspend fun generateFirstMessage(viewModel: WizardPageViewModel, prompt: String) {
-        val client = viewModel.client ?: return
-        val model = viewModel.selectedModel ?: return
-        if (viewModel.firstMessageGenerationStarted) {
-            return
-        }
-        viewModel.firstMessageGenerationStarted = true
-
-        withContext(Dispatchers.IO) {
-            try {
-                val response = client.executeStreaming(
-                    prompt = prompt("first-message") {
-                        val datetime =
-                            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                                .format(LocalDateTime.Formats.ISO)
-                        system(prompt.format(datetime))
-                    },
-                    model = model,
-                )
-                viewModel.firstMessageGenerated = false
-                viewModel.firstMessageFlow.value = ""
-                response.collect {
-                    when (it) {
-                        is StreamFrame.Append -> {
-                            viewModel.firstMessageFlow.value += it.text
-                        }
-
-                        is StreamFrame.End -> {
-                            viewModel.firstMessageGenerated = true
-                        }
-
-                        is StreamFrame.ToolCall -> {}
-                    }
-                    viewModel.apiConfigurationError = false
-                }
-                viewModel.firstMessageGenerated = true
-                viewModel.apiConfigurationError = false
-            } catch (e: Throwable) {
-                viewModel.apiConfigurationError = true
-                e.printStackTrace()
-            } finally {
-                viewModel.firstMessageGenerationStarted = false
             }
         }
     }
