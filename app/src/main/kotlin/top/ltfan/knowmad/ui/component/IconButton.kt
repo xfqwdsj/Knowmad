@@ -18,10 +18,12 @@
 
 package top.ltfan.knowmad.ui.component
 
+import android.content.ClipData
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,12 +36,84 @@ import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RetryIconButton(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes tooltipTextRes: Int? = R.string.label_retry,
+    @StringRes contentDescriptionRes: Int? = R.string.label_retry,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onRetry,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CopyIconButton(
+    onCopy: () -> Pair<CharSequence?, CharSequence>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes tooltipTextRes: Int? = R.string.label_copy,
+    @StringRes contentDescriptionRes: Int? = R.string.label_copy,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = {
+                coroutineScope.launch {
+                    val (label, text) = onCopy()
+                    val clipData = ClipData.newPlainText(label, text)
+                    clipboard.setClipEntry(ClipEntry(clipData))
+                }
+            },
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                Icons.Default.ContentPaste,
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
