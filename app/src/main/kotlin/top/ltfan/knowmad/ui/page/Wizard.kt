@@ -66,11 +66,9 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Key
@@ -85,7 +83,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -112,7 +109,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,8 +118,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -135,7 +129,6 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
@@ -150,6 +143,8 @@ import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.LLMProviderItem
 import top.ltfan.knowmad.ui.component.Markdown
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
+import top.ltfan.knowmad.ui.component.OpenUriIconButton
+import top.ltfan.knowmad.ui.component.PasteIconButton
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
 import top.ltfan.knowmad.ui.theme.ContentContainerColor
@@ -542,60 +537,17 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                         },
                         trailingIcon = {
                             Row {
-                                val coroutineScope = rememberCoroutineScope()
-                                val clipboard = LocalClipboard.current
-                                TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above,
-                                    ),
-                                    tooltip = {
-                                        PlainTooltip { Text(stringResource(R.string.label_paste)) }
+                                PasteIconButton(
+                                    onPaste = {
+                                        apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it)
                                     },
-                                    state = rememberTooltipState(),
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                val data = clipboard.getClipEntry()?.clipData
-                                                if (data?.itemCount == 0) {
-                                                    return@launch
-                                                }
-                                                data?.getItemAt(0)?.text?.toString()?.let {
-                                                    apiKeyTextFieldState
-                                                        .setTextAndPlaceCursorAtEnd(it)
-                                                }
-                                            }
-                                        },
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ContentPaste,
-                                            contentDescription = stringResource(R.string.label_paste),
-                                        )
-                                    }
-                                }
+                                )
                                 wizardPage.currentProviderInfo?.let { providerInfo ->
-                                    Spacer(Modifier.width(4.dp))
-                                    TooltipBox(
-                                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                            TooltipAnchorPosition.Above,
-                                        ),
-                                        tooltip = {
-                                            PlainTooltip { Text(stringResource(R.string.llm_api_key_guidance_get)) }
-                                        },
-                                        state = rememberTooltipState(),
-                                    ) {
-                                        val uriHandler = LocalUriHandler.current
-                                        IconButton(
-                                            onClick = {
-                                                uriHandler.openUri(providerInfo.platformUrl)
-                                            },
-                                        ) {
-                                            Icon(
-                                                Icons.AutoMirrored.Default.OpenInNew,
-                                                contentDescription = stringResource(R.string.llm_api_key_guidance_get),
-                                            )
-                                        }
-                                    }
+                                    OpenUriIconButton(
+                                        uri = providerInfo.platformUrl,
+                                        tooltipTextRes = R.string.llm_api_key_guidance_get,
+                                        contentDescriptionRes = R.string.llm_api_key_guidance_get,
+                                    )
                                 }
                             }
                         },
@@ -650,6 +602,9 @@ private class ApiSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             {
                                 Text(providerInfo.defaultBaseUrl)
                             }
+                        },
+                        trailingIcon = {
+                            PasteIconButton(onPaste = { wizardPage.baseUrl = it })
                         },
                         supportingText = {
                             Text(stringResource(R.string.llm_api_base_url_input_message))
@@ -760,6 +715,13 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     label = {
                         Text(stringResource(R.string.llm_model_id_label))
                     },
+                    trailingIcon = {
+                        PasteIconButton(
+                            onPaste = {
+                                modelTextFieldState.setTextAndPlaceCursorAtEnd(it)
+                            },
+                        )
+                    },
                     lineLimits = TextFieldLineLimits.SingleLine,
                 )
             }
@@ -777,6 +739,16 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     .fillMaxWidth(),
                 label = {
                     Text(stringResource(R.string.llm_context_length_label))
+                },
+                trailingIcon = {
+                    PasteIconButton(
+                        onPaste = {
+                            val value = it.toLongOrNull() ?: return@PasteIconButton
+                            wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                                contextLength = value,
+                            )
+                        },
+                    )
                 },
                 placeholder = { Text("0") },
                 keyboardOptions = KeyboardOptions(
@@ -796,6 +768,16 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                     .fillMaxWidth(),
                 label = {
                     Text(stringResource(R.string.llm_max_output_tokens_label))
+                },
+                trailingIcon = {
+                    PasteIconButton(
+                        onPaste = {
+                            val value = it.toLongOrNull() ?: return@PasteIconButton
+                            wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                                maxOutputTokens = value,
+                            )
+                        },
+                    )
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
@@ -824,37 +806,14 @@ private class ModelSetupPage(val wizardPage: WizardPage) : WizardSubPage() {
                             Spacer(Modifier.width(16.dp))
                             Text(stringResource(R.string.llm_capability_label))
                             Spacer(Modifier.weight(1f))
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Above,
-                                ),
-                                tooltip = {
-                                    PlainTooltip {
-                                        Text(stringResource(R.string.llm_capability_guidance_query))
-                                    }
+                            OpenUriIconButton(
+                                uri = wizardPage.currentProviderInfo?.let { providerInfo ->
+                                    model?.let { providerInfo.getModelCapabilitiesUrl(it.id) }
                                 },
-                                state = rememberTooltipState(),
-                            ) {
-                                val uriHandler = LocalUriHandler.current
-                                IconButton(
-                                    onClick = {
-                                        if (model == null) {
-                                            return@IconButton
-                                        }
-                                        wizardPage.currentProviderInfo?.let { providerInfo ->
-                                            uriHandler.openUri(
-                                                providerInfo.getModelCapabilitiesUrl(model.id),
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.size(24.dp),
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Default.OpenInNew,
-                                        contentDescription = stringResource(R.string.llm_capability_guidance_query),
-                                    )
-                                }
-                            }
+                                tooltipTextRes = R.string.llm_capability_guidance_query,
+                                contentDescriptionRes = R.string.llm_capability_guidance_query,
+                                modifier = Modifier.size(24.dp),
+                            )
                             Spacer(Modifier.width(16.dp))
                         }
                     }
