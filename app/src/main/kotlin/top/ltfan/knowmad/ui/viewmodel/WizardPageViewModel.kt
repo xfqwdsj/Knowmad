@@ -31,15 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
-import top.ltfan.knowmad.util.EmptySerializer
 
-@Serializable(with = WizardPageViewModelFakeSerializer::class)
 class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
 
@@ -133,5 +129,3 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
         firstMessageGenerated = false
     }
 }
-
-class WizardPageViewModelFakeSerializer : KSerializer<WizardPageViewModel> by EmptySerializer()

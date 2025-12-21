@@ -20,33 +20,12 @@ package top.ltfan.knowmad.ui.viewmodel
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavBackStack
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 
-@Serializable(with = AppViewModelFakeSerializer::class)
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<Route>(WizardPage())
-}
-
-class AppViewModelFakeSerializer() : KSerializer<AppViewModel> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("AppViewModel", PrimitiveKind.STRING)
-
-    override fun serialize(encoder: Encoder, value: AppViewModel) {
-        encoder.encodeString("AppViewModel")
-    }
-
-    override fun deserialize(decoder: Decoder): AppViewModel {
-        error("AppViewModelFakeSerializer cannot be deserialized")
-    }
 }
 
 val LocalAppViewModel = staticCompositionLocalOf<AppViewModel> {

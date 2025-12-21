@@ -284,10 +284,10 @@ class WizardPage : Page() {
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                currentPage.nextPage?.invoke(viewModel)
+                                currentPage.nextPage(viewModel)
                             },
                             shapes = ButtonDefaults.shapes(),
-                            enabled = currentPage.canContinue,
+                            enabled = currentPage.canContinue(viewModel),
                         ) {
                             Text(stringResource(R.string.label_next))
                         }
@@ -382,8 +382,9 @@ private class WelcomePage : WizardSubPage() {
         }
     }
 
-    override val canContinue @Composable get() = true
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+    override fun canContinue(viewModel: WizardPageViewModel) = true
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
         viewModel.backStack.add(ProviderPage())
     }
 }
@@ -441,8 +442,11 @@ private class ProviderPage : WizardSubPage() {
         }
     }
 
-    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().selectedProvider != null
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+    override fun canContinue(viewModel: WizardPageViewModel): Boolean {
+        return viewModel.selectedProvider != null
+    }
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
         viewModel.backStack.add(ApiSetupPage())
     }
 }
@@ -647,8 +651,11 @@ private class ApiSetupPage : WizardSubPage() {
         }
     }
 
-    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().apiKeyTextFieldState.text.isNotEmpty()
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+    override fun canContinue(viewModel: WizardPageViewModel): Boolean {
+        return viewModel.apiKeyTextFieldState.text.isNotEmpty()
+    }
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
         viewModel.apiKey = viewModel.apiKeyTextFieldState.text.toString()
         if (viewModel.baseUrl.isEmpty()) {
             viewModel.currentProviderInfo?.let { providerInfo ->
@@ -890,8 +897,9 @@ private class ModelSetupPage : WizardSubPage() {
         }
     }
 
-    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().selectedModel != null
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+    override fun canContinue(viewModel: WizardPageViewModel) = viewModel.selectedModel != null
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
         viewModel.backStack.add(AdvancedSettingsPage())
     }
 }
@@ -927,8 +935,11 @@ private class AdvancedSettingsPage : WizardSubPage() {
         }
     }
 
-    override val canContinue @Composable get() = true
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+    override fun canContinue(viewModel: WizardPageViewModel): Boolean {
+        return true
+    }
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
         viewModel.backStack.add(FinishPage())
     }
 }
@@ -1172,14 +1183,17 @@ private class FinishPage : WizardSubPage() {
 
     }
 
-    override val canContinue @Composable get() = true
-    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { finish() }
+    override fun canContinue(viewModel: WizardPageViewModel) = true
+
+    override fun nextPage(viewModel: WizardPageViewModel) {
+        finish()
+    }
 }
 
 @Serializable
 sealed class WizardSubPage : SubPage() {
-    abstract val canContinue: Boolean @Composable get
-    abstract val nextPage: ((viewModel: WizardPageViewModel) -> Unit)?
+    abstract fun canContinue(viewModel: WizardPageViewModel): Boolean
+    abstract fun nextPage(viewModel: WizardPageViewModel): Unit
 }
 
 @Composable

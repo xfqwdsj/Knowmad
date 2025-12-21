@@ -20,26 +20,5 @@ package top.ltfan.knowmad.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
-@Serializable(with = AndroidViewModelFakeSerializer::class)
 open class AndroidViewModel<T : Application>(val application: T) : ViewModel()
-
-class AndroidViewModelFakeSerializer<T : Application> : KSerializer<AndroidViewModel<T>> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("AndroidViewModel", PrimitiveKind.STRING)
-
-    override fun serialize(encoder: Encoder, value: AndroidViewModel<T>) {
-        encoder.encodeString("AndroidViewModel")
-    }
-
-    override fun deserialize(decoder: Decoder): AndroidViewModel<T> {
-        error("AndroidViewModelFakeSerializer cannot be deserialized")
-    }
-}
