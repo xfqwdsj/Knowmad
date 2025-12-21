@@ -110,6 +110,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
@@ -716,9 +717,10 @@ private class ModelSetupPage : WizardSubPage() {
                 )
             }
             Spacer(Modifier.height(16.dp))
+            var contextLengthFocused by remember { mutableStateOf(false) }
             TextField(
                 value = viewModel.selectedModel?.contextLength?.toString()
-                    .takeIf { it != "0" } ?: "",
+                    .takeIf { it != "0" || !contextLengthFocused } ?: "",
                 onValueChange = {
                     viewModel.selectedModel = viewModel.selectedModel?.copy(
                         contextLength = it.toLongOrNull() ?: 0,
@@ -726,7 +728,10 @@ private class ModelSetupPage : WizardSubPage() {
                 },
                 modifier = Modifier
                     .widthIn(max = TextFieldMaxWidth)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .onFocusEvent {
+                        contextLengthFocused = it.isFocused
+                    },
                 label = {
                     Text(stringResource(R.string.llm_context_length_label))
                 },
