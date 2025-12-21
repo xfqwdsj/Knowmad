@@ -19,8 +19,6 @@
 package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import androidx.annotation.StringRes
@@ -62,7 +60,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -76,7 +74,6 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.NoEncryption
 import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.Upcoming
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -107,6 +104,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -128,11 +126,10 @@ import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
-import androidx.navigation3.runtime.NavBackStack
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
@@ -163,24 +160,26 @@ import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
-import top.ltfan.knowmad.ui.viewmodel.AppViewModel
+import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
 import top.ltfan.knowmad.util.CryptoManager
 
 @Serializable
-class WizardPage(
-    override val appViewModel: AppViewModel,
-) : Page() {
+class WizardPage : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
-        val backStack = this@WizardPage.backStack
+        val viewModel = viewModel<WizardPageViewModel> {
+            WizardPageViewModel(WelcomePage())
+        }
+
+        val backStack = viewModel.backStack
         val currentPage = backStack.last()
 
         val insets = AppWindowInsets + contentPadding
         val horizontalPadding = insets.only { horizontal }.asPaddingValues()
 
-        val hasMessages = messageItems.any { it.second }
+        val hasMessages = viewModel.messageItems.any { it.second }
         val messagesBackgroundColor by animateColorAsState(
             if (hasMessages) MaterialTheme.colorScheme.errorContainer
             else Color.Transparent,
@@ -209,7 +208,7 @@ class WizardPage(
                 ) {
                     Column {
                         AnimatedContent(
-                            targetState = messageItems,
+                            targetState = viewModel.messageItems,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                         ) { messageItems ->
                             val hasMessages = messageItems.any { it.second }
@@ -285,7 +284,7 @@ class WizardPage(
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                currentPage.nextPage?.invoke(this@WizardPage)
+                                currentPage.nextPage?.invoke(viewModel)
                             },
                             shapes = ButtonDefaults.shapes(),
                             enabled = currentPage.canContinue,
@@ -318,94 +317,6 @@ class WizardPage(
         }
     }
 
-    var cryptoInitializationError by mutableStateOf(false)
-
-    var isUsingPlaintext by mutableStateOf(false)
-
-    private var _apiConfigurationError by mutableStateOf(false)
-    var apiConfigurationError: Boolean
-        get() = _apiConfigurationError
-        set(value) {
-            if (value && firstMessageGenerated) {
-                return
-            }
-            _apiConfigurationError = value
-        }
-
-    val messageItems
-        inline get() = listOf(
-            WizardMessageItem(
-                icon = Icons.Default.Error,
-                message = R.string.crypto_key_initialization_error_message,
-            ) to cryptoInitializationError,
-            WizardMessageItem(
-                icon = Icons.Default.Error,
-                message = R.string.llm_message_invalid,
-            ) to apiConfigurationError,
-            WizardMessageItem(
-                icon = Icons.Default.Warning,
-                message = R.string.crypto_use_plaintext_warning,
-            ) to isUsingPlaintext,
-        )
-
-    private var _selectedProvider by mutableStateOf<LLMProvider?>(null)
-    var selectedProvider: LLMProvider?
-        get() = _selectedProvider
-        set(value) {
-            if (_selectedProvider != value) {
-                _selectedProvider = value
-                baseUrl = currentProviderInfo?.defaultBaseUrl ?: ""
-                apiKey = ""
-                selectedModel = null
-                apiConfigurationError = false
-            }
-        }
-    val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
-
-    private var _baseUrl by mutableStateOf("")
-    var baseUrl: String
-        get() = _baseUrl
-        set(value) {
-            if (_baseUrl != value) {
-                _baseUrl = value
-                apiConfigurationError = false
-                resetFirstMessage()
-            }
-        }
-
-    private var _apiKey by mutableStateOf("")
-    var apiKey: String
-        get() = _apiKey
-        set(value) {
-            if (_apiKey != value) {
-                _apiKey = value
-                apiConfigurationError = false
-                resetFirstMessage()
-            }
-        }
-
-    private var _selectedModel by mutableStateOf<LLModel?>(null)
-    var selectedModel: LLModel?
-        get() = _selectedModel
-        set(value) {
-            if (_selectedModel != value) {
-                _selectedModel = value
-                resetFirstMessage()
-            }
-        }
-
-    var client: LLMClient? = null
-
-    val firstMessageFlow = MutableStateFlow("")
-    var firstMessageGenerationStarted by mutableStateOf(false)
-    var firstMessageGenerated by mutableStateOf(false)
-
-    fun resetFirstMessage() {
-        firstMessageFlow.value = ""
-        firstMessageGenerationStarted = false
-        firstMessageGenerated = false
-    }
-
     @Transient
     private lateinit var _steps: List<StepItem>
 
@@ -424,8 +335,6 @@ class WizardPage(
             _steps = list
             return _steps
         }
-
-    val backStack: NavBackStack<WizardSubPage> = NavBackStack(WelcomePage(appViewModel))
 }
 
 @Immutable
@@ -441,9 +350,7 @@ interface WizardSubPageInfo {
 }
 
 @Serializable
-private class WelcomePage(
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class WelcomePage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
@@ -475,17 +382,14 @@ private class WelcomePage(
         }
     }
 
-    override val canContinue = true
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(ProviderPage(wizardPage, viewModel))
+    override val canContinue @Composable get() = true
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+        viewModel.backStack.add(ProviderPage())
     }
 }
 
 @Serializable
-private class ProviderPage(
-    val wizardPage: WizardPage,
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class ProviderPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_provider_label))
@@ -497,6 +401,8 @@ private class ProviderPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<WizardPageViewModel>()
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -523,29 +429,26 @@ private class ProviderPage(
                         modifier = Modifier
                             .widthIn(max = ListItemMaxWidth)
                             .fillMaxWidth(),
-                        selected = wizardPage.selectedProvider == provider,
+                        selected = viewModel.selectedProvider == provider,
                     ) {
-                        if (wizardPage.selectedProvider == provider) {
+                        if (viewModel.selectedProvider == provider) {
                             return@LLMProviderItem
                         }
-                        wizardPage.selectedProvider = provider
+                        viewModel.selectedProvider = provider
                     }
                 }
             }
         }
     }
 
-    override val canContinue get() = wizardPage.selectedProvider != null
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(ApiSetupPage(wizardPage, viewModel))
+    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().selectedProvider != null
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+        viewModel.backStack.add(ApiSetupPage())
     }
 }
 
 @Serializable
-private class ApiSetupPage(
-    val wizardPage: WizardPage,
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class ApiSetupPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_api_label))
@@ -557,6 +460,10 @@ private class ApiSetupPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<WizardPageViewModel>()
+
+        var isReady by remember { mutableStateOf(!viewModel.cryptoInitializationError) }
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -586,7 +493,7 @@ private class ApiSetupPage(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (!isInitialized) {
-                        ErrorElements()
+                        ErrorElements { isReady = it }
                         return@AnimatedContent
                     }
                     TitleText(
@@ -595,13 +502,14 @@ private class ApiSetupPage(
                     )
                     TitleContentSpacer()
                     SecureTextField(
-                        state = apiKeyTextFieldState,
+                        state = viewModel.apiKeyTextFieldState,
                         modifier = Modifier
                             .widthIn(max = TextFieldMaxWidth)
                             .fillMaxWidth()
                             .onFocusChanged {
                                 if (!it.isFocused) {
-                                    wizardPage.apiKey = apiKey
+                                    viewModel.apiKey =
+                                        viewModel.apiKeyTextFieldState.text.toString()
                                 }
                             },
                         label = {
@@ -609,7 +517,7 @@ private class ApiSetupPage(
                         },
                         leadingIcon = {
                             Icon(
-                                if (wizardPage.isUsingPlaintext) Icons.Default.NoEncryption else Icons.Default.EnhancedEncryption,
+                                if (viewModel.isUsingPlaintext) Icons.Default.NoEncryption else Icons.Default.EnhancedEncryption,
                                 contentDescription = null,
                             )
                         },
@@ -617,10 +525,10 @@ private class ApiSetupPage(
                             Row {
                                 PasteIconButton(
                                     onPaste = {
-                                        apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it)
+                                        viewModel.apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it)
                                     },
                                 )
-                                wizardPage.currentProviderInfo?.let { providerInfo ->
+                                viewModel.currentProviderInfo?.let { providerInfo ->
                                     OpenUriIconButton(
                                         uri = providerInfo.platformUrl,
                                         tooltipTextRes = R.string.llm_api_key_guidance_get,
@@ -632,7 +540,7 @@ private class ApiSetupPage(
                         supportingText = {
                             Row {
                                 AnimatedContent(
-                                    targetState = wizardPage.isUsingPlaintext,
+                                    targetState = viewModel.isUsingPlaintext,
                                     modifier = Modifier.weight(1f),
                                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                                 ) { isUsingPlaintext ->
@@ -644,7 +552,7 @@ private class ApiSetupPage(
                                     )
                                 }
                                 AnimatedVisibility(
-                                    visible = wizardPage.isUsingPlaintext,
+                                    visible = viewModel.isUsingPlaintext,
                                     enter = fadeIn() + expandHorizontally(
                                         expandFrom = Alignment.Start,
                                         clip = false,
@@ -657,7 +565,11 @@ private class ApiSetupPage(
                                     Row {
                                         Spacer(Modifier.width(8.dp))
                                         TextButton(
-                                            onClick = ::initializeCrypto,
+                                            onClick = {
+                                                initializeCrypto(viewModel) {
+                                                    isReady = it
+                                                }
+                                            },
                                         ) {
                                             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
                                         }
@@ -668,21 +580,21 @@ private class ApiSetupPage(
                     )
                     Divider()
                     TextField(
-                        value = wizardPage.baseUrl,
-                        onValueChange = { wizardPage.baseUrl = it },
+                        value = viewModel.baseUrl,
+                        onValueChange = { viewModel.baseUrl = it },
                         modifier = Modifier
                             .widthIn(max = TextFieldMaxWidth)
                             .fillMaxWidth(),
                         label = {
                             Text(stringResource(R.string.llm_api_base_url_input_label))
                         },
-                        placeholder = wizardPage.currentProviderInfo?.let { providerInfo ->
+                        placeholder = viewModel.currentProviderInfo?.let { providerInfo ->
                             {
                                 Text(providerInfo.defaultBaseUrl)
                             }
                         },
                         trailingIcon = {
-                            PasteIconButton(onPaste = { wizardPage.baseUrl = it })
+                            PasteIconButton(onPaste = { viewModel.baseUrl = it })
                         },
                         supportingText = {
                             Text(stringResource(R.string.llm_api_base_url_input_message))
@@ -696,14 +608,18 @@ private class ApiSetupPage(
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
-    fun ErrorElements() {
+    fun ErrorElements(
+        setReady: (Boolean) -> Unit,
+    ) {
+        val viewModel = viewModel<WizardPageViewModel>()
+
         TitleText(
             title = R.string.crypto_key_initialization_error_title,
             message = R.string.crypto_key_initialization_error_message,
         )
         TitleContentSpacer()
         Button(
-            onClick = ::initializeCrypto,
+            onClick = { initializeCrypto(viewModel, setReady) },
             contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
         ) {
             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
@@ -711,50 +627,44 @@ private class ApiSetupPage(
         Spacer(Modifier.height(16.dp))
         TextButton(
             onClick = {
-                wizardPage.isUsingPlaintext = true
-                isReady = true
+                viewModel.isUsingPlaintext = true
+                setReady(true)
             },
         ) {
             Text(stringResource(R.string.crypto_use_plaintext_label))
         }
     }
 
-    var isReady by mutableStateOf(!wizardPage.cryptoInitializationError)
-
-    @Transient
-    val apiKeyTextFieldState = TextFieldState(wizardPage.apiKey)
-    val apiKey inline get() = apiKeyTextFieldState.text.toString()
-
-    init {
-        initializeCrypto()
-    }
-
-    fun initializeCrypto() {
+    fun initializeCrypto(
+        viewModel: WizardPageViewModel,
+        setReady: (Boolean) -> Unit,
+    ) {
         CryptoManager.LLMApiKey.generateKey()
-        wizardPage.cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
-        isReady = !wizardPage.cryptoInitializationError
-        if (!wizardPage.cryptoInitializationError) {
-            wizardPage.isUsingPlaintext = false
+        viewModel.cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
+        setReady(!viewModel.cryptoInitializationError)
+        if (!viewModel.cryptoInitializationError) {
+            viewModel.isUsingPlaintext = false
         }
     }
 
-    override val canContinue get() = apiKey.isNotEmpty()
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.apiKey = apiKey
-        if (wizardPage.baseUrl.isEmpty()) {
-            wizardPage.currentProviderInfo?.let { providerInfo ->
-                wizardPage.baseUrl = providerInfo.defaultBaseUrl
+    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().apiKeyTextFieldState.text.isNotEmpty()
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+        viewModel.apiKey = viewModel.apiKeyTextFieldState.text.toString()
+        if (viewModel.baseUrl.isEmpty()) {
+            viewModel.currentProviderInfo?.let { providerInfo ->
+                viewModel.baseUrl = providerInfo.defaultBaseUrl
             }
         }
-        wizardPage.backStack.add(ModelSetupPage(wizardPage, viewModel))
+        viewModel.client = viewModel.currentProviderInfo?.convertToClient(
+            viewModel.apiKey,
+            viewModel.baseUrl,
+        )
+        viewModel.backStack.add(ModelSetupPage())
     }
 }
 
 @Serializable
-private class ModelSetupPage(
-    val wizardPage: WizardPage,
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class ModelSetupPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_model_label))
@@ -766,6 +676,24 @@ private class ModelSetupPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<WizardPageViewModel>()
+
+        val knownModels = remember {
+            mutableStateListOf<LLModel>().also { list ->
+                viewModel.currentProviderInfo?.predefinedModels?.let {
+                    list.addAll(it)
+                }
+            }
+        }
+
+        val knownModelIds by remember(knownModels) {
+            derivedStateOf {
+                knownModels.map { it.id }
+            }
+        }
+
+        val modelTextFieldState = rememberTextFieldState(viewModel.selectedModel?.id ?: "")
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -810,10 +738,10 @@ private class ModelSetupPage(
             }
             Spacer(Modifier.height(16.dp))
             TextField(
-                value = wizardPage.selectedModel?.contextLength?.toString()
+                value = viewModel.selectedModel?.contextLength?.toString()
                     .takeIf { it != "0" } ?: "",
                 onValueChange = {
-                    wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                    viewModel.selectedModel = viewModel.selectedModel?.copy(
                         contextLength = it.toLongOrNull() ?: 0,
                     )
                 },
@@ -827,7 +755,7 @@ private class ModelSetupPage(
                     PasteIconButton(
                         onPaste = {
                             val value = it.toLongOrNull() ?: return@PasteIconButton
-                            wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                            viewModel.selectedModel = viewModel.selectedModel?.copy(
                                 contextLength = value,
                             )
                         },
@@ -840,9 +768,9 @@ private class ModelSetupPage(
             )
             Spacer(Modifier.height(16.dp))
             TextField(
-                value = wizardPage.selectedModel?.maxOutputTokens?.toString() ?: "",
+                value = viewModel.selectedModel?.maxOutputTokens?.toString() ?: "",
                 onValueChange = {
-                    wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                    viewModel.selectedModel = viewModel.selectedModel?.copy(
                         maxOutputTokens = it.toLongOrNull(),
                     )
                 },
@@ -856,7 +784,7 @@ private class ModelSetupPage(
                     PasteIconButton(
                         onPaste = {
                             val value = it.toLongOrNull() ?: return@PasteIconButton
-                            wizardPage.selectedModel = wizardPage.selectedModel?.copy(
+                            viewModel.selectedModel = viewModel.selectedModel?.copy(
                                 maxOutputTokens = value,
                             )
                         },
@@ -868,7 +796,7 @@ private class ModelSetupPage(
                 singleLine = true,
             )
             AnimatedContent(
-                targetState = wizardPage.selectedModel == null,
+                targetState = viewModel.selectedModel == null,
                 modifier = Modifier.fillMaxWidth(),
                 transitionSpec = {
                     fadeIn() togetherWith fadeOut() using SizeTransform(clip = false)
@@ -879,7 +807,7 @@ private class ModelSetupPage(
                     return@AnimatedContent
                 }
 
-                val model = wizardPage.selectedModel
+                val model = viewModel.selectedModel
                 Column(
                     Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -890,7 +818,7 @@ private class ModelSetupPage(
                             Text(stringResource(R.string.llm_capability_label))
                             Spacer(Modifier.weight(1f))
                             OpenUriIconButton(
-                                uri = wizardPage.currentProviderInfo?.let { providerInfo ->
+                                uri = viewModel.currentProviderInfo?.let { providerInfo ->
                                     model?.let { providerInfo.getModelCapabilitiesUrl(it.id) }
                                 },
                                 tooltipTextRes = R.string.llm_capability_guidance_query,
@@ -906,14 +834,14 @@ private class ModelSetupPage(
                             if (model == null) {
                                 return@ModelCapabilitiesFlow
                             }
-                            wizardPage.selectedModel =
+                            viewModel.selectedModel =
                                 model.copy(capabilities = model.capabilities + it)
                         },
                         onRemove = {
                             if (model == null) {
                                 return@ModelCapabilitiesFlow
                             }
-                            wizardPage.selectedModel =
+                            viewModel.selectedModel =
                                 model.copy(capabilities = model.capabilities - it)
                         },
                         enabled = model != null,
@@ -922,23 +850,27 @@ private class ModelSetupPage(
             }
         }
 
-        LaunchedEffect(wizardPage.selectedProvider) {
-            wizardPage.selectedProvider?.let { provider ->
+        LaunchedEffect(viewModel.selectedProvider) {
+            viewModel.selectedProvider?.let { provider ->
                 withContext(Dispatchers.IO) {
                     try {
-                        wizardPage.client?.models()?.forEach { id ->
+                        viewModel.client?.models()?.forEach { id ->
                             if (id !in knownModelIds) {
                                 knownModels.add(LLModel(provider, id, listOf(), 0))
                             }
                         }
-                        wizardPage.apiConfigurationError = false
+                        viewModel.apiConfigurationError = false
                     } catch (e: Throwable) {
-                        wizardPage.apiConfigurationError = true
+                        viewModel.apiConfigurationError = true
                         e.printStackTrace()
                     }
                 }
             }
         }
+
+        val modelId = modelTextFieldState.text.toString()
+        val contextLength = viewModel.selectedModel?.contextLength ?: 0
+        val maxOutputTokens = viewModel.selectedModel?.maxOutputTokens
 
         var isFirstTimeLaunchedByModelId by remember { mutableStateOf(true) }
         LaunchedEffect(modelId) {
@@ -948,49 +880,24 @@ private class ModelSetupPage(
             }
 
             if (modelId.isEmpty()) {
-                wizardPage.selectedModel = null
+                viewModel.selectedModel = null
                 return@LaunchedEffect
             }
             val model = knownModels.find { it.id == modelId }
-            wizardPage.selectedModel = model ?: wizardPage.selectedProvider?.let { provider ->
+            viewModel.selectedModel = model ?: viewModel.selectedProvider?.let { provider ->
                 LLModel(provider, modelId, listOf(), contextLength, maxOutputTokens)
             }
         }
     }
 
-    @Transient
-    val knownModels = mutableStateListOf<LLModel>()
-    val knownModelIds inline get() = knownModels.map { it.id }
-
-    @Transient
-    val modelTextFieldState = TextFieldState(wizardPage.selectedModel?.id ?: "")
-    val modelId inline get() = modelTextFieldState.text.toString()
-
-    val contextLength inline get() = wizardPage.selectedModel?.contextLength ?: 0
-
-    val maxOutputTokens inline get() = wizardPage.selectedModel?.maxOutputTokens
-
-    init {
-        wizardPage.client = wizardPage.currentProviderInfo?.convertToClient(
-            wizardPage.apiKey,
-            wizardPage.baseUrl,
-        )
-        wizardPage.currentProviderInfo?.predefinedModels?.let { models ->
-            knownModels.addAll(models)
-        }
-    }
-
-    override val canContinue get() = modelId.isNotEmpty()
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(AdvancedSettingsPage(wizardPage, viewModel))
+    override val canContinue @Composable get() = viewModel<WizardPageViewModel>().selectedModel != null
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+        viewModel.backStack.add(AdvancedSettingsPage())
     }
 }
 
 @Serializable
-private class AdvancedSettingsPage(
-    val wizardPage: WizardPage,
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class AdvancedSettingsPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_advanced_label))
@@ -1020,17 +927,14 @@ private class AdvancedSettingsPage(
         }
     }
 
-    override val canContinue = true
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { wizardPage ->
-        wizardPage.backStack.add(FinishPage(wizardPage, viewModel))
+    override val canContinue @Composable get() = true
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { viewModel ->
+        viewModel.backStack.add(FinishPage())
     }
 }
 
 @Serializable
-private data class FinishPage(
-    val wizardPage: WizardPage,
-    override val viewModel: AppViewModel,
-) : WizardSubPage() {
+private class FinishPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))
@@ -1044,9 +948,11 @@ private data class FinishPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<WizardPageViewModel>()
+
         val coroutineScope = rememberCoroutineScope()
         val prompt = stringResource(R.string.setup_wizard_finish_llm_prompt)
-        val firstMessage by wizardPage.firstMessageFlow.collectAsState()
+        val firstMessage by viewModel.firstMessageFlow.collectAsState()
 
         Column(
             Modifier
@@ -1065,11 +971,11 @@ private data class FinishPage(
                 color2 = MaterialTheme.colorScheme.errorContainer,
                 rotation2 = 135f,
                 icon2 = { TitleIcon(Icons.Default.Error) },
-                displayShape2 = wizardPage.apiConfigurationError,
+                displayShape2 = viewModel.apiConfigurationError,
             )
             IconTitleSpacer()
             AnimatedContent(
-                targetState = wizardPage.apiConfigurationError,
+                targetState = viewModel.apiConfigurationError,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 contentAlignment = Alignment.Center,
             ) { apiConfigurationError ->
@@ -1083,7 +989,7 @@ private data class FinishPage(
                 )
             }
             AnimatedVisibility(
-                visible = !wizardPage.apiConfigurationError,
+                visible = !viewModel.apiConfigurationError,
                 enter = fadeIn() + expandVertically(
                     expandFrom = Alignment.Top,
                     clip = false,
@@ -1104,7 +1010,7 @@ private data class FinishPage(
                     ) { firstMessage ->
                         if (firstMessage.isNotEmpty()) {
                             MarkdownView(
-                                wizardPage.firstMessageFlow,
+                                viewModel.firstMessageFlow,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 key = MARKDOWN_KEY,
                             )
@@ -1117,7 +1023,7 @@ private data class FinishPage(
             TitleContentSpacer()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AnimatedVisibility(
-                    visible = wizardPage.firstMessageGenerated,
+                    visible = viewModel.firstMessageGenerated,
                     enter = fadeIn() + expandHorizontally(
                         expandFrom = Alignment.Start,
                         clip = false,
@@ -1131,10 +1037,10 @@ private data class FinishPage(
                         RetryIconButton(
                             onRetry = {
                                 coroutineScope.launch {
-                                    generateFirstMessage(prompt)
+                                    generateFirstMessage(viewModel, prompt)
                                 }
                             },
-                            enabled = !wizardPage.firstMessageGenerationStarted,
+                            enabled = !viewModel.firstMessageGenerationStarted,
                         )
                         Spacer(Modifier.width(8.dp))
                     }
@@ -1166,7 +1072,7 @@ private data class FinishPage(
                     }
                 }
                 AnimatedVisibility(
-                    visible = wizardPage.firstMessageGenerated,
+                    visible = viewModel.firstMessageGenerated,
                     enter = fadeIn() + expandHorizontally(
                         expandFrom = Alignment.End,
                         clip = false,
@@ -1180,7 +1086,7 @@ private data class FinishPage(
                         Spacer(Modifier.width(8.dp))
                         CopyIconButton(
                             onCopy = { null to firstMessage },
-                            enabled = !wizardPage.firstMessageGenerationStarted,
+                            enabled = !viewModel.firstMessageGenerationStarted,
                         )
                     }
                 }
@@ -1188,8 +1094,8 @@ private data class FinishPage(
         }
 
         LaunchedEffect(Unit) {
-            if (!wizardPage.firstMessageGenerated) {
-                generateFirstMessage(prompt)
+            if (!viewModel.firstMessageGenerated) {
+                generateFirstMessage(viewModel, prompt)
             }
         }
 
@@ -1206,7 +1112,7 @@ private data class FinishPage(
         LaunchedEffect(scrollState.maxValue) {
             if (isFirstTimeLaunchedByMaxValue) {
                 isFirstTimeLaunchedByMaxValue = false
-                if (wizardPage.firstMessageGenerated) {
+                if (viewModel.firstMessageGenerated) {
                     return@LaunchedEffect
                 }
             }
@@ -1216,13 +1122,13 @@ private data class FinishPage(
         }
     }
 
-    suspend fun generateFirstMessage(prompt: String) {
-        val client = wizardPage.client ?: return
-        val model = wizardPage.selectedModel ?: return
-        if (wizardPage.firstMessageGenerationStarted) {
+    suspend fun generateFirstMessage(viewModel: WizardPageViewModel, prompt: String) {
+        val client = viewModel.client ?: return
+        val model = viewModel.selectedModel ?: return
+        if (viewModel.firstMessageGenerationStarted) {
             return
         }
-        wizardPage.firstMessageGenerationStarted = true
+        viewModel.firstMessageGenerationStarted = true
 
         withContext(Dispatchers.IO) {
             try {
@@ -1235,29 +1141,29 @@ private data class FinishPage(
                     },
                     model = model,
                 )
-                wizardPage.firstMessageGenerated = false
-                wizardPage.firstMessageFlow.value = ""
+                viewModel.firstMessageGenerated = false
+                viewModel.firstMessageFlow.value = ""
                 response.collect {
                     when (it) {
                         is StreamFrame.Append -> {
-                            wizardPage.firstMessageFlow.value += it.text
+                            viewModel.firstMessageFlow.value += it.text
                         }
 
                         is StreamFrame.End -> {
-                            wizardPage.firstMessageGenerated = true
+                            viewModel.firstMessageGenerated = true
                         }
 
                         is StreamFrame.ToolCall -> {}
                     }
-                    wizardPage.apiConfigurationError = false
+                    viewModel.apiConfigurationError = false
                 }
-                wizardPage.firstMessageGenerated = true
-                wizardPage.apiConfigurationError = false
+                viewModel.firstMessageGenerated = true
+                viewModel.apiConfigurationError = false
             } catch (e: Throwable) {
-                wizardPage.apiConfigurationError = true
+                viewModel.apiConfigurationError = true
                 e.printStackTrace()
             } finally {
-                wizardPage.firstMessageGenerationStarted = false
+                viewModel.firstMessageGenerationStarted = false
             }
         }
     }
@@ -1266,14 +1172,14 @@ private data class FinishPage(
 
     }
 
-    override val canContinue = true
-    override val nextPage: (wizardPage: WizardPage) -> Unit = { finish() }
+    override val canContinue @Composable get() = true
+    override val nextPage: (viewModel: WizardPageViewModel) -> Unit = { finish() }
 }
 
 @Serializable
-sealed class WizardSubPage : SubPage<AppViewModel>() {
-    abstract val canContinue: Boolean
-    abstract val nextPage: ((wizardPage: WizardPage) -> Unit)?
+sealed class WizardSubPage : SubPage() {
+    abstract val canContinue: Boolean @Composable get
+    abstract val nextPage: ((viewModel: WizardPageViewModel) -> Unit)?
 }
 
 @Composable

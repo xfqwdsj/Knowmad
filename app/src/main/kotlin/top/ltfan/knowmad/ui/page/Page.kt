@@ -25,9 +25,6 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
-import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 
 @Serializable
 sealed class Route : NavKey
@@ -55,18 +52,14 @@ sealed class PageRoute<K : Route> : Route() {
 
 /** A page in the navigation hierarchy. */
 @Serializable
-sealed class Page : PageRoute<Page>() {
-    abstract val appViewModel: AppViewModel
-}
+sealed class Page : PageRoute<Page>()
 
 /**
  * A page managed by a parent route. This page will not appear in the
  * top-level navigation stack.
  */
 @Serializable
-sealed class SubPage<T : AndroidViewModel<KnowmadApplication>> : PageRoute<SubPage<T>>() {
-    abstract val viewModel: T
-}
+sealed class SubPage : PageRoute<SubPage>()
 
 @Serializable
 abstract class BackStackRoute(
@@ -79,7 +72,7 @@ val NavBackStack<Route>.expanded: List<Page>
             when (entry) {
                 is Page -> add(entry)
                 is BackStackRoute -> addAll(entry.backStack.expanded)
-                is SubPage<*> -> {
+                is SubPage -> {
                     // Ignore SubPage entries at the top level
                 }
             }

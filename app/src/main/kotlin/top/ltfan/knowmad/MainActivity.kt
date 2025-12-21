@@ -23,8 +23,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
@@ -33,6 +36,7 @@ import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
+import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 class MainActivity : KnowmadActivity() {
     private val viewModel: AppViewModel by viewModels {
@@ -48,12 +52,16 @@ class MainActivity : KnowmadActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            with(viewModel) {
-                AppTheme {
-                    val dialogStrategy = remember { DialogSceneStrategy<Page>() }
+            AppTheme {
+                val dialogStrategy = remember { DialogSceneStrategy<Page>() }
 
+                CompositionLocalProvider(LocalAppViewModel provides viewModel) {
                     NavDisplay(
-                        backStack = backStack.expanded,
+                        backStack = viewModel.backStack.expanded,
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(),
+                            rememberViewModelStoreNavEntryDecorator(),
+                        ),
                         sceneStrategy = dialogStrategy,
                         entryProvider = { it.navEntry(PaddingValues()) },
                     )
