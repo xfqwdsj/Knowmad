@@ -25,7 +25,19 @@ import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
-    val backStack = NavBackStack<Route>(WizardPage())
+    val backStack = NavBackStack<Route>()
+
+    fun onFinishWizard() {
+
+    }
+
+    fun onSkipWizard() {
+
+    }
+
+    init {
+        backStack.add(WizardPage(::onFinishWizard, ::onSkipWizard))
+    }
 }
 
 val LocalAppViewModel = staticCompositionLocalOf<AppViewModel> {

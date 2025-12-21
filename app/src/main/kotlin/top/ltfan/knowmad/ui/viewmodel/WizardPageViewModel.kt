@@ -50,7 +50,11 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
 
-class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
+class WizardPageViewModel(
+    firstPage: WizardSubPage,
+    val onFinishWizard: () -> Unit,
+    val onSkipWizard: () -> Unit,
+) : ViewModel() {
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
 
     var cryptoInitializationError by mutableStateOf(false)
@@ -227,6 +231,16 @@ class WizardPageViewModel(firstPage: WizardSubPage) : ViewModel() {
                 firstMessageGenerationStarted = false
             }
         }
+    }
+
+    fun finishWizard() {
+        // TODO: Save the configuration
+        onFinishWizard()
+    }
+
+    fun skipWizard() {
+        // TODO: Handle skipping the wizard
+        onSkipWizard()
     }
 
     init {

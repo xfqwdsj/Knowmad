@@ -151,13 +151,16 @@ import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
 import top.ltfan.knowmad.util.CryptoManager
 
 @Serializable
-class WizardPage : Page() {
+class WizardPage(
+    val onFinishWizard: () -> Unit,
+    val onSkipWizard: () -> Unit,
+) : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
         val viewModel = viewModel<WizardPageViewModel> {
-            WizardPageViewModel(WelcomePage())
+            WizardPageViewModel(WelcomePage(), onFinishWizard, onSkipWizard)
         }
 
         val backStack = viewModel.backStack
@@ -253,7 +256,13 @@ class WizardPage : Page() {
                     ProvideCompatibleShapes {
                         Spacer(Modifier.width(16.dp))
                         TextButton(
-                            onClick = {},
+                            onClick = {
+                                if (currentPage.isFinal) {
+                                    viewModel.finishWizard()
+                                    return@TextButton
+                                }
+                                viewModel.skipWizard()
+                            },
                             shapes = ButtonDefaults.shapes(),
                         ) {
                             Text(stringResource(R.string.label_skip_for_now))
@@ -271,7 +280,12 @@ class WizardPage : Page() {
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                currentPage.nextPage(viewModel)
+                                val pageOrNull = currentPage.nextPage(viewModel)
+                                if (pageOrNull == null) {
+                                    viewModel.finishWizard()
+                                    return@Button
+                                }
+                                viewModel.backStack.add(pageOrNull)
                             },
                             shapes = ButtonDefaults.shapes(),
                             enabled = currentPage.canContinue(viewModel),
@@ -371,9 +385,7 @@ private class WelcomePage : WizardSubPage() {
 
     override fun canContinue(viewModel: WizardPageViewModel) = true
 
-    override fun nextPage(viewModel: WizardPageViewModel) {
-        viewModel.backStack.add(ProviderPage())
-    }
+    override fun nextPage(viewModel: WizardPageViewModel) = ProviderPage()
 }
 
 @Serializable
@@ -433,9 +445,7 @@ private class ProviderPage : WizardSubPage() {
         return viewModel.selectedProvider != null
     }
 
-    override fun nextPage(viewModel: WizardPageViewModel) {
-        viewModel.backStack.add(ApiSetupPage())
-    }
+    override fun nextPage(viewModel: WizardPageViewModel) = ApiSetupPage()
 }
 
 @Serializable
@@ -636,7 +646,7 @@ private class ApiSetupPage : WizardSubPage() {
         return viewModel.apiKey.isNotEmpty()
     }
 
-    override fun nextPage(viewModel: WizardPageViewModel) {
+    override fun nextPage(viewModel: WizardPageViewModel): WizardSubPage {
         if (viewModel.baseUrl.isEmpty()) {
             viewModel.currentProviderInfo?.let { providerInfo ->
                 viewModel.baseUrl = providerInfo.defaultBaseUrl
@@ -646,7 +656,7 @@ private class ApiSetupPage : WizardSubPage() {
             viewModel.apiKey,
             viewModel.baseUrl,
         )
-        viewModel.backStack.add(ModelSetupPage())
+        return ModelSetupPage()
     }
 }
 
@@ -832,9 +842,7 @@ private class ModelSetupPage : WizardSubPage() {
 
     override fun canContinue(viewModel: WizardPageViewModel) = viewModel.selectedModel != null
 
-    override fun nextPage(viewModel: WizardPageViewModel) {
-        viewModel.backStack.add(AdvancedSettingsPage())
-    }
+    override fun nextPage(viewModel: WizardPageViewModel) = AdvancedSettingsPage()
 }
 
 @Serializable
@@ -872,9 +880,7 @@ private class AdvancedSettingsPage : WizardSubPage() {
         return true
     }
 
-    override fun nextPage(viewModel: WizardPageViewModel) {
-        viewModel.backStack.add(FinishPage())
-    }
+    override fun nextPage(viewModel: WizardPageViewModel) = FinishPage()
 }
 
 @Serializable
@@ -1003,7 +1009,7 @@ private class FinishPage : WizardSubPage() {
                     ProvideCompatibleShapes {
                         val size = ButtonDefaults.MediumContainerHeight
                         Button(
-                            onClick = ::finish,
+                            onClick = viewModel::finishWizard,
                             shapes = ButtonDefaults.shapesFor(size),
                             contentPadding = ButtonDefaults.contentPaddingFor(size),
                         ) {
@@ -1066,21 +1072,17 @@ private class FinishPage : WizardSubPage() {
         }
     }
 
-    fun finish() {
-
-    }
-
+    override val isFinal = true
     override fun canContinue(viewModel: WizardPageViewModel) = true
-
-    override fun nextPage(viewModel: WizardPageViewModel) {
-        finish()
-    }
+    override fun nextPage(viewModel: WizardPageViewModel) = null
 }
 
 @Serializable
 sealed class WizardSubPage : SubPage() {
+    @Transient
+    open val isFinal = false
     abstract fun canContinue(viewModel: WizardPageViewModel): Boolean
-    abstract fun nextPage(viewModel: WizardPageViewModel): Unit
+    abstract fun nextPage(viewModel: WizardPageViewModel): WizardSubPage?
 }
 
 @Composable
