@@ -71,11 +71,7 @@ class WizardPageViewModel(
     private val _snackbarEvent = MutableSharedFlow<Resource.String>()
     val snackbarEvent = _snackbarEvent.asSharedFlow()
 
-    var cryptoInitializationError by mutableStateOf(false)
-
-    var isUsingPlaintext by mutableStateOf(false)
-
-    fun initializeCrypto(
+    fun generateCryptoKey(
         setReady: (Boolean) -> Unit,
     ) {
         CryptoManager.LLMApiKey.generateKey()
@@ -85,6 +81,13 @@ class WizardPageViewModel(
             isUsingPlaintext = false
         }
     }
+
+    init {
+        CryptoManager.LLMApiKey.generateKey()
+    }
+
+    var cryptoInitializationError by mutableStateOf(!CryptoManager.LLMApiKey.isKeyInitialized())
+    var isUsingPlaintext by mutableStateOf(false)
 
     private var _apiConfigurationError by mutableStateOf(false)
     var apiConfigurationError: Boolean

@@ -589,7 +589,7 @@ private class ApiSetupPage : WizardSubPage() {
                                         Spacer(Modifier.width(8.dp))
                                         TextButton(
                                             onClick = {
-                                                viewModel.initializeCrypto { isReady = it }
+                                                viewModel.generateCryptoKey { isReady = it }
                                             },
                                         ) {
                                             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
@@ -625,6 +625,12 @@ private class ApiSetupPage : WizardSubPage() {
                 }
             }
         }
+
+        LaunchedEffect(Unit) {
+            if (!isReady) {
+                viewModel.generateCryptoKey { isReady = it }
+            }
+        }
     }
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -640,7 +646,7 @@ private class ApiSetupPage : WizardSubPage() {
         )
         TitleContentSpacer()
         Button(
-            onClick = { viewModel.initializeCrypto(setReady) },
+            onClick = { viewModel.generateCryptoKey(setReady) },
             contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
         ) {
             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
