@@ -317,7 +317,6 @@ class WizardPageViewModel(
 
     fun skipWizard() {
         // TODO: Handle skipping the wizard
-        onSkipWizard()
     }
 
     init {
