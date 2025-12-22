@@ -148,7 +148,6 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
-import top.ltfan.knowmad.util.CryptoManager
 
 @Serializable
 class WizardPage(
@@ -561,9 +560,7 @@ private class ApiSetupPage : WizardSubPage() {
                                         Spacer(Modifier.width(8.dp))
                                         TextButton(
                                             onClick = {
-                                                initializeCrypto(viewModel) {
-                                                    isReady = it
-                                                }
+                                                viewModel.initializeCrypto { isReady = it }
                                             },
                                         ) {
                                             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
@@ -614,7 +611,7 @@ private class ApiSetupPage : WizardSubPage() {
         )
         TitleContentSpacer()
         Button(
-            onClick = { initializeCrypto(viewModel, setReady) },
+            onClick = { viewModel.initializeCrypto(setReady) },
             contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
         ) {
             Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
@@ -627,18 +624,6 @@ private class ApiSetupPage : WizardSubPage() {
             },
         ) {
             Text(stringResource(R.string.crypto_use_plaintext_label))
-        }
-    }
-
-    fun initializeCrypto(
-        viewModel: WizardPageViewModel,
-        setReady: (Boolean) -> Unit,
-    ) {
-        CryptoManager.LLMApiKey.generateKey()
-        viewModel.cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
-        setReady(!viewModel.cryptoInitializationError)
-        if (!viewModel.cryptoInitializationError) {
-            viewModel.isUsingPlaintext = false
         }
     }
 

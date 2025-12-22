@@ -49,6 +49,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
+import top.ltfan.knowmad.util.CryptoManager
 
 class WizardPageViewModel(
     firstPage: WizardSubPage,
@@ -60,6 +61,17 @@ class WizardPageViewModel(
     var cryptoInitializationError by mutableStateOf(false)
 
     var isUsingPlaintext by mutableStateOf(false)
+
+    fun initializeCrypto(
+        setReady: (Boolean) -> Unit,
+    ) {
+        CryptoManager.LLMApiKey.generateKey()
+        cryptoInitializationError = !CryptoManager.LLMApiKey.isKeyInitialized()
+        setReady(!cryptoInitializationError)
+        if (!cryptoInitializationError) {
+            isUsingPlaintext = false
+        }
+    }
 
     private var _apiConfigurationError by mutableStateOf(false)
     var apiConfigurationError: Boolean
