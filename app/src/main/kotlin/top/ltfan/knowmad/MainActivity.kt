@@ -22,9 +22,11 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -47,24 +49,29 @@ class MainActivity : KnowmadActivity() {
         }
     }
 
-    @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+    @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        splashScreen.setKeepOnScreenCondition { !viewModel.appReady }
 
         setContent {
             AppTheme {
                 val dialogStrategy = remember { DialogSceneStrategy<Page>() }
 
                 CompositionLocalProvider(LocalAppViewModel provides viewModel) {
-                    NavDisplay(
-                        backStack = viewModel.backStack.expanded,
-                        entryDecorators = listOf(
-                            rememberSaveableStateHolderNavEntryDecorator(),
-                            rememberViewModelStoreNavEntryDecorator(),
-                        ),
-                        sceneStrategy = dialogStrategy,
-                        entryProvider = { it.navEntry(PaddingValues()) },
-                    )
+                    if (viewModel.appReady) {
+                        NavDisplay(
+                            backStack = viewModel.backStack.expanded,
+                            entryDecorators = listOf(
+                                rememberSaveableStateHolderNavEntryDecorator(),
+                                rememberViewModelStoreNavEntryDecorator(),
+                            ),
+                            sceneStrategy = dialogStrategy,
+                            entryProvider = { it.navEntry(PaddingValues()) },
+                        )
+                    }
                 }
             }
         }

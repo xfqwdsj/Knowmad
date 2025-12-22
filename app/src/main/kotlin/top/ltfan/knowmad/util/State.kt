@@ -18,17 +18,16 @@
 
 package top.ltfan.knowmad.util
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.cbor.CborBuilder
-import kotlinx.serialization.modules.SerializersModule
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalSerializationApi::class)
-val Cbor = Cbor {
-    serializersModule = SerializersModule {
-        llmProvidersPolymorphic()
-    }
+context(viewModel: ViewModel)
+fun <T> StateFlow<T>.collectAsState(): State<T> {
+    val state = mutableStateOf(value)
+    viewModel.viewModelScope.launch { collect { state.value = it } }
+    return state
 }
-
-@OptIn(ExperimentalSerializationApi::class)
-fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(Cbor, builderAction)

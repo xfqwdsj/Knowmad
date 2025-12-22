@@ -132,6 +132,7 @@ import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
+import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.CopyIconButton
 import top.ltfan.knowmad.ui.component.LLMProviderItem
@@ -156,7 +157,11 @@ import top.ltfan.knowmad.util.Resource
 
 @Serializable
 class WizardPage(
-    val onFinishWizard: (entry: LLMConfigEntry, onFailed: (message: String) -> Unit) -> Unit,
+    val onFinishWizard: (
+        entry: LLMConfigEntry,
+        firstJoinedData: FirstJoinedData,
+        onFailed: (message: String) -> Unit,
+    ) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)

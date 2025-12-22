@@ -28,7 +28,7 @@
             android:icon="@mipmap/ic_launcher"
             android:supportsRtl="true"
             android:enableOnBackInvokedCallback="true"
-            android:theme="@style/Theme.Knowmad"
+            android:theme="@style/Theme.Knowmad.SplashScreen"
             tools:targetApi="33">
 
         <activity

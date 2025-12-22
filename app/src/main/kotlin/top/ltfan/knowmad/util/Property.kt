@@ -18,17 +18,22 @@
 
 package top.ltfan.knowmad.util
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.cbor.CborBuilder
-import kotlinx.serialization.modules.SerializersModule
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
-@OptIn(ExperimentalSerializationApi::class)
-val Cbor = Cbor {
-    serializersModule = SerializersModule {
-        llmProvidersPolymorphic()
+inline fun <T, R, P : ReadWriteProperty<Any?, T>> P.transform(
+    crossinline transformIn: T.() -> R,
+    crossinline transformOut: T.(R) -> T,
+): ReadWriteProperty<Any?, R> = object : ReadWriteProperty<Any?, R> {
+    override fun getValue(thisRef: Any?, property: KProperty<*>): R {
+        return this@transform.getValue(thisRef, property).transformIn()
+    }
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: R) {
+        this@transform.setValue(
+            thisRef,
+            property,
+            this@transform.getValue(thisRef, property).transformOut(value),
+        )
     }
 }
-
-@OptIn(ExperimentalSerializationApi::class)
-fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(Cbor, builderAction)

@@ -16,19 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.util
+package top.ltfan.knowmad.ui.page
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.cbor.CborBuilder
-import kotlinx.serialization.modules.SerializersModule
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.Composable
+import kotlinx.serialization.Serializable
 
-@OptIn(ExperimentalSerializationApi::class)
-val Cbor = Cbor {
-    serializersModule = SerializersModule {
-        llmProvidersPolymorphic()
+@Serializable
+class MainPage : Page() {
+    context(contentPadding: PaddingValues)
+    @Composable
+    override fun Content() {
     }
 }
-
-@OptIn(ExperimentalSerializationApi::class)
-fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(Cbor, builderAction)

@@ -18,20 +18,41 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
+import top.ltfan.knowmad.data.wizard.FirstJoinedData
+import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
+import top.ltfan.knowmad.util.transform
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<Route>()
+    var appReady by mutableStateOf(false)
 
-    fun onFinishWizard(entry: LLMConfigEntry, onFailed: (message: String) -> Unit) {
+    private val wizardStateStore = WizardState.createDataStore()
+    private val wizardState = wizardStateStore.asMutableState()
+    var firstJoinedData by wizardState.transform(
+        transformIn = { data },
+        transformOut = { copy(data = it) },
+    )
+
+    fun onFinishWizard(
+        entry: LLMConfigEntry,
+        firstJoinedData: FirstJoinedData,
+        onFailed: (message: String) -> Unit,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dao = application.llmDatabase.dao()
@@ -44,16 +65,31 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                 onFailed(e.localizedMessage ?: "Unknown error")
                 return@launch
             }
-            // TODO
+            this@AppViewModel.firstJoinedData = firstJoinedData
+            navigateToMainPage()
+            backStack.removeIf { it is WizardPage }
         }
     }
 
     fun onSkipWizard() {
+        firstJoinedData = FirstJoinedData(instant = Clock.System.now())
+        navigateToMainPage()
+        backStack.removeIf { it is WizardPage }
+    }
 
+    fun navigateToMainPage() {
+        backStack.add(MainPage())
     }
 
     init {
-        backStack.add(WizardPage(::onFinishWizard, ::onSkipWizard))
+        viewModelScope.launch {
+            if (wizardStateStore.data.first().data == null) {
+                backStack.add(WizardPage(::onFinishWizard, ::onSkipWizard))
+            } else {
+                navigateToMainPage()
+            }
+            appReady = true
+        }
     }
 }
 
