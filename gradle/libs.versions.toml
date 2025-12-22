@@ -67,7 +67,6 @@ compose = [
     "compose-foundation",
     "compose-ui",
     "compose-uiGraphics",
-    "compose-uiToolingPreview",
     "compose-animation",
     "compose-icons",
     "compose-material3",
@@ -75,6 +74,9 @@ compose = [
     "navigation3-runtime",
     "navigation3-ui",
     "lifecycle-viewmodel-navigation3"
+]
+compose-debug = [
+    "compose-uiToolingPreview"
 ]
 ktor = [
     "ktor-client-cio"
