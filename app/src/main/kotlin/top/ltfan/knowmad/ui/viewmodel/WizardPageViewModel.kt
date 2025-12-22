@@ -37,7 +37,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
@@ -46,17 +48,22 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
 import top.ltfan.knowmad.util.CryptoManager
+import top.ltfan.knowmad.util.Resource
+import top.ltfan.knowmad.util.asResource
 
 class WizardPageViewModel(
     firstPage: WizardSubPage,
-    val onFinishWizard: () -> Unit,
+    val onFinishWizard: (entry: LLMConfigEntry, onFailed: (message: String) -> Unit) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : ViewModel() {
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
+    private val _snackbarEvent = MutableSharedFlow<Resource.String>()
+    val snackbarEvent = _snackbarEvent.asSharedFlow()
 
     var cryptoInitializationError by mutableStateOf(false)
 
@@ -139,7 +146,7 @@ class WizardPageViewModel(
     suspend fun fetchKnownModels() {
         val provider = selectedProvider
         val client = client
-        val info = SupportedLLMProviders[provider]
+        val info = currentProviderInfo
         if (provider == null || client == null || provider != client.llmProvider() || info == null) {
             return
         }
@@ -245,9 +252,51 @@ class WizardPageViewModel(
         }
     }
 
+    var isWizardFinished by mutableStateOf(false)
+
     fun finishWizard() {
-        // TODO: Save the configuration
-        onFinishWizard()
+        isWizardFinished = true
+
+        val apiKeyBytes: ByteArray
+        val ivBytes: ByteArray?
+
+        val encryptedData = try {
+            CryptoManager.LLMApiKey.encrypt(apiKey.toByteArray()).also {
+                isUsingPlaintext = false
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            isUsingPlaintext = true
+            null
+        }
+
+        if (encryptedData == null) {
+            apiKeyBytes = apiKey.toByteArray()
+            ivBytes = null
+        } else {
+            apiKeyBytes = encryptedData.ciphertext
+            ivBytes = encryptedData.iv
+        }
+
+        val provider = selectedProvider ?: return
+        val model = selectedModel ?: return
+
+        val entry = LLMConfigEntry(
+            provider = provider,
+            apiKey = apiKeyBytes,
+            iv = ivBytes,
+            baseUrl = baseUrl.ifBlank { null },
+            model = model,
+        )
+
+        onFinishWizard(entry, ::onFinishWizardFailed)
+    }
+
+    fun onFinishWizardFailed(message: String) {
+        isWizardFinished = false
+        viewModelScope.launch {
+            _snackbarEvent.emit(message.asResource())
+        }
     }
 
     fun skipWizard() {
@@ -268,7 +317,7 @@ class WizardPageViewModel(
             snapshotFlow { modelTextFieldState.text }
                 .collect { text ->
                     val modelId = text.toString()
-                    if (modelId.isEmpty()) {
+                    if (modelId.isBlank()) {
                         selectedModel = null
                         return@collect
                     }

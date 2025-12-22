@@ -39,6 +39,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.SerializersModuleBuilder
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.util.CryptoManager
 
@@ -54,6 +55,13 @@ val SupportedLLMProviders = mapOf(
             DeepSeekModels.DeepSeekReasoner,
         ),
         getModelCapabilitiesUrl = { "https://api-docs.deepseek.com/quick_start/pricing" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.DeepSeek::class,
+                LLMProvider.DeepSeek.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         DeepSeekLLMClient(
             apiKey = apiKey,
@@ -69,6 +77,13 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://api.openai.com",
         platformUrl = "https://platform.openai.com",
         getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.OpenAI::class,
+                LLMProvider.OpenAI.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         OpenAILLMClient(
             apiKey = apiKey,
@@ -84,6 +99,13 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://api.anthropic.com",
         platformUrl = "https://console.anthropic.com",
         getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.Anthropic::class,
+                LLMProvider.Anthropic.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         AnthropicLLMClient(
             apiKey = apiKey,
@@ -99,6 +121,13 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
         platformUrl = "https://aistudio.google.com/",
         getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.Google::class,
+                LLMProvider.Google.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         GoogleLLMClient(
             apiKey = apiKey,
@@ -114,6 +143,13 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://openrouter.ai",
         platformUrl = "https://openrouter.ai/keys",
         getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.OpenRouter::class,
+                LLMProvider.OpenRouter.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         OpenRouterLLMClient(
             apiKey = apiKey,
@@ -129,6 +165,13 @@ val SupportedLLMProviders = mapOf(
         defaultBaseUrl = "https://dashscope.aliyuncs.com/",
         platformUrl = "https://dashscope.aliyun.com/",
         getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                LLMProvider.Alibaba::class,
+                LLMProvider.Alibaba.serializer(),
+            )
+        },
     ) { apiKey, baseUrl ->
         DashscopeLLMClient(
             apiKey = apiKey,
@@ -139,7 +182,6 @@ val SupportedLLMProviders = mapOf(
     },
 )
 
-@Serializable
 @Immutable
 data class LLMProviderInfo(
     @param:DrawableRes val icon: Int,
@@ -149,6 +191,7 @@ data class LLMProviderInfo(
     val platformUrl: String,
     val predefinedModels: Map<String, LLModel> = emptyMap(),
     val getModelCapabilitiesUrl: (id: String) -> String,
+    val polymorphic: SerializersModuleBuilder.() -> Unit,
     val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
 ) {
     constructor(
@@ -159,6 +202,7 @@ data class LLMProviderInfo(
         platformUrl: String,
         predefinedModels: Set<LLModel>,
         getModelCapabilitiesUrl: (id: String) -> String,
+        polymorphic: SerializersModuleBuilder.() -> Unit,
         convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
     ) : this(
         icon = icon,
@@ -168,6 +212,7 @@ data class LLMProviderInfo(
         platformUrl = platformUrl,
         predefinedModels = predefinedModels.associateBy { it.id },
         getModelCapabilitiesUrl = getModelCapabilitiesUrl,
+        polymorphic = polymorphic,
         convertToClient = convertToClient,
     )
 }
@@ -308,21 +353,83 @@ sealed interface LLMCapabilityInfo {
     ) : LLMCapabilityInfo
 }
 
+@Serializable
+@Immutable
+data class LLMConfigEntry(
+    val provider: LLMProvider,
+    val providerName: String = provider.display,
+    val apiKey: ByteArray,
+    val iv: ByteArray?,
+    val providerOrder: Int = 0,
+    val baseUrl: String? = null,
+    val model: LLModel,
+    val modelName: String = model.id,
+    val modelOrder: Int = 0,
+) {
+    fun getProviderConfig() = LLMProviderConfigEntity(
+        provider = provider,
+        name = providerName,
+        apiKey = apiKey,
+        iv = iv,
+        order = providerOrder,
+        baseUrl = baseUrl,
+    )
+
+    fun getModelConfig(providerConfigId: Long) = LLMEntity(
+        providerConfigId = providerConfigId,
+        model = model,
+        name = modelName,
+        order = modelOrder,
+    )
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as LLMConfigEntry
+
+        if (providerOrder != other.providerOrder) return false
+        if (modelOrder != other.modelOrder) return false
+        if (provider != other.provider) return false
+        if (providerName != other.providerName) return false
+        if (!apiKey.contentEquals(other.apiKey)) return false
+        if (!iv.contentEquals(other.iv)) return false
+        if (baseUrl != other.baseUrl) return false
+        if (model != other.model) return false
+        if (modelName != other.modelName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = providerOrder
+        result = 31 * result + modelOrder
+        result = 31 * result + provider.hashCode()
+        result = 31 * result + providerName.hashCode()
+        result = 31 * result + apiKey.contentHashCode()
+        result = 31 * result + (iv?.contentHashCode() ?: 0)
+        result = 31 * result + (baseUrl?.hashCode() ?: 0)
+        result = 31 * result + model.hashCode()
+        result = 31 * result + modelName.hashCode()
+        return result
+    }
+}
+
 fun LLMProviderConfigEntity.toClient() = SupportedLLMProviders[provider]
     ?.convertToClient(decryptedApiKey, baseUrl) ?: error("Unsupported LLM Provider: $provider")
 
 val LLMProviderConfigEntity.decryptedApiKey: String
     inline get() {
         if (iv == null) {
-            return apiKey.toByteArray().decodeToString()
+            return apiKey.decodeToString()
         }
         val manager = CryptoManager.LLMApiKey
         if (!manager.isKeyInitialized()) {
-            return apiKey.toByteArray().decodeToString()
+            return apiKey.decodeToString()
         }
         val decryptedBytes = manager.decrypt(
-            ciphertext = apiKey.toByteArray(),
-            iv = iv.toByteArray(),
+            ciphertext = apiKey,
+            iv = iv,
         )
         return decryptedBytes.decodeToString()
     }

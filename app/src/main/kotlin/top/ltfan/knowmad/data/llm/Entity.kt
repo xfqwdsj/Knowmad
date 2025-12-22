@@ -20,7 +20,6 @@ package top.ltfan.knowmad.data.llm
 
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.params.LLMParams
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -28,20 +27,19 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import top.ltfan.knowmad.util.Cbor
 
-@Serializable
 @Entity
 @TypeConverters(LLMProviderConfigEntity.Converters::class)
 data class LLMProviderConfigEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val provider: LLMProvider,
-    val apiKey: List<Byte>,
-    val iv: List<Byte>?,
+    val name: String = provider.display,
+    val apiKey: ByteArray,
+    val iv: ByteArray?,
     val order: Int = 0,
     val baseUrl: String? = null,
 ) {
@@ -57,16 +55,34 @@ data class LLMProviderConfigEntity(
         fun toProvider(data: ByteArray): LLMProvider {
             return Cbor.decodeFromByteArray<LLMProvider>(data)
         }
+    }
 
-        @TypeConverter
-        fun fromByteList(list: List<Byte>): ByteArray {
-            return list.toByteArray()
-        }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-        @TypeConverter
-        fun toByteList(data: ByteArray): List<Byte> {
-            return data.toList()
-        }
+        other as LLMProviderConfigEntity
+
+        if (id != other.id) return false
+        if (order != other.order) return false
+        if (provider != other.provider) return false
+        if (name != other.name) return false
+        if (!apiKey.contentEquals(other.apiKey)) return false
+        if (!iv.contentEquals(other.iv)) return false
+        if (baseUrl != other.baseUrl) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + order
+        result = 31 * result + provider.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + apiKey.contentHashCode()
+        result = 31 * result + (iv?.contentHashCode() ?: 0)
+        result = 31 * result + (baseUrl?.hashCode() ?: 0)
+        return result
     }
 }
 
@@ -85,11 +101,10 @@ data class LLMProviderConfigEntity(
 data class LLMEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val name: String,
-    val order: Int = 0,
     val providerConfigId: Long,
     val model: LLModel,
-    val params: LLMParams,
+    val name: String = model.id,
+    val order: Int = 0,
 ) {
     object Converters {
         @OptIn(ExperimentalSerializationApi::class)
@@ -102,18 +117,6 @@ data class LLMEntity(
         @TypeConverter
         fun toModel(data: ByteArray): LLModel {
             return Cbor.decodeFromByteArray<LLModel>(data)
-        }
-
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun fromParams(params: LLMParams): ByteArray {
-            return Cbor.encodeToByteArray<LLMParams>(params)
-        }
-
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun toParams(data: ByteArray): LLMParams {
-            return Cbor.decodeFromByteArray<LLMParams>(data)
         }
     }
 }

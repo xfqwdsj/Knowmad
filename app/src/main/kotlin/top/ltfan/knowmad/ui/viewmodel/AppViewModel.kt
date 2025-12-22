@@ -19,16 +19,33 @@
 package top.ltfan.knowmad.ui.viewmodel
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<Route>()
 
-    fun onFinishWizard() {
-
+    fun onFinishWizard(entry: LLMConfigEntry, onFailed: (message: String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dao = application.llmDatabase.dao()
+                val providerConfig = entry.getProviderConfig()
+                val providerId = dao.insertProvider(providerConfig)
+                val modelConfig = entry.getModelConfig(providerId)
+                dao.insertModel(modelConfig)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                onFailed(e.localizedMessage ?: "Unknown error")
+                return@launch
+            }
+            // TODO
+        }
     }
 
     fun onSkipWizard() {

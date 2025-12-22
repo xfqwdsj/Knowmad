@@ -85,6 +85,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SecureTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -113,6 +115,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -127,6 +130,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.CopyIconButton
@@ -148,10 +152,11 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
+import top.ltfan.knowmad.util.Resource
 
 @Serializable
 class WizardPage(
-    val onFinishWizard: () -> Unit,
+    val onFinishWizard: (entry: LLMConfigEntry, onFailed: (message: String) -> Unit) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : Page() {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -164,6 +169,8 @@ class WizardPage(
 
         val backStack = viewModel.backStack
         val currentPage = backStack.last()
+
+        val snackbarHostState = remember { SnackbarHostState() }
 
         val insets = AppWindowInsets + contentPadding
         val horizontalPadding = insets.only { horizontal }.asPaddingValues()
@@ -218,30 +225,36 @@ class WizardPage(
                                 }
                             }
                         }
-                        Surface(
+                        Box(
                             modifier = Modifier.weight(1f),
-                            shape = ContentContainerShape,
-                            color = ContentContainerColor,
+                            contentAlignment = Alignment.BottomCenter,
                         ) {
-                            NavDisplay(
-                                backStack = backStack,
+                            Surface(
                                 modifier = Modifier.fillMaxSize(),
-                                transitionSpec = {
-                                    fadeIn() + slideInHorizontally { it } togetherWith
-                                            fadeOut() + slideOutHorizontally { -it }
-                                },
-                                popTransitionSpec = {
-                                    fadeIn() + slideInHorizontally { -it } togetherWith
-                                            fadeOut() + slideOutHorizontally { it }
-                                },
-                                predictivePopTransitionSpec = {
-                                    fadeIn() + slideInHorizontally { -it } togetherWith
-                                            fadeOut() + slideOutHorizontally { it }
-                                },
-                                entryProvider = @Suppress("UNCHECKED_CAST") {
-                                    it.navEntry() as NavEntry<WizardSubPage>
-                                },
-                            )
+                                shape = ContentContainerShape,
+                                color = ContentContainerColor,
+                            ) {
+                                NavDisplay(
+                                    backStack = backStack,
+                                    modifier = Modifier.fillMaxSize(),
+                                    transitionSpec = {
+                                        fadeIn() + slideInHorizontally { it } togetherWith
+                                                fadeOut() + slideOutHorizontally { -it }
+                                    },
+                                    popTransitionSpec = {
+                                        fadeIn() + slideInHorizontally { -it } togetherWith
+                                                fadeOut() + slideOutHorizontally { it }
+                                    },
+                                    predictivePopTransitionSpec = {
+                                        fadeIn() + slideInHorizontally { -it } togetherWith
+                                                fadeOut() + slideOutHorizontally { it }
+                                    },
+                                    entryProvider = @Suppress("UNCHECKED_CAST") {
+                                        it.navEntry() as NavEntry<WizardSubPage>
+                                    },
+                                )
+                            }
+                            SnackbarHost(snackbarHostState)
                         }
                     }
                 }
@@ -295,6 +308,17 @@ class WizardPage(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
+            }
+        }
+
+        val resources = LocalResources.current
+        LaunchedEffect(Unit) {
+            viewModel.snackbarEvent.collect {
+                val string = when (it) {
+                    is Resource.String.Original -> it.value
+                    is Resource.String.Id -> resources.getString(it.id)
+                }
+                snackbarHostState.showSnackbar(string)
             }
         }
     }
@@ -519,7 +543,7 @@ private class ApiSetupPage : WizardSubPage() {
                             Row {
                                 PasteIconButton(
                                     onPaste = {
-                                        viewModel.apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it)
+                                        viewModel.apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it.trim())
                                     },
                                 )
                                 viewModel.currentProviderInfo?.let { providerInfo ->
@@ -573,7 +597,7 @@ private class ApiSetupPage : WizardSubPage() {
                     Divider()
                     TextField(
                         value = viewModel.baseUrl,
-                        onValueChange = { viewModel.baseUrl = it },
+                        onValueChange = { viewModel.baseUrl = it.trim() },
                         modifier = Modifier
                             .widthIn(max = TextFieldMaxWidth)
                             .fillMaxWidth(),
@@ -586,7 +610,7 @@ private class ApiSetupPage : WizardSubPage() {
                             }
                         },
                         trailingIcon = {
-                            PasteIconButton(onPaste = { viewModel.baseUrl = it })
+                            PasteIconButton(onPaste = { viewModel.baseUrl = it.trim() })
                         },
                         supportingText = {
                             Text(stringResource(R.string.llm_api_base_url_input_message))
@@ -628,11 +652,11 @@ private class ApiSetupPage : WizardSubPage() {
     }
 
     override fun canContinue(viewModel: WizardPageViewModel): Boolean {
-        return viewModel.apiKey.isNotEmpty()
+        return viewModel.apiKey.isNotBlank()
     }
 
     override fun nextPage(viewModel: WizardPageViewModel): WizardSubPage {
-        if (viewModel.baseUrl.isEmpty()) {
+        if (viewModel.baseUrl.isBlank()) {
             viewModel.currentProviderInfo?.let { providerInfo ->
                 viewModel.baseUrl = providerInfo.defaultBaseUrl
             }
@@ -695,7 +719,7 @@ private class ModelSetupPage : WizardSubPage() {
                     trailingIcon = {
                         PasteIconButton(
                             onPaste = {
-                                viewModel.modelTextFieldState.setTextAndPlaceCursorAtEnd(it)
+                                viewModel.modelTextFieldState.setTextAndPlaceCursorAtEnd(it.trim())
                             },
                         )
                     },
@@ -709,7 +733,7 @@ private class ModelSetupPage : WizardSubPage() {
                     .takeIf { it != "0" || !contextLengthFocused } ?: "",
                 onValueChange = {
                     viewModel.selectedModel = viewModel.selectedModel?.copy(
-                        contextLength = it.toLongOrNull() ?: 0,
+                        contextLength = it.trim().toLongOrNull() ?: 0,
                     )
                 },
                 modifier = Modifier
@@ -724,7 +748,7 @@ private class ModelSetupPage : WizardSubPage() {
                 trailingIcon = {
                     PasteIconButton(
                         onPaste = {
-                            val value = it.toLongOrNull() ?: return@PasteIconButton
+                            val value = it.trim().toLongOrNull() ?: return@PasteIconButton
                             viewModel.selectedModel = viewModel.selectedModel?.copy(
                                 contextLength = value,
                             )
@@ -741,7 +765,7 @@ private class ModelSetupPage : WizardSubPage() {
                 value = viewModel.selectedModel?.maxOutputTokens?.toString() ?: "",
                 onValueChange = {
                     viewModel.selectedModel = viewModel.selectedModel?.copy(
-                        maxOutputTokens = it.toLongOrNull(),
+                        maxOutputTokens = it.trim().toLongOrNull(),
                     )
                 },
                 modifier = Modifier
@@ -753,7 +777,7 @@ private class ModelSetupPage : WizardSubPage() {
                 trailingIcon = {
                     PasteIconButton(
                         onPaste = {
-                            val value = it.toLongOrNull() ?: return@PasteIconButton
+                            val value = it.trim().toLongOrNull() ?: return@PasteIconButton
                             viewModel.selectedModel = viewModel.selectedModel?.copy(
                                 maxOutputTokens = value,
                             )
@@ -941,9 +965,9 @@ private class FinishPage : WizardSubPage() {
                         modifier = Modifier.fillMaxWidth(),
                         transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = false) },
                         contentAlignment = Alignment.TopCenter,
-                        contentKey = { it.isEmpty() },
+                        contentKey = { it.isBlank() },
                     ) { firstMessage ->
-                        if (firstMessage.isNotEmpty()) {
+                        if (firstMessage.isNotBlank()) {
                             MarkdownView(
                                 viewModel.firstMessageFlow,
                                 modifier = Modifier.padding(horizontal = 16.dp),
