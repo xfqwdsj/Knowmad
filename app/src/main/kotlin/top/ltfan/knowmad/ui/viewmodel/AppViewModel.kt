@@ -67,14 +67,14 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             }
             this@AppViewModel.firstJoinedData = firstJoinedData
             navigateToMainPage()
-            backStack.removeIf { it is WizardPage }
+            backStack.removeAll { it is WizardPage }
         }
     }
 
     fun onSkipWizard() {
         firstJoinedData = FirstJoinedData(instant = Clock.System.now())
         navigateToMainPage()
-        backStack.removeIf { it is WizardPage }
+        backStack.removeAll { it is WizardPage }
     }
 
     fun navigateToMainPage() {
