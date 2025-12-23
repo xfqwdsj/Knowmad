@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_capability_speculation_label">Speculative Reasoning</string>
+    <string name="llm_capability_speculation_description">Indicates whether the model can generate speculative, hypothetical, or non-deterministic responses when exact or verified answers are unavailable This capability is typically used for exploration, brainstorming, or reasoning under uncertainty</string>
+    <string name="llm_capability_temperature_label">Temperature Control</string>
+    <string name="llm_capability_temperature_description">Indicates whether the model supports a temperature parameter to control response randomness Higher values increase output diversity and creativity, while lower values favor more deterministic and focused responses</string>
+    <string name="llm_capability_tools_label">Tool Calling</string>
+    <string name="llm_capability_tools_description">Indicates whether the model can call external tools or functions during generation This includes invoking predefined tools, passing structured arguments, and integrating tool results into its responses</string>
+    <string name="llm_capability_tool_choice_label">Tool Selection Control</string>
+    <string name="llm_capability_tool_choice_description">Indicates whether the tool calling behavior of the model can be explicitly controlled This may include automatic tool selection, forcing text-only output, forcing tool-only output, or requiring invocation of a specific tool</string>
+    <string name="llm_capability_multiple_choices_label">Multiple Completion Choices</string>
+    <string name="llm_capability_multiple_choices_description">Indicates whether the model can generate multiple independent response candidates for a single prompt, typically used for sampling, ranking, or user selection</string>
+    <string name="llm_capability_vision_label">Vision Processing</string>
+    <string name="llm_capability_vision_description">Indicates whether the model can process and reason over visual inputs Vision capabilities may include understanding, analyzing, or generating content based on visual data</string>
+    <string name="llm_capability_image_label">Image Understanding</string>
+    <string name="llm_capability_image_description">Indicates whether the model can process static image inputs, such as performing image analysis, visual question answering, image-to-text generation, or visual reasoning tasks</string>
+    <string name="llm_capability_video_label">Video Understanding</string>
+    <string name="llm_capability_video_description">Indicates whether the model can process video inputs, including temporal visual reasoning, scene understanding, or extracting insights from video sequences</string>
+    <string name="llm_capability_audio_label">Audio Processing</string>
+    <string name="llm_capability_audio_description">Indicates whether the model supports audio-based capabilities, such as speech recognition, audio transcription, audio generation, or audio-driven interactions</string>
+    <string name="llm_capability_document_label">Document Handling</string>
+    <string name="llm_capability_document_description">Indicates whether the model can ingest, analyze, and reason over structured or unstructured documents, such as PDFs, long texts, or multi-page inputs</string>
+    <string name="llm_capability_embed_label">Text Embeddings</string>
+    <string name="llm_capability_embed_description">Indicates whether the model can generate vector embeddings from text inputs Embeddings are numerical representations used for similarity search, clustering, retrieval, and other vector-based tasks</string>
+    <string name="llm_capability_completion_label">Text Completion</string>
+    <string name="llm_capability_completion_description">Indicates whether the model supports text or content generation based on a provided prompt or context, including continuation, summarization, and free-form generation</string>
+    <string name="llm_capability_prompt_caching_label">Prompt Caching</string>
+    <string name="llm_capability_prompt_caching_description">Indicates whether the model or underlying API supports prompt caching or reuse, enabling improved performance, reduced latency, or lower cost for repeated or shared prompt contexts</string>
+    <string name="llm_capability_moderation_label">Content Moderation</string>
+    <string name="llm_capability_moderation_description">Indicates whether the model can classify or analyze content for safety and policy compliance, such as detecting harassment, hate speech, violence, sexual content, or self-harm</string>
+    <string name="llm_capability_schema_label">Structured Output Schema</string>
+    <string name="llm_capability_schema_description">Indicates whether the model can generate outputs that conform to a predefined structured schema, enabling reliable machine-readable responses</string>
+    <string name="llm_capability_json_schema_label">JSON Schema Output</string>
+    <string name="llm_capability_json_schema_description">Indicates whether the model supports structured JSON output that follows a declared schema definition</string>
+    <string name="llm_capability_basic_json_schema_label">Basic JSON Schema</string>
+    <string name="llm_capability_basic_json_schema_description">Indicates support for basic JSON-structured outputs, typically limited to simple objects, arrays, and primitive types without full JSON Schema validation semantics</string>
+    <string name="llm_capability_standard_json_schema_label">Standard JSON Schema</string>
+    <string name="llm_capability_standard_json_schema_description">Indicates support for standard JSON Schema definitions, following a subset of the official JSON Schema specification, enabling more precise structure and validation</string>
+    <string name="llm_capability_openai_endpoint_label">OpenAI API Endpoint</string>
+    <string name="llm_capability_openai_endpoint_description">Indicates that the model is accessed via a specific OpenAI API endpoint, which defines the interaction style and supported features</string>
+    <string name="llm_capability_openai_endpoint_chat_completions_label">OpenAI Chat Completions API</string>
+    <string name="llm_capability_openai_endpoint_chat_completions_description">Indicates compatibility with the OpenAI Chat Completions API, which uses role-based message inputs and returns conversational responses</string>
+    <string name="llm_capability_openai_endpoint_responses_label">OpenAI Responses API</string>
+    <string name="llm_capability_openai_endpoint_responses_description">Indicates compatibility with the OpenAI Responses API, a unified endpoint supporting multimodal inputs, tool calls, and structured outputs</string>
+</resources>

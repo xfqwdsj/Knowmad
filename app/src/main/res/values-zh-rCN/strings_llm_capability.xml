@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_capability_speculation_label">推测推理</string>
+    <string name="llm_capability_speculation_description">表示模型在缺乏精确或可验证答案时，是否能够生成推测性、假设性或非确定性的响应。该能力通常用于探索、头脑风暴或不确定条件下的推理</string>
+    <string name="llm_capability_temperature_label">温度控制</string>
+    <string name="llm_capability_temperature_description">表示模型是否支持通过temperature参数控制响应的随机性。较高的值会增加输出的多样性和创造性，较低的值则更偏向确定性和聚焦的响应</string>
+    <string name="llm_capability_tools_label">工具调用</string>
+    <string name="llm_capability_tools_description">表示模型是否能够在生成过程中调用外部工具或函数，包括调用预定义工具、传递结构化参数，以及将工具结果整合到响应中</string>
+    <string name="llm_capability_tool_choice_label">工具选择控制</string>
+    <string name="llm_capability_tool_choice_description">表示是否可以显式控制模型的工具调用行为。这可能包括自动选择工具、强制仅输出文本、强制仅输出工具调用，或要求调用指定工具</string>
+    <string name="llm_capability_multiple_choices_label">多候选结果</string>
+    <string name="llm_capability_multiple_choices_description">表示模型是否能够针对同一个提示生成多个相互独立的响应候选，通常用于采样、排序或用户选择</string>
+    <string name="llm_capability_vision_label">视觉处理</string>
+    <string name="llm_capability_vision_description">表示模型是否能够处理并推理视觉输入。视觉能力可能包括理解、分析或基于视觉数据生成内容</string>
+    <string name="llm_capability_image_label">图像理解</string>
+    <string name="llm_capability_image_description">表示模型是否能够处理静态图像输入，例如图像分析、视觉问答、图像转文本生成或视觉推理任务</string>
+    <string name="llm_capability_video_label">视频理解</string>
+    <string name="llm_capability_video_description">表示模型是否能够处理视频输入，包括时序视觉推理、场景理解或从视频序列中提取信息</string>
+    <string name="llm_capability_audio_label">音频处理</string>
+    <string name="llm_capability_audio_description">表示模型是否支持基于音频的能力，例如语音识别、音频转写、音频生成或基于音频的交互</string>
+    <string name="llm_capability_document_label">文档处理</string>
+    <string name="llm_capability_document_description">表示模型是否能够摄取、分析并推理结构化或非结构化文档，例如PDF、长文本或多页输入</string>
+    <string name="llm_capability_embed_label">文本嵌入</string>
+    <string name="llm_capability_embed_description">表示模型是否能够从文本输入生成向量嵌入。嵌入是用于相似度搜索、聚类、检索等向量化任务的数值表示</string>
+    <string name="llm_capability_completion_label">文本补全</string>
+    <string name="llm_capability_completion_description">表示模型是否支持基于给定提示或上下文生成文本或内容，包括续写、摘要和自由生成</string>
+    <string name="llm_capability_prompt_caching_label">提示词缓存</string>
+    <string name="llm_capability_prompt_caching_description">表示模型或其底层API是否支持提示词缓存或复用，以提升性能、降低延迟，或减少重复或共享提示词上下文的成本</string>
+    <string name="llm_capability_moderation_label">内容审核</string>
+    <string name="llm_capability_moderation_description">表示模型是否能够对内容进行安全和合规性分析，例如识别骚扰、仇恨言论、暴力、色情或自残相关内容</string>
+    <string name="llm_capability_schema_label">结构化输出模式</string>
+    <string name="llm_capability_schema_description">表示模型是否能够生成符合预定义结构化模式的输出，以实现可靠的机器可读响应</string>
+    <string name="llm_capability_json_schema_label">JSON Schema输出</string>
+    <string name="llm_capability_json_schema_description">表示模型是否支持遵循声明式模式定义的结构化JSON输出</string>
+    <string name="llm_capability_basic_json_schema_label">基础JSON Schema</string>
+    <string name="llm_capability_basic_json_schema_description">表示支持基础的JSON结构化输出，通常仅限于简单对象、数组和基本类型，不包含完整的JSON Schema校验语义</string>
+    <string name="llm_capability_standard_json_schema_label">标准JSON Schema</string>
+    <string name="llm_capability_standard_json_schema_description">表示支持标准的JSON Schema定义，遵循官方JSON Schema规范的一个子集，以实现更精确的结构描述和校验</string>
+    <string name="llm_capability_openai_endpoint_label">OpenAI API端点</string>
+    <string name="llm_capability_openai_endpoint_description">表示模型通过特定的OpenAI API端点进行访问。该端点定义了交互方式和支持的功能</string>
+    <string name="llm_capability_openai_endpoint_chat_completions_label">OpenAI Chat Completions API</string>
+    <string name="llm_capability_openai_endpoint_chat_completions_description">表示兼容OpenAI Chat Completions API。该API使用基于角色的消息输入，并返回对话式响应</string>
+    <string name="llm_capability_openai_endpoint_responses_label">OpenAI Responses API</string>
+    <string name="llm_capability_openai_endpoint_responses_description">表示兼容OpenAI Responses API。这是一个统一端点，支持多模态输入、工具调用和结构化输出</string>
+</resources>
