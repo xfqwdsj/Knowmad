@@ -21,6 +21,7 @@ package top.ltfan.knowmad
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -61,16 +62,19 @@ class MainActivity : KnowmadActivity() {
                 val dialogStrategy = remember { DialogSceneStrategy<Page>() }
 
                 CompositionLocalProvider(LocalAppViewModel provides viewModel) {
-                    if (viewModel.appReady) {
-                        NavDisplay(
-                            backStack = viewModel.backStack.expanded,
-                            entryDecorators = listOf(
-                                rememberSaveableStateHolderNavEntryDecorator(),
-                                rememberViewModelStoreNavEntryDecorator(),
-                            ),
-                            sceneStrategy = dialogStrategy,
-                            entryProvider = { it.navEntry(PaddingValues()) },
-                        )
+                    SharedTransitionLayout {
+                        if (viewModel.appReady) {
+                            NavDisplay(
+                                backStack = viewModel.backStack.expanded,
+                                entryDecorators = listOf(
+                                    rememberSaveableStateHolderNavEntryDecorator(),
+                                    rememberViewModelStoreNavEntryDecorator(),
+                                ),
+                                sceneStrategy = dialogStrategy,
+                                sharedTransitionScope = this,
+                                entryProvider = { it.navEntry(PaddingValues()) },
+                            )
+                        }
                     }
                 }
             }
