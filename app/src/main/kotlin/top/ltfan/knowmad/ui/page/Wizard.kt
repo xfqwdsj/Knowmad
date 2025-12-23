@@ -911,7 +911,7 @@ private class FinishPage : WizardSubPage() {
         val viewModel = viewModel<WizardPageViewModel>()
 
         val coroutineScope = rememberCoroutineScope()
-        val prompt = stringResource(R.string.setup_wizard_finish_llm_prompt)
+        val resources = LocalResources.current
         val firstMessage by viewModel.firstMessageFlow.collectAsState()
 
         Column(
@@ -997,7 +997,7 @@ private class FinishPage : WizardSubPage() {
                         RetryIconButton(
                             onRetry = {
                                 coroutineScope.launch {
-                                    viewModel.generateFirstMessage(prompt)
+                                    viewModel.generateFirstMessage(resources)
                                 }
                             },
                             enabled = !viewModel.firstMessageGenerationStarted,
@@ -1055,7 +1055,7 @@ private class FinishPage : WizardSubPage() {
 
         LaunchedEffect(Unit) {
             if (!viewModel.firstMessageGenerated) {
-                viewModel.generateFirstMessage(prompt)
+                viewModel.generateFirstMessage(resources)
             }
         }
 

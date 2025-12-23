@@ -23,6 +23,7 @@ import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
+import android.content.res.Resources
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.getValue
@@ -213,7 +214,7 @@ class WizardPageViewModel(
         firstMessageGenerated = false
     }
 
-    suspend fun generateFirstMessage(prompt: String) {
+    suspend fun generateFirstMessage(resources: Resources) {
         val client = client ?: return
         val model = selectedModel ?: return
         if (firstMessageGenerationStarted) {
@@ -223,13 +224,17 @@ class WizardPageViewModel(
 
         withContext(Dispatchers.IO) {
             try {
+                val instant = Clock.System.now()
+                firstJoinedTime = instant
+                val datetime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+                    .format(LocalDateTime.Formats.ISO)
+                val head = resources.getString(R.string.llm_prompt_head)
+                val intro = resources.getString(R.string.llm_prompt_intro_long)
+                val body = resources.getString(R.string.llm_prompt_setup_wizard_finish, datetime)
+                val prompt = resources.getString(R.string.llm_prompt_concat, head, intro, body)
                 val response = client.executeStreaming(
                     prompt = prompt("first-message") {
-                        val instant = Clock.System.now()
-                        firstJoinedTime = instant
-                        val datetime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                            .format(LocalDateTime.Formats.ISO)
-                        system(prompt.format(datetime))
+                        system(prompt)
                     },
                     model = model,
                 )
