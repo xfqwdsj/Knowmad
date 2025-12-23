@@ -104,7 +104,7 @@ room {
 
 dependencies {
     implementation(libs.kotlin.reflect)
-    implementation(libs.bundles.kotlinx.serialization)
+    implementation(libs.bundles.kotlinx)
     implementation(libs.bundles.androidx)
     implementation(platform(libs.compose))
     implementation(libs.bundles.compose)

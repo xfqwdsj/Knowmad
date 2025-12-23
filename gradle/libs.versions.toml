@@ -1,6 +1,7 @@
 [versions]
 kotlin = "2.3.0"
 kotlinx-serialization = "1.9.0"
+kotlinx-datetime = "0.7.1-0.6.x-compat" # TODO: remove when possible
 ksp = "2.3.4"
 agp = "9.1.0-alpha01"
 room = "2.8.4"
@@ -23,6 +24,7 @@ calendar = "2.9.0"
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
@@ -36,7 +38,6 @@ compose-ui = { module = "androidx.compose.ui:ui" }
 compose-uiGraphics = { module = "androidx.compose.ui:ui-graphics" }
 compose-uiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-animation = { module = "androidx.compose.animation:animation" }
-compose-icons = { module = "androidx.compose.material:material-icons-extended" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose-material3" }
 compose-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive-navigation3", version.ref = "material3-adaptive-nav3" }
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3" }
@@ -51,9 +52,10 @@ markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-
 calendar = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "calendar" }
 
 [bundles]
-kotlinx-serialization = [
+kotlinx = [
     "kotlinx-serialization-json",
-    "kotlinx-serialization-cbor"
+    "kotlinx-serialization-cbor",
+    "kotlinx-datetime"
 ]
 androidx = [
     "room-runtime",
@@ -68,7 +70,6 @@ compose = [
     "compose-ui",
     "compose-uiGraphics",
     "compose-animation",
-    "compose-icons",
     "compose-material3",
     "compose-material3-adaptive",
     "navigation3-runtime",
@@ -97,6 +98,7 @@ calendar = [
 ]
 
 [plugins]
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

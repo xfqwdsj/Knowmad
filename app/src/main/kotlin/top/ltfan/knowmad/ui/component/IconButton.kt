@@ -20,10 +20,6 @@ package top.ltfan.knowmad.ui.component
 
 import android.content.ClipData
 import androidx.annotation.StringRes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +36,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
@@ -68,7 +65,7 @@ fun RetryIconButton(
             enabled = enabled,
         ) {
             Icon(
-                Icons.Default.Refresh,
+                painterResource(R.drawable.refresh_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
             )
         }
@@ -108,7 +105,7 @@ fun CopyIconButton(
             enabled = enabled,
         ) {
             Icon(
-                Icons.Default.ContentPaste,
+                painterResource(R.drawable.content_paste_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
             )
         }
@@ -153,7 +150,7 @@ fun PasteIconButton(
             enabled = enabled,
         ) {
             Icon(
-                Icons.Default.ContentPaste,
+                painterResource(R.drawable.content_paste_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
             )
         }
@@ -186,7 +183,7 @@ fun OpenUriIconButton(
             enabled = enabled,
         ) {
             Icon(
-                Icons.AutoMirrored.Default.OpenInNew,
+                painterResource(R.drawable.open_in_new_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
             )
         }

@@ -20,9 +20,9 @@ package top.ltfan.knowmad.data.wizard
 
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.data.DataStoreCompanion
+import kotlin.time.Instant
 
 @Serializable
 data class WizardData(

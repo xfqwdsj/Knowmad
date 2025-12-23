@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.page
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -59,17 +60,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Celebration
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.EnhancedEncryption
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.NoEncryption
-import androidx.compose.material.icons.filled.Token
-import androidx.compose.material.icons.filled.Upcoming
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,8 +104,8 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -223,7 +213,7 @@ class WizardPage(
                                 for ((item, show) in messageItems) {
                                     if (show) {
                                         Message(
-                                            imageVector = item.icon,
+                                            icon = item.icon,
                                             message = stringResource(item.message),
                                         )
                                     }
@@ -329,12 +319,12 @@ class WizardPage(
     }
 
     @Composable
-    fun Message(imageVector: ImageVector, message: String) {
+    fun Message(@DrawableRes icon: Int, message: String) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector,
+                painterResource(icon),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
             )
@@ -368,7 +358,7 @@ class WizardPage(
 
 @Immutable
 data class WizardMessageItem(
-    val icon: ImageVector,
+    @param:DrawableRes val icon: Int,
     @param:StringRes val message: Int,
 )
 
@@ -403,7 +393,7 @@ private class WelcomePage : WizardSubPage() {
         ) {
             StaticTitle(
                 icon = {
-                    TitleIcon(Icons.Default.AutoAwesome)
+                    TitleIcon(R.drawable.stars_2_24px)
                 },
                 title = R.string.setup_wizard_welcome_title,
                 message = R.string.setup_wizard_welcome_message,
@@ -441,7 +431,7 @@ private class ProviderPage : WizardSubPage() {
         ) {
             StaticTitle(
                 icon = {
-                    TitleIcon(Icons.Default.Upcoming)
+                    TitleIcon(R.drawable.computer_24px)
                 },
                 title = R.string.setup_wizard_provider_title,
                 message = R.string.setup_wizard_provider_message,
@@ -505,11 +495,11 @@ private class ApiSetupPage : WizardSubPage() {
                 shape1 = MaterialShapes.Cookie12Sided,
                 color1 = MaterialTheme.colorScheme.errorContainer,
                 rotation1 = 135f,
-                icon1 = { TitleIcon(Icons.Default.Error) },
+                icon1 = { TitleIcon(R.drawable.error_24px) },
                 shape2 = MaterialShapes.Cookie9Sided,
                 color2 = MaterialTheme.colorScheme.primaryContainer,
                 rotation2 = 0f,
-                icon2 = { TitleIcon(Icons.Default.Key) },
+                icon2 = { TitleIcon(R.drawable.key_24px) },
                 displayShape2 = isReady,
             )
             IconTitleSpacer()
@@ -540,7 +530,7 @@ private class ApiSetupPage : WizardSubPage() {
                         },
                         leadingIcon = {
                             Icon(
-                                if (viewModel.isUsingPlaintext) Icons.Default.NoEncryption else Icons.Default.EnhancedEncryption,
+                                painterResource(if (viewModel.isUsingPlaintext) R.drawable.encrypted_off_24px else R.drawable.encrypted_24px),
                                 contentDescription = null,
                             )
                         },
@@ -705,7 +695,7 @@ private class ModelSetupPage : WizardSubPage() {
         ) {
             StaticTitle(
                 icon = {
-                    TitleIcon(Icons.Default.Token)
+                    TitleIcon(R.drawable.token_24px)
                 },
                 title = R.string.setup_wizard_model_title,
                 message = R.string.setup_wizard_model_message,
@@ -888,7 +878,7 @@ private class AdvancedSettingsPage : WizardSubPage() {
         ) {
             StaticTitle(
                 icon = {
-                    TitleIcon(Icons.Default.Code)
+                    TitleIcon(R.drawable.code_24px)
                 },
                 title = R.string.setup_wizard_advanced_title,
                 message = R.string.setup_wizard_advanced_message,
@@ -936,11 +926,11 @@ private class FinishPage : WizardSubPage() {
                 shape1 = MaterialShapes.Cookie9Sided,
                 color1 = MaterialTheme.colorScheme.primaryContainer,
                 rotation1 = 0f,
-                icon1 = { TitleIcon(Icons.Default.Celebration) },
+                icon1 = { TitleIcon(R.drawable.celebration_24px) },
                 shape2 = MaterialShapes.Cookie12Sided,
                 color2 = MaterialTheme.colorScheme.errorContainer,
                 rotation2 = 135f,
-                icon2 = { TitleIcon(Icons.Default.Error) },
+                icon2 = { TitleIcon(R.drawable.error_24px) },
                 displayShape2 = viewModel.apiConfigurationError,
             )
             IconTitleSpacer()
@@ -1034,7 +1024,7 @@ private class FinishPage : WizardSubPage() {
                             contentPadding = ButtonDefaults.contentPaddingFor(size),
                         ) {
                             Icon(
-                                Icons.AutoMirrored.Default.ArrowForward,
+                                painterResource(R.drawable.arrow_forward_24px),
                                 contentDescription = stringResource(R.string.label_finish),
                                 modifier = Modifier.size(ButtonDefaults.iconSizeFor(size)),
                             )
@@ -1220,10 +1210,10 @@ private fun TitleText(
 
 @Composable
 private fun TitleIcon(
-    imageVector: ImageVector,
+    @DrawableRes drawable: Int,
 ) {
     Icon(
-        imageVector = imageVector,
+        painterResource(drawable),
         contentDescription = null,
         modifier = Modifier
             .padding(16.dp)

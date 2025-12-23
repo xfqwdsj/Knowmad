@@ -45,7 +45,7 @@ import top.ltfan.knowmad.util.CryptoManager
 
 val SupportedLLMProviders = mapOf(
     LLMProvider.DeepSeek to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_deepseek,
+        icon = R.drawable.llm_provider_deepseek,
         label = R.string.llm_provider_deepseek_label,
         description = R.string.llm_provider_deepseek_description,
         defaultBaseUrl = "https://api.deepseek.com",
@@ -71,7 +71,7 @@ val SupportedLLMProviders = mapOf(
         )
     },
     LLMProvider.OpenAI to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_openai,
+        icon = R.drawable.llm_provider_openai,
         label = R.string.llm_provider_openai_label,
         description = R.string.llm_provider_openai_description,
         defaultBaseUrl = "https://api.openai.com",
@@ -93,7 +93,7 @@ val SupportedLLMProviders = mapOf(
         )
     },
     LLMProvider.Anthropic to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_anthropic,
+        icon = R.drawable.llm_provider_anthropic,
         label = R.string.llm_provider_anthropic_label,
         description = R.string.llm_provider_anthropic_description,
         defaultBaseUrl = "https://api.anthropic.com",
@@ -115,7 +115,7 @@ val SupportedLLMProviders = mapOf(
         )
     },
     LLMProvider.Google to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_google,
+        icon = R.drawable.llm_provider_google,
         label = R.string.llm_provider_google_label,
         description = R.string.llm_provider_google_description,
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
@@ -137,7 +137,7 @@ val SupportedLLMProviders = mapOf(
         )
     },
     LLMProvider.OpenRouter to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_openrouter,
+        icon = R.drawable.llm_provider_openrouter,
         label = R.string.llm_provider_openrouter_label,
         description = R.string.llm_provider_openrouter_description,
         defaultBaseUrl = "https://openrouter.ai",
@@ -159,7 +159,7 @@ val SupportedLLMProviders = mapOf(
         )
     },
     LLMProvider.Alibaba to LLMProviderInfo(
-        icon = R.drawable.ic_llm_provider_alibaba,
+        icon = R.drawable.llm_provider_alibaba,
         label = R.string.llm_provider_alibaba_label,
         description = R.string.llm_provider_alibaba_description,
         defaultBaseUrl = "https://dashscope.aliyuncs.com/",

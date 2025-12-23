@@ -27,7 +27,6 @@ import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
@@ -36,6 +35,7 @@ import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 import top.ltfan.knowmad.util.transform
+import kotlin.time.Clock
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<Route>()

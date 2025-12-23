@@ -43,8 +43,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -65,10 +63,12 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import top.ltfan.knowmad.R
 
 @Immutable
 data class StepItem(
@@ -199,7 +199,7 @@ private fun StepperItem(
                 ) { currentStatus ->
                     if (currentStatus == StepStatus.COMPLETED) {
                         Icon(
-                            imageVector = Icons.Default.Check,
+                            painterResource(R.drawable.check_24px),
                             contentDescription = "Completed",
                             tint = onActiveColor,
                             modifier = Modifier.size(18.dp),

@@ -25,9 +25,6 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +39,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
@@ -57,6 +52,8 @@ import top.ltfan.knowmad.ui.page.WizardSubPage
 import top.ltfan.knowmad.util.CryptoManager
 import top.ltfan.knowmad.util.Resource
 import top.ltfan.knowmad.util.asResource
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class WizardPageViewModel(
     firstPage: WizardSubPage,
@@ -102,15 +99,15 @@ class WizardPageViewModel(
     val messageItems
         inline get() = listOf(
             WizardMessageItem(
-                icon = Icons.Default.Error,
+                icon = R.drawable.error_24px,
                 message = R.string.crypto_key_initialization_error_message,
             ) to cryptoInitializationError,
             WizardMessageItem(
-                icon = Icons.Default.Error,
+                icon = R.drawable.error_24px,
                 message = R.string.llm_message_invalid,
             ) to apiConfigurationError,
             WizardMessageItem(
-                icon = Icons.Default.Warning,
+                icon = R.drawable.warning_24px,
                 message = R.string.crypto_use_plaintext_warning,
             ) to isUsingPlaintext,
         )
