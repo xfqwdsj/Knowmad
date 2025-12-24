@@ -21,7 +21,6 @@ package top.ltfan.knowmad.ui.page
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
@@ -34,7 +33,6 @@ import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 
 @Serializable
 class MainPage : Page() {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {

@@ -20,7 +20,6 @@ package top.ltfan.knowmad.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -117,7 +116,6 @@ data class ColorFamily(
     val onColorContainer: Color,
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -142,7 +140,6 @@ fun AppTheme(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProvideCompatibleShapes(content: @Composable () -> Unit) {
     MaterialExpressiveTheme(

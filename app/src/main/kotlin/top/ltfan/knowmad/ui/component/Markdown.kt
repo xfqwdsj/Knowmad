@@ -34,7 +34,6 @@ import com.mikepenz.markdown.model.State
 import com.mikepenz.markdown.model.parseMarkdownFlow
 import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filter
@@ -82,7 +81,6 @@ fun MarkdownView(
 }
 
 private class MarkdownViewModel(markdownFlow: Flow<String>) : ViewModel() {
-    @OptIn(ExperimentalCoroutinesApi::class)
     val markdownState = markdownFlow
         .flatMapLatest { parseMarkdownFlow(it) }
         .filter { it !is State.Loading }

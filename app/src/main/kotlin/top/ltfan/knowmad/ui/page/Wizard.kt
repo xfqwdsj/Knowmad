@@ -63,8 +63,6 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -157,7 +155,6 @@ class WizardPage(
     ) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : Page() {
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -373,7 +370,6 @@ private class WelcomePage : WizardSubPage() {
         override val scrollState = ScrollState(0)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -409,7 +405,6 @@ private class ProviderPage : WizardSubPage() {
         override val scrollState = ScrollState(0)
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -469,7 +464,6 @@ private class ApiSetupPage : WizardSubPage() {
         override val scrollState = ScrollState(0)
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -617,7 +611,6 @@ private class ApiSetupPage : WizardSubPage() {
         }
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     fun ErrorElements(
         setReady: (Boolean) -> Unit,
@@ -673,7 +666,6 @@ private class ModelSetupPage : WizardSubPage() {
         override val scrollState = ScrollState(0)
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -858,7 +850,6 @@ private class AdvancedSettingsPage : WizardSubPage() {
         override val scrollState = ScrollState(0)
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -898,7 +889,6 @@ private class FinishPage : WizardSubPage() {
         const val MARKDOWN_KEY = "finish_page_markdown"
     }
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -1112,7 +1102,6 @@ private fun IconTitleSpacer() {
     Spacer(Modifier.height(32.dp))
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StaticBackgroundIcon(
     icon: @Composable () -> Unit,
@@ -1227,7 +1216,6 @@ private fun TitleContentSpacer() {
     Spacer(Modifier.height(36.dp))
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Divider(
     label: @Composable (() -> Unit)? = null,

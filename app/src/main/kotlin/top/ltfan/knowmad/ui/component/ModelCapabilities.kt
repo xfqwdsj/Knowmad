@@ -23,15 +23,12 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -61,7 +58,6 @@ import top.ltfan.knowmad.data.llm.LLMCapabilities
 import top.ltfan.knowmad.data.llm.LLMCapabilityInfo
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ModelCapabilitiesFlow(
     capabilities: List<LLMCapability>,
@@ -120,7 +116,6 @@ fun ModelCapabilitiesList(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun CapabilityToggleButton(
     item: LLMCapabilityInfo.Capability,
@@ -234,7 +229,6 @@ private fun CapabilityListItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ListCategory(
     capabilities: List<LLMCapability>,
@@ -266,7 +260,6 @@ private fun ListCategory(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CapabilityItem(
     item: LLMCapabilityInfo.Capability,
