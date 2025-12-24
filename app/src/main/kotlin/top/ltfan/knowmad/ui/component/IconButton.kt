@@ -75,8 +75,8 @@ fun CopyIconButton(
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes tooltipTextRes: Int? = R.string.label_copy,
-    @StringRes contentDescriptionRes: Int? = R.string.label_copy,
+    @StringRes tooltipTextRes: Int? = android.R.string.copy,
+    @StringRes contentDescriptionRes: Int? = android.R.string.copy,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -114,8 +114,8 @@ fun PasteIconButton(
     onPaste: (text: String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes tooltipTextRes: Int? = R.string.label_paste,
-    @StringRes contentDescriptionRes: Int? = R.string.label_paste,
+    @StringRes tooltipTextRes: Int? = android.R.string.paste,
+    @StringRes contentDescriptionRes: Int? = android.R.string.paste,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current

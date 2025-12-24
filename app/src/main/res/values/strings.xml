@@ -18,8 +18,6 @@
 
 <resources>
     <string name="app_name">Knowmad</string>
-    <string name="label_copy">Copy</string>
-    <string name="label_paste">Paste</string>
     <string name="label_skip_for_now">Skip for now</string>
     <string name="label_next">Next</string>
     <string name="label_finish">Finish</string>
