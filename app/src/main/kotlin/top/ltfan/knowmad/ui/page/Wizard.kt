@@ -133,6 +133,7 @@ import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.OpenUriIconButton
 import top.ltfan.knowmad.ui.component.PasteIconButton
 import top.ltfan.knowmad.ui.component.RetryIconButton
+import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
 import top.ltfan.knowmad.ui.theme.ContentContainerColor
@@ -146,7 +147,6 @@ import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
-import top.ltfan.knowmad.util.Resource
 
 @Serializable
 class WizardPage(
@@ -309,16 +309,7 @@ class WizardPage(
             }
         }
 
-        val resources = LocalResources.current
-        LaunchedEffect(Unit) {
-            viewModel.snackbarEvent.collect {
-                val string = when (it) {
-                    is Resource.String.Original -> it.value
-                    is Resource.String.Id -> resources.getString(it.id)
-                }
-                snackbarHostState.showSnackbar(string)
-            }
-        }
+        SnackbarEffect(snackbarHostState)
     }
 
     @Composable

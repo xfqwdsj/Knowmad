@@ -22,11 +22,14 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 
 @Serializable
@@ -35,6 +38,8 @@ class MainPage : Page() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val scaffoldState = rememberBottomSheetScaffoldState()
+
         BottomSheetScaffold(
             sheetContent = {
 
@@ -46,8 +51,12 @@ class MainPage : Page() {
                     resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop),
                 )
             },
+            scaffoldState = scaffoldState,
+            snackbarHost = { SnackbarHost(it) },
         ) {
 
         }
+
+        SnackbarEffect(scaffoldState.snackbarHostState)
     }
 }

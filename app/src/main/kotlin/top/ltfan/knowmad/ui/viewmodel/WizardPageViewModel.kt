@@ -35,9 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
@@ -51,7 +49,6 @@ import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
 import top.ltfan.knowmad.util.CryptoManager
-import top.ltfan.knowmad.util.Resource
 import top.ltfan.knowmad.util.asResource
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -66,8 +63,6 @@ class WizardPageViewModel(
     val onSkipWizard: () -> Unit,
 ) : ViewModel() {
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
-    private val _snackbarEvent = MutableSharedFlow<Resource.String>()
-    val snackbarEvent = _snackbarEvent.asSharedFlow()
 
     fun generateCryptoKey(
         setReady: (Boolean) -> Unit,
@@ -319,7 +314,7 @@ class WizardPageViewModel(
     fun onFinishWizardFailed(message: String) {
         isWizardFinished = false
         viewModelScope.launch {
-            _snackbarEvent.emit(message.asResource())
+            GlobalViewModel.snackbarEvent.emit(message.asResource())
         }
     }
 
