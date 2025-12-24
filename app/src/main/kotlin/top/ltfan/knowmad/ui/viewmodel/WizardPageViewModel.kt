@@ -202,6 +202,12 @@ class WizardPageViewModel(
         }
 
     var client: LLMClient? = null
+        set(value) {
+            if (field != value) {
+                field?.close()
+                field = value
+            }
+        }
 
     var firstJoinedTime: Instant? = null
     val firstMessageFlow = MutableStateFlow("")
@@ -353,5 +359,10 @@ class WizardPageViewModel(
                         }
                 }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        client?.close()
     }
 }
