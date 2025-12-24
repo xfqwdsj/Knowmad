@@ -102,7 +102,7 @@ fun CopyIconButton(
             enabled = enabled,
         ) {
             Icon(
-                painterResource(R.drawable.content_paste_24px),
+                painterResource(R.drawable.content_copy_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
             )
         }
