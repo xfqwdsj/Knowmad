@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -77,7 +78,10 @@ class TwoPaddingValuesOperationScope(
 }
 
 @PaddingValuesOperationScope.Dsl
-class PaddingValuesOperationScope(private val padding: PaddingValues) : LockableValueDsl() {
+class PaddingValuesOperationScope(
+    private val padding: PaddingValues,
+    density: Density,
+) : LockableValueDsl(), Density by density {
     var start by required<Dp>()
     var top by required<Dp>()
     var end by required<Dp>()
@@ -94,7 +98,6 @@ class PaddingValuesOperationScope(private val padding: PaddingValues) : Lockable
 
     @Composable
     fun build(): PaddingValues {
-        lock()
         return PaddingValues(start, top, end, bottom)
     }
 
@@ -141,14 +144,14 @@ infix fun PaddingValues.with(other: PaddingValues): @Composable (@Composable Two
 
 @Composable
 inline fun PaddingValues.operate(block: @Composable PaddingValuesOperationScope.() -> Unit) =
-    PaddingValuesOperationScope(this).apply {
+    PaddingValuesOperationScope(this, LocalDensity.current).apply {
         init()
         block()
     }.build()
 
 @Composable
 inline fun PaddingValues.Companion.build(block: @Composable PaddingValuesOperationScope.() -> Unit): PaddingValues =
-    PaddingValuesOperationScope(PaddingValues.Zero).apply {
+    PaddingValuesOperationScope(PaddingValues.Zero, LocalDensity.current).apply {
         init()
         block()
     }.build()

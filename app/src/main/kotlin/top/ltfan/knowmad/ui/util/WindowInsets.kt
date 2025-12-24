@@ -34,7 +34,7 @@ import top.ltfan.dslutilities.LockableValueDsl
 val AppWindowInsets @Composable inline get() = WindowInsets.safeDrawing
 
 @WindowInsetsSidesBuilder.Dsl
-class WindowInsetsSidesBuilder {
+object WindowInsetsSidesBuilder {
     val start = WindowInsetsSides.Start
     val top = WindowInsetsSides.Top
     val end = WindowInsetsSides.End
@@ -47,7 +47,7 @@ class WindowInsetsSidesBuilder {
 }
 
 inline fun WindowInsets.only(block: WindowInsetsSidesBuilder.() -> WindowInsetsSides) =
-    this.only(WindowInsetsSidesBuilder().block())
+    this.only(WindowInsetsSidesBuilder.block())
 
 @WindowInsetsOperationScope.Dsl
 class WindowInsetsOperationScope(private val insets: WindowInsets) : LockableValueDsl() {

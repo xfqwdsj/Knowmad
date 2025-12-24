@@ -98,6 +98,7 @@ kotlin {
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
         optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
         optIn.add("kotlinx.serialization.ExperimentalSerializationApi")
+        optIn.add("androidx.compose.foundation.ExperimentalFoundationApi")
         optIn.add("androidx.compose.foundation.layout.ExperimentalLayoutApi")
         optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
         optIn.add("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")

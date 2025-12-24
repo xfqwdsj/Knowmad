@@ -282,7 +282,7 @@ class WizardPage(
                             shapes = ButtonDefaults.shapes(),
                             enabled = backStack.size > 1,
                         ) {
-                            Text(stringResource(R.string.label_back))
+                            Text(stringResource(R.string.label_previous))
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(

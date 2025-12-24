@@ -19,9 +19,14 @@
 <resources>
     <string name="app_name">知行</string>
     <string name="label_skip_for_now">暂时跳过</string>
+    <string name="label_close">关闭</string>
+    <string name="label_previous">上一步</string>
     <string name="label_next">下一步</string>
-    <string name="label_finish">完成</string>
     <string name="label_back">返回</string>
+    <string name="label_forward">前进</string>
+    <string name="label_finish">完成</string>
+    <string name="label_go">转到</string>
+    <string name="label_reload">重新加载</string>
     <string name="label_retry">重试</string>
     <string name="label_help">帮助</string>
     <string name="label_need_attention">需要注意</string>
