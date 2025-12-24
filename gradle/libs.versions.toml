@@ -19,6 +19,7 @@ dslUtilities = "1.0.2"
 capsule = "1.0.2"
 markdown = "0.39.0"
 calendar = "2.9.0"
+webview = "2.0.3"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
@@ -50,6 +51,7 @@ capsule = { module = "top.ltfan.capsule:capsule", version.ref = "capsule" }
 markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer-android", version.ref = "markdown" }
 markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "markdown" }
 calendar = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "calendar" }
+webview = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "webview" }
 
 [bundles]
 kotlinx = [
@@ -95,6 +97,9 @@ markdown = [
 ]
 calendar = [
     "calendar"
+]
+webview = [
+    "webview"
 ]
 
 [plugins]

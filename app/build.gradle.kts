@@ -114,5 +114,6 @@ dependencies {
     implementation(libs.bundles.ltfan)
     implementation(libs.bundles.markdown)
     implementation(libs.bundles.calendar)
+    implementation(libs.bundles.webview)
     ksp(libs.room.compiler)
 }
