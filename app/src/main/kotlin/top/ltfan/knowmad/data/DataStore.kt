@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
-import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
@@ -141,13 +141,11 @@ class DatastoreSerializer<T>(
     override val defaultValue: T,
     val serializer: KSerializer<T>,
 ) : Serializer<T> {
-    @OptIn(ExperimentalSerializationApi::class)
     private val cbor = Cbor {
         encodeDefaults = true
         ignoreUnknownKeys = true
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     override suspend fun readFrom(input: InputStream): T {
         return try {
             val bytes = input.readBytes()
@@ -159,8 +157,9 @@ class DatastoreSerializer<T>(
         }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     override suspend fun writeTo(t: T, output: OutputStream) {
-        output.write(cbor.encodeToByteArray(serializer, t))
+        withContext(Dispatchers.IO) {
+            output.write(cbor.encodeToByteArray(serializer, t))
+        }
     }
 }

@@ -21,10 +21,8 @@ package top.ltfan.knowmad.data.schedule
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration
 import kotlin.time.Instant
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 @Serializable
 sealed interface Event {
     val id: Uuid
@@ -37,40 +35,71 @@ sealed interface Event {
     val reminders: List<Duration>
     val notes: String?
 
+    fun toEntity(): EventEntity
+
     @Serializable
     data class Normal(
-        override val id: Uuid,
+        override val id: Uuid = Uuid.generateV7(),
         override val semester: SemesterEntity,
         override val name: String,
         override val location: String,
         override val color: Int,
         override val startTime: Instant,
         override val endTime: Instant,
-        override val reminders: List<Duration>,
-        override val notes: String?,
-    ) : Event
+        override val reminders: List<Duration> = emptyList(),
+        override val notes: String? = null,
+    ) : Event {
+        override fun toEntity() = EventEntity(
+            id = id,
+            semesterId = semester.id,
+            courseId = null,
+            name = name,
+            instructor = null,
+            location = location,
+            color = color,
+            startTime = startTime,
+            endTime = endTime,
+            reminders = reminders,
+            notes = notes,
+        )
+    }
 
     @Serializable
     data class Course(
         override val id: Uuid,
         override val semester: SemesterEntity,
+        val course: CourseEntity,
         override val name: String,
         val instructor: String,
         override val location: String,
         override val color: Int,
         override val startTime: Instant,
         override val endTime: Instant,
-        override val reminders: List<Duration>,
-        override val notes: String?,
-    ) : Event
+        override val reminders: List<Duration> = emptyList(),
+        override val notes: String? = null,
+    ) : Event {
+        override fun toEntity() = EventEntity(
+            id = id,
+            semesterId = semester.id,
+            courseId = course.id,
+            name = name,
+            instructor = instructor,
+            location = location,
+            color = color,
+            startTime = startTime,
+            endTime = endTime,
+            reminders = reminders,
+            notes = notes,
+        )
+    }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 fun EventWithSemesterAndCourse.toEvent(): Event {
     return if (course != null) {
         Event.Course(
             id = event.id,
             semester = semester,
+            course = course,
             name = event.name ?: course.name,
             instructor = course.instructor,
             location = event.location ?: course.location,

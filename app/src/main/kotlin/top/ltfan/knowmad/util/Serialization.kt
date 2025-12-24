@@ -18,17 +18,14 @@
 
 package top.ltfan.knowmad.util
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.cbor.CborBuilder
 import kotlinx.serialization.modules.SerializersModule
 
-@OptIn(ExperimentalSerializationApi::class)
 val Cbor = Cbor {
     serializersModule = SerializersModule {
         llmProvidersPolymorphic()
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
 fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(Cbor, builderAction)

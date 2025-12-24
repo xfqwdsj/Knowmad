@@ -27,13 +27,10 @@ import androidx.room.Relation
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
-import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Instant
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 @Serializable
 @Entity
 data class SemesterEntity(
@@ -45,6 +42,7 @@ data class SemesterEntity(
     val timeZone: TimeZone,
 )
 
+@Serializable
 @Entity(
     indices = [Index("semesterId")],
     foreignKeys = [
@@ -58,15 +56,14 @@ data class SemesterEntity(
 )
 data class CourseEntity(
     @PrimaryKey
-    val id: UUID = UUID.randomUUID(),
-    val semesterId: UUID,
+    val id: Uuid = Uuid.generateV7(),
+    val semesterId: Uuid,
     val name: String,
     val instructor: String,
     val location: String,
     val color: Int,
 )
 
-@OptIn(ExperimentalUuidApi::class)
 @Entity(
     indices = [Index("semesterId"), Index("courseId")],
     foreignKeys = [

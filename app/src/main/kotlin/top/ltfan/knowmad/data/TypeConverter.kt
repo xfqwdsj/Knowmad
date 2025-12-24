@@ -23,16 +23,13 @@ import ai.koog.prompt.llm.LLModel
 import androidx.room.TypeConverter
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.util.Cbor
 import kotlin.time.Duration
 import kotlin.time.Instant
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 object UuidConverter {
     @TypeConverter
     fun fromUuid(uuid: Uuid): ByteArray {
@@ -81,7 +78,6 @@ object InstantConverter {
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
 object DurationListConverter {
     @TypeConverter
     fun fromDurationList(durations: List<Duration>): ByteArray {
@@ -95,13 +91,11 @@ object DurationListConverter {
 }
 
 object LLMProviderConverter {
-    @OptIn(ExperimentalSerializationApi::class)
     @TypeConverter
     fun fromLLMProvider(provider: LLMProvider): ByteArray {
         return Cbor.encodeToByteArray<LLMProvider>(provider)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     @TypeConverter
     fun toLLMProvider(data: ByteArray): LLMProvider {
         return Cbor.decodeFromByteArray<LLMProvider>(data)
@@ -109,13 +103,11 @@ object LLMProviderConverter {
 }
 
 object LLModelConverter {
-    @OptIn(ExperimentalSerializationApi::class)
     @TypeConverter
     fun fromLLModel(model: LLModel): ByteArray {
         return Cbor.encodeToByteArray<LLModel>(model)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     @TypeConverter
     fun toLLModel(data: ByteArray): LLModel {
         return Cbor.decodeFromByteArray<LLModel>(data)

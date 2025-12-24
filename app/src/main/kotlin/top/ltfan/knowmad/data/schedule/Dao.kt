@@ -19,6 +19,46 @@
 package top.ltfan.knowmad.data.schedule
 
 import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
+import kotlin.uuid.Uuid
 
 @Dao
-interface ScheduleDao
+interface ScheduleDao {
+    @Insert
+    suspend fun insertSemester(semester: SemesterEntity): Long
+
+    @Insert
+    suspend fun insertCourse(course: CourseEntity): Long
+
+    @Insert
+    suspend fun insertEvent(event: EventEntity): Long
+
+    @Delete
+    suspend fun deleteSemester(semester: SemesterEntity): Int
+
+    @Delete
+    suspend fun deleteCourse(course: CourseEntity): Int
+
+    @Delete
+    suspend fun deleteEvent(event: EventEntity): Int
+
+    @Update
+    suspend fun updateSemester(semester: SemesterEntity): Int
+
+    @Update
+    suspend fun updateCourse(course: CourseEntity): Int
+
+    @Update
+    suspend fun updateEvent(event: EventEntity): Int
+
+    @Query("SELECT * FROM SemesterEntity ORDER BY startDate ASC")
+    suspend fun getAllSemesters(): List<SemesterEntity>
+
+    @Transaction
+    @Query("SELECT * FROM EventEntity WHERE semesterId = :semesterId ORDER BY startTime ASC")
+    suspend fun getAllEventsBySemester(semesterId: Uuid): List<EventWithSemesterAndCourse>
+}
