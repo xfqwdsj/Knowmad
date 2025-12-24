@@ -24,15 +24,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.encodeToByteArray
-import top.ltfan.knowmad.util.Cbor
 
 @Entity
-@TypeConverters(LLMProviderConfigEntity.Converters::class)
 data class LLMProviderConfigEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -43,20 +36,6 @@ data class LLMProviderConfigEntity(
     val order: Int = 0,
     val baseUrl: String? = null,
 ) {
-    object Converters {
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun fromProvider(provider: LLMProvider): ByteArray {
-            return Cbor.encodeToByteArray<LLMProvider>(provider)
-        }
-
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun toProvider(data: ByteArray): LLMProvider {
-            return Cbor.decodeFromByteArray<LLMProvider>(data)
-        }
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -97,7 +76,6 @@ data class LLMProviderConfigEntity(
         )
     ],
 )
-@TypeConverters(LLMEntity.Converters::class)
 data class LLMEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -105,18 +83,4 @@ data class LLMEntity(
     val model: LLModel,
     val name: String = model.id,
     val order: Int = 0,
-) {
-    object Converters {
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun fromModel(model: LLModel): ByteArray {
-            return Cbor.encodeToByteArray<LLModel>(model)
-        }
-
-        @OptIn(ExperimentalSerializationApi::class)
-        @TypeConverter
-        fun toModel(data: ByteArray): LLModel {
-            return Cbor.decodeFromByteArray<LLModel>(data)
-        }
-    }
-}
+)

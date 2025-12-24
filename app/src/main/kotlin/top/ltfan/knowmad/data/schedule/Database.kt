@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.data.llm
+package top.ltfan.knowmad.data.schedule
 
 import android.app.Application
 import androidx.room.Database
@@ -24,27 +24,33 @@ import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
-import top.ltfan.knowmad.data.LLMProviderConverter
-import top.ltfan.knowmad.data.LLModelConverter
+import top.ltfan.knowmad.data.DurationListConverter
+import top.ltfan.knowmad.data.InstantConverter
+import top.ltfan.knowmad.data.LocalDateConverter
+import top.ltfan.knowmad.data.TimeZoneConverter
+import top.ltfan.knowmad.data.UuidConverter
 
 @Database(
-    entities = [LLMProviderConfigEntity::class, LLMEntity::class],
+    entities = [SemesterEntity::class, CourseEntity::class, EventEntity::class],
     version = 1,
 )
 @TypeConverters(
-    LLMProviderConverter::class,
-    LLModelConverter::class,
+    UuidConverter::class,
+    LocalDateConverter::class,
+    TimeZoneConverter::class,
+    InstantConverter::class,
+    DurationListConverter::class,
 )
-abstract class LLMDatabase : RoomDatabase() {
-    abstract fun dao(): LLMConfigDao
+abstract class ScheduleDatabase : RoomDatabase() {
+    abstract fun dao(): ScheduleDao
 
-    companion object : DatabaseCompanion<LLMDatabase> {
-        override val databaseName = "llm"
+    companion object : DatabaseCompanion<ScheduleDatabase> {
+        override val databaseName = "schedule"
 
         context(application: Application)
         override fun buildDatabase() = databaseBuilder(
             application,
-            LLMDatabase::class.java,
+            ScheduleDatabase::class.java,
             databaseName,
         ).build()
     }
