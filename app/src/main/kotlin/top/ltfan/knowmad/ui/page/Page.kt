@@ -64,7 +64,16 @@ sealed class SubPage : PageRoute<SubPage>()
 @Serializable
 abstract class BackStackRoute(
     val backStack: NavBackStack<Route>,
-) : Route()
+) : Route() {
+    open fun onBack() {
+        val last = backStack.lastOrNull() ?: return
+        if (last is BackStackRoute) {
+            last.onBack()
+        } else {
+            backStack.removeLastOrNull()
+        }
+    }
+}
 
 val NavBackStack<Route>.expanded: List<Page>
     get() = buildList {

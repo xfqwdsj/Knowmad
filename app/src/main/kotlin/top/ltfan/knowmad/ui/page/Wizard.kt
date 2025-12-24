@@ -22,6 +22,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -115,6 +116,7 @@ import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -140,6 +142,7 @@ import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
@@ -1021,6 +1024,13 @@ private class FinishPage : WizardSubPage() {
                         Button(
                             onClick = viewModel::finishWizard,
                             shapes = ButtonDefaults.shapesFor(size),
+                            modifier = localSharedTransitionScope {
+                                Modifier.sharedBounds(
+                                    rememberSharedContentState(WizardSharedTransitionKey),
+                                    LocalNavAnimatedContentScope.current,
+                                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                                )
+                            },
                             contentPadding = ButtonDefaults.contentPaddingFor(size),
                         ) {
                             Icon(
@@ -1249,3 +1259,6 @@ private fun Divider(
         }
     }
 }
+
+@Immutable
+data object WizardSharedTransitionKey

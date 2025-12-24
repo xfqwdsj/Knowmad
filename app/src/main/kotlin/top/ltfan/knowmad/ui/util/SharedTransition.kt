@@ -18,12 +18,16 @@
 
 package top.ltfan.knowmad.ui.util
 
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 
-@Immutable
-data class SharedTransitionScopes(
-    val sharedTransitionScope: SharedTransitionScope,
-    val animatedContentScope: AnimatedContentScope,
-)
+@Composable
+fun <R> localSharedTransitionScope(content: @Composable SharedTransitionScope.() -> R) =
+    with(LocalSharedTransitionScope.current) {
+        content()
+    }
+
+val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope> {
+    error("No SharedTransitionScopes provided")
+}

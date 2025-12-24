@@ -18,14 +18,36 @@
 
 package top.ltfan.knowmad.ui.page
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 
 @Serializable
 class MainPage : Page() {
-    context(contentPadding: PaddingValues)
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
+    context(contentPadding: PaddingValues)
     override fun Content() {
+        BottomSheetScaffold(
+            sheetContent = {
+
+            },
+            modifier = localSharedTransitionScope {
+                Modifier.sharedBounds(
+                    rememberSharedContentState(WizardSharedTransitionKey),
+                    LocalNavAnimatedContentScope.current,
+                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop),
+                )
+            },
+        ) {
+
+        }
     }
 }

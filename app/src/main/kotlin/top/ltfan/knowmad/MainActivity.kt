@@ -22,7 +22,6 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,9 +34,11 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.ui.page.BackStackRoute
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.theme.AppTheme
+import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
@@ -61,18 +62,29 @@ class MainActivity : KnowmadActivity() {
             AppTheme {
                 val dialogStrategy = remember { DialogSceneStrategy<Page>() }
 
-                CompositionLocalProvider(LocalAppViewModel provides viewModel) {
-                    SharedTransitionLayout {
+                SharedTransitionLayout {
+                    CompositionLocalProvider(
+                        LocalAppViewModel provides viewModel,
+                        LocalSharedTransitionScope provides this,
+                    ) {
                         if (viewModel.appReady) {
                             NavDisplay(
                                 backStack = viewModel.backStack.expanded,
+                                onBack = {
+                                    val last = viewModel.backStack.lastOrNull() ?: return@NavDisplay
+                                    if (last is BackStackRoute) {
+                                        last.onBack()
+                                    } else {
+                                        viewModel.backStack.removeLastOrNull()
+                                    }
+                                },
                                 entryDecorators = listOf(
                                     rememberSaveableStateHolderNavEntryDecorator(),
                                     rememberViewModelStoreNavEntryDecorator(),
                                 ),
                                 sceneStrategy = dialogStrategy,
                                 sharedTransitionScope = this,
-                                entryProvider = { it.navEntry(PaddingValues()) },
+                                entryProvider = { it.navEntry() },
                             )
                         }
                     }
