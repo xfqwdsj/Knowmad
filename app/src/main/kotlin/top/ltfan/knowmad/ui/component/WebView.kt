@@ -142,9 +142,9 @@ fun WebViewScaffold(
                 }
                 WebViewBottomController(
                     state = state,
+                    navigator = navigator,
                     onClose = onClose,
                     urlTextFieldState = urlTextFieldState,
-                    navigator = navigator,
                     windowInsets = windowInsets,
                 )
             }
@@ -170,9 +170,9 @@ fun WebViewScaffold(
 @Composable
 fun WebViewBottomController(
     state: WebViewState,
+    navigator: WebViewNavigator,
     onClose: () -> Unit,
     urlTextFieldState: TextFieldState = rememberTextFieldState(state.lastLoadedUrl ?: ""),
-    navigator: WebViewNavigator = rememberWebViewNavigator(),
     windowInsets: WindowInsets = AppWindowInsets,
 ) {
     val focusManager = LocalFocusManager.current
