@@ -375,7 +375,7 @@ data class LLMConfigEntry(
         baseUrl = baseUrl,
     )
 
-    fun getModelConfig(providerConfigId: Long) = LLMEntity(
+    fun getModelConfig(providerConfigId: Long) = LLMConfigEntity(
         providerConfigId = providerConfigId,
         model = model,
         name = modelName,

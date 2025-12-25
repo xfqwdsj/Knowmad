@@ -76,7 +76,7 @@ data class LLMProviderConfigEntity(
         )
     ],
 )
-data class LLMEntity(
+data class LLMConfigEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val providerConfigId: Long,

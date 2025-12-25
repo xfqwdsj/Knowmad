@@ -16,41 +16,45 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.data.schedule
+package top.ltfan.knowmad.data.database
 
 import android.app.Application
 import androidx.room.Database
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import top.ltfan.knowmad.data.AppDatabaseConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
-import top.ltfan.knowmad.data.DurationListConverter
-import top.ltfan.knowmad.data.InstantConverter
-import top.ltfan.knowmad.data.LocalDateConverter
-import top.ltfan.knowmad.data.TimeZoneConverter
-import top.ltfan.knowmad.data.UuidConverter
+import top.ltfan.knowmad.data.llm.LLMConfigDao
+import top.ltfan.knowmad.data.llm.LLMConfigEntity
+import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.data.schedule.CourseEntity
+import top.ltfan.knowmad.data.schedule.EventEntity
+import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.data.schedule.SemesterEntity
 
 @Database(
-    entities = [SemesterEntity::class, CourseEntity::class, EventEntity::class],
+    entities = [
+        LLMProviderConfigEntity::class,
+        LLMConfigEntity::class,
+        SemesterEntity::class,
+        CourseEntity::class,
+        EventEntity::class
+    ],
     version = 1,
 )
-@TypeConverters(
-    UuidConverter::class,
-    LocalDateConverter::class,
-    TimeZoneConverter::class,
-    InstantConverter::class,
-    DurationListConverter::class,
-)
-abstract class ScheduleDatabase : RoomDatabase() {
-    abstract fun dao(): ScheduleDao
+@TypeConverters(AppDatabaseConverters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun llmConfigDao(): LLMConfigDao
+    abstract fun scheduleDao(): ScheduleDao
 
-    companion object : DatabaseCompanion<ScheduleDatabase> {
-        override val databaseName = "schedule"
+    companion object : DatabaseCompanion<AppDatabase> {
+        override val databaseName = "db"
 
         context(application: Application)
         override fun buildDatabase() = databaseBuilder(
             application,
-            ScheduleDatabase::class.java,
+            AppDatabase::class.java,
             databaseName,
         ).build()
     }

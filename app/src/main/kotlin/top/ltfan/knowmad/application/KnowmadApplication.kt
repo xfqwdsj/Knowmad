@@ -19,8 +19,8 @@
 package top.ltfan.knowmad.application
 
 import android.app.Application
-import top.ltfan.knowmad.data.llm.LLMDatabase
+import top.ltfan.knowmad.data.database.AppDatabase
 
 class KnowmadApplication : Application() {
-    val llmDatabase by lazy { LLMDatabase.buildDatabase() }
+    val appDatabase by lazy { AppDatabase.buildDatabase() }
 }

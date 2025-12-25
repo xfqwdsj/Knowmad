@@ -55,7 +55,7 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val dao = application.llmDatabase.dao()
+                val dao = application.appDatabase.llmConfigDao()
                 val providerConfig = entry.getProviderConfig()
                 val providerId = dao.insertProvider(providerConfig)
                 val modelConfig = entry.getModelConfig(providerId)

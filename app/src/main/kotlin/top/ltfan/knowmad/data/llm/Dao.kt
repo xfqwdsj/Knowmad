@@ -30,29 +30,29 @@ interface LLMConfigDao {
     suspend fun insertProvider(config: LLMProviderConfigEntity): Long
 
     @Insert
-    suspend fun insertModel(model: LLMEntity): Long
+    suspend fun insertModel(model: LLMConfigEntity): Long
 
     @Delete
     suspend fun deleteProvider(config: LLMProviderConfigEntity): Int
 
     @Delete
-    suspend fun deleteModel(model: LLMEntity): Int
+    suspend fun deleteModel(model: LLMConfigEntity): Int
 
     @Query("DELETE FROM LLMProviderConfigEntity WHERE id = :id")
     suspend fun deleteProviderById(id: Long): Int
 
-    @Query("DELETE FROM LLMEntity WHERE id = :id")
+    @Query("DELETE FROM LLMConfigEntity WHERE id = :id")
     suspend fun deleteModelById(id: Long): Int
 
     @Update
     suspend fun updateProvider(config: LLMProviderConfigEntity): Int
 
     @Update
-    suspend fun updateModel(model: LLMEntity): Int
+    suspend fun updateModel(model: LLMConfigEntity): Int
 
     @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY `order` ASC")
     suspend fun getAllProviders(): List<LLMProviderConfigEntity>
 
-    @Query("SELECT * FROM LLMEntity WHERE providerConfigId = :providerConfigId ORDER BY `order` ASC")
-    suspend fun getModelsByProvider(providerConfigId: Long): List<LLMEntity>
+    @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY `order` ASC")
+    suspend fun getModelsByProvider(providerConfigId: Long): List<LLMConfigEntity>
 }

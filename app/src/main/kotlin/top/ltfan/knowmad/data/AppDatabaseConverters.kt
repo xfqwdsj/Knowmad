@@ -30,82 +30,70 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-object UuidConverter {
+object AppDatabaseConverters {
     @TypeConverter
-    fun fromUuid(uuid: Uuid): ByteArray {
-        return uuid.toByteArray()
+    fun fromUuid(data: Uuid): ByteArray {
+        return data.toByteArray()
     }
 
     @TypeConverter
     fun toUuid(data: ByteArray): Uuid {
         return Uuid.fromByteArray(data)
     }
-}
 
-object LocalDateConverter {
     @TypeConverter
-    fun fromLocalDate(date: LocalDate): String {
-        return date.toString()
+    fun fromLocalDate(data: LocalDate): String {
+        return data.toString()
     }
 
     @TypeConverter
     fun toLocalDate(data: String): LocalDate {
         return LocalDate.parse(data)
     }
-}
 
-object TimeZoneConverter {
     @TypeConverter
-    fun fromTimeZone(timeZone: TimeZone): String {
-        return timeZone.id
+    fun fromTimeZone(data: TimeZone): String {
+        return data.id
     }
 
     @TypeConverter
-    fun toTimeZone(id: String): TimeZone {
-        return TimeZone.of(id)
+    fun toTimeZone(data: String): TimeZone {
+        return TimeZone.of(data)
     }
-}
 
-object InstantConverter {
     @TypeConverter
-    fun fromInstant(instant: Instant): Long {
-        return instant.toEpochMilliseconds()
+    fun fromInstant(data: Instant): Long {
+        return data.toEpochMilliseconds()
     }
 
     @TypeConverter
     fun toInstant(data: Long): Instant {
         return Instant.fromEpochMilliseconds(data)
     }
-}
 
-object DurationListConverter {
     @TypeConverter
-    fun fromDurationList(durations: List<Duration>): ByteArray {
-        return Cbor.encodeToByteArray(durations)
+    fun fromDurationList(data: List<Duration>): ByteArray {
+        return Cbor.encodeToByteArray(data)
     }
 
     @TypeConverter
     fun toDurationList(data: ByteArray): List<Duration> {
         return Cbor.decodeFromByteArray(data)
     }
-}
 
-object LLMProviderConverter {
     @TypeConverter
-    fun fromLLMProvider(provider: LLMProvider): ByteArray {
-        return Cbor.encodeToByteArray<LLMProvider>(provider)
+    fun fromLLMProvider(data: LLMProvider): ByteArray {
+        return Cbor.encodeToByteArray<LLMProvider>(data)
     }
 
     @TypeConverter
     fun toLLMProvider(data: ByteArray): LLMProvider {
         return Cbor.decodeFromByteArray<LLMProvider>(data)
     }
-}
 
-object LLModelConverter {
     @TypeConverter
-    fun fromLLModel(model: LLModel): ByteArray {
-        return Cbor.encodeToByteArray<LLModel>(model)
+    fun fromLLModel(data: LLModel): ByteArray {
+        return Cbor.encodeToByteArray<LLModel>(data)
     }
 
     @TypeConverter
