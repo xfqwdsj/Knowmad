@@ -352,7 +352,7 @@ fun WebViewBottomController(
     }
 
     LaunchedEffect(expectedUrlActions, textFieldFocused) {
-        if (textFieldFocused || expectedUrlActions) return@LaunchedEffect
+        if (isEditing) return@LaunchedEffect
         if (urlTextFieldState.text.toString() == state.lastLoadedUrl) return@LaunchedEffect
         urlTextFieldState.setTextAndPlaceCursorAtEnd(state.lastLoadedUrl ?: "")
     }
