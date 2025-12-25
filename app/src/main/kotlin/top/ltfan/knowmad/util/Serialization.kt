@@ -28,4 +28,4 @@ val Cbor = Cbor {
     }
 }
 
-fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(Cbor, builderAction)
+fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(top.ltfan.knowmad.util.Cbor, builderAction)
