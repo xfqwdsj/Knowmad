@@ -141,6 +141,14 @@ fun AppTheme(
 }
 
 @Composable
+fun ProvideShapes(content: @Composable () -> Unit) {
+    MaterialExpressiveTheme(
+        shapes = AppShapes,
+        content = content,
+    )
+}
+
+@Composable
 fun ProvideCompatibleShapes(content: @Composable () -> Unit) {
     MaterialExpressiveTheme(
         shapes = AppShapesCompatible,

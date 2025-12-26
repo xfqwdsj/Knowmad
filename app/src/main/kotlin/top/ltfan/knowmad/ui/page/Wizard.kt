@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.page
 
+import ai.koog.prompt.llm.LLMProvider
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
@@ -108,6 +109,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
@@ -125,7 +127,7 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.CopyIconButton
-import top.ltfan.knowmad.ui.component.LLMProviderItem
+import top.ltfan.knowmad.ui.component.LLMProviderInfo
 import top.ltfan.knowmad.ui.component.MarkdownView
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.OpenUriIconButton
@@ -134,6 +136,7 @@ import top.ltfan.knowmad.ui.component.RetryIconButton
 import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
+import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ContentContainerColor
 import top.ltfan.knowmad.ui.theme.ContentContainerPadding
 import top.ltfan.knowmad.ui.theme.ContentContainerShape
@@ -360,7 +363,7 @@ interface WizardSubPageInfo {
 }
 
 @Serializable
-private class WelcomePage : WizardSubPage() {
+class WelcomePage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
@@ -397,7 +400,7 @@ private class WelcomePage : WizardSubPage() {
 }
 
 @Serializable
-private class ProviderPage : WizardSubPage() {
+class ProviderPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_provider_label))
@@ -410,6 +413,19 @@ private class ProviderPage : WizardSubPage() {
     override fun Content() {
         val viewModel = viewModel<WizardPageViewModel>()
 
+        PageContent(
+            contentPadding,
+            selectedProvider = viewModel.selectedProvider,
+            onSelectedProviderChange = { viewModel.selectedProvider = it },
+        )
+    }
+
+    @Composable
+    fun PageContent(
+        contentPadding: PaddingValues,
+        selectedProvider: LLMProvider?,
+        onSelectedProviderChange: (LLMProvider?) -> Unit,
+    ) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -427,24 +443,39 @@ private class ProviderPage : WizardSubPage() {
             )
             TitleContentSpacer()
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 for ((provider, info) in SupportedLLMProviders) {
-                    LLMProviderItem(
+                    LLMProviderInfo(
                         info = info,
                         modifier = Modifier
                             .widthIn(max = ListItemMaxWidth)
                             .fillMaxWidth(),
-                        selected = viewModel.selectedProvider == provider,
+                        checked = selectedProvider == provider,
                     ) {
-                        if (viewModel.selectedProvider == provider) {
-                            return@LLMProviderItem
+                        if (!it) return@LLMProviderInfo
+                        if (selectedProvider == provider) {
+                            return@LLMProviderInfo
                         }
-                        viewModel.selectedProvider = provider
+                        onSelectedProviderChange(provider)
                     }
                 }
             }
+        }
+    }
+
+    @Preview
+    @Composable
+    fun PreviewContent() {
+        var selected: LLMProvider? by remember { mutableStateOf(LLMProvider.OpenAI) }
+
+        AppTheme {
+            PageContent(
+                contentPadding = PaddingValues(),
+                selectedProvider = selected,
+                onSelectedProviderChange = { selected = it },
+            )
         }
     }
 
@@ -456,7 +487,7 @@ private class ProviderPage : WizardSubPage() {
 }
 
 @Serializable
-private class ApiSetupPage : WizardSubPage() {
+class ApiSetupPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_api_label))
@@ -658,7 +689,7 @@ private class ApiSetupPage : WizardSubPage() {
 }
 
 @Serializable
-private class ModelSetupPage : WizardSubPage() {
+class ModelSetupPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_model_label))
@@ -842,7 +873,7 @@ private class ModelSetupPage : WizardSubPage() {
 }
 
 @Serializable
-private class AdvancedSettingsPage : WizardSubPage() {
+class AdvancedSettingsPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_advanced_label))
@@ -879,7 +910,7 @@ private class AdvancedSettingsPage : WizardSubPage() {
 }
 
 @Serializable
-private class FinishPage : WizardSubPage() {
+class FinishPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))

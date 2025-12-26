@@ -18,71 +18,45 @@
 
 package top.ltfan.knowmad.ui.component
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import ai.koog.prompt.llm.LLMProvider
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMProviderInfo
+import top.ltfan.knowmad.data.llm.SupportedLLMProviders
+import top.ltfan.knowmad.ui.theme.AppTheme
+import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
+import top.ltfan.knowmad.ui.theme.ProvideShapes
 
 @Composable
-fun LLMProviderItem(
+fun LLMProviderInfo(
     info: LLMProviderInfo,
     modifier: Modifier = Modifier,
-    selected: Boolean,
-    onClick: () -> Unit,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
-    val background by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerLow,
-    )
-    Surface(
-        modifier = modifier.padding(vertical = 8.dp),
-        shape = MaterialTheme.shapes.large,
-        color = background,
-        onClick = onClick,
-    ) {
-        Row(
-            Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                AnimatedContent(
-                    targetState = selected,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    contentAlignment = Alignment.Center,
-                ) { selected ->
-                    if (selected) {
-                        Icon(
-                            painterResource(R.drawable.check_24px),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .size(36.dp),
-                        )
-                    } else {
+    ProvideCompatibleShapes {
+        ListItem(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier,
+            leadingContent = {
+                ProvideShapes {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
                         Icon(
                             painterResource(info.icon),
                             contentDescription = null,
@@ -92,19 +66,31 @@ fun LLMProviderItem(
                         )
                     }
                 }
-            }
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(
-                    stringResource(info.label),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(info.description),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+            },
+            supportingContent = {
+                Text(stringResource(info.description))
+            },
+        ) {
+            Text(stringResource(info.label))
+        }
+    }
+}
+
+@Preview
+@Composable
+fun LLMProviderInfoPreview() {
+    AppTheme {
+        Column {
+            LLMProviderInfo(
+                info = SupportedLLMProviders[LLMProvider.DeepSeek]!!,
+                checked = true,
+                onCheckedChange = {},
+            )
+            LLMProviderInfo(
+                info = SupportedLLMProviders[LLMProvider.OpenAI]!!,
+                checked = false,
+                onCheckedChange = {},
+            )
         }
     }
 }
