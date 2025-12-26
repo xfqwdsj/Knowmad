@@ -48,6 +48,8 @@ data class ConversationEntity(
 @Entity(
     indices = [
         Index("conversationId"),
+        Index("depth"),
+        Index("rootId"),
         Index("generatedBy"),
     ],
     foreignKeys = [
@@ -60,7 +62,7 @@ data class ConversationEntity(
         ForeignKey(
             entity = MessageEntity::class,
             parentColumns = ["id"],
-            childColumns = ["parentId"],
+            childColumns = ["rootId"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
@@ -75,7 +77,9 @@ data class MessageEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
     val conversationId: Uuid,
-    val parentId: Uuid? = null,
+    val depth: Int,
+    val rootId: Uuid? = null,
+    val isLeaf: Boolean = rootId == null,
     val role: Message.Role = message.role,
     val message: Message,
     val searchableContent: String = message.content,
