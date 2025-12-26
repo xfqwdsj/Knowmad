@@ -58,6 +58,12 @@ data class ConversationEntity(
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
+            entity = MessageEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["parentId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
             entity = LLMConfigEntity::class,
             parentColumns = ["id"],
             childColumns = ["generatedBy"],
@@ -69,6 +75,7 @@ data class MessageEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
     val conversationId: Uuid,
+    val parentId: Uuid? = null,
     val role: Message.Role = message.role,
     val message: Message,
     val searchableContent: String = message.content,
