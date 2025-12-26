@@ -16,15 +16,4 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.ui.viewmodel
-
-import androidx.compose.runtime.staticCompositionLocalOf
-import top.ltfan.knowmad.application.KnowmadApplication
-
-class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
-
-}
-
-val LocalAgentViewModel = staticCompositionLocalOf<AgentViewModel> {
-    error("No AgentViewModel provided")
-}
+package top.ltfan.knowmad.ui.component

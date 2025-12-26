@@ -361,18 +361,18 @@ data class LLMConfigEntry(
     val providerName: String = provider.display,
     val apiKey: ByteArray,
     val iv: ByteArray?,
-    val providerOrder: Int = 0,
+    val providerRank: ByteArray = byteArrayOf(0x80.toByte()),
     val baseUrl: String? = null,
     val model: LLModel,
     val modelName: String = model.id,
-    val modelOrder: Int = 0,
+    val modelRank: ByteArray = byteArrayOf(0x80.toByte()),
 ) {
     fun getProviderConfig() = LLMProviderConfigEntity(
         provider = provider,
         name = providerName,
         apiKey = apiKey,
         iv = iv,
-        order = providerOrder,
+        rank = providerRank,
         baseUrl = baseUrl,
     )
 
@@ -380,7 +380,7 @@ data class LLMConfigEntry(
         providerConfigId = providerConfigId,
         model = model,
         name = modelName,
-        order = modelOrder,
+        rank = modelRank,
     )
 
     override fun equals(other: Any?): Boolean {
@@ -389,29 +389,29 @@ data class LLMConfigEntry(
 
         other as LLMConfigEntry
 
-        if (providerOrder != other.providerOrder) return false
-        if (modelOrder != other.modelOrder) return false
         if (provider != other.provider) return false
         if (providerName != other.providerName) return false
         if (!apiKey.contentEquals(other.apiKey)) return false
         if (!iv.contentEquals(other.iv)) return false
+        if (!providerRank.contentEquals(other.providerRank)) return false
         if (baseUrl != other.baseUrl) return false
         if (model != other.model) return false
         if (modelName != other.modelName) return false
+        if (!modelRank.contentEquals(other.modelRank)) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = providerOrder
-        result = 31 * result + modelOrder
-        result = 31 * result + provider.hashCode()
+        var result = provider.hashCode()
         result = 31 * result + providerName.hashCode()
         result = 31 * result + apiKey.contentHashCode()
         result = 31 * result + (iv?.contentHashCode() ?: 0)
+        result = 31 * result + providerRank.contentHashCode()
         result = 31 * result + (baseUrl?.hashCode() ?: 0)
         result = 31 * result + model.hashCode()
         result = 31 * result + modelName.hashCode()
+        result = 31 * result + modelRank.contentHashCode()
         return result
     }
 }

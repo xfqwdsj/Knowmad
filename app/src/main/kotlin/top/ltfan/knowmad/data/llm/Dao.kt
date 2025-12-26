@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.llm
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -50,9 +51,15 @@ interface LLMConfigDao {
     @Update
     suspend fun updateModel(model: LLMConfigEntity): Int
 
-    @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY `order` ASC")
-    suspend fun getAllProviders(): List<LLMProviderConfigEntity>
+    @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY rank ASC")
+    fun getAllProviders(): PagingSource<Int, LLMProviderConfigEntity>
 
-    @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY `order` ASC")
-    suspend fun getModelsByProvider(providerConfigId: Long): List<LLMConfigEntity>
+    @Query("SELECT rank FROM LLMProviderConfigEntity ORDER BY rank ASC LIMIT 1 OFFSET :pos")
+    suspend fun getProviderRankAt(pos: Int): ByteArray?
+
+    @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
+    fun getModelsByProvider(providerConfigId: Long): PagingSource<Int, LLMConfigEntity>
+
+    @Query("SELECT rank FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC LIMIT 1 OFFSET :pos")
+    suspend fun getModelRankAt(providerConfigId: Long, pos: Int): ByteArray?
 }

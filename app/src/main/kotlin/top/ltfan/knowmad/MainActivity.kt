@@ -37,7 +37,9 @@ import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
+import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 class MainActivity : KnowmadActivity() {
@@ -45,6 +47,14 @@ class MainActivity : KnowmadActivity() {
         viewModelFactory {
             addInitializer(AppViewModel::class) {
                 AppViewModel(application as KnowmadApplication)
+            }
+        }
+    }
+
+    private val agentViewModel: AgentViewModel by viewModels {
+        viewModelFactory {
+            addInitializer(AgentViewModel::class) {
+                AgentViewModel(application as KnowmadApplication)
             }
         }
     }
@@ -62,6 +72,7 @@ class MainActivity : KnowmadActivity() {
                 SharedTransitionLayout {
                     CompositionLocalProvider(
                         LocalAppViewModel provides viewModel,
+                        LocalAgentViewModel provides agentViewModel,
                         LocalSharedTransitionScope provides this,
                     ) {
                         if (viewModel.appReady) {

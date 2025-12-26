@@ -34,7 +34,7 @@ data class LLMProviderConfigEntity(
     val name: String = provider.display,
     val apiKey: ByteArray,
     val iv: ByteArray?,
-    val order: Int = 0,
+    val rank: ByteArray = byteArrayOf(0x80.toByte()),
     val baseUrl: String? = null,
 ) {
     override fun equals(other: Any?): Boolean {
@@ -43,24 +43,24 @@ data class LLMProviderConfigEntity(
 
         other as LLMProviderConfigEntity
 
-        if (order != other.order) return false
         if (id != other.id) return false
         if (provider != other.provider) return false
         if (name != other.name) return false
         if (!apiKey.contentEquals(other.apiKey)) return false
         if (!iv.contentEquals(other.iv)) return false
+        if (!rank.contentEquals(other.rank)) return false
         if (baseUrl != other.baseUrl) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = order
-        result = 31 * result + id.hashCode()
+        var result = id.hashCode()
         result = 31 * result + provider.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + apiKey.contentHashCode()
         result = 31 * result + (iv?.contentHashCode() ?: 0)
+        result = 31 * result + rank.contentHashCode()
         result = 31 * result + (baseUrl?.hashCode() ?: 0)
         return result
     }
@@ -83,5 +83,29 @@ data class LLMConfigEntity(
     val providerConfigId: Uuid,
     val model: LLModel,
     val name: String = model.id,
-    val order: Int = 0,
-)
+    val rank: ByteArray = byteArrayOf(0x80.toByte()),
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as LLMConfigEntity
+
+        if (id != other.id) return false
+        if (providerConfigId != other.providerConfigId) return false
+        if (model != other.model) return false
+        if (name != other.name) return false
+        if (!rank.contentEquals(other.rank)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + providerConfigId.hashCode()
+        result = 31 * result + model.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + rank.contentHashCode()
+        return result
+    }
+}
