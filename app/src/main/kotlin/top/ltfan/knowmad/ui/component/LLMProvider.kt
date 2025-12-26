@@ -54,15 +54,15 @@ fun LLMProviderInfo(
             leadingContent = {
                 ProvideShapes {
                     Surface(
-                        shape = MaterialTheme.shapes.large,
+                        shape = MaterialTheme.shapes.medium,
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
                         Icon(
                             painterResource(info.icon),
                             contentDescription = null,
                             modifier = Modifier
-                                .padding(8.dp)
-                                .size(36.dp),
+                                .padding(12.dp)
+                                .size(32.dp),
                         )
                     }
                 }
