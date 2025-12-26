@@ -104,12 +104,15 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
@@ -450,8 +453,22 @@ class ProviderPage : WizardSubPage() {
                     LLMProviderInfo(
                         info = info,
                         modifier = Modifier
-                            .widthIn(max = ListItemMaxWidth)
-                            .fillMaxWidth(),
+                            .fillMaxRowHeight()
+                            .layout { mesurable, constraints ->
+                                val width = constraints.constrainWidth(ListItemMaxWidth.roundToPx())
+                                val placeable = mesurable.measure(
+                                    Constraints(
+                                        minWidth = width,
+                                        maxWidth = width,
+                                        minHeight = constraints.minHeight,
+                                        maxHeight = constraints.maxHeight,
+                                    ),
+                                )
+                                val height = placeable.height
+                                layout(width, height) {
+                                    placeable.place(0, 0)
+                                }
+                            },
                         checked = selectedProvider == provider,
                     ) {
                         if (!it) return@LLMProviderInfo
