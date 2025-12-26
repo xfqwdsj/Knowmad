@@ -18,6 +18,7 @@ ktor = "3.3.3"
 koog = "0.6.0"
 dslUtilities = "1.0.2"
 capsule = "1.0.2"
+reorderable = "3.0.0"
 markdown = "0.39.0"
 calendar = "2.9.0"
 webview = "2.0.3"
@@ -53,18 +54,21 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 koog = { module = "ai.koog:koog-agents", version.ref = "koog" }
 dslUtilities = { module = "top.ltfan.dslutilities:dsl-utilities", version.ref = "dslUtilities" }
 capsule = { module = "top.ltfan.capsule:capsule", version.ref = "capsule" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer-android", version.ref = "markdown" }
 markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "markdown" }
 calendar = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "calendar" }
 webview = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "webview" }
 
 [bundles]
-kotlinx = [
+all = [
+    # kotlin
+    "kotlin-reflect",
+    # kotlinx
     "kotlinx-serialization-json",
     "kotlinx-serialization-cbor",
-    "kotlinx-datetime"
-]
-androidx = [
+    "kotlinx-datetime",
+    # androidx
     "paging",
     "paging-compose",
     "room-runtime",
@@ -72,9 +76,8 @@ androidx = [
     "room-ktx",
     "datastore",
     "splashscreen",
-    "activity-compose"
-]
-compose = [
+    "activity-compose",
+    # compose
     "compose-runtime",
     "compose-foundation",
     "compose-ui",
@@ -84,31 +87,28 @@ compose = [
     "compose-material3-adaptive",
     "navigation3-runtime",
     "navigation3-ui",
-    "lifecycle-viewmodel-navigation3"
+    "lifecycle-viewmodel-navigation3",
+    # ktor
+    "ktor-client-cio",
+    # koog
+    "koog",
+    # ltfan
+    "dslUtilities",
+    "capsule",
+    # reorderable
+    "reorderable",
+    # markdown
+    "markdown-renderer",
+    "markdown-renderer-m3",
+    # calendar
+    "calendar",
+    # webview
+    "webview"
 ]
-compose-debug = [
+debug = [
+    # compose
     "compose-uiTooling",
     "compose-uiToolingPreview"
-]
-ktor = [
-    "ktor-client-cio"
-]
-koog = [
-    "koog"
-]
-ltfan = [
-    "dslUtilities",
-    "capsule"
-]
-markdown = [
-    "markdown-renderer",
-    "markdown-renderer-m3"
-]
-calendar = [
-    "calendar"
-]
-webview = [
-    "webview"
 ]
 
 [plugins]

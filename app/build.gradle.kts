@@ -111,17 +111,8 @@ room {
 }
 
 dependencies {
-    implementation(libs.kotlin.reflect)
-    implementation(libs.bundles.kotlinx)
-    implementation(libs.bundles.androidx)
     implementation(platform(libs.compose))
-    implementation(libs.bundles.compose)
-    debugImplementation(libs.bundles.compose.debug)
-    implementation(libs.bundles.ktor)
-    implementation(libs.bundles.koog)
-    implementation(libs.bundles.ltfan)
-    implementation(libs.bundles.markdown)
-    implementation(libs.bundles.calendar)
-    implementation(libs.bundles.webview)
+    implementation(libs.bundles.all)
     ksp(libs.room.compiler)
+    debugImplementation(libs.bundles.debug)
 }
