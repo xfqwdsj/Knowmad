@@ -41,6 +41,7 @@ compose-runtime = { module = "androidx.compose.runtime:runtime" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-uiGraphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-uiTooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-uiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-animation = { module = "androidx.compose.animation:animation" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose-material3" }
@@ -86,6 +87,7 @@ compose = [
     "lifecycle-viewmodel-navigation3"
 ]
 compose-debug = [
+    "compose-uiTooling",
     "compose-uiToolingPreview"
 ]
 ktor = [
