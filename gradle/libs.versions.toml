@@ -4,6 +4,7 @@ kotlinx-serialization = "1.9.0"
 kotlinx-datetime = "0.7.1-0.6.x-compat" # TODO: remove when possible
 ksp = "2.3.4"
 agp = "9.1.0-alpha01"
+paging = "3.3.6"
 room = "2.8.4"
 datastore = "1.2.0"
 splashscreen = "1.2.0"
@@ -26,8 +27,11 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+paging = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
+paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
@@ -60,7 +64,10 @@ kotlinx = [
     "kotlinx-datetime"
 ]
 androidx = [
+    "paging",
+    "paging-compose",
     "room-runtime",
+    "room-paging",
     "room-ktx",
     "datastore",
     "splashscreen",

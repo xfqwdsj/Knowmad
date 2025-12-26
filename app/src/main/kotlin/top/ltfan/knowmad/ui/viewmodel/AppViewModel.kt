@@ -57,7 +57,8 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             try {
                 val dao = application.appDatabase.llmConfigDao()
                 val providerConfig = entry.getProviderConfig()
-                val providerId = dao.insertProvider(providerConfig)
+                dao.insertProvider(providerConfig)
+                val providerId = providerConfig.id
                 val modelConfig = entry.getModelConfig(providerId)
                 dao.insertModel(modelConfig)
             } catch (e: Throwable) {

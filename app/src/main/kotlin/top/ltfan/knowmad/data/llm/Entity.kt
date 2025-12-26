@@ -24,11 +24,12 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlin.uuid.Uuid
 
 @Entity
 data class LLMProviderConfigEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
     val provider: LLMProvider,
     val name: String = provider.display,
     val apiKey: ByteArray,
@@ -42,8 +43,8 @@ data class LLMProviderConfigEntity(
 
         other as LLMProviderConfigEntity
 
-        if (id != other.id) return false
         if (order != other.order) return false
+        if (id != other.id) return false
         if (provider != other.provider) return false
         if (name != other.name) return false
         if (!apiKey.contentEquals(other.apiKey)) return false
@@ -54,8 +55,8 @@ data class LLMProviderConfigEntity(
     }
 
     override fun hashCode(): Int {
-        var result = id.hashCode()
-        result = 31 * result + order
+        var result = order
+        result = 31 * result + id.hashCode()
         result = 31 * result + provider.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + apiKey.contentHashCode()
@@ -77,9 +78,9 @@ data class LLMProviderConfigEntity(
     ],
 )
 data class LLMConfigEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val providerConfigId: Long,
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
+    val providerConfigId: Uuid,
     val model: LLModel,
     val name: String = model.id,
     val order: Int = 0,

@@ -20,11 +20,14 @@ package top.ltfan.knowmad.data
 
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.message.Message
 import androidx.room.TypeConverter
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import okio.Path
+import okio.Path.Companion.toPath
 import top.ltfan.knowmad.util.Cbor
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -72,6 +75,16 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
+    fun fromOkioPath(data: Path): String {
+        return data.toString()
+    }
+
+    @TypeConverter
+    fun toOkioPath(data: String): Path {
+        return data.toPath()
+    }
+
+    @TypeConverter
     fun fromDurationList(data: List<Duration>): ByteArray {
         return Cbor.encodeToByteArray(data)
     }
@@ -83,21 +96,31 @@ object AppDatabaseConverters {
 
     @TypeConverter
     fun fromLLMProvider(data: LLMProvider): ByteArray {
-        return Cbor.encodeToByteArray<LLMProvider>(data)
+        return Cbor.encodeToByteArray(data)
     }
 
     @TypeConverter
     fun toLLMProvider(data: ByteArray): LLMProvider {
-        return Cbor.decodeFromByteArray<LLMProvider>(data)
+        return Cbor.decodeFromByteArray(data)
     }
 
     @TypeConverter
     fun fromLLModel(data: LLModel): ByteArray {
-        return Cbor.encodeToByteArray<LLModel>(data)
+        return Cbor.encodeToByteArray(data)
     }
 
     @TypeConverter
     fun toLLModel(data: ByteArray): LLModel {
-        return Cbor.decodeFromByteArray<LLModel>(data)
+        return Cbor.decodeFromByteArray(data)
+    }
+
+    @TypeConverter
+    fun fromMessage(data: Message): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toMessage(data: ByteArray): Message {
+        return Cbor.decodeFromByteArray(data)
     }
 }

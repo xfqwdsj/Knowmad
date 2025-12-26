@@ -25,6 +25,13 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import top.ltfan.knowmad.data.AppDatabaseConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
+import top.ltfan.knowmad.data.chat.ChatDao
+import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.MessageEntity
+import top.ltfan.knowmad.data.chat.MessageFileCrossRef
+import top.ltfan.knowmad.data.chat.MessageFtsEntity
+import top.ltfan.knowmad.data.file.FileDao
+import top.ltfan.knowmad.data.file.FileEntity
 import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
@@ -39,7 +46,12 @@ import top.ltfan.knowmad.data.schedule.SemesterEntity
         LLMConfigEntity::class,
         SemesterEntity::class,
         CourseEntity::class,
-        EventEntity::class
+        EventEntity::class,
+        FileEntity::class,
+        ConversationEntity::class,
+        MessageEntity::class,
+        MessageFileCrossRef::class,
+        MessageFtsEntity::class,
     ],
     version = 1,
 )
@@ -47,6 +59,8 @@ import top.ltfan.knowmad.data.schedule.SemesterEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun llmConfigDao(): LLMConfigDao
     abstract fun scheduleDao(): ScheduleDao
+    abstract fun fileDao(): FileDao
+    abstract fun chatDao(): ChatDao
 
     companion object : DatabaseCompanion<AppDatabase> {
         override val databaseName = "db"

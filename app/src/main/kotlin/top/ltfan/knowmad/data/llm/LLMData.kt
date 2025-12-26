@@ -42,6 +42,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModuleBuilder
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.util.CryptoManager
+import kotlin.uuid.Uuid
 
 val SupportedLLMProviders = mapOf(
     LLMProvider.DeepSeek to LLMProviderInfo(
@@ -375,7 +376,7 @@ data class LLMConfigEntry(
         baseUrl = baseUrl,
     )
 
-    fun getModelConfig(providerConfigId: Long) = LLMConfigEntity(
+    fun getModelConfig(providerConfigId: Uuid) = LLMConfigEntity(
         providerConfigId = providerConfigId,
         model = model,
         name = modelName,
