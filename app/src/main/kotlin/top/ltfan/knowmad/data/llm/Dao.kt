@@ -23,15 +23,50 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
+import top.ltfan.knowmad.util.calculateLexoRank
+import kotlin.uuid.Uuid
 
 @Dao
 interface LLMConfigDao {
     @Insert
-    suspend fun insertProvider(config: LLMProviderConfigEntity): Long
+    suspend fun insertProviderUnsafeRanking(config: LLMProviderConfigEntity): Long
+
+    @Transaction
+    suspend fun insertProviderAtBeginning(config: LLMProviderConfigEntity): Long {
+        val firstRank = getProviderRankAt(0)
+        val newRank = calculateLexoRank(null, firstRank)
+        val newConfig = config.copy(rank = newRank)
+        return insertProviderUnsafeRanking(newConfig)
+    }
+
+    @Transaction
+    suspend fun insertProviderAtEnd(config: LLMProviderConfigEntity): Long {
+        val lastRank = getProviderRankDescAt(0)
+        val newRank = calculateLexoRank(lastRank, null)
+        val newConfig = config.copy(rank = newRank)
+        return insertProviderUnsafeRanking(newConfig)
+    }
 
     @Insert
-    suspend fun insertModel(model: LLMConfigEntity): Long
+    suspend fun insertModelUnsafeRanking(model: LLMConfigEntity): Long
+
+    @Transaction
+    suspend fun insertModelAtBeginning(model: LLMConfigEntity): Long {
+        val firstRank = getModelRankAt(model.providerConfigId, 0)
+        val newRank = calculateLexoRank(null, firstRank)
+        val newModel = model.copy(rank = newRank)
+        return insertModelUnsafeRanking(newModel)
+    }
+
+    @Transaction
+    suspend fun insertModelAtEnd(model: LLMConfigEntity): Long {
+        val lastRank = getModelRankAt(model.providerConfigId, 0)
+        val newRank = calculateLexoRank(lastRank, null)
+        val newModel = model.copy(rank = newRank)
+        return insertModelUnsafeRanking(newModel)
+    }
 
     @Delete
     suspend fun deleteProvider(config: LLMProviderConfigEntity): Int
@@ -57,9 +92,15 @@ interface LLMConfigDao {
     @Query("SELECT rank FROM LLMProviderConfigEntity ORDER BY rank ASC LIMIT 1 OFFSET :pos")
     suspend fun getProviderRankAt(pos: Int): ByteArray?
 
+    @Query("SELECT rank FROM LLMProviderConfigEntity ORDER BY rank DESC LIMIT 1 OFFSET :pos")
+    suspend fun getProviderRankDescAt(pos: Int): ByteArray?
+
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
-    fun getModelsByProvider(providerConfigId: Long): PagingSource<Int, LLMConfigEntity>
+    fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>
 
     @Query("SELECT rank FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC LIMIT 1 OFFSET :pos")
-    suspend fun getModelRankAt(providerConfigId: Long, pos: Int): ByteArray?
+    suspend fun getModelRankAt(providerConfigId: Uuid, pos: Int): ByteArray?
+
+    @Query("SELECT rank FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank DESC LIMIT 1 OFFSET :pos")
+    suspend fun getModelRankDescAt(providerConfigId: Uuid, pos: Int): ByteArray?
 }

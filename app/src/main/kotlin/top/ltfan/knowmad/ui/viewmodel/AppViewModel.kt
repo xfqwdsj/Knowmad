@@ -57,10 +57,10 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             try {
                 val dao = application.appDatabase.llmConfigDao()
                 val providerConfig = entry.getProviderConfig()
-                dao.insertProvider(providerConfig)
+                dao.insertProviderAtEnd(providerConfig)
                 val providerId = providerConfig.id
                 val modelConfig = entry.getModelConfig(providerId)
-                dao.insertModel(modelConfig)
+                dao.insertModelAtEnd(modelConfig)
             } catch (e: Throwable) {
                 e.printStackTrace()
                 onFailed(e.localizedMessage ?: "Unknown error")

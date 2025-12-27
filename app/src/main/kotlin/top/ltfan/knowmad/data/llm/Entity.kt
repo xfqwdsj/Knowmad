@@ -24,9 +24,14 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import top.ltfan.knowmad.util.UnsafeEmptyRank
 import kotlin.uuid.Uuid
 
-@Entity
+@Entity(
+    indices = [
+        Index(value = ["rank"], unique = true),
+    ],
+)
 data class LLMProviderConfigEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
@@ -34,7 +39,7 @@ data class LLMProviderConfigEntity(
     val name: String = provider.display,
     val apiKey: ByteArray,
     val iv: ByteArray?,
-    val rank: ByteArray = byteArrayOf(0x80.toByte()),
+    val rank: ByteArray = UnsafeEmptyRank,
     val baseUrl: String? = null,
 ) {
     override fun equals(other: Any?): Boolean {
@@ -67,7 +72,9 @@ data class LLMProviderConfigEntity(
 }
 
 @Entity(
-    indices = [Index(value = ["providerConfigId"])],
+    indices = [
+        Index(value = ["providerConfigId", "rank"], unique = true),
+    ],
     foreignKeys = [
         ForeignKey(
             entity = LLMProviderConfigEntity::class,
@@ -83,7 +90,7 @@ data class LLMConfigEntity(
     val providerConfigId: Uuid,
     val model: LLModel,
     val name: String = model.id,
-    val rank: ByteArray = byteArrayOf(0x80.toByte()),
+    val rank: ByteArray = UnsafeEmptyRank,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

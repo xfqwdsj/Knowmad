@@ -95,6 +95,7 @@ android {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-parameters")
+        optIn.add("kotlin.ExperimentalUnsignedTypes")
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
         optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
         optIn.add("kotlinx.serialization.ExperimentalSerializationApi")

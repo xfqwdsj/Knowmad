@@ -18,35 +18,32 @@
 
 package top.ltfan.knowmad.util
 
+val UnsafeEmptyRank = byteArrayOf(0x80.toByte())
+
 fun calculateLexoRank(prev: ByteArray?, next: ByteArray?): ByteArray {
     val p = prev ?: byteArrayOf()
     val n = next ?: byteArrayOf()
 
-    val result = ArrayList<Byte>(maxOf(p.size, n.size) + 1)
-
+    val result = mutableListOf<Byte>()
     var i = 0
+
     while (true) {
-        val byteP = if (i < p.size) p[i].toInt() and 0xff else 0
-        val byteN = when {
-            i < n.size -> n[i].toInt() and 0xff
-            next == null -> 256          // 逻辑上界（末尾插入）
-            else -> 256                  // next 存在但已到末尾
+        val prevVal = if (i < p.size) p[i].toInt() and 0xFF else 0
+        val nextVal = if (i < n.size) n[i].toInt() and 0xFF else 256
+
+        if (prevVal == nextVal) {
+            result.add(prevVal.toByte())
+            i++
+            continue
         }
 
-        if (byteN - byteP > 1) {
-            result.add(((byteP + byteN) ushr 1).toByte())
+        if (nextVal - prevVal > 1) {
+            val mid = (prevVal + nextVal) / 2
+            result.add(mid.toByte())
             break
-        }
-
-        // 无法分裂，复制 prev 位
-        result.add(byteP.toByte())
-        i++
-
-        // 兜底：防止理论 bug / 恶意数据
-        if (i > 64) {
-            // 强行扩展空间
-            result.add(0x80.toByte())
-            break
+        } else {
+            result.add(prevVal.toByte())
+            i++
         }
     }
 

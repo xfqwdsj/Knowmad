@@ -85,6 +85,7 @@ import kotlin.random.Random
 @Composable
 fun LLMProviderLazyColumn(
     dao: LLMConfigDao,
+    onProviderClick: (LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     key: String = rememberSaveable { Random.nextLong().toString() },
@@ -144,7 +145,7 @@ fun LLMProviderLazyColumn(
 
                 LLMProviderItem(
                     entity = entity,
-                    onClick = { /* TODO */ },
+                    onClick = { onProviderClick(entity) },
                     trailingContent = {
                         IconButton(
                             onClick = {},
@@ -252,7 +253,7 @@ fun LLMProviderLazyColumnPreview() {
                         onClick = {
                             coroutineScope.launch(Dispatchers.IO) {
                                 SupportedLLMProviders.keys.forEach { provider ->
-                                    dao.insertProvider(
+                                    dao.insertProviderAtEnd(
                                         LLMProviderConfigEntity(
                                             provider = provider,
                                             apiKey = "sample_api_key_for_${provider.id}".toByteArray(),
@@ -266,17 +267,14 @@ fun LLMProviderLazyColumnPreview() {
                         Text("Add Sample Data")
                     }
                     Button(
-                        onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-
-                            }
-                        },
+                        onClick = {},
                     ) {
                         Text("Clear All")
                     }
                 }
                 LLMProviderLazyColumn(
                     dao = dao,
+                    onProviderClick = {},
                     modifier = Modifier.weight(1f),
                 )
             }
