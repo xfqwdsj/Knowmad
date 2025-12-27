@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLMProvider
 import android.app.Application
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,9 +79,11 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
+import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.util.calculateLexoRank
 import kotlin.random.Random
+import kotlin.uuid.Uuid
 
 @Composable
 fun LLMProviderLazyColumn(
@@ -89,6 +92,7 @@ fun LLMProviderLazyColumn(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     key: String = rememberSaveable { Random.nextLong().toString() },
 ) {
     val contentPadding = contentPadding + PaddingValues(vertical = 16.dp)
@@ -147,6 +151,17 @@ fun LLMProviderLazyColumn(
                 LLMProviderItem(
                     entity = entity,
                     onClick = { onProviderClick(entity) },
+                    modifier = Modifier.run {
+                        if (animatedVisibilityScope == null) this
+                        else with(LocalSharedTransitionScope.current) {
+                            sharedBounds(
+                                rememberSharedContentState(
+                                    LLMProviderItemSharedKey.Container(entity.id),
+                                ),
+                                animatedVisibilityScope,
+                            )
+                        }
+                    },
                     trailingContent = {
                         IconButton(
                             onClick = {},
@@ -227,6 +242,12 @@ fun LLMProviderItem(
             Text(entity.name)
         }
     }
+}
+
+sealed interface LLMProviderItemSharedKey {
+    val id: Uuid
+
+    data class Container(override val id: Uuid) : LLMProviderItemSharedKey
 }
 
 @Preview
