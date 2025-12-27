@@ -88,6 +88,7 @@ fun LLMProviderLazyColumn(
     onProviderClick: (LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
     key: String = rememberSaveable { Random.nextLong().toString() },
 ) {
     val contentPadding = contentPadding + PaddingValues(vertical = 16.dp)
@@ -101,7 +102,7 @@ fun LLMProviderLazyColumn(
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(
         lazyListState,
-        scrollThresholdPadding = contentPadding,
+        scrollThresholdPadding = contentPadding + additionalScrollThresholdPadding,
     ) { from, to ->
         viewModel.listUpdatedChannel.tryReceive()
 
