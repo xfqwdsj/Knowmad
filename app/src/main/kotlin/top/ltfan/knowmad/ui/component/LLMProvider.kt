@@ -67,7 +67,6 @@ import androidx.paging.compose.itemKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import top.ltfan.knowmad.R
@@ -123,7 +122,8 @@ fun LLMProviderLazyColumn(
         }
         val newRank = calculateLexoRank(prevRank, nextRank)
         val updatedEntity = fromEntity.copy(rank = newRank)
-        withContext(Dispatchers.IO) {
+
+        launch(Dispatchers.IO) {
             dao.updateProvider(updatedEntity)
         }
 
