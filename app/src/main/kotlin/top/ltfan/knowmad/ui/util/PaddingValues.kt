@@ -69,7 +69,6 @@ class TwoPaddingValuesOperationScope(
 
     @Composable
     fun build(): PaddingValues {
-        lock()
         return PaddingValues(start, top, end, bottom)
     }
 
