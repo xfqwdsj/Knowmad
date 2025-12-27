@@ -19,7 +19,7 @@
 package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLMCapability
-import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,7 +65,7 @@ fun ModelCapabilitiesFlow(
     onRemove: (LLMCapability) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val allItems = remember { getAllCapabilities(LLMCapabilities) }
     FlowRow(
@@ -84,7 +84,7 @@ fun ModelCapabilitiesFlow(
                 onSelectedChange = { selected ->
                     if (selected) onAdd(item.capability) else onRemove(item.capability)
                 },
-                animatedContentScope = animatedContentScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
     }
@@ -97,7 +97,7 @@ fun ModelCapabilitiesList(
     onRemove: (LLMCapability) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     Column(
         modifier = modifier,
@@ -110,7 +110,7 @@ fun ModelCapabilitiesList(
                 enabled = enabled,
                 onAdd = onAdd,
                 onRemove = onRemove,
-                animatedContentScope = animatedContentScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
     }
@@ -122,7 +122,7 @@ private fun CapabilityToggleButton(
     enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val size = SplitButtonDefaults.ExtraSmallContainerHeight
     val colors =
@@ -136,11 +136,11 @@ private fun CapabilityToggleButton(
                     .semantics {
                         this.selected = selected
                     }.run {
-                        if (animatedContentScope == null) this
+                        if (animatedVisibilityScope == null) this
                         else with(LocalSharedTransitionScope.current) {
                             sharedBounds(
                                 rememberSharedContentState(SharedKey.Container(item)),
-                                animatedContentScope,
+                                animatedVisibilityScope,
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                             )
                         }
@@ -154,11 +154,11 @@ private fun CapabilityToggleButton(
                 Text(
                     stringResource(item.label),
                     modifier = Modifier.run {
-                        if (animatedContentScope == null) this
+                        if (animatedVisibilityScope == null) this
                         else with(LocalSharedTransitionScope.current) {
                             sharedBounds(
                                 rememberSharedContentState(SharedKey.Label(item)),
-                                animatedContentScope,
+                                animatedVisibilityScope,
                             )
                         }
                     },
@@ -200,7 +200,7 @@ private fun CapabilityListItem(
     enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     when (item) {
         is LLMCapabilityInfo.Category -> {
@@ -210,7 +210,7 @@ private fun CapabilityListItem(
                 enabled = enabled,
                 onAdd = onAdd,
                 onRemove = onRemove,
-                animatedContentScope = animatedContentScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
 
@@ -223,7 +223,7 @@ private fun CapabilityListItem(
                 onSelectedChange = { selected ->
                     if (selected) onAdd(item.capability) else onRemove(item.capability)
                 },
-                animatedContentScope = animatedContentScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
     }
@@ -236,7 +236,7 @@ private fun ListCategory(
     enabled: Boolean = true,
     onAdd: (LLMCapability) -> Unit,
     onRemove: (LLMCapability) -> Unit,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     OutlinedCard {
         Column(Modifier.padding(8.dp)) {
@@ -252,7 +252,7 @@ private fun ListCategory(
                         enabled = enabled,
                         onAdd = onAdd,
                         onRemove = onRemove,
-                        animatedContentScope = animatedContentScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
                     )
                 }
             }
@@ -266,17 +266,17 @@ private fun CapabilityItem(
     enabled: Boolean = true,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
-    animatedContentScope: AnimatedContentScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     ListItem(
         selected = selected,
         onClick = { onSelectedChange(!selected) },
         modifier = Modifier.run {
-            if (animatedContentScope == null) this
+            if (animatedVisibilityScope == null) this
             else with(LocalSharedTransitionScope.current) {
                 sharedBounds(
                     rememberSharedContentState(SharedKey.Container(item)),
-                    animatedContentScope,
+                    animatedVisibilityScope,
                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                 )
             }
@@ -287,11 +287,11 @@ private fun CapabilityItem(
         Text(
             stringResource(item.label),
             modifier = Modifier.run {
-                if (animatedContentScope == null) this
+                if (animatedVisibilityScope == null) this
                 else with(LocalSharedTransitionScope.current) {
                     sharedBounds(
                         rememberSharedContentState(SharedKey.Label(item)),
-                        animatedContentScope,
+                        animatedVisibilityScope,
                     )
                 }
             },
