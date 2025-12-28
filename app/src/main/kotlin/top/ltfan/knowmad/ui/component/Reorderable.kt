@@ -42,7 +42,7 @@ import top.ltfan.knowmad.ui.util.plus
 
 @Composable
 fun ReorderableLazyColumn(
-    itemCount: Int,
+    itemCount: () -> Int,
     itemKey: (index: Int) -> Any,
     onMove: suspend CoroutineScope.(LazyListItemInfo, LazyListItemInfo) -> Unit,
     modifier: Modifier = Modifier,
@@ -70,7 +70,7 @@ fun ReorderableLazyColumn(
         horizontalAlignment = horizontalAlignment,
     ) {
         items(
-            count = itemCount,
+            count = itemCount(),
             key = itemKey,
         ) { index ->
             ReorderableItem(
