@@ -58,13 +58,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
@@ -79,7 +75,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -99,7 +94,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposePath
@@ -107,7 +101,6 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
@@ -127,15 +120,16 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
-import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.CopyIconButton
+import top.ltfan.knowmad.ui.component.LLMContextLengthTextField
+import top.ltfan.knowmad.ui.component.LLMMaxOutputTokensTextField
 import top.ltfan.knowmad.ui.component.LLMProviderApiKeyTextField
 import top.ltfan.knowmad.ui.component.LLMProviderBaseUrlTextField
 import top.ltfan.knowmad.ui.component.LLMProviderInfo
+import top.ltfan.knowmad.ui.component.LLModelTextField
 import top.ltfan.knowmad.ui.component.MarkdownView
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.OpenUriIconButton
-import top.ltfan.knowmad.ui.component.PasteIconButton
 import top.ltfan.knowmad.ui.component.RetryIconButton
 import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.component.StepItem
@@ -146,7 +140,6 @@ import top.ltfan.knowmad.ui.theme.ContentContainerPadding
 import top.ltfan.knowmad.ui.theme.ContentContainerShape
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
@@ -660,94 +653,27 @@ class ModelSetupPage : WizardSubPage() {
                 message = R.string.setup_wizard_model_message,
             )
             TitleContentSpacer()
-            var modelMenuExpanded by remember { mutableStateOf(false) }
-            AutoSuggestTextField(
+            LLModelTextField(
                 state = viewModel.modelTextFieldState,
-                options = viewModel.knownModelIds,
-                allowExpansion = modelMenuExpanded,
-                onExpandedChange = { modelMenuExpanded = it },
-            ) {
-                TextField(
-                    state = viewModel.modelTextFieldState,
-                    modifier = Modifier
-                        .widthIn(max = TextFieldMaxWidth)
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-                    label = {
-                        Text(stringResource(R.string.llm_model_id_label))
-                    },
-                    trailingIcon = {
-                        PasteIconButton(
-                            onPaste = {
-                                viewModel.modelTextFieldState.setTextAndPlaceCursorAtEnd(it.trim())
-                            },
-                        )
-                    },
-                    lineLimits = TextFieldLineLimits.SingleLine,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            var contextLengthFocused by remember { mutableStateOf(false) }
-            TextField(
-                value = viewModel.selectedModel?.contextLength?.toString()
-                    .takeIf { it != "0" || !contextLengthFocused } ?: "",
-                onValueChange = {
-                    viewModel.selectedModel = viewModel.selectedModel?.copy(
-                        contextLength = it.trim().toLongOrNull() ?: 0,
-                    )
-                },
-                modifier = Modifier
-                    .widthIn(max = TextFieldMaxWidth)
-                    .fillMaxWidth()
-                    .onFocusEvent {
-                        contextLengthFocused = it.isFocused
-                    },
-                label = {
-                    Text(stringResource(R.string.llm_context_length_label))
-                },
-                trailingIcon = {
-                    PasteIconButton(
-                        onPaste = {
-                            val value = it.trim().toLongOrNull() ?: return@PasteIconButton
-                            viewModel.selectedModel = viewModel.selectedModel?.copy(
-                                contextLength = value,
-                            )
-                        },
-                    )
-                },
-                placeholder = { Text("0") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                ),
+                knownModelIds = viewModel.knownModelIds,
             )
             Spacer(Modifier.height(16.dp))
-            TextField(
-                value = viewModel.selectedModel?.maxOutputTokens?.toString() ?: "",
-                onValueChange = {
-                    viewModel.selectedModel = viewModel.selectedModel?.copy(
-                        maxOutputTokens = it.trim().toLongOrNull(),
-                    )
+            LLMContextLengthTextField(
+                contextLength = viewModel.selectedModel?.contextLength,
+                onContextLengthChange = {
+                    viewModel.selectedModel?.let { model ->
+                        viewModel.selectedModel = model.copy(contextLength = it)
+                    }
                 },
-                modifier = Modifier
-                    .widthIn(max = TextFieldMaxWidth)
-                    .fillMaxWidth(),
-                label = {
-                    Text(stringResource(R.string.llm_max_output_tokens_label))
+            )
+            Spacer(Modifier.height(16.dp))
+            LLMMaxOutputTokensTextField(
+                maxOutputTokens = viewModel.selectedModel?.maxOutputTokens,
+                onMaxOutputTokensChange = {
+                    viewModel.selectedModel?.let { model ->
+                        viewModel.selectedModel = model.copy(maxOutputTokens = it)
+                    }
                 },
-                trailingIcon = {
-                    PasteIconButton(
-                        onPaste = {
-                            val value = it.trim().toLongOrNull() ?: return@PasteIconButton
-                            viewModel.selectedModel = viewModel.selectedModel?.copy(
-                                maxOutputTokens = value,
-                            )
-                        },
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                ),
-                singleLine = true,
             )
             AnimatedContent(
                 targetState = viewModel.selectedModel == null,
