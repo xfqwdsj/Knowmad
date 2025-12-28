@@ -301,13 +301,19 @@ private fun CapabilityItem(
 
 private fun getAllCapabilities(items: List<LLMCapabilityInfo>): List<LLMCapabilityInfo.Capability> {
     val result = mutableListOf<LLMCapabilityInfo.Capability>()
-    val stack = ArrayDeque(items.reversed())
+    val stack = ArrayDeque<LLMCapabilityInfo>()
+
+    for (i in items.indices.reversed()) {
+        stack.addLast(items[i])
+    }
 
     while (stack.isNotEmpty()) {
         when (val item = stack.removeLast()) {
             is LLMCapabilityInfo.Capability -> result.add(item)
             is LLMCapabilityInfo.Category -> {
-                stack.addAll(item.items.reversed())
+                for (i in item.items.indices.reversed()) {
+                    stack.addLast(item.items[i])
+                }
             }
         }
     }
