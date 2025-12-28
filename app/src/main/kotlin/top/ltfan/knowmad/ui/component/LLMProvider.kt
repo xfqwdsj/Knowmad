@@ -81,11 +81,11 @@ import top.ltfan.knowmad.util.calculateLexoRankForReorderableList
 import kotlin.uuid.Uuid
 
 @Composable
-fun LLMProviderLazyColumn(
+fun LLMProviderConfigLazyColumn(
     dao: LLMConfigDao,
     onProviderClick: (LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
-    state: LLMProviderLazyListState = rememberLLMProviderLazyListState {
+    state: LLMProviderConfigLazyListState = rememberLLMProviderConfigLazyListState {
         dao.getAllProviders()
     },
     contentPadding: PaddingValues = PaddingValues(),
@@ -133,7 +133,7 @@ fun LLMProviderLazyColumn(
 
         val interactionSource = remember { MutableInteractionSource() }
 
-        LLMProviderItem(
+        LLMProviderConfigItem(
             entity = entity,
             onClick = { onProviderClick(entity) },
             modifier = Modifier.run {
@@ -141,7 +141,7 @@ fun LLMProviderLazyColumn(
                 else with(LocalSharedTransitionScope.current) {
                     sharedBounds(
                         rememberSharedContentState(
-                            LLMProviderItemSharedKey.Container(entity.id),
+                            LLMProviderConfigItemSharedKey.Container(entity.id),
                         ),
                         animatedVisibilityScope,
                     )
@@ -170,7 +170,7 @@ fun LLMProviderLazyColumn(
 }
 
 @Immutable
-class LLMProviderLazyListState(
+class LLMProviderConfigLazyListState(
     coroutineScope: CoroutineScope,
     entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
 ) : PagingLazyListState<Int, LLMProviderConfigEntity>(coroutineScope, entitiesFactory) {
@@ -178,25 +178,25 @@ class LLMProviderLazyListState(
 }
 
 @Composable
-fun rememberLLMProviderLazyListState(
+fun rememberLLMProviderConfigLazyListState(
     entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-): LLMProviderLazyListState {
+): LLMProviderConfigLazyListState {
     val coroutineScope = rememberCoroutineScope()
     return remember(coroutineScope, entitiesFactory) {
-        LLMProviderLazyListState(coroutineScope, entitiesFactory)
+        LLMProviderConfigLazyListState(coroutineScope, entitiesFactory)
     }
 }
 
 context(viewModel: ViewModel)
-fun LLMProviderLazyListState(
+fun LLMProviderConfigLazyListState(
     entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-) = LLMProviderLazyListState(
+) = LLMProviderConfigLazyListState(
     coroutineScope = viewModel.viewModelScope,
     entitiesFactory = entitiesFactory,
 )
 
 @Composable
-fun LLMProviderItem(
+fun LLMProviderConfigItem(
     entity: LLMProviderConfigEntity,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -232,15 +232,15 @@ fun LLMProviderItem(
     }
 }
 
-sealed interface LLMProviderItemSharedKey {
+sealed interface LLMProviderConfigItemSharedKey {
     val id: Uuid
 
-    data class Container(override val id: Uuid) : LLMProviderItemSharedKey
+    data class Container(override val id: Uuid) : LLMProviderConfigItemSharedKey
 }
 
 @Preview
 @Composable
-fun LLMProviderLazyColumnPreview() {
+fun LLMProviderConfigLazyColumnPreview() {
     AppTheme {
         Surface {
             if (LocalInspectionMode.current) {
@@ -284,7 +284,7 @@ fun LLMProviderLazyColumnPreview() {
                         Text("Clear All")
                     }
                 }
-                LLMProviderLazyColumn(
+                LLMProviderConfigLazyColumn(
                     dao = dao,
                     onProviderClick = {},
                     modifier = Modifier.weight(1f),
@@ -299,9 +299,9 @@ fun LLMProviderLazyColumnPreview() {
 
 @Preview
 @Composable
-fun LLMProviderItemPreview() {
+fun LLMProviderConfigItemPreview() {
     AppTheme {
-        LLMProviderItem(
+        LLMProviderConfigItem(
             entity = LLMProviderConfigEntity(
                 provider = LLMProvider.DeepSeek,
                 name = "DeepSeek",
