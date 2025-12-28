@@ -25,10 +25,14 @@
     <string name="label_back">返回</string>
     <string name="label_forward">前进</string>
     <string name="label_finish">完成</string>
+    <string name="label_expand">展开</string>
+    <string name="label_collapse">折叠</string>
     <string name="label_go">转到</string>
     <string name="label_reload">重新加载</string>
     <string name="label_retry">重试</string>
     <string name="label_help">帮助</string>
+    <string name="label_edit">编辑</string>
+    <string name="label_delete">删除</string>
     <string name="label_need_attention">需要注意</string>
     <string name="setup_wizard_welcome_label">欢迎</string>
     <string name="setup_wizard_welcome_title">欢迎使用知行</string>
@@ -57,6 +61,10 @@
     <string name="llm_api_key_message_secure">您的API Key将安全地存储在您的设备上，不会与任何第三方共享</string>
     <string name="llm_api_key_message_unsecure">您的API Key将以明文形式存储在您的设备上。这可能会带来安全风险，但我们不会与任何第三方共享它</string>
     <string name="llm_model_id_label">模型ID</string>
+    <string name="llm_model_add_label">添加模型</string>
+    <plurals name="llm_model_count_label">
+        <item quantity="other">%d个模型</item>
+    </plurals>
     <string name="llm_context_length_label">上下文长度</string>
     <string name="llm_max_output_tokens_label">最大输出Token数</string>
     <string name="llm_capability_label">模型能力</string>

@@ -28,12 +28,14 @@ import kotlinx.coroutines.CoroutineScope
 @Immutable
 open class PagingLazyListState<Key : Any, Value : Any>(
     coroutineScope: CoroutineScope,
+    pagingConfig: PagingConfig = PagingConfig(
+        pageSize = 20,
+        enablePlaceholders = false,
+    ),
     pagingSourceFactory: () -> PagingSource<Key, Value>,
 ) {
     val flow = Pager(
-        config = PagingConfig(
-            pageSize = 20,
-        ),
+        config = pagingConfig,
         pagingSourceFactory = pagingSourceFactory,
     ).flow.cachedIn(coroutineScope)
 }

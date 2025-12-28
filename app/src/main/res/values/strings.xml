@@ -25,10 +25,14 @@
     <string name="label_back">Back</string>
     <string name="label_forward">Forward</string>
     <string name="label_finish">Finish</string>
+    <string name="label_expand">Expand</string>
+    <string name="label_collapse">Collapse</string>
     <string name="label_go">Go</string>
     <string name="label_reload">Reload</string>
     <string name="label_retry">Retry</string>
     <string name="label_help">Help</string>
+    <string name="label_edit">Edit</string>
+    <string name="label_delete">Delete</string>
     <string name="label_need_attention">Needs Attention</string>
     <string name="setup_wizard_welcome_label">Welcome</string>
     <string name="setup_wizard_welcome_title">Welcome to Knowmad</string>
@@ -57,6 +61,11 @@
     <string name="llm_api_key_message_secure">Your API Key will be stored securely on your device and will not be shared with any third parties</string>
     <string name="llm_api_key_message_unsecure">Your API Key will be stored in plaintext on your device. This may pose security risks, but we will not share it with any third parties</string>
     <string name="llm_model_id_label">Model ID</string>
+    <string name="llm_model_add_label">Add Model</string>
+    <plurals name="llm_model_count_label">
+        <item quantity="one">%d Model</item>
+        <item quantity="other">%d Models</item>
+    </plurals>
     <string name="llm_context_length_label">Context Length</string>
     <string name="llm_max_output_tokens_label">Max Output Tokens</string>
     <string name="llm_capability_label">Capabilities</string>

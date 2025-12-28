@@ -25,6 +25,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import top.ltfan.knowmad.util.calculateLexoRank
 import kotlin.uuid.Uuid
 
@@ -97,6 +98,9 @@ interface LLMConfigDao {
 
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>
+
+    @Query("SELECT COUNT(*) FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId")
+    fun getModelCountByProvider(providerConfigId: Uuid): Flow<Int>
 
     @Query("SELECT rank FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC LIMIT 1 OFFSET :pos")
     suspend fun getModelRankAt(providerConfigId: Uuid, pos: Int): ByteArray?
