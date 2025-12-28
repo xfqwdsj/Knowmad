@@ -19,299 +19,45 @@
 package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLMProvider
-import android.app.Application
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ListItemElevation
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.paging.LoadState
-import androidx.paging.PagingSource
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.itemKey
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.database.AppDatabase
-import top.ltfan.knowmad.data.llm.LLMConfigDao
-import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderInfo
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
-import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
-import top.ltfan.knowmad.ui.util.only
-import top.ltfan.knowmad.ui.util.plus
-import top.ltfan.knowmad.util.calculateLexoRankForReorderableList
-import kotlin.uuid.Uuid
-
-@Composable
-fun LLMProviderConfigLazyColumn(
-    dao: LLMConfigDao,
-    onProviderClick: (LLMProviderConfigEntity) -> Unit,
-    modifier: Modifier = Modifier,
-    state: LLMProviderConfigLazyListState = rememberLLMProviderConfigLazyListState {
-        dao.getAllProviders()
-    },
-    contentPadding: PaddingValues = PaddingValues(),
-    additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
-    reverseLayout: Boolean = false,
-    verticalArrangement: Arrangement.Vertical =
-        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
-    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null,
-) {
-    val entities = state.flow.collectAsLazyPagingItems()
-
-    val hapticFeedback = LocalHapticFeedback.current
-
-    ReorderableLazyColumn(
-        itemCount = entities.itemCount,
-        itemKey = entities.itemKey { it.id },
-        onMove = { from, to ->
-            state.listUpdatedChannel.tryReceive()
-
-            val fromEntity = entities[from.index] ?: return@ReorderableLazyColumn
-
-            val newRank = calculateLexoRankForReorderableList(
-                itemCount = entities.itemCount,
-                fromIndex = from.index,
-                toIndex = to.index,
-                getRankAtIndex = { entities[it]?.rank },
-            )
-
-            launch(Dispatchers.IO) {
-                dao.updateProvider(fromEntity.copy(rank = newRank))
-            }
-
-            state.listUpdatedChannel.receive()
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-        },
-        modifier = modifier,
-        contentPadding = contentPadding,
-        reverseLayout = reverseLayout,
-        verticalArrangement = verticalArrangement,
-        horizontalAlignment = horizontalAlignment,
-        additionalScrollThresholdPadding = additionalScrollThresholdPadding,
-    ) { index, _ ->
-        val entity = entities[index] ?: return@ReorderableLazyColumn
-
-        val interactionSource = remember { MutableInteractionSource() }
-
-        LLMProviderConfigItem(
-            entity = entity,
-            onClick = { onProviderClick(entity) },
-            modifier = Modifier.run {
-                if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
-                    sharedBounds(
-                        rememberSharedContentState(
-                            LLMProviderConfigItemSharedKey.Container(entity.id),
-                        ),
-                        animatedVisibilityScope,
-                    )
-                }
-            },
-            trailingContent = {
-                ReorderableDragHandle(
-                    interactionSource = interactionSource,
-                    onDragStarted = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                    },
-                    onDragStopped = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                    },
-                )
-            },
-            interactionSource = interactionSource,
-        )
-    }
-
-    LaunchedEffect(entities.loadState) {
-        if (entities.loadState.refresh is LoadState.NotLoading) {
-            state.listUpdatedChannel.trySend(Unit)
-        }
-    }
-}
-
-@Immutable
-class LLMProviderConfigLazyListState(
-    coroutineScope: CoroutineScope,
-    entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-) : PagingLazyListState<Int, LLMProviderConfigEntity>(coroutineScope, entitiesFactory) {
-    val listUpdatedChannel = Channel<Unit>()
-}
-
-@Composable
-fun rememberLLMProviderConfigLazyListState(
-    entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-): LLMProviderConfigLazyListState {
-    val coroutineScope = rememberCoroutineScope()
-    return remember(coroutineScope, entitiesFactory) {
-        LLMProviderConfigLazyListState(coroutineScope, entitiesFactory)
-    }
-}
-
-context(viewModel: ViewModel)
-fun LLMProviderConfigLazyListState(
-    entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-) = LLMProviderConfigLazyListState(
-    coroutineScope = viewModel.viewModelScope,
-    entitiesFactory = entitiesFactory,
-)
-
-@Composable
-fun LLMProviderConfigItem(
-    entity: LLMProviderConfigEntity,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    trailingContent: @Composable (() -> Unit)? = {
-        Icon(
-            painterResource(R.drawable.drag_handle_24px),
-            contentDescription = null,
-        )
-    },
-    elevation: ListItemElevation = ListItemDefaults.elevation(),
-    interactionSource: MutableInteractionSource? = null,
-) {
-    val info = SupportedLLMProviders[entity.provider] ?: return
-    ProvideCompatibleShapes {
-        ListItem(
-            onClick = onClick,
-            modifier = modifier,
-            leadingContent = {
-                LLMProviderIcon(info)
-            },
-            trailingContent = trailingContent,
-            overlineContent = {
-                Text(stringResource(info.label))
-            },
-            supportingContent = {
-                Text(stringResource(info.description))
-            },
-            elevation = elevation,
-            interactionSource = interactionSource,
-        ) {
-            Text(entity.name)
-        }
-    }
-}
-
-sealed interface LLMProviderConfigItemSharedKey {
-    val id: Uuid
-
-    data class Container(override val id: Uuid) : LLMProviderConfigItemSharedKey
-}
-
-@Preview
-@Composable
-fun LLMProviderConfigLazyColumnPreview() {
-    AppTheme {
-        Surface {
-            if (LocalInspectionMode.current) {
-                Text("Inspection Mode")
-                return@Surface
-            }
-
-            val application = LocalContext.current.applicationContext as? Application ?: run {
-                Text("No Application Context")
-                return@Surface
-            }
-
-            val coroutineScope = rememberCoroutineScope()
-            val dao =
-                remember { context(application) { AppDatabase.buildDatabase() }.llmConfigDao() }
-
-            Column(Modifier.fillMaxSize()) {
-                Row(
-                    Modifier.windowInsetsPadding(AppWindowInsets.only { top }),
-                ) {
-                    Button(
-                        onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                SupportedLLMProviders.keys.forEach { provider ->
-                                    dao.insertProviderAtEnd(
-                                        LLMProviderConfigEntity(
-                                            provider = provider,
-                                            apiKey = "sample_api_key_for_${provider.id}".toByteArray(),
-                                            iv = null,
-                                        ),
-                                    )
-                                }
-                            }
-                        },
-                    ) {
-                        Text("Add Sample Data")
-                    }
-                    Button(
-                        onClick = {},
-                    ) {
-                        Text("Clear All")
-                    }
-                }
-                LLMProviderConfigLazyColumn(
-                    dao = dao,
-                    onProviderClick = {},
-                    modifier = Modifier.weight(1f),
-                    contentPadding = AppWindowInsets.only { horizontal + bottom }
-                        .asPaddingValues() + PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                )
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun LLMProviderConfigItemPreview() {
-    AppTheme {
-        LLMProviderConfigItem(
-            entity = LLMProviderConfigEntity(
-                provider = LLMProvider.DeepSeek,
-                name = "DeepSeek",
-                apiKey = ByteArray(0),
-                iv = null,
-            ),
-            onClick = {},
-        )
-    }
-}
+import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 
 @Composable
 fun LLMProviderInfo(
@@ -357,7 +103,113 @@ fun LLMProviderInfoPreview() {
 }
 
 @Composable
-private fun LLMProviderIcon(
+fun LLMProviderApiKeyTextField(
+    state: TextFieldState,
+    isUsingPlaintext: Boolean,
+    providerInfo: LLMProviderInfo?,
+    onRetryCryptoKeyInitialization: () -> Unit,
+) {
+    SecureTextField(
+        state = state,
+        modifier = Modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .fillMaxWidth(),
+        label = {
+            Text(stringResource(R.string.llm_api_key_label))
+        },
+        leadingIcon = {
+            Icon(
+                painterResource(if (isUsingPlaintext) R.drawable.encrypted_off_24px else R.drawable.encrypted_24px),
+                contentDescription = null,
+            )
+        },
+        trailingIcon = {
+            Row {
+                PasteIconButton(
+                    onPaste = {
+                        state.setTextAndPlaceCursorAtEnd(it.trim())
+                    },
+                )
+                providerInfo?.let { providerInfo ->
+                    OpenUriIconButton(
+                        uri = providerInfo.platformUrl,
+                        tooltipTextRes = R.string.llm_api_key_guidance_get,
+                        contentDescriptionRes = R.string.llm_api_key_guidance_get,
+                    )
+                }
+            }
+        },
+        supportingText = {
+            Row {
+                AnimatedContent(
+                    targetState = isUsingPlaintext,
+                    modifier = Modifier.weight(1f),
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                ) { isUsingPlaintext ->
+                    Text(
+                        stringResource(
+                            if (isUsingPlaintext) R.string.llm_api_key_message_unsecure
+                            else R.string.llm_api_key_message_secure,
+                        ),
+                    )
+                }
+                AnimatedVisibility(
+                    visible = isUsingPlaintext,
+                    enter = fadeIn() + expandHorizontally(
+                        expandFrom = Alignment.Start,
+                        clip = false,
+                    ),
+                    exit = fadeOut() + shrinkHorizontally(
+                        shrinkTowards = Alignment.Start,
+                        clip = false,
+                    ),
+                ) {
+                    Row {
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(
+                            onClick = onRetryCryptoKeyInitialization,
+                        ) {
+                            Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+fun LLMProviderBaseUrlTextField(
+    baseUrl: String,
+    onBaseUrlChange: (String) -> Unit,
+    providerInfo: LLMProviderInfo?,
+) {
+    TextField(
+        value = baseUrl,
+        onValueChange = { onBaseUrlChange(it.trim()) },
+        modifier = Modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .fillMaxWidth(),
+        label = {
+            Text(stringResource(R.string.llm_api_base_url_input_label))
+        },
+        placeholder = providerInfo?.let { providerInfo ->
+            {
+                Text(providerInfo.defaultBaseUrl)
+            }
+        },
+        trailingIcon = {
+            PasteIconButton(onPaste = { onBaseUrlChange(it.trim()) })
+        },
+        supportingText = {
+            Text(stringResource(R.string.llm_api_base_url_input_message))
+        },
+        singleLine = true,
+    )
+}
+
+@Composable
+fun LLMProviderIcon(
     info: LLMProviderInfo,
     modifier: Modifier = Modifier,
 ) {

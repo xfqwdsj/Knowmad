@@ -74,7 +74,6 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -130,6 +129,8 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.ui.component.AutoSuggestTextField
 import top.ltfan.knowmad.ui.component.CopyIconButton
+import top.ltfan.knowmad.ui.component.LLMProviderApiKeyTextField
+import top.ltfan.knowmad.ui.component.LLMProviderBaseUrlTextField
 import top.ltfan.knowmad.ui.component.LLMProviderInfo
 import top.ltfan.knowmad.ui.component.MarkdownView
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
@@ -556,97 +557,21 @@ class ApiSetupPage : WizardSubPage() {
                         message = R.string.setup_wizard_api_message,
                     )
                     TitleContentSpacer()
-                    SecureTextField(
+                    LLMProviderApiKeyTextField(
                         state = viewModel.apiKeyTextFieldState,
-                        modifier = Modifier
-                            .widthIn(max = TextFieldMaxWidth)
-                            .fillMaxWidth(),
-                        label = {
-                            Text(stringResource(R.string.llm_api_key_label))
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(if (viewModel.isUsingPlaintext) R.drawable.encrypted_off_24px else R.drawable.encrypted_24px),
-                                contentDescription = null,
-                            )
-                        },
-                        trailingIcon = {
-                            Row {
-                                PasteIconButton(
-                                    onPaste = {
-                                        viewModel.apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(it.trim())
-                                    },
-                                )
-                                viewModel.currentProviderInfo?.let { providerInfo ->
-                                    OpenUriIconButton(
-                                        uri = providerInfo.platformUrl,
-                                        tooltipTextRes = R.string.llm_api_key_guidance_get,
-                                        contentDescriptionRes = R.string.llm_api_key_guidance_get,
-                                    )
-                                }
-                            }
-                        },
-                        supportingText = {
-                            Row {
-                                AnimatedContent(
-                                    targetState = viewModel.isUsingPlaintext,
-                                    modifier = Modifier.weight(1f),
-                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                                ) { isUsingPlaintext ->
-                                    Text(
-                                        stringResource(
-                                            if (isUsingPlaintext) R.string.llm_api_key_message_unsecure
-                                            else R.string.llm_api_key_message_secure,
-                                        ),
-                                    )
-                                }
-                                AnimatedVisibility(
-                                    visible = viewModel.isUsingPlaintext,
-                                    enter = fadeIn() + expandHorizontally(
-                                        expandFrom = Alignment.Start,
-                                        clip = false,
-                                    ),
-                                    exit = fadeOut() + shrinkHorizontally(
-                                        shrinkTowards = Alignment.Start,
-                                        clip = false,
-                                    ),
-                                ) {
-                                    Row {
-                                        Spacer(Modifier.width(8.dp))
-                                        TextButton(
-                                            onClick = {
-                                                viewModel.generateCryptoKey { isReady = it }
-                                            },
-                                        ) {
-                                            Text(stringResource(R.string.crypto_key_initialization_error_retry_label))
-                                        }
-                                    }
-                                }
+                        isUsingPlaintext = viewModel.isUsingPlaintext,
+                        providerInfo = viewModel.currentProviderInfo,
+                        onRetryCryptoKeyInitialization = {
+                            viewModel.generateCryptoKey {
+                                isReady = it
                             }
                         },
                     )
                     Divider()
-                    TextField(
-                        value = viewModel.baseUrl,
-                        onValueChange = { viewModel.baseUrl = it.trim() },
-                        modifier = Modifier
-                            .widthIn(max = TextFieldMaxWidth)
-                            .fillMaxWidth(),
-                        label = {
-                            Text(stringResource(R.string.llm_api_base_url_input_label))
-                        },
-                        placeholder = viewModel.currentProviderInfo?.let { providerInfo ->
-                            {
-                                Text(providerInfo.defaultBaseUrl)
-                            }
-                        },
-                        trailingIcon = {
-                            PasteIconButton(onPaste = { viewModel.baseUrl = it.trim() })
-                        },
-                        supportingText = {
-                            Text(stringResource(R.string.llm_api_base_url_input_message))
-                        },
-                        singleLine = true,
+                    LLMProviderBaseUrlTextField(
+                        baseUrl = viewModel.baseUrl,
+                        onBaseUrlChange = { viewModel.baseUrl = it },
+                        providerInfo = viewModel.currentProviderInfo,
                     )
                 }
             }
