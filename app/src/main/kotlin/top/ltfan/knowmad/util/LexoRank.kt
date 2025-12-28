@@ -20,6 +20,22 @@ package top.ltfan.knowmad.util
 
 val UnsafeEmptyRank = byteArrayOf(0x80.toByte())
 
+inline fun calculateLexoRankForReorderableList(
+    itemCount: Int,
+    fromIndex: Int,
+    toIndex: Int,
+    getRankAtIndex: (index: Int) -> ByteArray?,
+) = if (toIndex < fromIndex) {
+    val prev = if (toIndex > 0) getRankAtIndex(toIndex - 1) else null
+    val next = getRankAtIndex(toIndex)
+    prev to next
+} else {
+    val prev = getRankAtIndex(toIndex)
+    val next =
+        if (toIndex < itemCount - 1) getRankAtIndex(toIndex + 1) else null
+    prev to next
+}.let { (prev, next) -> calculateLexoRank(prev, next) }
+
 fun calculateLexoRank(prev: ByteArray?, next: ByteArray?): ByteArray {
     val p = prev ?: byteArrayOf()
     val n = next ?: byteArrayOf()

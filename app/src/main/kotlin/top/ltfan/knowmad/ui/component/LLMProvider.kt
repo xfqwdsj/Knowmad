@@ -26,14 +26,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemElevation
@@ -41,10 +40,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -56,19 +56,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
-import androidx.paging.cachedIn
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigDao
@@ -78,10 +73,11 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
+import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
-import top.ltfan.knowmad.util.calculateLexoRank
-import kotlin.random.Random
+import top.ltfan.knowmad.util.calculateLexoRankForReorderableList
 import kotlin.uuid.Uuid
 
 @Composable
@@ -89,123 +85,115 @@ fun LLMProviderLazyColumn(
     dao: LLMConfigDao,
     onProviderClick: (LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
+    state: LLMProviderLazyListState = rememberLLMProviderLazyListState {
+        dao.getAllProviders()
+    },
     contentPadding: PaddingValues = PaddingValues(),
     additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical =
+        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
-    key: String = rememberSaveable { Random.nextLong().toString() },
 ) {
-    val contentPadding = contentPadding + PaddingValues(vertical = 16.dp)
-
-    val viewModel =
-        viewModel(key = key) { LLMProviderLazyColumnViewModel { dao.getAllProviders() } }
-    val entities = viewModel.entitiesFlow.collectAsLazyPagingItems()
+    val entities = state.flow.collectAsLazyPagingItems()
 
     val hapticFeedback = LocalHapticFeedback.current
 
-    val lazyListState = rememberLazyListState()
-    val reorderableLazyListState = rememberReorderableLazyListState(
-        lazyListState,
-        scrollThresholdPadding = contentPadding + additionalScrollThresholdPadding,
-    ) { from, to ->
-        viewModel.listUpdatedChannel.tryReceive()
+    ReorderableLazyColumn(
+        itemCount = entities.itemCount,
+        itemKey = entities.itemKey { it.id },
+        onMove = { from, to ->
+            state.listUpdatedChannel.tryReceive()
 
-        val fromEntity = entities[from.index] ?: return@rememberReorderableLazyListState
-        val toIndex = to.index
-        val (prevRank, nextRank) = if (toIndex < from.index) {
-            val prev = if (toIndex > 0) entities[toIndex - 1]?.rank else null
-            val next = entities[toIndex]?.rank
-            prev to next
-        } else {
-            val prev = entities[toIndex]?.rank
-            val next = if (toIndex < entities.itemCount - 1) entities[toIndex + 1]?.rank else null
-            prev to next
-        }
-        val newRank = calculateLexoRank(prevRank, nextRank)
-        val updatedEntity = fromEntity.copy(rank = newRank)
+            val fromEntity = entities[from.index] ?: return@ReorderableLazyColumn
 
-        launch(Dispatchers.IO) {
-            dao.updateProvider(updatedEntity)
-        }
+            val newRank = calculateLexoRankForReorderableList(
+                itemCount = entities.itemCount,
+                fromIndex = from.index,
+                toIndex = to.index,
+                getRankAtIndex = { entities[it]?.rank },
+            )
 
-        viewModel.listUpdatedChannel.receive()
-        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-    }
-
-    LazyColumn(
-        modifier = modifier,
-        state = lazyListState,
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        items(
-            count = entities.itemCount,
-            key = entities.itemKey { it.id },
-        ) { index ->
-            val entity = entities[index] ?: return@items
-            ReorderableItem(
-                state = reorderableLazyListState,
-                key = entity.id,
-            ) {
-                val interactionSource = remember { MutableInteractionSource() }
-
-                LLMProviderItem(
-                    entity = entity,
-                    onClick = { onProviderClick(entity) },
-                    modifier = Modifier.run {
-                        if (animatedVisibilityScope == null) this
-                        else with(LocalSharedTransitionScope.current) {
-                            sharedBounds(
-                                rememberSharedContentState(
-                                    LLMProviderItemSharedKey.Container(entity.id),
-                                ),
-                                animatedVisibilityScope,
-                            )
-                        }
-                    },
-                    trailingContent = {
-                        IconButton(
-                            onClick = {},
-                            modifier = Modifier.draggableHandle(
-                                interactionSource = interactionSource,
-                                onDragStarted = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                },
-                                onDragStopped = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                },
-                            ),
-                        ) {
-                            Icon(
-                                painterResource(R.drawable.drag_handle_24px),
-                                contentDescription = null,
-                            )
-                        }
-                    },
-                    interactionSource = interactionSource,
-                )
+            launch(Dispatchers.IO) {
+                dao.updateProvider(fromEntity.copy(rank = newRank))
             }
-        }
+
+            state.listUpdatedChannel.receive()
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        },
+        modifier = modifier,
+        contentPadding = contentPadding,
+        reverseLayout = reverseLayout,
+        verticalArrangement = verticalArrangement,
+        horizontalAlignment = horizontalAlignment,
+        additionalScrollThresholdPadding = additionalScrollThresholdPadding,
+    ) { index, _ ->
+        val entity = entities[index] ?: return@ReorderableLazyColumn
+
+        val interactionSource = remember { MutableInteractionSource() }
+
+        LLMProviderItem(
+            entity = entity,
+            onClick = { onProviderClick(entity) },
+            modifier = Modifier.run {
+                if (animatedVisibilityScope == null) this
+                else with(LocalSharedTransitionScope.current) {
+                    sharedBounds(
+                        rememberSharedContentState(
+                            LLMProviderItemSharedKey.Container(entity.id),
+                        ),
+                        animatedVisibilityScope,
+                    )
+                }
+            },
+            trailingContent = {
+                ReorderableDragHandle(
+                    interactionSource = interactionSource,
+                    onDragStarted = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                    },
+                    onDragStopped = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                    },
+                )
+            },
+            interactionSource = interactionSource,
+        )
     }
 
     LaunchedEffect(entities.loadState) {
         if (entities.loadState.refresh is LoadState.NotLoading) {
-            viewModel.listUpdatedChannel.trySend(Unit)
+            state.listUpdatedChannel.trySend(Unit)
         }
     }
 }
 
-private class LLMProviderLazyColumnViewModel(
+@Immutable
+class LLMProviderLazyListState(
+    coroutineScope: CoroutineScope,
     entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
-) : ViewModel() {
+) : PagingLazyListState<Int, LLMProviderConfigEntity>(coroutineScope, entitiesFactory) {
     val listUpdatedChannel = Channel<Unit>()
-
-    val entitiesFlow = Pager(
-        config = PagingConfig(
-            pageSize = 20,
-        ),
-        pagingSourceFactory = entitiesFactory,
-    ).flow.cachedIn(viewModelScope)
 }
+
+@Composable
+fun rememberLLMProviderLazyListState(
+    entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
+): LLMProviderLazyListState {
+    val coroutineScope = rememberCoroutineScope()
+    return remember(coroutineScope, entitiesFactory) {
+        LLMProviderLazyListState(coroutineScope, entitiesFactory)
+    }
+}
+
+context(viewModel: ViewModel)
+fun LLMProviderLazyListState(
+    entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
+) = LLMProviderLazyListState(
+    coroutineScope = viewModel.viewModelScope,
+    entitiesFactory = entitiesFactory,
+)
 
 @Composable
 fun LLMProviderItem(
@@ -270,7 +258,9 @@ fun LLMProviderLazyColumnPreview() {
                 remember { context(application) { AppDatabase.buildDatabase() }.llmConfigDao() }
 
             Column(Modifier.fillMaxSize()) {
-                Row {
+                Row(
+                    Modifier.windowInsetsPadding(AppWindowInsets.only { top }),
+                ) {
                     Button(
                         onClick = {
                             coroutineScope.launch(Dispatchers.IO) {
@@ -298,6 +288,9 @@ fun LLMProviderLazyColumnPreview() {
                     dao = dao,
                     onProviderClick = {},
                     modifier = Modifier.weight(1f),
+                    contentPadding = AppWindowInsets.only { horizontal + bottom }
+                        .asPaddingValues() + PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 )
             }
         }
