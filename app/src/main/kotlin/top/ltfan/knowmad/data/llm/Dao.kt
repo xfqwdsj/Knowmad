@@ -62,7 +62,7 @@ interface LLMConfigDao {
 
     @Transaction
     suspend fun insertModelAtEnd(model: LLMConfigEntity): Long {
-        val lastRank = getModelRankAt(model.providerConfigId, 0)
+        val lastRank = getModelRankDescAt(model.providerConfigId, 0)
         val newRank = calculateLexoRank(lastRank, null)
         val newModel = model.copy(rank = newRank)
         return insertModelUnsafeRanking(newModel)
