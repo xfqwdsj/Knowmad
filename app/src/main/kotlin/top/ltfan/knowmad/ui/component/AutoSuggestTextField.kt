@@ -40,14 +40,14 @@ import androidx.compose.ui.unit.Dp
 fun AutoSuggestTextField(
     state: TextFieldState,
     options: List<String>,
-    allowExpand: Boolean,
+    allowExpansion: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     menuMaxHeight: Dp = Dp.Unspecified,
     textField: @Composable ExposedDropdownMenuBoxScope.(expanded: Boolean) -> Unit,
 ) {
     val filteredOptions = options.filteredBy(state.text)
 
-    val expanded = allowExpand && filteredOptions.isNotEmpty()
+    val expanded = allowExpansion && filteredOptions.isNotEmpty()
 
     ExposedDropdownMenuBox(
         expanded = expanded,

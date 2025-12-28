@@ -664,7 +664,7 @@ class ModelSetupPage : WizardSubPage() {
             AutoSuggestTextField(
                 state = viewModel.modelTextFieldState,
                 options = viewModel.knownModelIds,
-                allowExpand = modelMenuExpanded,
+                allowExpansion = modelMenuExpanded,
                 onExpandedChange = { modelMenuExpanded = it },
             ) {
                 TextField(
