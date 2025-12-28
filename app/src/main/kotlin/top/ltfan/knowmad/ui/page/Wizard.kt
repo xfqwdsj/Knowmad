@@ -933,8 +933,6 @@ class FinishPage : WizardSubPage() {
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))
         override val nextInfo: WizardSubPageInfo? = null
         override val scrollState = ScrollState(0)
-
-        const val MARKDOWN_KEY = "finish_page_markdown"
     }
 
     @Composable
@@ -1002,9 +1000,8 @@ class FinishPage : WizardSubPage() {
                     ) { firstMessage ->
                         if (firstMessage.isNotBlank()) {
                             MarkdownView(
-                                viewModel.firstMessageFlow,
+                                viewModel.firstMessageState,
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                key = MARKDOWN_KEY,
                             )
                         } else {
                             LoadingIndicator()
