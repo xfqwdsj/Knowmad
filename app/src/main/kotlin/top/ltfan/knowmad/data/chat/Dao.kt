@@ -34,14 +34,14 @@ interface ChatDao {
     suspend fun insertConversation(conversation: ConversationEntity): Long
 
     @Insert
-    suspend fun _insertMessage(message: MessageEntity): Long
+    suspend fun insertMessageWithoutFiles(message: MessageEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessageFileCrossRef(ref: MessageFileCrossRef): Long
 
     @Transaction
     suspend fun insertMessage(message: MessageEntity, fileIds: List<Uuid>): Long {
-        val messageRowId = _insertMessage(message)
+        val messageRowId = insertMessageWithoutFiles(message)
         val messageId = message.id
         for (fileId in fileIds) {
             val ref = MessageFileCrossRef(
