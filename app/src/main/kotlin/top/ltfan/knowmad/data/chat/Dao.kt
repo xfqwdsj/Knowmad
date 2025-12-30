@@ -75,4 +75,33 @@ interface ChatDao {
     @Transaction
     @Query("SELECT * FROM FileEntity WHERE id = :fileId")
     suspend fun getAllMessagesAssociatedWithFile(fileId: Uuid): List<FileWithMessages>
+
+    @Transaction
+    @Query(
+        """
+        SELECT MessageEntity.* FROM MessageEntity
+        JOIN MessageFtsEntity ON MessageEntity.rowid = MessageFtsEntity.rowid
+        WHERE MessageFtsEntity MATCH :query
+    """,
+    )
+    suspend fun searchMessagesInternal(query: String): List<MessageWithFiles>
+
+    @Transaction
+    suspend fun searchMessages(query: String): List<MessageWithFiles> {
+        // SQLite FTS uses double quotes to wrap phrases and operators like AND, OR, NOT.
+        // Raw user input might contain special characters that cause syntax errors.
+        // We sanitize the input by:
+        // 1. Removing double quotes to prevent syntax errors.
+        // 2. Splitting by whitespace.
+        // 3. Appending '*' to each token for prefix matching (search-as-you-type behavior).
+        val sanitized = query.replace("\"", "")
+            .split(Regex("\\s+"))
+            .asSequence()
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { "$it*" }
+
+        if (sanitized.isBlank()) return emptyList()
+
+        return searchMessagesInternal(sanitized)
+    }
 }
