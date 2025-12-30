@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.chat
 
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
@@ -29,7 +30,6 @@ import androidx.room.Junction
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import top.ltfan.knowmad.data.file.FileEntity
-import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -50,7 +50,6 @@ data class ConversationEntity(
         Index("conversationId"),
         Index("depth"),
         Index("rootId"),
-        Index("generatedBy"),
     ],
     foreignKeys = [
         ForeignKey(
@@ -65,12 +64,6 @@ data class ConversationEntity(
             childColumns = ["rootId"],
             onDelete = ForeignKey.CASCADE,
         ),
-        ForeignKey(
-            entity = LLMConfigEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["generatedBy"],
-            onDelete = ForeignKey.CASCADE,
-        ),
     ],
 )
 data class MessageEntity(
@@ -83,7 +76,7 @@ data class MessageEntity(
     val role: Message.Role = message.role,
     val message: Message,
     val searchableContent: String = message.content,
-    val generatedBy: Uuid,
+    val generatedBy: LLModel,
     val createdAt: Instant = Clock.System.now(),
 )
 
