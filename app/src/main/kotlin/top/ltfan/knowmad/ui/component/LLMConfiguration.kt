@@ -248,7 +248,7 @@ fun LLMProviderConfigItem(
     var isExpanded by remember { mutableStateOf(false) }
 
     Card(
-        onClick = {},
+        onClick = onEditProvider,
         modifier = modifier
             .widthIn(max = ListItemMaxWidth)
             .fillMaxWidth(),
@@ -554,7 +554,7 @@ fun LLMConfigItem(
 ) {
     ProvideCompatibleShapes {
         ListItem(
-            onClick = {},
+            onClick = onEdit,
             modifier = modifier,
             trailingContent = {
                 Row(
