@@ -153,6 +153,5 @@ data class MessageFtsEntity(
     @PrimaryKey
     @ColumnInfo(name = "rowid")
     val rowId: Long,
-    val id: Uuid,
     val searchableContent: String,
 )
