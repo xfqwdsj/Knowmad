@@ -28,17 +28,31 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.util.calculateLexoRankForReorderableList
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Composable
 fun ReorderableLazyColumn(
@@ -123,4 +137,51 @@ fun ReorderableCollectionItemScope.ReorderableLongPressDragHandle(
             contentDescription = null,
         )
     }
+}
+
+inline fun <Entity : Any> databaseEntitiesOnReorder(
+    entities: LazyPagingItems<Entity>,
+    state: ReorderableState,
+    hapticFeedback: HapticFeedback,
+    crossinline getRank: (entity: Entity?) -> ByteArray?,
+    crossinline update: suspend CoroutineScope.(entity: Entity, newRank: ByteArray) -> Unit,
+): suspend CoroutineScope.(LazyListItemInfo, LazyListItemInfo) -> Unit = lambda@{ from, to ->
+    val fromEntity = entities[from.index] ?: return@lambda
+
+    val newRank = calculateLexoRankForReorderableList(
+        itemCount = entities.itemCount,
+        fromIndex = from.index,
+        toIndex = to.index,
+        getRankAtIndex = { getRank(entities[it]) },
+    )
+
+    val requestedAt = Clock.System.now()
+    launch(Dispatchers.IO) {
+        update(fromEntity, newRank)
+    }
+
+    state.listUpdated.first { it >= requestedAt }
+    hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+}
+
+@Composable
+fun PagingReorderableUpdatedEffect(state: ReorderableState, entities: LazyPagingItems<*>) {
+    LaunchedEffect(entities.itemSnapshotList) {
+        val isReady = entities.loadState.refresh is LoadState.NotLoading &&
+                entities.loadState.append is LoadState.NotLoading &&
+                entities.loadState.prepend is LoadState.NotLoading
+        if (isReady) {
+            state.listUpdated.emit(Clock.System.now())
+        }
+    }
+}
+
+@Immutable
+interface ReorderableState {
+    val listUpdated: MutableSharedFlow<Instant>
+
+    fun initializeListUpdated() = MutableSharedFlow<Instant>(
+        replay = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
 }

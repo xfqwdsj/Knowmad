@@ -59,7 +59,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -83,14 +82,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.LoadState
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
@@ -108,7 +105,6 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
-import top.ltfan.knowmad.util.calculateLexoRankForReorderableList
 import kotlin.uuid.Uuid
 
 @Composable
@@ -137,24 +133,13 @@ fun LLMProviderConfigLazyColumn(
     ReorderableLazyColumn(
         itemCount = { entities.itemCount },
         itemKey = entities.itemKey { it.id },
-        onMove = { from, to ->
-            state.listUpdatedChannel.tryReceive()
-
-            val fromEntity = entities[from.index] ?: return@ReorderableLazyColumn
-
-            val newRank = calculateLexoRankForReorderableList(
-                itemCount = entities.itemCount,
-                fromIndex = from.index,
-                toIndex = to.index,
-                getRankAtIndex = { entities[it]?.rank },
-            )
-
-            launch(Dispatchers.IO) {
-                dao.updateProvider(fromEntity.copy(rank = newRank))
-            }
-
-            state.listUpdatedChannel.receive()
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        onMove = databaseEntitiesOnReorder(
+            entities = entities,
+            state = state,
+            hapticFeedback = hapticFeedback,
+            getRank = { it?.rank },
+        ) { entity, newRank ->
+            dao.updateProvider(entity.copy(rank = newRank))
         },
         modifier = modifier,
         contentPadding = contentPadding,
@@ -202,11 +187,7 @@ fun LLMProviderConfigLazyColumn(
         )
     }
 
-    LaunchedEffect(entities.loadState) {
-        if (entities.loadState.refresh is LoadState.NotLoading) {
-            state.listUpdatedChannel.trySend(Unit)
-        }
-    }
+    PagingReorderableUpdatedEffect(state, entities)
 }
 
 @Immutable
@@ -221,8 +202,8 @@ class LLMProviderConfigLazyListState(
     coroutineScope,
     pagingConfig,
     entitiesFactory,
-) {
-    val listUpdatedChannel = Channel<Unit>()
+), ReorderableState {
+    override val listUpdated = initializeListUpdated()
 }
 
 @Composable
@@ -416,6 +397,80 @@ fun LLMProviderConfigItem(
     }
 }
 
+@Composable
+fun LLMConfigLazyColumn(
+    dao: LLMConfigDao,
+    state: LLMConfigLazyListState,
+    onEditModel: (model: LLMConfigEntity) -> Unit,
+    onDeleteModel: (model: LLMConfigEntity) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
+    additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
+    reverseLayout: Boolean = false,
+    verticalArrangement: Arrangement.Vertical =
+        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    val entities = state.flow.collectAsLazyPagingItems()
+
+    val hapticFeedback = LocalHapticFeedback.current
+
+    ReorderableLazyColumn(
+        itemCount = { entities.itemCount },
+        itemKey = entities.itemKey { it.id },
+        onMove = databaseEntitiesOnReorder(
+            entities = entities,
+            state = state,
+            hapticFeedback = hapticFeedback,
+            getRank = { it?.rank },
+        ) { entity, newRank ->
+            dao.updateModel(entity.copy(rank = newRank))
+        },
+        modifier = modifier,
+        contentPadding = contentPadding,
+        reverseLayout = reverseLayout,
+        verticalArrangement = verticalArrangement,
+        horizontalAlignment = horizontalAlignment,
+        additionalScrollThresholdPadding = additionalScrollThresholdPadding,
+    ) { index, _ ->
+        val entity = entities[index] ?: return@ReorderableLazyColumn
+
+        val interactionSource = remember { MutableInteractionSource() }
+
+        LLMConfigItem(
+            entity = entity,
+            onEdit = { onEditModel(entity) },
+            onDelete = { onDeleteModel(entity) },
+            modifier = Modifier.run {
+                if (animatedVisibilityScope == null) this
+                else with(LocalSharedTransitionScope.current) {
+                    sharedBounds(
+                        rememberSharedContentState(
+                            LLMProviderConfigItemSharedKey.Container(entity.id),
+                        ),
+                        animatedVisibilityScope,
+                    )
+                }
+            },
+            dragHandle = {
+                ReorderableDragHandle(
+                    interactionSource = interactionSource,
+                    onDragStarted = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                    },
+                    onDragStopped = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                    },
+                )
+            },
+            interactionSource = interactionSource,
+        )
+    }
+
+    PagingReorderableUpdatedEffect(state, entities)
+}
+
 @Immutable
 class LLMConfigLazyListState(
     coroutineScope: CoroutineScope,
@@ -429,8 +484,8 @@ class LLMConfigLazyListState(
     coroutineScope,
     pagingConfig,
     entitiesFactory,
-) {
-    val listUpdatedChannel = Channel<Unit>()
+), ReorderableState {
+    override val listUpdated = initializeListUpdated()
     val modelCountFlow = modelCountFlow.shareIn(
         coroutineScope,
         started = SharingStarted.Eagerly,
@@ -486,95 +541,6 @@ fun LLMConfigLazyListState(
     modelCountFlow = modelCountFlow,
     entitiesFactory = entitiesFactory,
 )
-
-@Composable
-fun LLMConfigLazyColumn(
-    dao: LLMConfigDao,
-    state: LLMConfigLazyListState,
-    onEditModel: (model: LLMConfigEntity) -> Unit,
-    onDeleteModel: (model: LLMConfigEntity) -> Unit,
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(),
-    additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
-    reverseLayout: Boolean = false,
-    verticalArrangement: Arrangement.Vertical =
-        if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
-    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null,
-) {
-    val entities = state.flow.collectAsLazyPagingItems()
-
-    val hapticFeedback = LocalHapticFeedback.current
-
-    ReorderableLazyColumn(
-        itemCount = { entities.itemCount },
-        itemKey = entities.itemKey { it.id },
-        onMove = { from, to ->
-            state.listUpdatedChannel.tryReceive()
-
-            val fromEntity = entities[from.index] ?: return@ReorderableLazyColumn
-
-            val newRank = calculateLexoRankForReorderableList(
-                itemCount = entities.itemCount,
-                fromIndex = from.index,
-                toIndex = to.index,
-                getRankAtIndex = { entities[it]?.rank },
-            )
-
-            launch(Dispatchers.IO) {
-                dao.updateModel(fromEntity.copy(rank = newRank))
-            }
-
-            state.listUpdatedChannel.receive()
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-        },
-        modifier = modifier,
-        contentPadding = contentPadding,
-        reverseLayout = reverseLayout,
-        verticalArrangement = verticalArrangement,
-        horizontalAlignment = horizontalAlignment,
-        additionalScrollThresholdPadding = additionalScrollThresholdPadding,
-    ) { index, _ ->
-        val entity = entities[index] ?: return@ReorderableLazyColumn
-
-        val interactionSource = remember { MutableInteractionSource() }
-
-        LLMConfigItem(
-            entity = entity,
-            onEdit = { onEditModel(entity) },
-            onDelete = { onDeleteModel(entity) },
-            modifier = Modifier.run {
-                if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
-                    sharedBounds(
-                        rememberSharedContentState(
-                            LLMProviderConfigItemSharedKey.Container(entity.id),
-                        ),
-                        animatedVisibilityScope,
-                    )
-                }
-            },
-            dragHandle = {
-                ReorderableDragHandle(
-                    interactionSource = interactionSource,
-                    onDragStarted = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                    },
-                    onDragStopped = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                    },
-                )
-            },
-            interactionSource = interactionSource,
-        )
-    }
-
-    LaunchedEffect(entities.loadState) {
-        if (entities.loadState.refresh is LoadState.NotLoading) {
-            state.listUpdatedChannel.trySend(Unit)
-        }
-    }
-}
 
 @Composable
 fun LLMConfigItem(
