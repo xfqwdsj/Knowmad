@@ -24,12 +24,16 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import top.ltfan.dslutilities.LockableValueDsl
+import top.ltfan.dslutilities.ValueDsl
 
 val AppWindowInsets @Composable inline get() = WindowInsets.safeDrawing
 
@@ -49,8 +53,9 @@ object WindowInsetsSidesBuilder {
 inline fun WindowInsets.only(block: WindowInsetsSidesBuilder.() -> WindowInsetsSides) =
     this.only(WindowInsetsSidesBuilder.block())
 
+@Stable
 @WindowInsetsOperationScope.Dsl
-class WindowInsetsOperationScope(private val insets: WindowInsets) : LockableValueDsl() {
+class WindowInsetsOperationScope(private val insets: WindowInsets) : ValueDsl() {
     var left by prepared<(inset: Dp) -> Dp>({ it })
     var top by prepared<(inset: Dp) -> Dp>({ it })
     var right by prepared<(inset: Dp) -> Dp>({ it })
@@ -73,7 +78,6 @@ class WindowInsetsOperationScope(private val insets: WindowInsets) : LockableVal
     }
 
     fun asWindowInsets(): WindowInsets {
-        lock()
         return object : WindowInsets {
             override fun getLeft(density: Density, layoutDirection: LayoutDirection) =
                 with(density) {
@@ -99,7 +103,6 @@ class WindowInsetsOperationScope(private val insets: WindowInsets) : LockableVal
 
     @Composable
     fun asPaddingValues(): PaddingValues {
-        lock()
         return PaddingValues.build {
             val density = LocalDensity.current
             val layoutDirection = LocalLayoutDirection.current
@@ -143,21 +146,27 @@ class WindowInsetsOperationScope(private val insets: WindowInsets) : LockableVal
 }
 
 @Composable
-inline fun WindowInsets.operateAsWindowInsets(
-    block: @Composable WindowInsetsOperationScope.() -> Unit,
-) = WindowInsetsOperationScope(this).apply {
-    block()
-}.asWindowInsets()
+fun WindowInsets.operateAsWindowInsets(
+    block: WindowInsetsOperationScope.() -> Unit,
+): WindowInsets {
+    val currentBlock by rememberUpdatedState(block)
+
+    return remember(this, currentBlock) {
+        WindowInsetsOperationScope(this).apply(currentBlock).asWindowInsets()
+    }
+}
 
 @Composable
-operator fun WindowInsets.plus(padding: PaddingValues) = operateAsWindowInsets {
-    val paddingLeft = padding.left
-    val paddingTop = padding.top
-    val paddingRight = padding.right
-    val paddingBottom = padding.bottom
+operator fun WindowInsets.plus(padding: PaddingValues): WindowInsets {
+    val getLeft = padding.getLeft
+    val getTop = padding.getTop
+    val getRight = padding.getRight
+    val getBottom = padding.getBottom
 
-    left { it + paddingLeft }
-    top { it + paddingTop }
-    right { it + paddingRight }
-    bottom { it + paddingBottom }
+    return operateAsWindowInsets {
+        left { it + getLeft() }
+        top { it + getTop() }
+        right { it + getRight() }
+        bottom { it + getBottom() }
+    }
 }

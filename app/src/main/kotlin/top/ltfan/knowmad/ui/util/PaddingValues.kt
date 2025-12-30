@@ -104,6 +104,36 @@ class PaddingValuesOperationScope(
     annotation class Dsl
 }
 
+val PaddingValues.getLeft: () -> Dp
+    @Composable inline get() {
+        val layoutDirection = LocalLayoutDirection.current
+        return { calculateLeftPadding(layoutDirection) }
+    }
+
+val PaddingValues.getStart: () -> Dp
+    @Composable inline get() {
+        val layoutDirection = LocalLayoutDirection.current
+        return { calculateStartPadding(layoutDirection) }
+    }
+
+val PaddingValues.getTop: () -> Dp
+    inline get() = { calculateTopPadding() }
+
+val PaddingValues.getRight: () -> Dp
+    @Composable inline get() {
+        val layoutDirection = LocalLayoutDirection.current
+        return { calculateRightPadding(layoutDirection) }
+    }
+
+val PaddingValues.getEnd: () -> Dp
+    @Composable inline get() {
+        val layoutDirection = LocalLayoutDirection.current
+        return { calculateEndPadding(layoutDirection) }
+    }
+
+val PaddingValues.getBottom: () -> Dp
+    inline get() = { calculateBottomPadding() }
+
 val PaddingValues.left: Dp
     @Composable inline get() = calculateLeftPadding(LocalLayoutDirection.current)
 
