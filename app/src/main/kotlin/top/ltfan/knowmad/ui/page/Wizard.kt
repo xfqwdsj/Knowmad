@@ -144,6 +144,7 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
 
 @Serializable
@@ -158,8 +159,14 @@ class WizardPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val appViewModel = LocalAppViewModel.current
         val viewModel = viewModel<WizardPageViewModel> {
-            WizardPageViewModel(WizardWelcomePage(), onFinishWizard, onSkipWizard)
+            WizardPageViewModel(
+                appViewModel.application,
+                WizardWelcomePage(),
+                onFinishWizard,
+                onSkipWizard,
+            )
         }
 
         val backStack = viewModel.backStack

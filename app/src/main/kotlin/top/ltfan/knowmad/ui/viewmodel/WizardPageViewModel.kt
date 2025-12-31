@@ -31,11 +31,11 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
@@ -43,18 +43,22 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
+import top.ltfan.knowmad.data.wizard.WizardData
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
 import top.ltfan.knowmad.util.CryptoManager
 import top.ltfan.knowmad.util.asResource
+import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 class WizardPageViewModel(
+    app: KnowmadApplication,
     firstPage: WizardSubPage,
     val onFinishWizard: (
         entry: LLMConfigEntry,
@@ -62,8 +66,11 @@ class WizardPageViewModel(
         onFailed: (message: String) -> Unit,
     ) -> Unit,
     val onSkipWizard: () -> Unit,
-) : ViewModel() {
+) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
+
+    private val wizardDataStore = WizardData.createDataStore()
+    private val wizardData = wizardDataStore.asMutableState()
 
     fun generateCryptoKey(
         setReady: (Boolean) -> Unit,
@@ -109,7 +116,10 @@ class WizardPageViewModel(
             ) to isUsingPlaintext,
         )
 
-    private var _selectedProvider by mutableStateOf<LLMProvider?>(null)
+    private var _selectedProvider by wizardData.transform(
+        transformIn = { provider },
+        transformOut = { copy(provider = it) },
+    )
     var selectedProvider: LLMProvider?
         get() = _selectedProvider
         set(value) {
@@ -124,7 +134,10 @@ class WizardPageViewModel(
 
     val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
 
-    private var _baseUrl by mutableStateOf("")
+    private var _baseUrl by wizardData.transform(
+        transformIn = { baseUrl },
+        transformOut = { copy(baseUrl = it) },
+    )
     var baseUrl: String
         get() = _baseUrl
         set(value) {
@@ -187,7 +200,10 @@ class WizardPageViewModel(
             modelTextFieldState.setTextAndPlaceCursorAtEnd(value)
         }
 
-    private var _selectedModel by mutableStateOf<LLModel?>(null)
+    private var _selectedModel by wizardData.transform(
+        transformIn = { model },
+        transformOut = { copy(model = it) },
+    )
     var selectedModel: LLModel?
         get() = _selectedModel
         set(value) {
@@ -196,6 +212,16 @@ class WizardPageViewModel(
                 resetFirstMessage()
             }
         }
+
+    init {
+        viewModelScope.launch {
+            val savedModel = wizardDataStore.data.first().model
+            if (savedModel != null) {
+                selectedModel = savedModel
+                model = savedModel.id
+            }
+        }
+    }
 
     var client: LLMClient? = null
         set(value) {
@@ -337,6 +363,9 @@ class WizardPageViewModel(
             snapshotFlow { modelTextFieldState.text }
                 .collect { text ->
                     val modelId = text.toString()
+                    if (modelId == selectedModel?.id) {
+                        return@collect
+                    }
                     if (modelId.isBlank()) {
                         selectedModel = null
                         return@collect

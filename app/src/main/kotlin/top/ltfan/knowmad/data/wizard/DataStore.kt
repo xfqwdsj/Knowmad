@@ -27,7 +27,7 @@ import kotlin.time.Instant
 @Serializable
 data class WizardData(
     val provider: LLMProvider? = null,
-    val baseUrl: String? = null,
+    val baseUrl: String = "",
     val model: LLModel? = null,
 ) {
     companion object : DataStoreCompanion<WizardData> {
