@@ -159,7 +159,7 @@ class WizardPage(
     context(contentPadding: PaddingValues)
     override fun Content() {
         val viewModel = viewModel<WizardPageViewModel> {
-            WizardPageViewModel(WelcomePage(), onFinishWizard, onSkipWizard)
+            WizardPageViewModel(WizardWelcomePage(), onFinishWizard, onSkipWizard)
         }
 
         val backStack = viewModel.backStack
@@ -336,8 +336,8 @@ class WizardPage(
                 return _steps
             }
             val list = mutableListOf<StepItem>()
-            list.add(WelcomePage.stepItem)
-            var currentInfo: WizardSubPageInfo? = WelcomePage.nextInfo
+            list.add(WizardWelcomePage.stepItem)
+            var currentInfo: WizardSubPageInfo? = WizardWelcomePage.nextInfo
             while (currentInfo != null) {
                 list.add(currentInfo.stepItem)
                 currentInfo = currentInfo.nextInfo
@@ -360,11 +360,11 @@ interface WizardSubPageInfo {
 }
 
 @Serializable
-class WelcomePage : WizardSubPage() {
+class WizardWelcomePage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_welcome_label))
-        override val nextInfo: WizardSubPageInfo = ProviderPage
+        override val nextInfo: WizardSubPageInfo = WizardProviderPage
 
         @Transient
         override val scrollState = ScrollState(0)
@@ -393,15 +393,15 @@ class WelcomePage : WizardSubPage() {
 
     override fun canContinue(viewModel: WizardPageViewModel) = true
 
-    override fun nextPage(viewModel: WizardPageViewModel) = ProviderPage()
+    override fun nextPage(viewModel: WizardPageViewModel) = WizardProviderPage()
 }
 
 @Serializable
-class ProviderPage : WizardSubPage() {
+class WizardProviderPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_provider_label))
-        override val nextInfo: WizardSubPageInfo = ApiSetupPage
+        override val nextInfo: WizardSubPageInfo = WizardApiPage
         override val scrollState = ScrollState(0)
     }
 
@@ -494,15 +494,15 @@ class ProviderPage : WizardSubPage() {
         return viewModel.selectedProvider != null
     }
 
-    override fun nextPage(viewModel: WizardPageViewModel) = ApiSetupPage()
+    override fun nextPage(viewModel: WizardPageViewModel) = WizardApiPage()
 }
 
 @Serializable
-class ApiSetupPage : WizardSubPage() {
+class WizardApiPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_api_label))
-        override val nextInfo: WizardSubPageInfo = ModelSetupPage
+        override val nextInfo: WizardSubPageInfo = WizardModelPage
         override val scrollState = ScrollState(0)
     }
 
@@ -619,16 +619,16 @@ class ApiSetupPage : WizardSubPage() {
             viewModel.apiKey,
             viewModel.baseUrl,
         )
-        return ModelSetupPage()
+        return WizardModelPage()
     }
 }
 
 @Serializable
-class ModelSetupPage : WizardSubPage() {
+class WizardModelPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_model_label))
-        override val nextInfo: WizardSubPageInfo = AdvancedSettingsPage
+        override val nextInfo: WizardSubPageInfo = WizardAdvancedPage
         override val scrollState = ScrollState(0)
     }
 
@@ -737,15 +737,15 @@ class ModelSetupPage : WizardSubPage() {
 
     override fun canContinue(viewModel: WizardPageViewModel) = viewModel.selectedModel != null
 
-    override fun nextPage(viewModel: WizardPageViewModel) = AdvancedSettingsPage()
+    override fun nextPage(viewModel: WizardPageViewModel) = WizardAdvancedPage()
 }
 
 @Serializable
-class AdvancedSettingsPage : WizardSubPage() {
+class WizardAdvancedPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_advanced_label))
-        override val nextInfo: WizardSubPageInfo = FinishPage
+        override val nextInfo: WizardSubPageInfo = WizardFinishPage
         override val scrollState = ScrollState(0)
     }
 
@@ -774,11 +774,11 @@ class AdvancedSettingsPage : WizardSubPage() {
         return true
     }
 
-    override fun nextPage(viewModel: WizardPageViewModel) = FinishPage()
+    override fun nextPage(viewModel: WizardPageViewModel) = WizardFinishPage()
 }
 
 @Serializable
-class FinishPage : WizardSubPage() {
+class WizardFinishPage : WizardSubPage() {
     companion object : WizardSubPageInfo {
         override val stepItem: StepItem
             @Composable get() = StepItem(stringResource(R.string.setup_wizard_finish_label))
