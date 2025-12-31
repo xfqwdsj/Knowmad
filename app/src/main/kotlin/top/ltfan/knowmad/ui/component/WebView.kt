@@ -72,6 +72,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -88,8 +89,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.minus
 import top.ltfan.knowmad.ui.util.only
-import top.ltfan.knowmad.ui.util.operate
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -159,7 +160,11 @@ fun WebViewScaffold(
         WebView(
             state = state,
             modifier = Modifier
-                .padding(contentPadding.operate { bottom -= progressBarHeight.toDp() })
+                .padding(
+                    with(LocalDensity.current) {
+                        contentPadding - PaddingValues(bottom = progressBarHeight.toDp())
+                    },
+                )
                 .fillMaxSize(),
             captureBackPresses = captureBackPresses,
             navigator = navigator,
