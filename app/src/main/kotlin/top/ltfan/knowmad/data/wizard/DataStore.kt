@@ -41,7 +41,7 @@ data class WizardState(
     val data: FirstJoinedData? = null,
 ) {
     companion object : DataStoreCompanion<WizardState> {
-        override val fileName = "wizard_state_data"
+        override val fileName = "wizard_state"
         override val default = WizardState()
     }
 }
