@@ -98,6 +98,7 @@ kotlin {
         optIn.add("kotlin.ExperimentalUnsignedTypes")
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
         optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
+        optIn.add("kotlinx.coroutines.FlowPreview")
         optIn.add("kotlinx.serialization.ExperimentalSerializationApi")
         optIn.add("androidx.compose.foundation.ExperimentalFoundationApi")
         optIn.add("androidx.compose.foundation.layout.ExperimentalLayoutApi")

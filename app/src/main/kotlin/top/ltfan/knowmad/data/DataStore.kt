@@ -18,13 +18,9 @@
 
 package top.ltfan.knowmad.data
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
@@ -34,7 +30,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -43,12 +42,12 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.util.Cbor
-import top.ltfan.knowmad.util.collectAsState
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
+import kotlin.time.Duration.Companion.seconds
 
 class AppDataStore<T>(
     serializer: KSerializer<T>,
@@ -73,44 +72,46 @@ class AppDataStore<T>(
     context(viewModel: ViewModel)
     fun asMutableState(
         started: SharingStarted = SharingStarted.Eagerly,
-    ): ReadWriteProperty<Any?, T> {
-        val state = stateInViewModel(started).collectAsState()
-        return object : ReadWriteProperty<Any?, T> {
-            override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-                return state.value
+    ) = object : ReadWriteProperty<Any?, T> {
+        private val dataState = stateInViewModel(started)
+
+        private var state by mutableStateOf(dataState.value)
+
+        private val writeRequest = MutableSharedFlow<T>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
+        private suspend fun write(value: T) {
+            withContext(Dispatchers.IO) {
+                updateData { value }
+            }
+        }
+
+        init {
+            viewModel.viewModelScope.launch {
+                writeRequest
+                    .debounce(1.seconds)
+                    .collect { value ->
+                        write(value)
+                    }
             }
 
-            override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-                viewModel.viewModelScope.launch(Dispatchers.IO) {
-                    updateData { value }
+            viewModel.viewModelScope.launch {
+                dataState.collect { value ->
+                    state = value
                 }
             }
         }
-    }
 
-    @Composable
-    fun <R> rememberPropertyAsState(
-        defaultValue: T = this.defaultValue,
-        get: (T) -> R,
-        set: (T, R) -> T,
-    ): MutableState<R> {
-        val coroutineScope = rememberCoroutineScope()
-        val delegate = rememberSaveable { mutableStateOf(defaultValue) }
-
-        LaunchedEffect(defaultValue, delegate) {
-            data.collect { delegate.value = it }
+        override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+            return state
         }
 
-        return remember(get, set, coroutineScope, delegate) {
-            object : MutableState<R> by mutableStateOf(get(delegate.value)) {
-                override var value: R
-                    get() = get(delegate.value)
-                    set(newValue) {
-                        coroutineScope.launch {
-                            updateData { set(delegate.value, newValue) }
-                        }
-                    }
-            }
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+            state = value
+            writeRequest.tryEmit(value)
         }
     }
 }
