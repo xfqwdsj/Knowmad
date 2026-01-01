@@ -28,9 +28,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -44,11 +50,14 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +65,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,14 +82,15 @@ import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.SnackbarAction
+import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
-import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.asStringRes
 import top.ltfan.knowmad.util.transform
 import kotlin.uuid.Uuid
@@ -85,7 +98,6 @@ import kotlin.uuid.Uuid
 @Composable
 fun ConversationList() {
     val viewModel = viewModel<AgentViewModel>()
-    val appViewModel = LocalAppViewModel.current
 
     ConversationList(
         state = viewModel.conversationListState,
@@ -93,7 +105,6 @@ fun ConversationList() {
         onConversationSelected = { viewModel.currentConversation = it },
         onNewConversation = viewModel::newConversation,
         onEditConversation = viewModel::editConversation,
-        onShowEditDialog = { },
         onDeleteConversation = viewModel::deleteConversation,
     )
 }
@@ -105,7 +116,6 @@ fun ConversationList(
     onConversationSelected: (Uuid?) -> Unit,
     onNewConversation: () -> Unit,
     onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
-    onShowEditDialog: (conversation: ConversationEntity) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
@@ -113,8 +123,17 @@ fun ConversationList(
 
     val conversations = state.flow.collectAsLazyPagingItems()
 
+    val layoutDirection = LocalLayoutDirection.current
+
     Column(Modifier.fillMaxSize()) {
-        Row {
+        Row(
+            Modifier.padding(
+                contentPadding.copy(
+                    layoutDirection,
+                    bottom = 0.dp,
+                ),
+            ),
+        ) {
             Spacer(Modifier.width(4.dp))
             Spacer(Modifier.weight(1f))
             Row(
@@ -145,7 +164,10 @@ fun ConversationList(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentPadding = contentPadding + PaddingValues(16.dp),
+            contentPadding = PaddingValues(16.dp) + contentPadding.copy(
+                layoutDirection,
+                top = 0.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -173,6 +195,7 @@ fun ConversationList(
                     badge = {
                         Box(Modifier.wrapContentSize(Alignment.TopEnd)) {
                             var showMenu by remember { mutableStateOf(false) }
+                            var showDialog by remember { mutableStateOf(false) }
                             IconButton(onClick = { showMenu = true }) {
                                 Icon(
                                     painterResource(R.drawable.more_vert_24px),
@@ -203,7 +226,7 @@ fun ConversationList(
                                 )
                                 DropdownMenuItem(
                                     onClick = {
-                                        onShowEditDialog(conversation)
+                                        showDialog = true
                                         showMenu = false
                                     },
                                     text = { Text(stringResource(R.string.label_edit)) },
@@ -281,12 +304,77 @@ fun ConversationList(
                                     ),
                                 )
                             }
+                            if (showDialog) {
+                                ConversationEditingDialog(
+                                    conversation = conversation,
+                                    onDismissRequest = { showDialog = false },
+                                    onConfirm = { newEntity ->
+                                        onEditConversation(newEntity) {}
+                                        showDialog = false
+                                    },
+                                )
+                            }
                         }
                     },
                 )
             }
         }
     }
+}
+
+@Composable
+fun ConversationEditingDialog(
+    conversation: ConversationEntity,
+    onDismissRequest: () -> Unit,
+    onConfirm: (newEntity: ConversationEntity) -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    val state = rememberTextFieldState(conversation.name)
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(conversation.copy(name = state.text.toString()))
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        title = { Text(stringResource(R.string.agent_conversation_label_edit)) },
+        text = {
+            ConversationNameTextField(
+                state = state,
+                focusRequester = focusRequester,
+            )
+
+            LaunchedEffect(Unit) {
+                state.edit { placeCursorAtEnd() }
+                focusRequester.requestFocus()
+            }
+        },
+    )
+}
+
+@Composable
+fun ConversationNameTextField(
+    state: TextFieldState,
+    focusRequester: FocusRequester = remember { FocusRequester() },
+) {
+    TextField(
+        state = state,
+        modifier = Modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .focusRequester(focusRequester),
+        label = { Text(stringResource(R.string.agent_conversation_label_name)) },
+    )
 }
 
 @Preview
@@ -298,8 +386,6 @@ fun ConversationListPreview() {
         val store = remember(coroutineScope) { ChatData.createDataStore(coroutineScope) }
 
         val snackbarHostState = remember { SnackbarHostState() }
-
-        var currentEditingConversation by remember { mutableStateOf<ConversationEntity?>(null) }
 
         var currentConversationId by store.asMutableState().transform(
             transformIn = { conversation },
@@ -328,7 +414,6 @@ fun ConversationListPreview() {
                         onFinished()
                     }
                 },
-                onShowEditDialog = { currentEditingConversation = it },
                 onDeleteConversation = { conversation, onDeleted ->
                     coroutineScope.launch(Dispatchers.IO) {
                         dao.deleteConversation(conversation)
