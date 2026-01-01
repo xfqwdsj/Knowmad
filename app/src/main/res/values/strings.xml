@@ -20,6 +20,8 @@
     <string name="app_name">Knowmad</string>
     <string name="label_skip_for_now">Skip for now</string>
     <string name="label_close">Close</string>
+    <string name="label_undo">Undo</string>
+    <string name="label_redo">Redo</string>
     <string name="label_previous">Previous</string>
     <string name="label_next">Next</string>
     <string name="label_back">Back</string>
@@ -40,6 +42,7 @@
     <string name="label_help">Help</string>
     <string name="label_edit">Edit</string>
     <string name="label_delete">Delete</string>
+    <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
     <string name="agent_conversation_label_new">New Conversation</string>
     <string name="setup_wizard_welcome_label">Welcome</string>

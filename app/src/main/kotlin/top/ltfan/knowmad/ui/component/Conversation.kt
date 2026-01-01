@@ -39,6 +39,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -66,10 +69,16 @@ import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.SnackbarAction
+import top.ltfan.knowmad.ui.util.SnackbarEvent
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
+import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
+import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.asStringRes
 import top.ltfan.knowmad.util.transform
 import kotlin.uuid.Uuid
 
@@ -93,12 +102,15 @@ fun ConversationList() {
 fun ConversationList(
     state: PagingLazyListState<Int, ConversationEntity>,
     currentConversationId: Uuid?,
-    onConversationSelected: (Uuid) -> Unit,
+    onConversationSelected: (Uuid?) -> Unit,
     onNewConversation: () -> Unit,
-    onEditConversation: (newEntity: ConversationEntity) -> Unit,
+    onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
     onShowEditDialog: (conversation: ConversationEntity) -> Unit,
-    onDeleteConversation: (conversation: ConversationEntity) -> Unit,
+    onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     val conversations = state.flow.collectAsLazyPagingItems()
 
     Column(Modifier.fillMaxSize()) {
@@ -133,7 +145,7 @@ fun ConversationList(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = contentPadding + PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -175,7 +187,7 @@ fun ConversationList(
                                     onClick = {
                                         onEditConversation(
                                             conversation.copy(isPinned = !conversation.isPinned),
-                                        )
+                                        ) {}
                                         showMenu = false
                                     },
                                     text = {
@@ -207,7 +219,26 @@ fun ConversationList(
                                     onClick = {
                                         onEditConversation(
                                             conversation.copy(isArchived = true),
-                                        )
+                                        ) {
+                                            if (currentConversationId == conversation.id) {
+                                                onConversationSelected(null)
+                                            }
+                                            coroutineScope.launch {
+                                                GlobalViewModel.snackbarEvent.emit(
+                                                    SnackbarEvent(
+                                                        message = R.string.label_archived.asStringRes(),
+                                                        action = SnackbarAction(
+                                                            R.string.label_undo.asStringRes(),
+                                                            onClick = {
+                                                                onEditConversation(
+                                                                    conversation.copy(isArchived = false),
+                                                                ) {}
+                                                            },
+                                                        ),
+                                                    ),
+                                                )
+                                            }
+                                        }
                                         showMenu = false
                                     },
                                     text = { Text(stringResource(R.string.label_archive)) },
@@ -221,7 +252,22 @@ fun ConversationList(
                                 )
                                 DropdownMenuItem(
                                     onClick = {
-                                        onDeleteConversation(conversation)
+                                        onDeleteConversation(conversation) { onUndo ->
+                                            if (currentConversationId == conversation.id) {
+                                                onConversationSelected(null)
+                                            }
+                                            coroutineScope.launch {
+                                                GlobalViewModel.snackbarEvent.emit(
+                                                    SnackbarEvent(
+                                                        message = R.string.label_deleted.asStringRes(),
+                                                        action = SnackbarAction(
+                                                            R.string.label_undo.asStringRes(),
+                                                            onClick = onUndo,
+                                                        ),
+                                                    ),
+                                                )
+                                            }
+                                        }
                                         showMenu = false
                                     },
                                     text = { Text(stringResource(R.string.label_delete)) },
@@ -254,6 +300,8 @@ fun ConversationListPreview() {
         val dao = remember { AppDatabase.buildDatabase().chatDao() }
         val store = remember(coroutineScope) { ChatData.createDataStore(coroutineScope) }
 
+        val snackbarHostState = remember { SnackbarHostState() }
+
         var currentEditingConversation by remember { mutableStateOf<ConversationEntity?>(null) }
 
         var currentConversationId by store.asMutableState().transform(
@@ -261,33 +309,44 @@ fun ConversationListPreview() {
             transformOut = { copy(conversation = it) },
         )
 
-        ConversationList(
-            state = rememberState(dao),
-            currentConversationId = currentConversationId,
-            onConversationSelected = { currentConversationId = it },
-            onNewConversation = {
-                coroutineScope.launch(Dispatchers.IO) {
-                    val conversation = ConversationEntity(
-                        name = "New Conversation",
-                    )
-                    dao.insertConversation(conversation)
-                }
-            },
-            onEditConversation = { newEntity ->
-                coroutineScope.launch(Dispatchers.IO) {
-                    dao.updateConversation(newEntity)
-                }
-            },
-            onShowEditDialog = { currentEditingConversation = it },
-            onDeleteConversation = { conversation ->
-                coroutineScope.launch(Dispatchers.IO) {
-                    dao.deleteConversation(conversation)
-                    if (currentConversationId == conversation.id) {
-                        currentConversationId = null
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            contentWindowInsets = AppWindowInsets,
+        ) { contentPadding ->
+            ConversationList(
+                state = rememberState(dao),
+                currentConversationId = currentConversationId,
+                onConversationSelected = { currentConversationId = it },
+                onNewConversation = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val conversation = ConversationEntity(
+                            name = "New Conversation",
+                        )
+                        dao.insertConversation(conversation)
                     }
-                }
-            },
-        )
+                },
+                onEditConversation = { newEntity, onFinished ->
+                    coroutineScope.launch(Dispatchers.IO) {
+                        dao.updateConversation(newEntity)
+                        onFinished()
+                    }
+                },
+                onShowEditDialog = { currentEditingConversation = it },
+                onDeleteConversation = { conversation, onDeleted ->
+                    coroutineScope.launch(Dispatchers.IO) {
+                        dao.deleteConversation(conversation)
+                        onDeleted {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                dao.insertConversation(conversation)
+                            }
+                        }
+                    }
+                },
+                contentPadding = contentPadding,
+            )
+        }
+
+        SnackbarEffect(snackbarHostState)
     }
 }
 

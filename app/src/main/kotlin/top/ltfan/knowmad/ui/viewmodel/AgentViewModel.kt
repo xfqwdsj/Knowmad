@@ -60,18 +60,27 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    fun editConversation(conversation: ConversationEntity) {
+    fun editConversation(
+        conversation: ConversationEntity,
+        onFinished: () -> Unit,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             application.appDatabase.chatDao().updateConversation(conversation)
+            onFinished()
         }
     }
 
-    fun deleteConversation(conversation: ConversationEntity) {
+    fun deleteConversation(
+        conversation: ConversationEntity,
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             val dao = application.appDatabase.chatDao()
             dao.deleteConversation(conversation)
-            if (currentConversation == conversation) {
-                currentConversation = null
+            onDeleted {
+                viewModelScope.launch(Dispatchers.IO) {
+                    dao.insertConversation(conversation)
+                }
             }
         }
     }

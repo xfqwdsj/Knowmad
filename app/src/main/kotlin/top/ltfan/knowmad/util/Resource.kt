@@ -45,3 +45,4 @@ sealed interface Resource {
 }
 
 fun String.asResource(): Resource.String = Resource.String.Original(this)
+fun Int.asStringRes(): Resource.String = Resource.String.Id(this)
