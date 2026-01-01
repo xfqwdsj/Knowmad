@@ -52,13 +52,11 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val drawerState = DrawerState(DrawerValue.Closed)
 
-    fun toggleDrawer() {
-        viewModelScope.launch {
-            if (drawerState.isClosed) {
-                drawerState.open()
-            } else {
-                drawerState.close()
-            }
+    suspend fun toggleDrawer() {
+        if (drawerState.isClosed) {
+            drawerState.open()
+        } else {
+            drawerState.close()
         }
     }
 

@@ -57,6 +57,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,12 +90,13 @@ import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
+import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.asStringRes
 import kotlin.uuid.Uuid
 
 @Composable
 fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
-    val viewModel = viewModel<AgentViewModel>()
+    val viewModel = LocalAgentViewModel.current
 
     ConversationList(
         state = viewModel.conversationListState,
@@ -383,7 +385,7 @@ fun ConversationNameTextField(
 @Composable
 fun ConversationListPreview() {
     ApplicationPreview {
-        (this as? KnowmadApplication)?.let {
+        val viewModel = (this as? KnowmadApplication)?.let {
             viewModel<AgentViewModel> {
                 AgentViewModel(it)
             }
@@ -398,7 +400,9 @@ fun ConversationListPreview() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             contentWindowInsets = AppWindowInsets,
         ) { contentPadding ->
-            ConversationList(contentPadding)
+            CompositionLocalProvider(LocalAgentViewModel provides viewModel) {
+                ConversationList(contentPadding)
+            }
         }
 
         SnackbarEffect(snackbarHostState)

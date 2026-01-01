@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,28 +19,45 @@
 package top.ltfan.knowmad.ui.page
 
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.SnackbarEffect
+import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
+import top.ltfan.knowmad.ui.util.only
 
 @Serializable
 class MainPage : Page() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        PageContent(contentPadding)
+    }
+
+    @Composable
+    fun PageContent(
+        contentPadding: PaddingValues,
+    ) {
         val scaffoldState = rememberBottomSheetScaffoldState()
 
         BottomSheetScaffold(
             sheetContent = {
-
+                Box(
+                    Modifier.consumeWindowInsets(AppWindowInsets.only { top }),
+                ) {
+                    AgentScreen()
+                }
             },
             modifier = localSharedTransitionScope {
                 Modifier.sharedBounds(
@@ -50,6 +67,7 @@ class MainPage : Page() {
                 )
             },
             scaffoldState = scaffoldState,
+            sheetPeekHeight = 128.dp,
             snackbarHost = { SnackbarHost(it) },
         ) {
 
@@ -57,4 +75,5 @@ class MainPage : Page() {
 
         SnackbarEffect(scaffoldState.snackbarHostState)
     }
+
 }

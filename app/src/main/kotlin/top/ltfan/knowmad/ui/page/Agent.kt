@@ -33,11 +33,12 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.component.ConversationList
@@ -46,7 +47,7 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
-import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
+import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 
 @Serializable
 class AgentMainPage : AgentSubPage() {
@@ -60,8 +61,9 @@ class AgentMainPage : AgentSubPage() {
     fun PageContent(
         contentPadding: PaddingValues,
     ) {
-        val viewModel = viewModel<AgentViewModel>()
+        val viewModel = LocalAgentViewModel.current
 
+        val coroutineScope = rememberCoroutineScope()
         val layoutDirection = LocalLayoutDirection.current
 
         ModalNavigationDrawer(
@@ -105,9 +107,7 @@ class AgentMainPage : AgentSubPage() {
                                 state = rememberTooltipState(),
                             ) {
                                 IconButton(
-                                    onClick = {
-                                        viewModel.toggleDrawer()
-                                    },
+                                    onClick = { coroutineScope.launch { viewModel.toggleDrawer() } },
                                 ) {
                                     Icon(
                                         painterResource(R.drawable.menu_24px),
@@ -154,7 +154,7 @@ class AgentConfigPage : AgentSubPage() {
     fun PageContent(
         contentPadding: PaddingValues,
     ) {
-        val viewModel = viewModel<AgentViewModel>()
+        val viewModel = LocalAgentViewModel.current
 
         Scaffold {
             val contentPadding = it + contentPadding
