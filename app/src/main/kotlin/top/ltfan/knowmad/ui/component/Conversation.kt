@@ -79,6 +79,7 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.ui.page.AgentConfigPage
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.SnackbarAction
@@ -97,9 +98,9 @@ fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
 
     ConversationList(
         state = viewModel.conversationListState,
-        currentConversationId = viewModel.currentConversation,
-        onConversationSelected = { viewModel.currentConversation = it },
-        onNewConversation = viewModel::newConversation,
+        currentConversationId = viewModel.currentConversationId,
+        onConversationSelected = { viewModel.currentConversationId = it },
+        onSettingsClick = { viewModel.backStack.add(AgentConfigPage()) },
         onEditConversation = viewModel::editConversation,
         onDeleteConversation = viewModel::deleteConversation,
         contentPadding = contentPadding,
@@ -111,7 +112,7 @@ fun ConversationList(
     state: PagingLazyListState<Int, ConversationEntity>,
     currentConversationId: Uuid?,
     onConversationSelected: (Uuid?) -> Unit,
-    onNewConversation: () -> Unit,
+    onSettingsClick: () -> Unit,
     onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
@@ -142,14 +143,18 @@ fun ConversationList(
                         TooltipAnchorPosition.Below,
                     ),
                     tooltip = {
-                        PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
+                        PlainTooltip {
+                            Text(stringResource(R.string.llm_config_label_settings))
+                        }
                     },
                     state = rememberTooltipState(),
                 ) {
-                    IconButton(onClick = onNewConversation) {
+                    IconButton(
+                        onClick = onSettingsClick,
+                    ) {
                         Icon(
-                            painterResource(R.drawable.edit_square_24px),
-                            contentDescription = stringResource(R.string.agent_conversation_label_new),
+                            painterResource(R.drawable.settings_24px),
+                            contentDescription = stringResource(R.string.llm_config_label_settings),
                         )
                     }
                 }

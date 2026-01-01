@@ -20,14 +20,28 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.component.ConversationList
+import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyColumn
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.only
@@ -72,7 +86,82 @@ class AgentMainPage : AgentSubPage() {
             },
             drawerState = viewModel.drawerState,
         ) {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(viewModel.currentConversation?.name ?: "")
+                        },
+                        navigationIcon = {
+                            TooltipBox(
+                                TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close))
+                                    }
+                                },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        viewModel.toggleDrawer()
+                                    },
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.menu_24px),
+                                        contentDescription = stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close),
+                                    )
+                                }
+                            }
+                        },
+                        actions = {
+                            TooltipBox(
+                                TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                ),
+                                tooltip = {
+                                    PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
+                                },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(onClick = { viewModel.newConversation() }) {
+                                    Icon(
+                                        painterResource(R.drawable.edit_square_24px),
+                                        contentDescription = stringResource(R.string.agent_conversation_label_new),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                },
+            ) { }
+        }
+    }
 
+}
+
+@Serializable
+class AgentConfigPage : AgentSubPage() {
+    @Composable
+    context(contentPadding: PaddingValues)
+    override fun Content() {
+        PageContent(contentPadding)
+    }
+
+    @Composable
+    fun PageContent(
+        contentPadding: PaddingValues,
+    ) {
+        val viewModel = viewModel<AgentViewModel>()
+
+        Scaffold {
+            val contentPadding = it + contentPadding
+
+            LLMProviderConfigLazyColumn(
+                contentPadding = contentPadding,
+            )
         }
     }
 

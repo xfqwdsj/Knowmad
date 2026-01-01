@@ -26,6 +26,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -90,6 +91,9 @@ interface ChatDao {
 
     @Query("SELECT * FROM ConversationEntity WHERE isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllConversations(): PagingSource<Int, ConversationEntity>
+
+    @Query("SELECT * FROM ConversationEntity WHERE id = :conversationId")
+    fun getConversationById(conversationId: Uuid): Flow<ConversationEntity?>
 
     @Query("SELECT * FROM MessageEntity WHERE id = :messageId")
     suspend fun getMessageById(messageId: Uuid): MessageEntity?

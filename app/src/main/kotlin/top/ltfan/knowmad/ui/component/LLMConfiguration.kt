@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -100,7 +101,29 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import kotlin.uuid.Uuid
+
+@Composable
+fun LLMProviderConfigLazyColumn(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
+    additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
+) {
+    val viewModel = viewModel<AgentViewModel>()
+
+    LLMProviderConfigLazyColumn(
+        dao = viewModel.llmConfigDao,
+        state = viewModel.providerConfigLazyListState,
+        modelState = rememberLLMConfigLazyListStateFactory(viewModel.llmConfigDao),
+        onEditProvider = {},
+        onDeleteProvider = {},
+        onEditModel = {},
+        onDeleteModel = {},
+        onAddModel = {},
+        contentPadding = contentPadding,
+    )
+}
 
 @Composable
 fun LLMProviderConfigLazyColumn(

@@ -20,44 +20,76 @@ package top.ltfan.knowmad.ui.viewmodel
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import top.ltfan.knowmad.R
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
+import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
+
+    val chatDao = application.appDatabase.chatDao()
+    val llmConfigDao = application.appDatabase.llmConfigDao()
 
     val chatDataStore = ChatData.createDataStore()
     val chatData = chatDataStore.asMutableState()
 
     val drawerState = DrawerState(DrawerValue.Closed)
 
+    fun toggleDrawer() {
+        viewModelScope.launch {
+            if (drawerState.isClosed) {
+                drawerState.open()
+            } else {
+                drawerState.close()
+            }
+        }
+    }
+
     val conversationListState = PagingLazyListState(viewModelScope) {
         application.appDatabase.chatDao().getAllConversations()
     }
-    var currentConversation by chatData.transform(
+
+    var currentConversationId by chatData.transform(
         transformIn = { conversation },
         transformOut = { copy(conversation = it) },
     )
+    val currentConversation by snapshotFlow { currentConversationId }
+        .flatMapLatest { id ->
+            id?.let { chatDao.getConversationById(it) } ?: flowOf(null)
+        }
+        .stateIn(
+            viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = null,
+        )
+        .collectAsState()
 
     fun newConversation() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val conversation = ConversationEntity(
-                name = application.getString(R.string.agent_conversation_label_new),
-            )
-            application.appDatabase.chatDao().insertConversation(conversation)
-            currentConversation = conversation.id
-        }
+        currentConversationId = null
+//        viewModelScope.launch(Dispatchers.IO) {
+//            val conversation = ConversationEntity(
+//                name = application.getString(R.string.agent_conversation_label_new),
+//            )
+//            application.appDatabase.chatDao().insertConversation(conversation)
+//            currentConversationId = conversation.id
+//        }
     }
 
     fun editConversation(
@@ -83,6 +115,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 }
             }
         }
+    }
+
+    val providerConfigLazyListState = LLMProviderConfigLazyListState {
+        llmConfigDao.getAllProviders()
     }
 }
 

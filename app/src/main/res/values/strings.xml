@@ -44,6 +44,8 @@
     <string name="label_delete">Delete</string>
     <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
+    <string name="agent_drawer_label_open">Open Conversation List</string>
+    <string name="agent_drawer_label_close">Close Conversation List</string>
     <string name="agent_conversation_label_new">New Conversation</string>
     <string name="agent_conversation_label_edit">Edit Conversation</string>
     <string name="agent_conversation_label_name">Conversation Name</string>
@@ -66,6 +68,7 @@
     <string name="setup_wizard_finish_title">Congratulations</string>
     <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
     <string name="llm_message_invalid">The selected model configuration seems invalid. Please review your settings</string>
+    <string name="llm_config_label_settings">Language Model Configuration</string>
     <string name="llm_api_base_url_label">Base URL</string>
     <string name="llm_api_base_url_input_label">Base URL (optional)</string>
     <string name="llm_api_base_url_input_message">Leave blank to use the default URL for the selected provider</string>

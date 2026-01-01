@@ -18,12 +18,18 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 
@@ -34,6 +40,16 @@ fun AgentScreen() {
     NavDisplay(
         backStack = viewModel.backStack,
         modifier = Modifier.fillMaxSize(),
+        transitionSpec = {
+            fadeIn() + slideInHorizontally { it / 2 } togetherWith fadeOut() + slideOutHorizontally()
+        },
+        popTransitionSpec = {
+            fadeIn() + slideInHorizontally() togetherWith fadeOut() + slideOutHorizontally { it / 2 }
+        },
+        predictivePopTransitionSpec = { edge ->
+            val factor = if (edge == NavigationEvent.EDGE_RIGHT) -1 else 1
+            fadeIn() + slideInHorizontally { -it * factor / 2 } togetherWith fadeOut() + slideOutHorizontally { it * factor / 2 }
+        },
         entryProvider = { it.navEntry() },
     )
 }
