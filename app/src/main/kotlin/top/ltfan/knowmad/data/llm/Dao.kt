@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,6 +98,9 @@ interface LLMConfigDao {
 
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>
+
+    @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
+    suspend fun getModelsByProviderOnce(providerConfigId: Uuid): List<LLMConfigEntity>
 
     @Query("SELECT COUNT(*) FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId")
     fun getModelCountByProvider(providerConfigId: Uuid): Flow<Int>

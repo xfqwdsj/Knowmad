@@ -147,10 +147,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            val models = llmConfigDao.getModelsByProviderOnce(config.id)
             llmConfigDao.deleteProvider(config)
             onDeleted {
                 viewModelScope.launch(Dispatchers.IO) {
                     llmConfigDao.insertProviderAtBeginning(config)
+                    for (model in models) {
+                        llmConfigDao.insertModelAtEnd(model)
+                    }
                 }
             }
         }
