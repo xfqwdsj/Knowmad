@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data
 
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -142,13 +143,20 @@ interface DataStoreCompanion<T> {
     val default: T
     fun serializer(): KSerializer<T>
 
-    context(viewModel: AndroidViewModel<*>)
-    fun createDataStore() = AppDataStore(
+    context(application: Application)
+    fun createDataStore(
+        coroutineScope: CoroutineScope,
+    ) = AppDataStore(
         serializer = serializer(),
         defaultValue = default,
-        scope = viewModel.viewModelScope + Dispatchers.IO,
-        produceFile = { viewModel.application.dataStoreFile(fileName) },
+        scope = coroutineScope + Dispatchers.IO,
+        produceFile = { application.dataStoreFile(fileName) },
     )
+
+    context(viewModel: AndroidViewModel<*>)
+    fun createDataStore() = context(viewModel.application) {
+        createDataStore(viewModel.viewModelScope)
+    }
 
     context(viewModel: AndroidViewModel<*>)
     fun deleteFile() {
