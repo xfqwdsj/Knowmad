@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMCapabilities
 import top.ltfan.knowmad.data.llm.LLMCapabilityInfo
+import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 
 @Composable
@@ -104,14 +105,16 @@ fun ModelCapabilitiesList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (item in LLMCapabilities) {
-            CapabilityListItem(
-                capabilities = capabilities,
-                item = item,
-                enabled = enabled,
-                onAdd = onAdd,
-                onRemove = onRemove,
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
+            ProvideCompatibleShapes {
+                CapabilityListItem(
+                    capabilities = capabilities,
+                    item = item,
+                    enabled = enabled,
+                    onAdd = onAdd,
+                    onRemove = onRemove,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+            }
         }
     }
 }
