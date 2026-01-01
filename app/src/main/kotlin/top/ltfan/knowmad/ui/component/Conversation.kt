@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -378,6 +379,7 @@ fun ConversationNameTextField(
             .widthIn(max = TextFieldMaxWidth)
             .focusRequester(focusRequester),
         label = { Text(stringResource(R.string.agent_conversation_label_name)) },
+        lineLimits = TextFieldLineLimits.SingleLine,
     )
 }
 
