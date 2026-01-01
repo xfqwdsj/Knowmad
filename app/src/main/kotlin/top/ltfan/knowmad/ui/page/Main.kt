@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -34,7 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentScreen
-import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
+import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
+import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -58,7 +60,8 @@ class MainPage : Page() {
                         .consumeWindowInsets(AppWindowInsets.only { top }),
                 ) {
                     CompositionLocalProvider(
-                        LocalAgentScreenTransparentBackground provides true,
+                        LocalAgentScreenTransparentContainer provides true,
+                        LocalAgentScreenPreferredContainerColor provides BottomSheetDefaults.ContainerColor,
                     ) {
                         AgentScreen(LocalNavAnimatedContentScope.current)
                     }

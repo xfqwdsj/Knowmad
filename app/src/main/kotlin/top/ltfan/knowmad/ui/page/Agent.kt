@@ -65,7 +65,8 @@ import top.ltfan.knowmad.ui.component.LLMProviderConfig
 import top.ltfan.knowmad.ui.component.LLMProviderConfigEditingDialog
 import top.ltfan.knowmad.ui.component.LLMProviderSelectionDialog
 import top.ltfan.knowmad.ui.component.LocalAgentScreenIsStandalone
-import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
+import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
+import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
@@ -364,13 +365,15 @@ class AgentPage : Page() {
 }
 
 private val DrawerScrimColor
-    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) Color.Transparent else DrawerDefaults.scrimColor
+    @Composable inline get() = if (LocalAgentScreenTransparentContainer.current) Color.Transparent else DrawerDefaults.scrimColor
 
 private val DrawerContainerColor
-    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) MaterialTheme.colorScheme.surface else DrawerDefaults.modalContainerColor
+    @Composable inline get() = if (LocalAgentScreenTransparentContainer.current) MaterialTheme.colorScheme.surface else DrawerDefaults.modalContainerColor
 
 private val ContainerColor
-    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) Color.Transparent else Color.Unspecified
+    @Composable inline get() =
+        if (LocalAgentScreenTransparentContainer.current) LocalAgentScreenPreferredContainerColor.current.takeOrElse { Color.Transparent }
+        else Color.Unspecified
 
 private val Color.scaffoldContainer
     @Composable inline get() = takeOrElse { MaterialTheme.colorScheme.background }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.NavDisplay
@@ -80,7 +81,8 @@ fun AgentScreen(
 @Immutable
 data object AgentScreenSharedKey
 
-val LocalAgentScreenTransparentBackground = staticCompositionLocalOf { false }
+val LocalAgentScreenTransparentContainer = staticCompositionLocalOf { false }
+val LocalAgentScreenPreferredContainerColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalAgentScreenIsStandalone = staticCompositionLocalOf { false }
 
 @Preview
