@@ -18,31 +18,51 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 
 @Composable
-fun AgentScreen() {
+fun AgentScreen(
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    contentPadding: PaddingValues = PaddingValues(),
+) {
     val viewModel = LocalAgentViewModel.current
 
     NavDisplay(
         backStack = viewModel.backStack,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .run {
+                if (animatedVisibilityScope == null) this
+                else with(LocalSharedTransitionScope.current) {
+                    sharedBounds(
+                        rememberSharedContentState(AgentScreenSharedKey),
+                        animatedVisibilityScope,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    )
+                }
+            },
         transitionSpec = {
             fadeIn() + slideInHorizontally { it / 2 } togetherWith fadeOut() + slideOutHorizontally()
         },
@@ -53,9 +73,15 @@ fun AgentScreen() {
             val factor = if (edge == NavigationEvent.EDGE_RIGHT) -1 else 1
             fadeIn() + slideInHorizontally { -it * factor / 2 } togetherWith fadeOut() + slideOutHorizontally { it * factor / 2 }
         },
-        entryProvider = { it.navEntry() },
+        entryProvider = { it.navEntry(contentPadding) },
     )
 }
+
+@Immutable
+data object AgentScreenSharedKey
+
+val LocalAgentScreenTransparentBackground = staticCompositionLocalOf { false }
+val LocalAgentScreenIsStandalone = staticCompositionLocalOf { false }
 
 @Preview
 @Composable

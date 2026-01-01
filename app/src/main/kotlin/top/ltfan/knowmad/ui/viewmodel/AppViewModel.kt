@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
@@ -80,6 +81,17 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
 
     fun navigateToMainPage() {
         backStack.add(MainPage())
+    }
+
+    val standaloneAgentScreenIndex inline get() = backStack.indexOfLast { it is AgentPage }
+
+    fun switchStandaloneAgentScreen() {
+        val index = standaloneAgentScreenIndex
+        if (index != -1) {
+            backStack.removeAt(index)
+        } else {
+            backStack.add(AgentPage())
+        }
     }
 
     init {

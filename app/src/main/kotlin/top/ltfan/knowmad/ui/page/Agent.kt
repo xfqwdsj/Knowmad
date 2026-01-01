@@ -21,8 +21,10 @@ package top.ltfan.knowmad.ui.page
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.PlainTooltip
@@ -32,25 +34,34 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.ConversationList
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyColumn
+import top.ltfan.knowmad.ui.component.LocalAgentScreenIsStandalone
+import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
+import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 @Serializable
 class AgentMainPage : AgentSubPage() {
@@ -64,6 +75,7 @@ class AgentMainPage : AgentSubPage() {
     fun PageContent(
         contentPadding: PaddingValues,
     ) {
+        val appViewModel = LocalAppViewModel.current
         val viewModel = LocalAgentViewModel.current
 
         val coroutineScope = rememberCoroutineScope()
@@ -73,6 +85,7 @@ class AgentMainPage : AgentSubPage() {
             drawerContent = {
                 ModalDrawerSheet(
                     viewModel.drawerState,
+                    drawerContainerColor = DrawerContainerColor,
                     windowInsets = AppWindowInsets.only { start } + contentPadding.copy(
                         layoutDirection,
                         top = 0.dp,
@@ -93,6 +106,7 @@ class AgentMainPage : AgentSubPage() {
                 }
             },
             drawerState = viewModel.drawerState,
+            scrimColor = DrawerScrimColor,
         ) {
             Scaffold(
                 topBar = {
@@ -128,6 +142,26 @@ class AgentMainPage : AgentSubPage() {
                                     TooltipAnchorPosition.Below,
                                 ),
                                 tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter))
+                                    }
+                                },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = { appViewModel.switchStandaloneAgentScreen() },
+                                ) {
+                                    Icon(
+                                        painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
+                                        contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
+                                    )
+                                }
+                            }
+                            TooltipBox(
+                                TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                ),
+                                tooltip = {
                                     PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
                                 },
                                 state = rememberTooltipState(),
@@ -140,10 +174,21 @@ class AgentMainPage : AgentSubPage() {
                                 }
                             }
                         },
+                        windowInsets = AppWindowInsets.only { horizontal + top },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = ContainerColor,
+                            scrolledContainerColor = ContainerColor,
+                        ),
                     )
                 },
+                containerColor = ContainerColor.scaffoldContainer,
+                contentColor = ScaffoldContentColor,
                 contentWindowInsets = AppWindowInsets,
-            ) { }
+            ) {
+                val contentPadding = it + contentPadding + PaddingValues(16.dp)
+
+
+            }
         }
     }
 
@@ -190,8 +235,15 @@ class AgentConfigPage : AgentSubPage() {
                             }
                         }
                     },
+                    windowInsets = AppWindowInsets.only { horizontal + top },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = ContainerColor,
+                        scrolledContainerColor = ContainerColor,
+                    ),
                 )
             },
+            containerColor = ContainerColor.scaffoldContainer,
+            contentColor = ScaffoldContentColor,
             contentWindowInsets = AppWindowInsets,
         ) {
             val contentPadding = it + contentPadding + PaddingValues(16.dp)
@@ -207,3 +259,32 @@ class AgentConfigPage : AgentSubPage() {
 
 @Serializable
 sealed class AgentSubPage : SubPage<AgentSubPage>()
+
+@Serializable
+class AgentPage : Page() {
+    @Composable
+    context(contentPadding: PaddingValues)
+    override fun Content() {
+        CompositionLocalProvider(LocalAgentScreenIsStandalone provides true) {
+            AgentScreen(
+                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                contentPadding = contentPadding,
+            )
+        }
+    }
+}
+
+private val DrawerScrimColor
+    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) Color.Transparent else DrawerDefaults.scrimColor
+
+private val DrawerContainerColor
+    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) MaterialTheme.colorScheme.surface else DrawerDefaults.modalContainerColor
+
+private val ContainerColor
+    @Composable inline get() = if (LocalAgentScreenTransparentBackground.current) Color.Transparent else Color.Unspecified
+
+private val Color.scaffoldContainer
+    @Composable inline get() = takeOrElse { MaterialTheme.colorScheme.background }
+
+private val ScaffoldContentColor
+    @Composable inline get() = MaterialTheme.colorScheme.onBackground

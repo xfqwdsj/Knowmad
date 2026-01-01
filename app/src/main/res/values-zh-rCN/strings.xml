@@ -44,6 +44,8 @@
     <string name="label_delete">删除</string>
     <string name="label_deleted">已删除</string>
     <string name="label_need_attention">需要注意</string>
+    <string name="agent_standalone_label_enter">进入独立页面</string>
+    <string name="agent_standalone_label_exit">关闭独立页面</string>
     <string name="agent_drawer_label_open">打开对话列表</string>
     <string name="agent_drawer_label_close">关闭对话列表</string>
     <string name="agent_conversation_label_new">新对话</string>

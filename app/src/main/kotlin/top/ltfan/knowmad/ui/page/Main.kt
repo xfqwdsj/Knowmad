@@ -26,12 +26,14 @@ import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentScreen
+import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
 import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -56,7 +58,11 @@ class MainPage : Page() {
                 Box(
                     Modifier.consumeWindowInsets(AppWindowInsets.only { top }),
                 ) {
-                    AgentScreen()
+                    CompositionLocalProvider(
+                        LocalAgentScreenTransparentBackground provides true,
+                    ) {
+                        AgentScreen(LocalNavAnimatedContentScope.current)
+                    }
                 }
             },
             modifier = localSharedTransitionScope {

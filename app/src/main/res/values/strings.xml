@@ -44,6 +44,8 @@
     <string name="label_delete">Delete</string>
     <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
+    <string name="agent_standalone_label_enter">Enter Standalone Page</string>
+    <string name="agent_standalone_label_exit">Exit Standalone Page</string>
     <string name="agent_drawer_label_open">Open Conversation List</string>
     <string name="agent_drawer_label_close">Close Conversation List</string>
     <string name="agent_conversation_label_new">New Conversation</string>
