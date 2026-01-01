@@ -18,6 +18,7 @@
 
 <resources>
     <string name="app_name">Knowmad</string>
+    <string name="label_skip">Skip</string>
     <string name="label_skip_for_now">Skip for now</string>
     <string name="label_close">Close</string>
     <string name="label_undo">Undo</string>
@@ -71,6 +72,7 @@
     <string name="setup_wizard_finish_title">Congratulations</string>
     <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
     <string name="setup_wizard_skip_message_confirmation">Are you sure you want to skip the setup wizard? You can configure the language model later in the settings</string>
+    <string name="setup_wizard_skip_message_suggestion_has_model">We noticed you already have a configured language model. Would you like to skip the setup wizard?</string>
     <string name="llm_message_invalid">The selected model configuration seems invalid. Please review your settings</string>
     <string name="llm_config_label_settings">Language Model Configuration</string>
     <string name="llm_api_base_url_label">Base URL</string>

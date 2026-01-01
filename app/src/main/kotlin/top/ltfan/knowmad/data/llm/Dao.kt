@@ -122,6 +122,9 @@ interface LLMConfigDao {
     @Query("SELECT * FROM LLMConfigEntity WHERE id = :id")
     suspend fun getModelById(id: Uuid): LLMConfigEntity?
 
+    @Query("SELECT COUNT(*) FROM LLMConfigEntity")
+    suspend fun getTotalModelCount(): Int
+
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>
 
