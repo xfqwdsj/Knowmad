@@ -1,6 +1,6 @@
 <!--
   ~ Knowmad - Knowledge nomad
-  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~ Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -27,6 +27,13 @@
     <string name="label_finish">Finish</string>
     <string name="label_expand">Expand</string>
     <string name="label_collapse">Collapse</string>
+    <string name="label_pin">Pin</string>
+    <string name="label_unpin">Unpin</string>
+    <string name="label_pinned">Pinned</string>
+    <string name="label_archive">Archive</string>
+    <string name="label_unarchive">Unarchive</string>
+    <string name="label_archived">Archived</string>
+    <string name="label_more_options">More Options</string>
     <string name="label_go">Go</string>
     <string name="label_reload">Reload</string>
     <string name="label_retry">Retry</string>
@@ -34,6 +41,7 @@
     <string name="label_edit">Edit</string>
     <string name="label_delete">Delete</string>
     <string name="label_need_attention">Needs Attention</string>
+    <string name="agent_conversation_label_new">New Conversation</string>
     <string name="setup_wizard_welcome_label">Welcome</string>
     <string name="setup_wizard_welcome_title">Welcome to Knowmad</string>
     <string name="setup_wizard_welcome_message">Let\'s set up your knowledge companion in a few easy steps</string>

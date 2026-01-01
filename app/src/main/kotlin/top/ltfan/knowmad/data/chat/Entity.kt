@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,12 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-@Entity
+@Entity(
+    indices = [
+        Index("isArchived", "isPinned", "updatedAt"),
+        Index("createdAt"),
+    ],
+)
 data class ConversationEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
@@ -47,9 +52,9 @@ data class ConversationEntity(
 
 @Entity(
     indices = [
-        Index("conversationId"),
+        Index("conversationId", "parentId"),
+        Index("parentId", "createdAt"),
         Index("depth"),
-        Index("rootId"),
     ],
     foreignKeys = [
         ForeignKey(
@@ -61,7 +66,7 @@ data class ConversationEntity(
         ForeignKey(
             entity = MessageEntity::class,
             parentColumns = ["id"],
-            childColumns = ["rootId"],
+            childColumns = ["parentId"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
@@ -70,15 +75,49 @@ data class MessageEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
     val conversationId: Uuid,
+    val parentId: Uuid? = null,
     val depth: Int,
-    val rootId: Uuid? = null,
-    val isLeaf: Boolean = rootId == null,
-    val role: Message.Role = message.role,
     val message: Message,
+    val role: Message.Role = message.role,
     val searchableContent: String = message.content,
     val generatedBy: LLModel,
     val createdAt: Instant = Clock.System.now(),
 )
+
+@Entity(
+    indices = [
+        Index("conversationId", "parentId", unique = true),
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = ConversationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["conversationId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = MessageEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["parentId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = MessageEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["selectedChildId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class MessageBranchSelectionEntity(
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
+    val conversationId: Uuid,
+    val parentId: Uuid,
+    val selectedChildId: Uuid,
+    val updatedAt: Instant = Clock.System.now(),
+)
+
 
 @Entity(
     indices = [
@@ -106,7 +145,7 @@ data class MessageFileCrossRef(
     val fileId: Uuid,
 )
 
-data class MessageWithFiles(
+data class MessageWithFilesAndBranchInfo(
     @Embedded
     val message: MessageEntity,
     @Relation(
@@ -119,6 +158,10 @@ data class MessageWithFiles(
         ),
     )
     val files: List<FileEntity>,
+
+    /** 1-based */
+    val branchIndex: Int,
+    val branchCount: Int,
 )
 
 data class MessageWithConversation(

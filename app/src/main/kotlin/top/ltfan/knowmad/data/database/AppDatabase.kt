@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import top.ltfan.knowmad.data.AppDatabaseConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
 import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.MessageBranchSelectionEntity
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageFileCrossRef
 import top.ltfan.knowmad.data.chat.MessageFtsEntity
@@ -50,6 +51,7 @@ import top.ltfan.knowmad.data.schedule.SemesterEntity
         FileEntity::class,
         ConversationEntity::class,
         MessageEntity::class,
+        MessageBranchSelectionEntity::class,
         MessageFileCrossRef::class,
         MessageFtsEntity::class,
     ],

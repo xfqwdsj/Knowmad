@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   ~ Knowmad - Knowledge nomad
-  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~ Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -27,6 +27,13 @@
     <string name="label_finish">完成</string>
     <string name="label_expand">展开</string>
     <string name="label_collapse">折叠</string>
+    <string name="label_pin">置顶</string>
+    <string name="label_unpin">取消置顶</string>
+    <string name="label_pinned">已置顶</string>
+    <string name="label_archive">归档</string>
+    <string name="label_unarchive">取消归档</string>
+    <string name="label_archived">已归档</string>
+    <string name="label_more_options">更多选项</string>
     <string name="label_go">转到</string>
     <string name="label_reload">重新加载</string>
     <string name="label_retry">重试</string>
@@ -34,6 +41,7 @@
     <string name="label_edit">编辑</string>
     <string name="label_delete">删除</string>
     <string name="label_need_attention">需要注意</string>
+    <string name="agent_conversation_label_new">新对话</string>
     <string name="setup_wizard_welcome_label">欢迎</string>
     <string name="setup_wizard_welcome_title">欢迎使用知行</string>
     <string name="setup_wizard_welcome_message">让我们通过几个简单的步骤来设置您的知识助手</string>

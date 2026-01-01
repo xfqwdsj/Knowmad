@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 @Dao
@@ -34,15 +35,16 @@ interface ChatDao {
     suspend fun insertConversation(conversation: ConversationEntity): Long
 
     @Insert
-    suspend fun insertMessageWithoutFiles(message: MessageEntity): Long
+    suspend fun insertMessageInternalUnsafe(message: MessageEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessageFileCrossRef(ref: MessageFileCrossRef): Long
 
     @Transaction
     suspend fun insertMessage(message: MessageEntity, fileIds: List<Uuid>): Long {
-        val messageRowId = insertMessageWithoutFiles(message)
+        val messageRowId = insertMessageInternalUnsafe(message)
         val messageId = message.id
+
         for (fileId in fileIds) {
             val ref = MessageFileCrossRef(
                 messageId = messageId,
@@ -50,8 +52,21 @@ interface ChatDao {
             )
             insertMessageFileCrossRef(ref)
         }
+
+        message.parentId?.let { parentId ->
+            val selection = MessageBranchSelectionEntity(
+                conversationId = message.conversationId,
+                parentId = parentId,
+                selectedChildId = message.id,
+            )
+            setMessageBranchSelection(selection)
+        }
+
         return messageRowId
     }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setMessageBranchSelection(selection: MessageBranchSelectionEntity)
 
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity): Int
@@ -63,14 +78,66 @@ interface ChatDao {
     suspend fun deleteMessageFileCrossRef(ref: MessageFileCrossRef): Int
 
     @Update
-    suspend fun updateConversation(conversation: ConversationEntity): Int
-
-    @Query("SELECT * FROM ConversationEntity")
-    suspend fun getAllConversations(): List<ConversationEntity>
+    suspend fun updateConversationWithoutInstant(conversation: ConversationEntity): Int
 
     @Transaction
-    @Query("SELECT * FROM MessageEntity WHERE conversationId = :conversationId ORDER BY createdAt ASC")
-    fun getAllMessagesByConversation(conversationId: Uuid): PagingSource<Int, MessageWithFiles>
+    suspend fun updateConversation(conversation: ConversationEntity): Int {
+        val updatedConversation = conversation.copy(
+            updatedAt = Clock.System.now(),
+        )
+        return updateConversationWithoutInstant(updatedConversation)
+    }
+
+    @Query("SELECT * FROM ConversationEntity WHERE isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    fun getAllConversations(): PagingSource<Int, ConversationEntity>
+
+    @Query("SELECT * FROM MessageEntity WHERE id = :messageId")
+    suspend fun getMessageById(messageId: Uuid): MessageEntity?
+
+    @Transaction
+    @Query(
+        """
+        WITH RECURSIVE SelectedPath AS (
+            SELECT * FROM MessageEntity
+            WHERE conversationId = :conversationId AND parentId IS NULL
+
+            UNION ALL
+
+            SELECT child.* FROM MessageEntity AS child
+            JOIN SelectedPath AS parent ON child.parentId = parent.id AND child.depth = parent.depth + 1
+            JOIN MessageBranchSelectionEntity AS bs ON bs.parentId = parent.id AND bs.selectedChildId = child.id
+        )
+
+        SELECT 
+            sp.*,
+            (
+                SELECT COUNT(*) + 1 
+                FROM MessageEntity AS s 
+                WHERE (s.parentId IS sp.parentId)
+                  AND s.createdAt < sp.createdAt
+            ) AS branchIndex,
+
+            (
+                SELECT COUNT(*) 
+                FROM MessageEntity AS s 
+                WHERE (s.parentId IS sp.parentId)
+            ) AS branchCount
+
+        FROM SelectedPath AS sp
+        ORDER BY sp.depth ASC
+    """,
+    )
+    fun getAllMessagesByConversation(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
+
+    @Query(
+        """
+        SELECT id FROM MessageEntity 
+        WHERE (parentId IS :parentId) 
+        ORDER BY createdAt ASC 
+        LIMIT 1 OFFSET :targetIndex
+    """,
+    )
+    suspend fun getSiblingMessageIdByIndex(parentId: Uuid?, targetIndex: Int): Uuid?
 
     @Transaction
     @Query("SELECT * FROM FileEntity WHERE id = :fileId")
@@ -84,10 +151,10 @@ interface ChatDao {
         WHERE MessageFtsEntity MATCH :query
     """,
     )
-    suspend fun searchMessagesInternal(query: String): List<MessageWithFiles>
+    suspend fun searchMessagesInternal(query: String): List<MessageEntity>
 
     @Transaction
-    suspend fun searchMessages(query: String): List<MessageWithFiles> {
+    suspend fun searchMessages(query: String): List<MessageEntity> {
         // SQLite FTS uses double quotes to wrap phrases and operators like AND, OR, NOT.
         // Raw user input might contain special characters that cause syntax errors.
         // We sanitize the input by:
