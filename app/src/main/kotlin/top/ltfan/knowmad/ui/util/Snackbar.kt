@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.util
 
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Immutable
 import top.ltfan.knowmad.util.Resource
 
@@ -25,6 +26,9 @@ import top.ltfan.knowmad.util.Resource
 data class SnackbarEvent(
     val message: Resource.String,
     val action: SnackbarAction? = null,
+    val withDismissAction: Boolean = false,
+    val duration: SnackbarDuration = if (action == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
+    val onDismissed: (() -> Unit)? = null,
 )
 
 @Immutable

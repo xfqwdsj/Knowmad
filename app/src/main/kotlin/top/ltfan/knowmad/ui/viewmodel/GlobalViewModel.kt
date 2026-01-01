@@ -18,9 +18,28 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import androidx.compose.material3.SnackbarDuration
 import kotlinx.coroutines.flow.MutableSharedFlow
+import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.SnackbarEvent
+import top.ltfan.knowmad.util.Resource
 
 object GlobalViewModel {
     val snackbarEvent = MutableSharedFlow<SnackbarEvent>(replay = 1)
+
+    suspend fun showSnackbar(
+        message: Resource.String,
+        action: SnackbarAction? = null,
+        withDismissAction: Boolean = false,
+        duration: SnackbarDuration = if (action == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
+        onDismissed: (() -> Unit)? = null,
+    ) = snackbarEvent.emit(
+        SnackbarEvent(
+            message,
+            action,
+            withDismissAction,
+            duration,
+            onDismissed,
+        ),
+    )
 }

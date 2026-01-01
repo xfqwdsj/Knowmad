@@ -40,6 +40,7 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -71,7 +72,6 @@ import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.SnackbarAction
-import top.ltfan.knowmad.ui.util.SnackbarEvent
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
@@ -224,18 +224,15 @@ fun ConversationList(
                                                 onConversationSelected(null)
                                             }
                                             coroutineScope.launch {
-                                                GlobalViewModel.snackbarEvent.emit(
-                                                    SnackbarEvent(
-                                                        message = R.string.label_archived.asStringRes(),
-                                                        action = SnackbarAction(
-                                                            R.string.label_undo.asStringRes(),
-                                                            onClick = {
-                                                                onEditConversation(
-                                                                    conversation.copy(isArchived = false),
-                                                                ) {}
-                                                            },
-                                                        ),
-                                                    ),
+                                                GlobalViewModel.showSnackbar(
+                                                    message = R.string.label_archived.asStringRes(),
+                                                    action = SnackbarAction(R.string.label_undo.asStringRes()) {
+                                                        onEditConversation(
+                                                            conversation.copy(isArchived = false),
+                                                        ) {}
+                                                    },
+                                                    withDismissAction = true,
+                                                    duration = SnackbarDuration.Long,
                                                 )
                                             }
                                         }
@@ -257,14 +254,14 @@ fun ConversationList(
                                                 onConversationSelected(null)
                                             }
                                             coroutineScope.launch {
-                                                GlobalViewModel.snackbarEvent.emit(
-                                                    SnackbarEvent(
-                                                        message = R.string.label_deleted.asStringRes(),
-                                                        action = SnackbarAction(
-                                                            R.string.label_undo.asStringRes(),
-                                                            onClick = onUndo,
-                                                        ),
+                                                GlobalViewModel.showSnackbar(
+                                                    message = R.string.label_deleted.asStringRes(),
+                                                    action = SnackbarAction(
+                                                        R.string.label_undo.asStringRes(),
+                                                        onClick = onUndo,
                                                     ),
+                                                    withDismissAction = true,
+                                                    duration = SnackbarDuration.Long,
                                                 )
                                             }
                                         }

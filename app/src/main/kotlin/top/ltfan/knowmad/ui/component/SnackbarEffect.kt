@@ -32,9 +32,20 @@ fun SnackbarEffect(snackbarHostState: SnackbarHostState) {
         GlobalViewModel.snackbarEvent.collect { event ->
             val message = event.message.get(resources)
             val actionLabel = event.action?.label?.get(resources)
-            snackbarHostState.showSnackbar(message, actionLabel).let {
-                if (it == SnackbarResult.ActionPerformed) {
-                    event.action?.onClick?.invoke()
+            snackbarHostState.showSnackbar(
+                message,
+                actionLabel,
+                event.withDismissAction,
+                event.duration,
+            ).let {
+                when (it) {
+                    SnackbarResult.ActionPerformed -> {
+                        event.action?.onClick?.invoke()
+                    }
+
+                    SnackbarResult.Dismissed -> {
+                        event.onDismissed?.invoke()
+                    }
                 }
             }
         }
