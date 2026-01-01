@@ -518,7 +518,7 @@ fun LLMProviderConfigItem(
             ) {
                 IconButton(onClick = { isExpanded = !isExpanded }) {
                     val expandedRotation =
-                        if (LocalLayoutDirection.current == LayoutDirection.Ltr) 180f else -180f
+                        if (LocalLayoutDirection.current == LayoutDirection.Ltr) -180f else 180f
                     val expandIconRotation by animateFloatAsState(if (!isExpanded) 0f else expandedRotation)
                     val collapseIconRotation by animateFloatAsState(if (isExpanded) 0f else -expandedRotation)
                     AnimatedContent(
@@ -526,14 +526,14 @@ fun LLMProviderConfigItem(
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
                     ) { isExpanded ->
                         Icon(
-                            painterResource(if (isExpanded) R.drawable.arrow_drop_down_24px else R.drawable.arrow_drop_up_24px),
+                            painterResource(if (!isExpanded) R.drawable.arrow_drop_down_24px else R.drawable.arrow_drop_up_24px),
                             contentDescription = stringResource(if (isExpanded) R.string.label_collapse else R.string.label_expand),
                             modifier = Modifier
                                 .then(
-                                    if (isExpanded) Modifier
-                                        .rotate(collapseIconRotation)
+                                    if (!isExpanded) Modifier
+                                        .rotate(expandIconRotation)
                                     else Modifier
-                                        .rotate(expandIconRotation),
+                                        .rotate(collapseIconRotation),
                                 ),
                         )
                     }
