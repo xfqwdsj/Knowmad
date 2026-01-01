@@ -284,10 +284,10 @@ fun ConversationList(
                                             coroutineScope.launch {
                                                 GlobalViewModel.showSnackbar(
                                                     message = R.string.label_deleted.asStringRes(),
-                                                    action = SnackbarAction(
-                                                        R.string.label_undo.asStringRes(),
-                                                        onClick = { onUndo() },
-                                                    ),
+                                                    action = SnackbarAction(R.string.label_undo.asStringRes()) { dismiss ->
+                                                        dismiss()
+                                                        onUndo()
+                                                    },
                                                     withDismissAction = true,
                                                     duration = SnackbarDuration.Long,
                                                 )
