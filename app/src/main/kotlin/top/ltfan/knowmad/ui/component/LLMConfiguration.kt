@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLModel
-import android.app.Application
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -54,7 +53,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemElevation
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -70,9 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -98,7 +94,6 @@ import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
-import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
@@ -602,91 +597,78 @@ sealed interface LLMConfigItemSharedKey {
 @Preview
 @Composable
 fun LLMProviderConfigLazyColumnPreview() {
-    AppTheme {
-        Surface {
-            if (LocalInspectionMode.current) {
-                Text("Inspection Mode")
-                return@Surface
-            }
+    ApplicationPreview {
+        val coroutineScope = rememberCoroutineScope()
+        val dao = remember { AppDatabase.buildDatabase().llmConfigDao() }
 
-            val application = LocalContext.current.applicationContext as? Application ?: run {
-                Text("No Application Context")
-                return@Surface
-            }
-
-            val coroutineScope = rememberCoroutineScope()
-            val dao =
-                remember { context(application) { AppDatabase.buildDatabase() }.llmConfigDao() }
-
-            Column(Modifier.fillMaxSize()) {
-                Row(
-                    Modifier.windowInsetsPadding(AppWindowInsets.only { top }),
-                ) {
-                    Button(
-                        onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                SupportedLLMProviders.keys.forEach { provider ->
-                                    dao.insertProviderAtEnd(
-                                        LLMProviderConfigEntity(
-                                            provider = provider,
-                                            apiKey = "sample_api_key_for_${provider.id}".toByteArray(),
-                                            iv = null,
-                                        ),
-                                    )
-                                }
-                            }
-                        },
-                    ) {
-                        Text("Add Sample Data")
-                    }
-                    Button(
-                        onClick = {},
-                    ) {
-                        Text("Clear All")
-                    }
-                }
-                LLMProviderConfigLazyColumn(
-                    dao = dao,
-                    state = rememberLLMProviderConfigLazyListState(
-                        entitiesFactory = { dao.getAllProviders() },
-                    ),
-                    modelState = rememberLLMConfigLazyListStateFactory(dao),
-                    onEditProvider = {},
-                    onDeleteProvider = {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.windowInsetsPadding(AppWindowInsets.only { top }),
+            ) {
+                Button(
+                    onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
-                            dao.deleteProvider(it)
-                        }
-                    },
-                    onEditModel = {},
-                    onDeleteModel = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            dao.deleteModel(it)
-                        }
-                    },
-                    onAddModel = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            dao.insertModelAtEnd(
-                                LLMConfigEntity(
-                                    providerConfigId = it.id,
-                                    model = LLModel(
-                                        provider = it.provider,
-                                        id = "sample-model-for-${it.provider.id}",
-                                        capabilities = listOf(),
-                                        contextLength = 1024,
+                            SupportedLLMProviders.keys.forEach { provider ->
+                                dao.insertProviderAtEnd(
+                                    LLMProviderConfigEntity(
+                                        provider = provider,
+                                        apiKey = "sample_api_key_for_${provider.id}".toByteArray(),
+                                        iv = null,
                                     ),
-                                ),
-                            )
+                                )
+                            }
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = AppWindowInsets.only { horizontal + bottom }
-                        .asPaddingValues() + PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                )
+                ) {
+                    Text("Add Sample Data")
+                }
+                Button(
+                    onClick = {},
+                ) {
+                    Text("Clear All")
+                }
             }
+            LLMProviderConfigLazyColumn(
+                dao = dao,
+                state = rememberLLMProviderConfigLazyListState(
+                    entitiesFactory = { dao.getAllProviders() },
+                ),
+                modelState = rememberLLMConfigLazyListStateFactory(dao),
+                onEditProvider = {},
+                onDeleteProvider = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        dao.deleteProvider(it)
+                    }
+                },
+                onEditModel = {},
+                onDeleteModel = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        dao.deleteModel(it)
+                    }
+                },
+                onAddModel = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        dao.insertModelAtEnd(
+                            LLMConfigEntity(
+                                providerConfigId = it.id,
+                                model = LLModel(
+                                    provider = it.provider,
+                                    id = "sample-model-for-${it.provider.id}",
+                                    capabilities = listOf(),
+                                    contextLength = 1024,
+                                ),
+                            ),
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = AppWindowInsets.only { horizontal + bottom }
+                    .asPaddingValues() + PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            )
         }
     }
 }
