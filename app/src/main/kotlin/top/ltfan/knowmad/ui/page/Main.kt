@@ -54,7 +54,7 @@ class MainPage : Page() {
             sheetContent = {
                 Box(
                     Modifier
-                        .heightIn(max = 600.dp)
+                        .heightIn(max = 800.dp)
                         .consumeWindowInsets(AppWindowInsets.only { top }),
                 ) {
                     CompositionLocalProvider(
