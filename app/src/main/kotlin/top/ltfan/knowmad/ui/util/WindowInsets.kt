@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,22 @@
 
 package top.ltfan.knowmad.ui.util
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -89,4 +97,15 @@ private data class ScaledWindowInsets(
 
     override fun getBottom(density: Density): Int =
         base.getBottom(density) + with(density) { bottomAdd.roundToPx() }
+}
+
+@Composable
+fun WindowInsetsToPaddingValuesBox(
+    insets: WindowInsets,
+    content: @Composable (paddingValues: PaddingValues) -> Unit,
+) {
+    var consumedInsets by remember { mutableStateOf(WindowInsets()) }
+    Box(Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
+        content(insets.exclude(consumedInsets).asPaddingValues())
+    }
 }

@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.ui.page
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
@@ -47,6 +46,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.component.ConversationList
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyColumn
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -80,13 +80,16 @@ class AgentMainPage : AgentSubPage() {
                         bottom = 0.dp,
                     ),
                 ) {
-                    val contentPadding = AppWindowInsets.only { vertical }.asPaddingValues() +
-                            contentPadding.copy(
-                                layoutDirection,
-                                start = 0.dp,
-                                end = 0.dp,
-                            )
-                    ConversationList(contentPadding)
+                    WindowInsetsToPaddingValuesBox(AppWindowInsets.only { vertical }) {
+                        val contentPadding = it + contentPadding.copy(
+                            layoutDirection,
+                            start = 0.dp,
+                            end = 0.dp,
+                        ) + PaddingValues(
+                            top = 16.dp,
+                        )
+                        ConversationList(contentPadding)
+                    }
                 }
             },
             drawerState = viewModel.drawerState,

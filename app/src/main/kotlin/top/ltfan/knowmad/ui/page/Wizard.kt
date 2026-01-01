@@ -48,7 +48,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -140,6 +139,7 @@ import top.ltfan.knowmad.ui.theme.ContentContainerShape
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -174,7 +174,6 @@ class WizardPage(
         val snackbarHostState = remember { SnackbarHostState() }
 
         val insets = AppWindowInsets + contentPadding
-        val horizontalPadding = insets.only { horizontal }.asPaddingValues()
 
         val hasMessages = viewModel.messageItems.any { it.second }
         val messagesBackgroundColor by animateColorAsState(
@@ -182,131 +181,133 @@ class WizardPage(
             else Color.Transparent,
         )
 
-        Surface {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(insets.only { vertical }),
-            ) {
-                Spacer(Modifier.height(16.dp))
-                Stepper(
-                    steps = steps,
-                    currentStep = backStack.size - 1,
-                    contentPadding = horizontalPadding,
-                )
-                Spacer(Modifier.height(ContentContainerPadding))
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontalPadding)
-                        .padding(horizontal = ContentContainerPadding),
-                    shape = ContentContainerShape,
-                    color = messagesBackgroundColor,
+        WindowInsetsToPaddingValuesBox(insets.only { horizontal }) { horizontalPadding ->
+            Surface {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(insets.only { vertical }),
                 ) {
-                    Column {
-                        AnimatedContent(
-                            targetState = viewModel.messageItems,
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        ) { messageItems ->
-                            val hasMessages = messageItems.any { it.second }
-                            Column(
-                                Modifier.fillMaxWidth().padding(horizontal = 24.dp).run {
-                                    if (hasMessages) padding(vertical = 8.dp)
-                                    else this
-                                },
-                                verticalArrangement = if (hasMessages) Arrangement.spacedBy(8.dp) else Arrangement.Top,
-                            ) {
-                                for ((item, show) in messageItems) {
-                                    if (show) {
-                                        Message(
-                                            icon = item.icon,
-                                            message = stringResource(item.message),
-                                        )
+                    Spacer(Modifier.height(16.dp))
+                    Stepper(
+                        steps = steps,
+                        currentStep = backStack.size - 1,
+                        contentPadding = horizontalPadding,
+                    )
+                    Spacer(Modifier.height(ContentContainerPadding))
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontalPadding)
+                            .padding(horizontal = ContentContainerPadding),
+                        shape = ContentContainerShape,
+                        color = messagesBackgroundColor,
+                    ) {
+                        Column {
+                            AnimatedContent(
+                                targetState = viewModel.messageItems,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            ) { messageItems ->
+                                val hasMessages = messageItems.any { it.second }
+                                Column(
+                                    Modifier.fillMaxWidth().padding(horizontal = 24.dp).run {
+                                        if (hasMessages) padding(vertical = 8.dp)
+                                        else this
+                                    },
+                                    verticalArrangement = if (hasMessages) Arrangement.spacedBy(8.dp) else Arrangement.Top,
+                                ) {
+                                    for ((item, show) in messageItems) {
+                                        if (show) {
+                                            Message(
+                                                icon = item.icon,
+                                                message = stringResource(item.message),
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.BottomCenter,
-                        ) {
-                            Surface(
-                                modifier = Modifier.fillMaxSize(),
-                                shape = ContentContainerShape,
-                                color = ContentContainerColor,
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.BottomCenter,
                             ) {
-                                NavDisplay(
-                                    backStack = backStack,
+                                Surface(
                                     modifier = Modifier.fillMaxSize(),
-                                    transitionSpec = {
-                                        fadeIn() + slideInHorizontally { it } togetherWith
-                                                fadeOut() + slideOutHorizontally { -it }
-                                    },
-                                    popTransitionSpec = {
-                                        fadeIn() + slideInHorizontally { -it } togetherWith
-                                                fadeOut() + slideOutHorizontally { it }
-                                    },
-                                    predictivePopTransitionSpec = {
-                                        fadeIn() + slideInHorizontally { -it } togetherWith
-                                                fadeOut() + slideOutHorizontally { it }
-                                    },
-                                    entryProvider = { it.navEntry() },
-                                )
+                                    shape = ContentContainerShape,
+                                    color = ContentContainerColor,
+                                ) {
+                                    NavDisplay(
+                                        backStack = backStack,
+                                        modifier = Modifier.fillMaxSize(),
+                                        transitionSpec = {
+                                            fadeIn() + slideInHorizontally { it } togetherWith
+                                                    fadeOut() + slideOutHorizontally { -it }
+                                        },
+                                        popTransitionSpec = {
+                                            fadeIn() + slideInHorizontally { -it } togetherWith
+                                                    fadeOut() + slideOutHorizontally { it }
+                                        },
+                                        predictivePopTransitionSpec = {
+                                            fadeIn() + slideInHorizontally { -it } togetherWith
+                                                    fadeOut() + slideOutHorizontally { it }
+                                        },
+                                        entryProvider = { it.navEntry() },
+                                    )
+                                }
+                                SnackbarHost(snackbarHostState)
                             }
-                            SnackbarHost(snackbarHostState)
                         }
                     }
-                }
-                Spacer(Modifier.height(ContentContainerPadding))
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontalPadding),
-                ) {
-                    ProvideCompatibleShapes {
-                        Spacer(Modifier.width(16.dp))
-                        TextButton(
-                            onClick = {
-                                if (currentPage.isFinal) {
-                                    viewModel.finishWizard()
-                                    return@TextButton
-                                }
-                                viewModel.skipWizard()
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Text(stringResource(R.string.label_skip_for_now))
+                    Spacer(Modifier.height(ContentContainerPadding))
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontalPadding),
+                    ) {
+                        ProvideCompatibleShapes {
+                            Spacer(Modifier.width(16.dp))
+                            TextButton(
+                                onClick = {
+                                    if (currentPage.isFinal) {
+                                        viewModel.finishWizard()
+                                        return@TextButton
+                                    }
+                                    viewModel.skipWizard()
+                                },
+                                shapes = ButtonDefaults.shapes(),
+                            ) {
+                                Text(stringResource(R.string.label_skip_for_now))
+                            }
+                            Spacer(Modifier.weight(1f))
+                            OutlinedButton(
+                                onClick = {
+                                    backStack.removeLastOrNull()
+                                },
+                                shapes = ButtonDefaults.shapes(),
+                                enabled = backStack.size > 1,
+                            ) {
+                                Text(stringResource(R.string.label_previous))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val pageOrNull = currentPage.nextPage(viewModel)
+                                    if (pageOrNull == null) {
+                                        viewModel.finishWizard()
+                                        return@Button
+                                    }
+                                    viewModel.backStack.add(pageOrNull)
+                                },
+                                shapes = ButtonDefaults.shapes(),
+                                enabled = currentPage.canContinue(viewModel),
+                            ) {
+                                Text(stringResource(R.string.label_next))
+                            }
+                            Spacer(Modifier.width(16.dp))
                         }
-                        Spacer(Modifier.weight(1f))
-                        OutlinedButton(
-                            onClick = {
-                                backStack.removeLastOrNull()
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                            enabled = backStack.size > 1,
-                        ) {
-                            Text(stringResource(R.string.label_previous))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val pageOrNull = currentPage.nextPage(viewModel)
-                                if (pageOrNull == null) {
-                                    viewModel.finishWizard()
-                                    return@Button
-                                }
-                                viewModel.backStack.add(pageOrNull)
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                            enabled = currentPage.canContinue(viewModel),
-                        ) {
-                            Text(stringResource(R.string.label_next))
-                        }
-                        Spacer(Modifier.width(16.dp))
                     }
+                    Spacer(Modifier.height(16.dp))
                 }
-                Spacer(Modifier.height(16.dp))
             }
         }
 
