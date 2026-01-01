@@ -75,13 +75,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.chat.ChatDao
-import top.ltfan.knowmad.data.chat.ChatData
+import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ConversationEntity
-import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.SnackbarAction
@@ -92,11 +89,10 @@ import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.util.asStringRes
-import top.ltfan.knowmad.util.transform
 import kotlin.uuid.Uuid
 
 @Composable
-fun ConversationList() {
+fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
     val viewModel = viewModel<AgentViewModel>()
 
     ConversationList(
@@ -106,6 +102,7 @@ fun ConversationList() {
         onNewConversation = viewModel::newConversation,
         onEditConversation = viewModel::editConversation,
         onDeleteConversation = viewModel::deleteConversation,
+        contentPadding = contentPadding,
     )
 }
 
@@ -381,61 +378,24 @@ fun ConversationNameTextField(
 @Composable
 fun ConversationListPreview() {
     ApplicationPreview {
-        val coroutineScope = rememberCoroutineScope()
-        val dao = remember { AppDatabase.buildDatabase().chatDao() }
-        val store = remember(coroutineScope) { ChatData.createDataStore(coroutineScope) }
+        (this as? KnowmadApplication)?.let {
+            viewModel<AgentViewModel> {
+                AgentViewModel(it)
+            }
+        } ?: run {
+            Text("Preview not available")
+            return@ApplicationPreview
+        }
 
         val snackbarHostState = remember { SnackbarHostState() }
-
-        var currentConversationId by store.asMutableState().transform(
-            transformIn = { conversation },
-            transformOut = { copy(conversation = it) },
-        )
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             contentWindowInsets = AppWindowInsets,
         ) { contentPadding ->
-            ConversationList(
-                state = rememberState(dao),
-                currentConversationId = currentConversationId,
-                onConversationSelected = { currentConversationId = it },
-                onNewConversation = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val conversation = ConversationEntity(
-                            name = "New Conversation",
-                        )
-                        dao.insertConversation(conversation)
-                    }
-                },
-                onEditConversation = { newEntity, onFinished ->
-                    coroutineScope.launch(Dispatchers.IO) {
-                        dao.updateConversation(newEntity)
-                        onFinished()
-                    }
-                },
-                onDeleteConversation = { conversation, onDeleted ->
-                    coroutineScope.launch(Dispatchers.IO) {
-                        dao.deleteConversation(conversation)
-                        onDeleted {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                dao.insertConversation(conversation)
-                            }
-                        }
-                    }
-                },
-                contentPadding = contentPadding,
-            )
+            ConversationList(contentPadding)
         }
 
         SnackbarEffect(snackbarHostState)
-    }
-}
-
-@Composable
-private fun rememberState(dao: ChatDao): PagingLazyListState<Int, ConversationEntity> {
-    val coroutineScope = rememberCoroutineScope()
-    return remember(coroutineScope, dao) {
-        PagingLazyListState(coroutineScope) { dao.getAllConversations() }
     }
 }
