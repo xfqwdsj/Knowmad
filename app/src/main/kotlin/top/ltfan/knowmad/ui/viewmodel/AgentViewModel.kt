@@ -122,22 +122,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         llmConfigDao.getAllProviders()
     }
 
-    fun addProviderConfig(
-        config: LLMProviderConfigEntity,
-        onFinished: () -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            llmConfigDao.insertProviderAtEnd(config)
-            onFinished()
-        }
-    }
-
     fun editProviderConfig(
         config: LLMProviderConfigEntity,
         onFinished: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            llmConfigDao.updateProvider(config)
+            llmConfigDao.insertAtEndOrUpdateProvider(config)
             onFinished()
         }
     }
@@ -160,22 +150,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    fun addModelConfig(
-        config: LLMConfigEntity,
-        onFinished: () -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            llmConfigDao.insertModelAtEnd(config)
-            onFinished()
-        }
-    }
-
     fun editModelConfig(
         config: LLMConfigEntity,
         onFinished: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            llmConfigDao.updateModel(config)
+            llmConfigDao.insertAtEndOrUpdateModel(config)
             onFinished()
         }
     }

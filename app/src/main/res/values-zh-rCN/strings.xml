@@ -79,8 +79,10 @@
     <string name="llm_api_key_guidance_get">如何获取API Key？</string>
     <string name="llm_api_key_message_secure">您的API Key将安全地存储在您的设备上，不会与任何第三方共享</string>
     <string name="llm_api_key_message_unsecure">您的API Key将以明文形式存储在您的设备上。这可能会带来安全风险，但我们不会与任何第三方共享它</string>
-    <string name="llm_model_id_label">模型ID</string>
-    <string name="llm_model_add_label">添加模型</string>
+    <string name="llm_model_label_id">模型ID</string>
+    <string name="llm_model_label_name">模型别名</string>
+    <string name="llm_model_label_add">添加模型</string>
+    <string name="llm_model_label_edit">编辑模型</string>
     <plurals name="llm_model_count_label">
         <item quantity="other">%d个模型</item>
     </plurals>

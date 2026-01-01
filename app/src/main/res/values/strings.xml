@@ -79,8 +79,10 @@
     <string name="llm_api_key_guidance_get">How to get an API Key?</string>
     <string name="llm_api_key_message_secure">Your API Key will be stored securely on your device and will not be shared with any third parties</string>
     <string name="llm_api_key_message_unsecure">Your API Key will be stored in plaintext on your device. This may pose security risks, but we will not share it with any third parties</string>
-    <string name="llm_model_id_label">Model ID</string>
-    <string name="llm_model_add_label">Add Model</string>
+    <string name="llm_model_label_id">Model ID</string>
+    <string name="llm_model_label_name">Model Alias</string>
+    <string name="llm_model_label_add">Add Model</string>
+    <string name="llm_model_label_edit">Edit Model</string>
     <plurals name="llm_model_count_label">
         <item quantity="one">%d Model</item>
         <item quantity="other">%d Models</item>

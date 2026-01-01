@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.component
 
+import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import androidx.compose.animation.AnimatedContent
@@ -46,7 +47,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,13 +65,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -93,12 +101,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
+import top.ltfan.knowmad.data.llm.decryptedApiKey
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
@@ -116,6 +126,9 @@ import kotlin.uuid.Uuid
 fun LLMProviderConfig(
     editingProvider: LLMProviderConfigEntity?,
     onEditProvider: (LLMProviderConfigEntity?) -> Unit,
+    editingModel: Pair<LLMProviderConfigEntity, LLMConfigEntity>?,
+    onEditModel: (Pair<LLMProviderConfigEntity, LLMConfigEntity>?) -> Unit,
+    onAddModel: (provider: LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
@@ -144,7 +157,7 @@ fun LLMProviderConfig(
                 }
             }
         },
-        onEditModel = {},
+        onEditModel = { p, m -> onEditModel(p to m) },
         onDeleteModel = {
             viewModel.deleteModelConfig(it) { onUndo ->
                 coroutineScope.launch {
@@ -160,7 +173,7 @@ fun LLMProviderConfig(
                 }
             }
         },
-        onAddModel = {},
+        onAddModel = onAddModel,
         modifier = modifier,
         contentPadding = contentPadding,
         additionalScrollThresholdPadding = additionalScrollThresholdPadding,
@@ -172,6 +185,14 @@ fun LLMProviderConfig(
         LLMProviderConfigEditingDialog(
             entity = provider,
             onDismissRequest = { onEditProvider(null) },
+        )
+    }
+
+    editingModel?.let { (provider, model) ->
+        LLMConfigEditingDialog(
+            provider = provider,
+            entity = model,
+            onDismissRequest = { onEditModel(null) },
         )
     }
 }
@@ -262,11 +283,7 @@ fun LLMProviderConfigEditingDialog(
                             iv = iv,
                         )
                     }
-                    if (isNew) {
-                        viewModel.addProviderConfig(newEntity) {}
-                    } else {
-                        viewModel.editProviderConfig(newEntity) {}
-                    }
+                    viewModel.editProviderConfig(newEntity) {}
                 },
             ) {
                 Text(stringResource(android.R.string.ok))
@@ -305,13 +322,166 @@ fun LLMProviderConfigEditingDialog(
 }
 
 @Composable
+fun LLMConfigEditingDialog(
+    provider: LLMProviderConfigEntity,
+    entity: LLMConfigEntity,
+    onDismissRequest: () -> Unit,
+) {
+    val viewModel = LocalAgentViewModel.current
+
+    val knownModelsMap = remember { mutableStateMapOf<String, LLModel>() }
+    val knownModelIds by remember { derivedStateOf { knownModelsMap.keys.toList() } }
+
+    val modelId = rememberTextFieldState(entity.model.id)
+    val capabilities = remember { mutableStateListOf(*entity.model.capabilities.toTypedArray()) }
+    var contextLength by remember { mutableLongStateOf(entity.model.contextLength) }
+    var maxOutputTokens by remember { mutableStateOf(entity.model.maxOutputTokens) }
+    var name by remember { mutableStateOf(entity.name) }
+
+    var showCapabilitiesDialog by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.llm_model_label_edit)) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                    val newEntity = entity.copy(
+                        model = entity.model.copy(
+                            id = modelId.text.toString(),
+                            capabilities = capabilities.toList(),
+                            contextLength = contextLength,
+                            maxOutputTokens = maxOutputTokens,
+                        ),
+                        name = name.ifBlank { modelId.text.toString() },
+                    )
+                    viewModel.editModelConfig(newEntity) {}
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                LLModelTextField(
+                    state = modelId,
+                    knownModelIds = knownModelIds,
+                )
+                LLMContextLengthTextField(
+                    contextLength = contextLength,
+                    onContextLengthChange = { contextLength = it },
+                )
+                LLMMaxOutputTokensTextField(
+                    maxOutputTokens = maxOutputTokens,
+                    onMaxOutputTokensChange = { maxOutputTokens = it },
+                )
+                LLMNameTextField(
+                    name = name,
+                    onNameChange = { name = it },
+                )
+                Button(onClick = { showCapabilitiesDialog = true }) {
+                    Text(
+                        stringResource(R.string.llm_capability_label),
+                    )
+                }
+            }
+        },
+    )
+
+    if (showCapabilitiesDialog) {
+        LLMConfigCapabilitiesEditingDialog(
+            stateList = capabilities,
+            onDismissRequest = { showCapabilitiesDialog = false },
+        )
+    }
+
+    var oldId by remember { mutableStateOf(modelId.text.toString()) }
+
+    LaunchedEffect(modelId.text) {
+        val id = modelId.text.toString()
+        if (id.isBlank()) return@LaunchedEffect
+        if (name.isBlank() || name == oldId) {
+            name = id
+        }
+        oldId = id
+        knownModelsMap[id]?.let { model ->
+            contextLength = model.contextLength
+            maxOutputTokens = model.maxOutputTokens
+            capabilities.clear()
+            capabilities.addAll(model.capabilities)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val info = SupportedLLMProviders[provider.provider] ?: return@LaunchedEffect
+        val client = info.convertToClient(
+            provider.decryptedApiKey, provider.baseUrl,
+        )
+
+        val apiModelIds = withContext(Dispatchers.IO) {
+            try {
+                client.models()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+
+        knownModelsMap.putAll(
+            apiModelIds.associateWith {
+                LLModel(
+                    provider = provider.provider,
+                    id = it,
+                    capabilities = listOf(),
+                    contextLength = 0,
+                )
+            },
+        )
+        knownModelsMap.putAll(info.predefinedModels)
+    }
+}
+
+@Composable
+fun LLMConfigCapabilitiesEditingDialog(
+    stateList: SnapshotStateList<LLMCapability>,
+    onDismissRequest: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.llm_capability_label)) },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        text = {
+            ModelCapabilitiesList(
+                capabilities = stateList,
+                onAdd = { stateList.add(it) },
+                onRemove = { stateList.remove(it) },
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            )
+        },
+    )
+}
+
+@Composable
 fun LLMProviderConfigLazyColumn(
     dao: LLMConfigDao,
     state: LLMProviderConfigLazyListState,
     modelState: (provider: LLMProviderConfigEntity) -> LLMConfigLazyListState,
     onEditProvider: (provider: LLMProviderConfigEntity) -> Unit,
     onDeleteProvider: (provider: LLMProviderConfigEntity) -> Unit,
-    onEditModel: (model: LLMConfigEntity) -> Unit,
+    onEditModel: (provider: LLMProviderConfigEntity, model: LLMConfigEntity) -> Unit,
     onDeleteModel: (model: LLMConfigEntity) -> Unit,
     onAddModel: (provider: LLMProviderConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
@@ -355,7 +525,7 @@ fun LLMProviderConfigLazyColumn(
             modelState = modelState(entity),
             onEditProvider = { onEditProvider(entity) },
             onDeleteProvider = { onDeleteProvider(entity) },
-            onEditModel = onEditModel,
+            onEditModel = { onEditModel(entity, it) },
             onDeleteModel = onDeleteModel,
             onAddModel = { onAddModel(entity) },
             dragHandle = {
@@ -417,7 +587,9 @@ fun rememberLLMProviderConfigLazyListState(
     }
 }
 
-context(viewModel: ViewModel)
+context (viewModel
+: ViewModel,
+)
 fun LLMProviderConfigLazyListState(
     entitiesFactory: () -> PagingSource<Int, LLMProviderConfigEntity>,
 ) = LLMProviderConfigLazyListState(
@@ -585,7 +757,7 @@ fun LLMProviderConfigItem(
                                 modifier = Modifier.size(ButtonDefaults.IconSize),
                             )
                             Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(stringResource(R.string.llm_model_add_label))
+                            Text(stringResource(R.string.llm_model_label_add))
                         }
                     }
                 }
@@ -842,7 +1014,7 @@ fun LLMProviderConfigLazyColumnPreview() {
                         dao.deleteProvider(it)
                     }
                 },
-                onEditModel = {},
+                onEditModel = { _, _ -> },
                 onDeleteModel = {
                     coroutineScope.launch(Dispatchers.IO) {
                         dao.deleteModel(it)

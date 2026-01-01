@@ -50,6 +50,16 @@ interface LLMConfigDao {
         return insertProviderUnsafeRanking(newConfig)
     }
 
+    @Transaction
+    suspend fun insertAtEndOrUpdateProvider(config: LLMProviderConfigEntity) {
+        val existingConfig = getProviderById(config.id)
+        if (existingConfig != null) {
+            updateProvider(config)
+        } else {
+            insertProviderAtEnd(config)
+        }
+    }
+
     @Insert
     suspend fun insertModelUnsafeRanking(model: LLMConfigEntity): Long
 
@@ -67,6 +77,16 @@ interface LLMConfigDao {
         val newRank = calculateLexoRank(lastRank, null)
         val newModel = model.copy(rank = newRank)
         return insertModelUnsafeRanking(newModel)
+    }
+
+    @Transaction
+    suspend fun insertAtEndOrUpdateModel(model: LLMConfigEntity) {
+        val existingModel = getModelById(model.id)
+        if (existingModel != null) {
+            updateModel(model)
+        } else {
+            insertModelAtEnd(model)
+        }
     }
 
     @Delete
@@ -90,11 +110,17 @@ interface LLMConfigDao {
     @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY rank ASC")
     fun getAllProviders(): PagingSource<Int, LLMProviderConfigEntity>
 
+    @Query("SELECT * FROM LLMProviderConfigEntity WHERE id = :id")
+    suspend fun getProviderById(id: Uuid): LLMProviderConfigEntity?
+
     @Query("SELECT rank FROM LLMProviderConfigEntity ORDER BY rank ASC LIMIT 1 OFFSET :pos")
     suspend fun getProviderRankAt(pos: Int): ByteArray?
 
     @Query("SELECT rank FROM LLMProviderConfigEntity ORDER BY rank DESC LIMIT 1 OFFSET :pos")
     suspend fun getProviderRankDescAt(pos: Int): ByteArray?
+
+    @Query("SELECT * FROM LLMConfigEntity WHERE id = :id")
+    suspend fun getModelById(id: Uuid): LLMConfigEntity?
 
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>

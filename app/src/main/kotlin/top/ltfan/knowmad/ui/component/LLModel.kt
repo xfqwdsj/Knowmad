@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -46,6 +47,7 @@ import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 fun LLModelTextField(
     state: TextFieldState,
     knownModelIds: List<String>,
+    inputTransformation: InputTransformation? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -62,7 +64,7 @@ fun LLModelTextField(
                 .fillMaxWidth()
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
             label = {
-                Text(stringResource(R.string.llm_model_id_label))
+                Text(stringResource(R.string.llm_model_label_id))
             },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -77,6 +79,7 @@ fun LLModelTextField(
                     )
                 }
             },
+            inputTransformation = inputTransformation,
             lineLimits = TextFieldLineLimits.SingleLine,
         )
     }
@@ -144,6 +147,24 @@ fun LLMMaxOutputTokensTextField(
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
         ),
+        singleLine = true,
+    )
+}
+
+@Composable
+fun LLMNameTextField(
+    name: String,
+    onNameChange: (String) -> Unit,
+) {
+    TextField(
+        value = name,
+        onValueChange = { onNameChange(it) },
+        modifier = Modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .fillMaxWidth(),
+        label = {
+            Text(stringResource(R.string.llm_model_label_name))
+        },
         singleLine = true,
     )
 }

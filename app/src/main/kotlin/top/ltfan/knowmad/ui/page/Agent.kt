@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.page
 
+import ai.koog.prompt.llm.LLModel
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -54,6 +55,7 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.ConversationList
@@ -219,6 +221,12 @@ class AgentConfigPage : AgentSubPage() {
         var creatingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
         var editingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
 
+        var editingModel by remember {
+            mutableStateOf<Pair<LLMProviderConfigEntity, LLMConfigEntity>?>(
+                null,
+            )
+        }
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -280,6 +288,19 @@ class AgentConfigPage : AgentSubPage() {
             LLMProviderConfig(
                 editingProvider = editingProvider,
                 onEditProvider = { editingProvider = it },
+                editingModel = editingModel,
+                onEditModel = { editingModel = it },
+                onAddModel = {
+                    editingModel = it to LLMConfigEntity(
+                        providerConfigId = it.id,
+                        model = LLModel(
+                            provider = it.provider,
+                            id = "",
+                            capabilities = emptyList(),
+                            contextLength = 0,
+                        ),
+                    )
+                },
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding,
             )
