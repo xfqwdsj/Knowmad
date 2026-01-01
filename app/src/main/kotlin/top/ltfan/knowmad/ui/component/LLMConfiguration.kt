@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.component
 
+import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -44,6 +45,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,6 +57,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemElevation
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -98,33 +103,204 @@ import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
+import top.ltfan.knowmad.util.CryptoManager
+import top.ltfan.knowmad.util.asStringRes
 import kotlin.uuid.Uuid
 
 @Composable
-fun LLMProviderConfigLazyColumn(
+fun LLMProviderConfig(
+    editingProvider: LLMProviderConfigEntity?,
+    onEditProvider: (LLMProviderConfigEntity?) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     additionalScrollThresholdPadding: PaddingValues = PaddingValues(16.dp),
 ) {
     val viewModel = LocalAgentViewModel.current
 
+    val coroutineScope = rememberCoroutineScope()
+
     LLMProviderConfigLazyColumn(
         dao = viewModel.llmConfigDao,
         state = viewModel.providerConfigLazyListState,
         modelState = rememberLLMConfigLazyListStateFactory(viewModel.llmConfigDao),
-        onEditProvider = {},
-        onDeleteProvider = {},
+        onEditProvider = { onEditProvider(it) },
+        onDeleteProvider = {
+            viewModel.deleteProviderConfig(it) { onUndo ->
+                coroutineScope.launch {
+                    GlobalViewModel.showSnackbar(
+                        message = R.string.label_deleted.asStringRes(),
+                        action = SnackbarAction(
+                            label = R.string.label_undo.asStringRes(),
+                            onClick = onUndo,
+                        ),
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Long,
+                    )
+                }
+            }
+        },
         onEditModel = {},
-        onDeleteModel = {},
+        onDeleteModel = {
+            viewModel.deleteModelConfig(it) { onUndo ->
+                coroutineScope.launch {
+                    GlobalViewModel.showSnackbar(
+                        message = R.string.label_deleted.asStringRes(),
+                        action = SnackbarAction(
+                            label = R.string.label_undo.asStringRes(),
+                            onClick = onUndo,
+                        ),
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Long,
+                    )
+                }
+            }
+        },
         onAddModel = {},
         modifier = modifier,
         contentPadding = contentPadding,
         additionalScrollThresholdPadding = additionalScrollThresholdPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+    )
+
+    editingProvider?.let { provider ->
+        LLMProviderConfigEditingDialog(
+            entity = provider,
+            onDismissRequest = { onEditProvider(null) },
+        )
+    }
+}
+
+@Composable
+fun LLMProviderSelectionDialog(
+    onProviderSelected: (provider: LLMProvider) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    var selectedProvider by remember { mutableStateOf<LLMProvider?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.llm_provider_label_select)) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    selectedProvider?.let { onProviderSelected(it) }
+                    onDismissRequest()
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 400.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                for ((provider, info) in SupportedLLMProviders) {
+                    item(key = provider.id) {
+                        LLMProviderInfo(
+                            info = info,
+                            modifier = Modifier
+                                .widthIn(ListItemMaxWidth)
+                                .fillMaxWidth(),
+                            checked = selectedProvider == provider,
+                            onCheckedChange = {
+                                if (it) {
+                                    selectedProvider = provider
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+fun LLMProviderConfigEditingDialog(
+    entity: LLMProviderConfigEntity,
+    onDismissRequest: () -> Unit,
+    isNew: Boolean = false,
+) {
+    val info = SupportedLLMProviders[entity.provider] ?: return
+
+    val viewModel = LocalAgentViewModel.current
+
+    var name by remember { mutableStateOf(entity.name) }
+    val apiKeyState = rememberTextFieldState()
+    var baseUrl by remember { mutableStateOf(entity.baseUrl ?: info.defaultBaseUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.llm_provider_label_edit)) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                    val newEntity = entity.copy(
+                        name = name,
+                        baseUrl = baseUrl,
+                    ).run {
+                        val apiKey =
+                            apiKeyState.text.ifBlank { null }?.toString() ?: return@run this
+                        val (apiKeyBytes, iv) = CryptoManager.LLMApiKey.encryptOrPlain(apiKey)
+                        copy(
+                            apiKey = apiKeyBytes,
+                            iv = iv,
+                        )
+                    }
+                    if (isNew) {
+                        viewModel.addProviderConfig(newEntity) {}
+                    } else {
+                        viewModel.editProviderConfig(newEntity) {}
+                    }
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                LLMProviderNameTextField(
+                    name = name,
+                    onNameChange = { name = it },
+                )
+                LLMProviderApiKeyTextField(
+                    state = apiKeyState,
+                    isUsingPlaintext = !CryptoManager.LLMApiKey.isKeyInitialized(),
+                    providerInfo = info,
+                    onRetryCryptoKeyInitialization = {
+                        CryptoManager.LLMApiKey.generateKey()
+                    },
+                    notChanged = !isNew,
+                )
+                LLMProviderBaseUrlTextField(
+                    baseUrl = baseUrl,
+                    onBaseUrlChange = { baseUrl = it },
+                    providerInfo = info,
+                )
+            }
+        },
     )
 }
 

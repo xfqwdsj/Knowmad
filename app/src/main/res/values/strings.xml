@@ -44,6 +44,7 @@
     <string name="label_delete">Delete</string>
     <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
+    <string name="label_not_changed">Not Changed</string>
     <string name="agent_standalone_label_enter">Enter Standalone Page</string>
     <string name="agent_standalone_label_exit">Exit Standalone Page</string>
     <string name="agent_drawer_label_open">Open Conversation List</string>
@@ -88,6 +89,10 @@
     <string name="llm_max_output_tokens_label">Max Output Tokens</string>
     <string name="llm_capability_label">Capabilities</string>
     <string name="llm_capability_guidance_query">How do I know the model capabilities?</string>
+    <string name="llm_provider_label_add">Add Provider</string>
+    <string name="llm_provider_label_select">Select Provider</string>
+    <string name="llm_provider_label_edit">Edit Provider</string>
+    <string name="llm_provider_label_name">Provider Name</string>
     <string name="llm_provider_deepseek_label">DeepSeek AI</string>
     <string name="llm_provider_deepseek_description">deepseek-chat and deepseek-reasoner</string>
     <string name="llm_provider_openai_label">OpenAI (and compatible)</string>

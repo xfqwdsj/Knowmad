@@ -38,7 +38,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
@@ -50,9 +54,12 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.ConversationList
-import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyColumn
+import top.ltfan.knowmad.ui.component.LLMProviderConfig
+import top.ltfan.knowmad.ui.component.LLMProviderConfigEditingDialog
+import top.ltfan.knowmad.ui.component.LLMProviderSelectionDialog
 import top.ltfan.knowmad.ui.component.LocalAgentScreenIsStandalone
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
 import top.ltfan.knowmad.ui.util.AppWindowInsets
@@ -208,6 +215,10 @@ class AgentConfigPage : AgentSubPage() {
     ) {
         val viewModel = LocalAgentViewModel.current
 
+        var isSelectingNewProvider by remember { mutableStateOf(false) }
+        var creatingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
+        var editingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -235,6 +246,24 @@ class AgentConfigPage : AgentSubPage() {
                             }
                         }
                     },
+                    actions = {
+                        TooltipBox(
+                            TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                            ),
+                            tooltip = {
+                                PlainTooltip { Text(stringResource(R.string.llm_provider_label_add)) }
+                            },
+                            state = rememberTooltipState(),
+                        ) {
+                            IconButton(onClick = { isSelectingNewProvider = true }) {
+                                Icon(
+                                    painterResource(R.drawable.add_24px),
+                                    contentDescription = stringResource(R.string.llm_provider_label_add),
+                                )
+                            }
+                        }
+                    },
                     windowInsets = AppWindowInsets.only { horizontal + top },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = ContainerColor,
@@ -245,16 +274,38 @@ class AgentConfigPage : AgentSubPage() {
             containerColor = ContainerColor.scaffoldContainer,
             contentColor = ScaffoldContentColor,
             contentWindowInsets = AppWindowInsets,
-        ) {
-            val contentPadding = it + contentPadding + PaddingValues(16.dp)
+        ) { scaffoldPadding ->
+            val contentPadding = scaffoldPadding + contentPadding + PaddingValues(16.dp)
 
-            LLMProviderConfigLazyColumn(
+            LLMProviderConfig(
+                editingProvider = editingProvider,
+                onEditProvider = { editingProvider = it },
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding,
             )
         }
-    }
 
+        if (isSelectingNewProvider) {
+            LLMProviderSelectionDialog(
+                onProviderSelected = { provider ->
+                    creatingProvider = LLMProviderConfigEntity(
+                        provider = provider,
+                        apiKey = byteArrayOf(),
+                        iv = null,
+                    )
+                },
+                onDismissRequest = { isSelectingNewProvider = false },
+            )
+        }
+
+        creatingProvider?.let { provider ->
+            LLMProviderConfigEditingDialog(
+                entity = provider,
+                onDismissRequest = { creatingProvider = null },
+                isNew = true,
+            )
+        }
+    }
 }
 
 @Serializable

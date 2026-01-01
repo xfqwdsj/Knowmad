@@ -51,6 +51,7 @@ import top.ltfan.knowmad.data.wizard.WizardData
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
+import top.ltfan.knowmad.util.CryptoData
 import top.ltfan.knowmad.util.CryptoManager
 import top.ltfan.knowmad.util.asResource
 import top.ltfan.knowmad.util.transform
@@ -299,25 +300,8 @@ class WizardPageViewModel(
     fun finishWizard() {
         isWizardFinished = true
 
-        val apiKeyBytes: ByteArray
-        val ivBytes: ByteArray?
-
-        val encryptedData = try {
-            CryptoManager.LLMApiKey.encrypt(apiKey.toByteArray()).also {
-                isUsingPlaintext = false
-            }
-        } catch (e: Throwable) {
-            e.printStackTrace()
-            isUsingPlaintext = true
-            null
-        }
-
-        if (encryptedData == null) {
-            apiKeyBytes = apiKey.toByteArray()
-            ivBytes = null
-        } else {
-            apiKeyBytes = encryptedData.ciphertext
-            ivBytes = encryptedData.iv
+        val (apiKeyBytes, iv) = CryptoManager.LLMApiKey.encryptOrPlain(apiKey).also {
+            isUsingPlaintext = it is CryptoData.Plain
         }
 
         val provider = selectedProvider ?: return
@@ -329,7 +313,7 @@ class WizardPageViewModel(
         val entry = LLMConfigEntry(
             provider = provider,
             apiKey = apiKeyBytes,
-            iv = ivBytes,
+            iv = iv,
             baseUrl = baseUrl.ifBlank { null },
             model = model,
         )

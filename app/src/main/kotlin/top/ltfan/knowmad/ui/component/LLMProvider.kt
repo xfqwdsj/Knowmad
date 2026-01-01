@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,11 +103,30 @@ fun LLMProviderInfoPreview() {
 }
 
 @Composable
+fun LLMProviderNameTextField(
+    name: String,
+    onNameChange: (String) -> Unit,
+) {
+    TextField(
+        value = name,
+        onValueChange = { onNameChange(it) },
+        modifier = Modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .fillMaxWidth(),
+        label = {
+            Text(stringResource(R.string.llm_provider_label_name))
+        },
+        singleLine = true,
+    )
+}
+
+@Composable
 fun LLMProviderApiKeyTextField(
     state: TextFieldState,
     isUsingPlaintext: Boolean,
     providerInfo: LLMProviderInfo?,
     onRetryCryptoKeyInitialization: () -> Unit,
+    notChanged: Boolean = false,
 ) {
     SecureTextField(
         state = state,
@@ -116,6 +135,12 @@ fun LLMProviderApiKeyTextField(
             .fillMaxWidth(),
         label = {
             Text(stringResource(R.string.llm_api_key_label))
+        },
+        placeholder = if (!notChanged) null
+        else {
+            {
+                Text(stringResource(R.string.label_not_changed))
+            }
         },
         leadingIcon = {
             Icon(

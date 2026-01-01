@@ -22,20 +22,16 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
@@ -52,14 +48,14 @@ class MainPage : Page() {
     override fun Content() {
         val viewModel = LocalAppViewModel.current
 
-        val scaffoldState = rememberBottomSheetScaffoldState(
-            bottomSheetState = rememberStandardBottomSheetState(remember { viewModel.mainSheetExpectedValue.value }),
-        )
+        val scaffoldState = rememberBottomSheetScaffoldState()
 
         BottomSheetScaffold(
             sheetContent = {
                 Box(
-                    Modifier.consumeWindowInsets(AppWindowInsets.only { top }),
+                    Modifier
+                        .heightIn(max = 600.dp)
+                        .consumeWindowInsets(AppWindowInsets.only { top }),
                 ) {
                     CompositionLocalProvider(
                         LocalAgentScreenTransparentBackground provides true,
@@ -83,16 +79,6 @@ class MainPage : Page() {
         }
 
         SnackbarEffect(scaffoldState.snackbarHostState)
-
-        LaunchedEffect(Unit) {
-            viewModel.mainSheetExpectedValue.collectLatest { value ->
-                when (value) {
-                    SheetValue.Expanded -> scaffoldState.bottomSheetState.expand()
-                    SheetValue.PartiallyExpanded -> scaffoldState.bottomSheetState.partialExpand()
-                    else -> {}
-                }
-            }
-        }
     }
 
 }

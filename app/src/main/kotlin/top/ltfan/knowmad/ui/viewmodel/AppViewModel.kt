@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
-import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,7 +25,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -83,16 +81,6 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
 
     fun navigateToMainPage() {
         backStack.add(MainPage())
-    }
-
-    var mainSheetExpectedValue = MutableStateFlow(SheetValue.PartiallyExpanded)
-
-    fun expandMainSheet() {
-        mainSheetExpectedValue.value = SheetValue.Expanded
-    }
-
-    fun collapseMainSheet() {
-        mainSheetExpectedValue.value = SheetValue.PartiallyExpanded
     }
 
     val standaloneAgentScreenIndex inline get() = backStack.indexOfLast { it is AgentPage }

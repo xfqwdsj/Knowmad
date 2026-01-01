@@ -44,6 +44,7 @@
     <string name="label_delete">删除</string>
     <string name="label_deleted">已删除</string>
     <string name="label_need_attention">需要注意</string>
+    <string name="label_not_changed">未更改</string>
     <string name="agent_standalone_label_enter">进入独立页面</string>
     <string name="agent_standalone_label_exit">关闭独立页面</string>
     <string name="agent_drawer_label_open">打开对话列表</string>
@@ -87,6 +88,10 @@
     <string name="llm_max_output_tokens_label">最大输出Token数</string>
     <string name="llm_capability_label">模型能力</string>
     <string name="llm_capability_guidance_query">如何查询模型能力？</string>
+    <string name="llm_provider_label_add">添加提供商</string>
+    <string name="llm_provider_label_select">选择提供商</string>
+    <string name="llm_provider_label_edit">编辑提供商</string>
+    <string name="llm_provider_label_name">提供商名称</string>
     <string name="llm_provider_deepseek_label">深度求索</string>
     <string name="llm_provider_deepseek_description">deepseek-chat和deepseek-reasoner</string>
     <string name="llm_provider_openai_label">OpenAI（和OpenAI-compatible）</string>

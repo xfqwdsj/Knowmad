@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,18 @@ open class CryptoManager private constructor(private val keyAlias: String) {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 
-    object LLMApiKey : CryptoManager("knowmad_llm_api_key")
+    object LLMApiKey : CryptoManager("knowmad_llm_api_key") {
+        fun encryptOrPlain(apiKey: String): CryptoData {
+            try {
+                if (isKeyInitialized()) {
+                    return encrypt(apiKey.toByteArray())
+                }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+            return CryptoData.Plain(apiKey.toByteArray())
+        }
+    }
 
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
         load(null)
@@ -70,12 +81,12 @@ open class CryptoManager private constructor(private val keyAlias: String) {
         return keyStore.getKey(keyAlias, null) as SecretKey
     }
 
-    fun encrypt(data: ByteArray): EncryptedData {
+    fun encrypt(data: ByteArray): CryptoData.Encrypted {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getKey())
         val iv = cipher.iv
         val ciphertext = cipher.doFinal(data)
-        return EncryptedData(ciphertext, iv)
+        return CryptoData.Encrypted(ciphertext, iv)
     }
 
     fun decrypt(ciphertext: ByteArray, iv: ByteArray): ByteArray {
@@ -85,31 +96,59 @@ open class CryptoManager private constructor(private val keyAlias: String) {
         return cipher.doFinal(ciphertext)
     }
 
-    fun decrypt(encryptedData: EncryptedData): ByteArray {
-        return decrypt(encryptedData.ciphertext, encryptedData.iv)
+    fun decrypt(data: CryptoData.Encrypted): ByteArray {
+        return decrypt(data.value, data.iv)
     }
 }
 
 @Immutable
-data class EncryptedData(
-    val ciphertext: ByteArray,
-    val iv: ByteArray,
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+sealed interface CryptoData {
+    val value: ByteArray
 
-        other as EncryptedData
+    @Immutable
+    data class Plain(
+        override val value: ByteArray,
+    ) : CryptoData {
+        override fun component2() = null
 
-        if (!ciphertext.contentEquals(other.ciphertext)) return false
-        if (!iv.contentEquals(other.iv)) return false
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-        return true
+            other as Plain
+
+            return value.contentEquals(other.value)
+        }
+
+        override fun hashCode(): Int {
+            return value.contentHashCode()
+        }
     }
 
-    override fun hashCode(): Int {
-        var result = ciphertext.contentHashCode()
-        result = 31 * result + iv.contentHashCode()
-        return result
+    @Immutable
+    data class Encrypted(
+        override val value: ByteArray,
+        val iv: ByteArray,
+    ) : CryptoData {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Encrypted
+
+            if (!value.contentEquals(other.value)) return false
+            if (!iv.contentEquals(other.iv)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = value.contentHashCode()
+            result = 31 * result + iv.contentHashCode()
+            return result
+        }
     }
+
+    operator fun component1(): ByteArray = value
+    operator fun component2(): ByteArray?
 }

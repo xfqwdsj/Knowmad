@@ -35,6 +35,8 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.llm.LLMConfigEntity
+import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
@@ -118,6 +120,74 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val providerConfigLazyListState = LLMProviderConfigLazyListState {
         llmConfigDao.getAllProviders()
+    }
+
+    fun addProviderConfig(
+        config: LLMProviderConfigEntity,
+        onFinished: () -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.insertProviderAtEnd(config)
+            onFinished()
+        }
+    }
+
+    fun editProviderConfig(
+        config: LLMProviderConfigEntity,
+        onFinished: () -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.updateProvider(config)
+            onFinished()
+        }
+    }
+
+    fun deleteProviderConfig(
+        config: LLMProviderConfigEntity,
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.deleteProvider(config)
+            onDeleted {
+                viewModelScope.launch(Dispatchers.IO) {
+                    llmConfigDao.insertProviderAtBeginning(config)
+                }
+            }
+        }
+    }
+
+    fun addModelConfig(
+        config: LLMConfigEntity,
+        onFinished: () -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.insertModelAtEnd(config)
+            onFinished()
+        }
+    }
+
+    fun editModelConfig(
+        config: LLMConfigEntity,
+        onFinished: () -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.updateModel(config)
+            onFinished()
+        }
+    }
+
+    fun deleteModelConfig(
+        config: LLMConfigEntity,
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            llmConfigDao.deleteModel(config)
+            onDeleted {
+                viewModelScope.launch(Dispatchers.IO) {
+                    llmConfigDao.insertModelAtBeginning(config)
+                }
+            }
+        }
     }
 }
 
