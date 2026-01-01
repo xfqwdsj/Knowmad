@@ -70,6 +70,7 @@
     <string name="setup_wizard_finish_label">完成</string>
     <string name="setup_wizard_finish_title">恭喜</string>
     <string name="setup_wizard_finish_message">您已成功设置你的知识助手，准备好开始探索吧！之前的设置可以在应用内随时修改</string>
+    <string name="setup_wizard_skip_message_confirmation">您确定要跳过设置向导吗？您可以稍后在设置中配置语言模型</string>
     <string name="llm_message_invalid">您的语言模型配置可能是无效的，请检查您的设置</string>
     <string name="llm_config_label_settings">语言模型配置</string>
     <string name="llm_api_base_url_label">Base URL</string>

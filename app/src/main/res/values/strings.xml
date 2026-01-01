@@ -70,6 +70,7 @@
     <string name="setup_wizard_finish_label">Finish</string>
     <string name="setup_wizard_finish_title">Congratulations</string>
     <string name="setup_wizard_finish_message">You have successfully set up your knowledge companion. You can always modify the settings later in the app</string>
+    <string name="setup_wizard_skip_message_confirmation">Are you sure you want to skip the setup wizard? You can configure the language model later in the settings</string>
     <string name="llm_message_invalid">The selected model configuration seems invalid. Please review your settings</string>
     <string name="llm_config_label_settings">Language Model Configuration</string>
     <string name="llm_api_base_url_label">Base URL</string>

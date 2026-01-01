@@ -34,5 +34,5 @@ data class SnackbarEvent(
 @Immutable
 data class SnackbarAction(
     val label: Resource.String,
-    val onClick: () -> Unit,
+    val onClick: (dismiss: () -> Unit) -> Unit,
 )

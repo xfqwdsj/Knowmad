@@ -149,7 +149,7 @@ fun LLMProviderConfig(
                         message = R.string.label_deleted.asStringRes(),
                         action = SnackbarAction(
                             label = R.string.label_undo.asStringRes(),
-                            onClick = onUndo,
+                            onClick = { onUndo() },
                         ),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,
@@ -165,7 +165,7 @@ fun LLMProviderConfig(
                         message = R.string.label_deleted.asStringRes(),
                         action = SnackbarAction(
                             label = R.string.label_undo.asStringRes(),
-                            onClick = onUndo,
+                            onClick = { onUndo() },
                         ),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,

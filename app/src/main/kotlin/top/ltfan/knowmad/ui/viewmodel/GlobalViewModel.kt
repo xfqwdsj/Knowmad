@@ -25,7 +25,7 @@ import top.ltfan.knowmad.ui.util.SnackbarEvent
 import top.ltfan.knowmad.util.Resource
 
 object GlobalViewModel {
-    val snackbarEvent = MutableSharedFlow<SnackbarEvent>(replay = 1)
+    val snackbarEvent = MutableSharedFlow<SnackbarEvent?>(replay = 1)
 
     suspend fun showSnackbar(
         message: Resource.String,
@@ -42,4 +42,6 @@ object GlobalViewModel {
             onDismissed,
         ),
     )
+
+    suspend fun dismissSnackbar() = snackbarEvent.emit(null)
 }

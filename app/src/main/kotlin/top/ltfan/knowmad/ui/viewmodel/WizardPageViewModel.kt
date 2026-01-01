@@ -26,6 +26,7 @@ import ai.koog.prompt.streaming.StreamFrame
 import android.content.res.Resources
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,9 +52,11 @@ import top.ltfan.knowmad.data.wizard.WizardData
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
+import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.util.CryptoData
 import top.ltfan.knowmad.util.CryptoManager
 import top.ltfan.knowmad.util.asResource
+import top.ltfan.knowmad.util.asStringRes
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -331,7 +334,20 @@ class WizardPageViewModel(
     }
 
     fun skipWizard() {
-        // TODO: Handle skipping the wizard
+        var isSkipped = false
+        viewModelScope.launch {
+            GlobalViewModel.showSnackbar(
+                message = R.string.setup_wizard_skip_message_confirmation.asStringRes(),
+                action = SnackbarAction(android.R.string.ok.asStringRes()) { dismiss ->
+                    dismiss()
+                    if (isSkipped) return@SnackbarAction
+                    isSkipped = true
+                    onSkipWizard()
+                },
+                withDismissAction = true,
+                duration = SnackbarDuration.Short,
+            )
+        }
     }
 
     init {

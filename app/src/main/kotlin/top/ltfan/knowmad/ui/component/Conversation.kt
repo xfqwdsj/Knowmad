@@ -286,7 +286,7 @@ fun ConversationList(
                                                     message = R.string.label_deleted.asStringRes(),
                                                     action = SnackbarAction(
                                                         R.string.label_undo.asStringRes(),
-                                                        onClick = onUndo,
+                                                        onClick = { onUndo() },
                                                     ),
                                                     withDismissAction = true,
                                                     duration = SnackbarDuration.Long,

@@ -23,28 +23,42 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalResources
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 
 @Composable
 fun SnackbarEffect(snackbarHostState: SnackbarHostState) {
     val resources = LocalResources.current
     LaunchedEffect(resources) {
-        GlobalViewModel.snackbarEvent.collect { event ->
+        val launchedEffectCoroutine = this
+        GlobalViewModel.snackbarEvent.filterNotNull().collect { event ->
             val message = event.message.get(resources)
             val actionLabel = event.action?.label?.get(resources)
-            snackbarHostState.showSnackbar(
-                message,
-                actionLabel,
-                event.withDismissAction,
-                event.duration,
-            ).let {
-                when (it) {
-                    SnackbarResult.ActionPerformed -> {
-                        event.action?.onClick?.invoke()
-                    }
+            launch {
+                val showSnackbarCoroutine = this
+                snackbarHostState.showSnackbar(
+                    message,
+                    actionLabel,
+                    event.withDismissAction,
+                    event.duration,
+                ).let {
+                    when (it) {
+                        SnackbarResult.ActionPerformed -> {
+                            launchedEffectCoroutine.launch {
+                                event.action?.onClick?.invoke {
+                                    event.onDismissed?.invoke()
+                                    launch { GlobalViewModel.dismissSnackbar() }.invokeOnCompletion {
+                                        showSnackbarCoroutine.cancel()
+                                    }
+                                }
+                            }
+                        }
 
-                    SnackbarResult.Dismissed -> {
-                        event.onDismissed?.invoke()
+                        SnackbarResult.Dismissed -> {
+                            event.onDismissed?.invoke()
+                        }
                     }
                 }
             }
