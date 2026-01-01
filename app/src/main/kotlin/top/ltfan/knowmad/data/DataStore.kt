@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,11 @@
 
 package top.ltfan.knowmad.data
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
@@ -62,18 +65,15 @@ class AppDataStore<T>(
     scope = scope,
     produceFile = produceFile,
 ) {
-    context(viewModel: ViewModel)
-    fun stateInViewModel(started: SharingStarted = SharingStarted.Eagerly) = this.data.stateIn(
-        scope = viewModel.viewModelScope,
-        started = started,
-        initialValue = defaultValue,
-    )
-
-    context(viewModel: ViewModel)
     fun asMutableState(
+        coroutineScope: CoroutineScope,
         started: SharingStarted = SharingStarted.Eagerly,
     ) = object : ReadWriteProperty<Any?, T> {
-        private val dataState = stateInViewModel(started)
+        private val dataState = data.stateIn(
+            scope = coroutineScope,
+            started = started,
+            initialValue = defaultValue,
+        )
 
         private var state by mutableStateOf(dataState.value)
 
@@ -90,7 +90,7 @@ class AppDataStore<T>(
         }
 
         init {
-            viewModel.viewModelScope.launch {
+            coroutineScope.launch {
                 writeRequest
                     .debounce(1.seconds)
                     .collect { value ->
@@ -98,7 +98,7 @@ class AppDataStore<T>(
                     }
             }
 
-            viewModel.viewModelScope.launch {
+            coroutineScope.launch {
                 dataState.collect { value ->
                     state = value
                 }
@@ -112,6 +112,27 @@ class AppDataStore<T>(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             state = value
             writeRequest.tryEmit(value)
+        }
+    }
+
+    context(viewModel: ViewModel)
+    fun asMutableState(
+        started: SharingStarted = SharingStarted.Eagerly,
+    ) = asMutableState(
+        coroutineScope = viewModel.viewModelScope,
+        started = started,
+    )
+
+    @Composable
+    fun asMutableState(
+        started: SharingStarted = SharingStarted.Eagerly,
+    ): ReadWriteProperty<Any?, T> {
+        val coroutineScope = rememberCoroutineScope()
+        return remember(started, coroutineScope) {
+            asMutableState(
+                coroutineScope = coroutineScope,
+                started = started,
+            )
         }
     }
 }
