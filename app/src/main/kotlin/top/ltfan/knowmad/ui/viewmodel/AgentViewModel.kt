@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import top.ltfan.knowmad.R
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ConversationEntity
@@ -80,14 +81,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         .collectAsState()
 
     fun newConversation() {
-        currentConversationId = null
-//        viewModelScope.launch(Dispatchers.IO) {
-//            val conversation = ConversationEntity(
-//                name = application.getString(R.string.agent_conversation_label_new),
-//            )
-//            application.appDatabase.chatDao().insertConversation(conversation)
-//            currentConversationId = conversation.id
-//        }
+//        currentConversationId = null
+        viewModelScope.launch(Dispatchers.IO) {
+            val conversation = ConversationEntity(
+                name = application.getString(R.string.agent_conversation_label_new),
+            )
+            application.appDatabase.chatDao().insertConversation(conversation)
+            currentConversationId = conversation.id
+        }
     }
 
     fun editConversation(
