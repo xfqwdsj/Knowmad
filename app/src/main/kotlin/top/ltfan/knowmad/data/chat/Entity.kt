@@ -52,9 +52,8 @@ data class ConversationEntity(
 
 @Entity(
     indices = [
-        Index("conversationId", "parentId"),
-        Index("parentId", "createdAt"),
-        Index("depth"),
+        Index("conversationId", "parentId", "depth"),
+        Index("parentId", "createdAt", "id"),
     ],
     foreignKeys = [
         ForeignKey(
@@ -86,6 +85,9 @@ data class MessageEntity(
 
 @Entity(
     indices = [
+        Index("parentId"),
+        Index("selectedChildId"),
+        Index("parentId", "selectedChildId"),
         Index("conversationId", "parentId", unique = true),
     ],
     foreignKeys = [
@@ -117,7 +119,6 @@ data class MessageBranchSelectionEntity(
     val selectedChildId: Uuid,
     val updatedAt: Instant = Clock.System.now(),
 )
-
 
 @Entity(
     indices = [

@@ -108,7 +108,9 @@ interface ChatDao {
             UNION ALL
 
             SELECT child.* FROM MessageEntity AS child
-            JOIN SelectedPath AS parent ON child.parentId = parent.id AND child.depth = parent.depth + 1
+            JOIN SelectedPath AS parent ON child.parentId = parent.id 
+                AND child.depth = parent.depth + 1
+                AND child.conversationId = parent.conversationId
             JOIN MessageBranchSelectionEntity AS bs ON bs.parentId = parent.id AND bs.selectedChildId = child.id
         )
 
