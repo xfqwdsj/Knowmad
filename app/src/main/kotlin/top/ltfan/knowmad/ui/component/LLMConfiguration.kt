@@ -445,7 +445,7 @@ fun LLMProviderConfigItem(
     var isExpanded by remember { mutableStateOf(false) }
 
     Card(
-        onClick = onEditProvider,
+        onClick = { isExpanded = !isExpanded },
         modifier = modifier
             .widthIn(max = ListItemMaxWidth)
             .fillMaxWidth(),
