@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,36 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.ui.NavDisplay
+import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 
 @Composable
 fun AgentScreen() {
+    val viewModel = viewModel<AgentViewModel>()
 
+    NavDisplay(
+        backStack = viewModel.backStack,
+        modifier = Modifier.fillMaxSize(),
+        entryProvider = { it.navEntry() },
+    )
+}
+
+@Preview
+@Composable
+fun AgentScreenPreview() {
+    ApplicationPreview {
+        (this as? KnowmadApplication)?.let {
+            viewModel<AgentViewModel> {
+                AgentViewModel(it)
+            }
+        }
+
+        AgentScreen()
+    }
 }
