@@ -181,6 +181,9 @@ fun ConversationList(
                 key = conversations.itemKey { it.id },
             ) { index ->
                 val conversation = conversations[index] ?: return@items
+
+                var showDialog by remember { mutableStateOf(false) }
+
                 NavigationDrawerItem(
                     label = { Text(conversation.name) },
                     selected = currentConversationId == conversation.id,
@@ -200,7 +203,6 @@ fun ConversationList(
                     badge = {
                         Box(Modifier.wrapContentSize(Alignment.TopEnd)) {
                             var showMenu by remember { mutableStateOf(false) }
-                            var showDialog by remember { mutableStateOf(false) }
                             IconButton(onClick = { showMenu = true }) {
                                 Icon(
                                     painterResource(R.drawable.more_vert_24px),
@@ -309,19 +311,20 @@ fun ConversationList(
                                     ),
                                 )
                             }
-                            if (showDialog) {
-                                ConversationEditingDialog(
-                                    conversation = conversation,
-                                    onDismissRequest = { showDialog = false },
-                                    onConfirm = { newEntity ->
-                                        onEditConversation(newEntity) {}
-                                        showDialog = false
-                                    },
-                                )
-                            }
                         }
                     },
                 )
+
+                if (showDialog) {
+                    ConversationEditingDialog(
+                        conversation = conversation,
+                        onDismissRequest = { showDialog = false },
+                        onConfirm = { newEntity ->
+                            onEditConversation(newEntity) {}
+                            showDialog = false
+                        },
+                    )
+                }
             }
         }
     }
