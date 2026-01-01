@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+
+fun PaddingValues.copy(
+    layoutDirection: LayoutDirection,
+    start: Dp = this.calculateStartPadding(layoutDirection),
+    top: Dp = this.calculateTopPadding(),
+    end: Dp = this.calculateEndPadding(layoutDirection),
+    bottom: Dp = this.calculateBottomPadding(),
+) = PaddingValues(
+    start = start,
+    top = top,
+    end = end,
+    bottom = bottom,
+)
 
 @Composable
 operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
