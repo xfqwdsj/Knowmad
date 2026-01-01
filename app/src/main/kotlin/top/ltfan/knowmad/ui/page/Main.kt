@@ -23,14 +23,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentBackground
@@ -38,20 +43,18 @@ import top.ltfan.knowmad.ui.component.SnackbarEffect
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
+import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 @Serializable
 class MainPage : Page() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
-        PageContent(contentPadding)
-    }
+        val viewModel = LocalAppViewModel.current
 
-    @Composable
-    fun PageContent(
-        contentPadding: PaddingValues,
-    ) {
-        val scaffoldState = rememberBottomSheetScaffoldState()
+        val scaffoldState = rememberBottomSheetScaffoldState(
+            bottomSheetState = rememberStandardBottomSheetState(remember { viewModel.mainSheetExpectedValue.value }),
+        )
 
         BottomSheetScaffold(
             sheetContent = {
@@ -80,6 +83,16 @@ class MainPage : Page() {
         }
 
         SnackbarEffect(scaffoldState.snackbarHostState)
+
+        LaunchedEffect(Unit) {
+            viewModel.mainSheetExpectedValue.collectLatest { value ->
+                when (value) {
+                    SheetValue.Expanded -> scaffoldState.bottomSheetState.expand()
+                    SheetValue.PartiallyExpanded -> scaffoldState.bottomSheetState.partialExpand()
+                    else -> {}
+                }
+            }
+        }
     }
 
 }
