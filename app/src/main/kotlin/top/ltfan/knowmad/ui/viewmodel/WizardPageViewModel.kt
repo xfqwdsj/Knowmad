@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ import top.ltfan.knowmad.data.wizard.WizardData
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.page.WizardMessageItem
 import top.ltfan.knowmad.ui.page.WizardSubPage
+import top.ltfan.knowmad.ui.util.SnackbarEvent
 import top.ltfan.knowmad.util.CryptoManager
 import top.ltfan.knowmad.util.asResource
 import top.ltfan.knowmad.util.transform
@@ -342,7 +343,7 @@ class WizardPageViewModel(
     fun onFinishWizardFailed(message: String) {
         isWizardFinished = false
         viewModelScope.launch {
-            GlobalViewModel.snackbarEvent.emit(message.asResource())
+            GlobalViewModel.snackbarEvent.emit(SnackbarEvent(message.asResource()))
         }
     }
 

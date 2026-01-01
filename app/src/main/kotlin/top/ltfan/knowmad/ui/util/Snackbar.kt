@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
+ * Copyright (C) 2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.ui.viewmodel
+package top.ltfan.knowmad.ui.util
 
-import kotlinx.coroutines.flow.MutableSharedFlow
-import top.ltfan.knowmad.ui.util.SnackbarEvent
+import androidx.compose.runtime.Immutable
+import top.ltfan.knowmad.util.Resource
 
-object GlobalViewModel {
-    val snackbarEvent = MutableSharedFlow<SnackbarEvent>(replay = 1)
-}
+@Immutable
+data class SnackbarEvent(
+    val message: Resource.String,
+    val action: SnackbarAction? = null,
+)
+
+@Immutable
+data class SnackbarAction(
+    val label: Resource.String,
+    val onClick: () -> Unit,
+)

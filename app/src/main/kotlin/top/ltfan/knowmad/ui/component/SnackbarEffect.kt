@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,22 +19,24 @@
 package top.ltfan.knowmad.ui.component
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalResources
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
-import top.ltfan.knowmad.util.Resource
 
 @Composable
 fun SnackbarEffect(snackbarHostState: SnackbarHostState) {
     val resources = LocalResources.current
-    LaunchedEffect(Unit) {
-        GlobalViewModel.snackbarEvent.collect {
-            val string = when (it) {
-                is Resource.String.Original -> it.value
-                is Resource.String.Id -> resources.getString(it.id)
+    LaunchedEffect(resources) {
+        GlobalViewModel.snackbarEvent.collect { event ->
+            val message = event.message.get(resources)
+            val actionLabel = event.action?.label?.get(resources)
+            snackbarHostState.showSnackbar(message, actionLabel).let {
+                if (it == SnackbarResult.ActionPerformed) {
+                    event.action?.onClick?.invoke()
+                }
             }
-            snackbarHostState.showSnackbar(string)
         }
     }
 }

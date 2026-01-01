@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.util
 
+import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
@@ -35,6 +36,11 @@ sealed interface Resource {
         @Serializable
         @Immutable
         data class Id(@param:StringRes val id: Int) : String
+
+        fun get(resources: Resources): kotlin.String = when (this) {
+            is Original -> value
+            is Id -> resources.getString(id)
+        }
     }
 }
 
