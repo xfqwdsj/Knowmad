@@ -40,4 +40,4 @@ class AgentMainPage : AgentSubPage() {
 }
 
 @Serializable
-sealed class AgentSubPage : SubPage()
+sealed class AgentSubPage : SubPage<AgentSubPage>()

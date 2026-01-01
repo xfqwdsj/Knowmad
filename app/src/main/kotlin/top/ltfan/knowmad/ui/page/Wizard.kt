@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -110,7 +110,6 @@ import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.launch
@@ -251,9 +250,7 @@ class WizardPage(
                                         fadeIn() + slideInHorizontally { -it } togetherWith
                                                 fadeOut() + slideOutHorizontally { it }
                                     },
-                                    entryProvider = @Suppress("UNCHECKED_CAST") {
-                                        it.navEntry() as NavEntry<WizardSubPage>
-                                    },
+                                    entryProvider = { it.navEntry() },
                                 )
                             }
                             SnackbarHost(snackbarHostState)
@@ -982,7 +979,7 @@ class WizardFinishPage : WizardSubPage() {
 }
 
 @Serializable
-sealed class WizardSubPage : SubPage() {
+sealed class WizardSubPage : SubPage<WizardSubPage>() {
     @Transient
     open val isFinal = false
     abstract fun canContinue(viewModel: WizardPageViewModel): Boolean

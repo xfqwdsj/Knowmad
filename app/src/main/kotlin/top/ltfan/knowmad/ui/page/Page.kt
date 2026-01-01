@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ sealed class Page : PageRoute<Page>()
  * top-level navigation stack.
  */
 @Serializable
-sealed class SubPage : PageRoute<SubPage>()
+sealed class SubPage<K : SubPage<K>> : PageRoute<K>()
 
 @Serializable
 abstract class BackStackRoute(
@@ -81,7 +81,7 @@ val NavBackStack<Route>.expanded: List<Page>
             when (entry) {
                 is Page -> add(entry)
                 is BackStackRoute -> addAll(entry.backStack.expanded)
-                is SubPage -> {
+                is SubPage<*> -> {
                     // Ignore SubPage entries at the top level
                 }
             }
