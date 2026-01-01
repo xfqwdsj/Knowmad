@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,9 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -136,6 +139,7 @@ class AgentMainPage : AgentSubPage() {
                         },
                     )
                 },
+                contentWindowInsets = AppWindowInsets,
             ) { }
         }
     }
@@ -156,10 +160,41 @@ class AgentConfigPage : AgentSubPage() {
     ) {
         val viewModel = LocalAgentViewModel.current
 
-        Scaffold {
-            val contentPadding = it + contentPadding
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(stringResource(R.string.llm_config_label_settings))
+                    },
+                    navigationIcon = {
+                        TooltipBox(
+                            TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                            ),
+                            tooltip = {
+                                PlainTooltip { Text(stringResource(R.string.label_back)) }
+                            },
+                            state = rememberTooltipState(),
+                        ) {
+                            IconButton(
+                                onClick = { viewModel.backStack.removeLastOrNull() },
+                                enabled = viewModel.backStack.size > 1,
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.arrow_back_24px),
+                                    contentDescription = stringResource(R.string.label_back),
+                                )
+                            }
+                        }
+                    },
+                )
+            },
+            contentWindowInsets = AppWindowInsets,
+        ) {
+            val contentPadding = it + contentPadding + PaddingValues(16.dp)
 
             LLMProviderConfigLazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding,
             )
         }

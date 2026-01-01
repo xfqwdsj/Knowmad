@@ -120,7 +120,11 @@ fun LLMProviderConfigLazyColumn(
         onEditModel = {},
         onDeleteModel = {},
         onAddModel = {},
+        modifier = modifier,
         contentPadding = contentPadding,
+        additionalScrollThresholdPadding = additionalScrollThresholdPadding,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     )
 }
 
