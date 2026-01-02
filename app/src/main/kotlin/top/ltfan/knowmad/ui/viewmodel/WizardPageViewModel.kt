@@ -338,8 +338,7 @@ class WizardPageViewModel(
         viewModelScope.launch {
             GlobalViewModel.showSnackbar(
                 message = R.string.setup_wizard_skip_message_confirmation.asStringRes(),
-                action = SnackbarAction(android.R.string.ok.asStringRes()) { dismiss ->
-                    dismiss()
+                action = SnackbarAction(android.R.string.ok.asStringRes()) {
                     if (isSkipped) return@SnackbarAction
                     isSkipped = true
                     onSkipWizard()
@@ -391,10 +390,7 @@ class WizardPageViewModel(
             if (modelCount >= 1) {
                 GlobalViewModel.showSnackbar(
                     message = R.string.setup_wizard_skip_message_suggestion_has_model.asStringRes(),
-                    action = SnackbarAction(R.string.label_skip.asStringRes()) { dismiss ->
-                        dismiss()
-                        onSkipWizard()
-                    },
+                    action = SnackbarAction(R.string.label_skip.asStringRes(), onSkipWizard),
                     withDismissAction = true,
                     duration = SnackbarDuration.Short,
                 )

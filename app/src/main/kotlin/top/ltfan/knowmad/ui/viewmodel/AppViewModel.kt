@@ -27,7 +27,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -118,7 +117,6 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                 val message = event.message.get(resources)
                 val actionLabel = event.action?.label?.get(resources)
                 launch {
-                    val showSnackbarCoroutine = this
                     snackbarHostState.showSnackbar(
                         message,
                         actionLabel,
@@ -127,14 +125,7 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                     ).let {
                         when (it) {
                             SnackbarResult.ActionPerformed -> {
-                                viewModelScope.launch {
-                                    event.action?.onClick?.invoke {
-                                        event.onDismissed?.invoke()
-                                        launch { GlobalViewModel.dismissSnackbar() }.invokeOnCompletion {
-                                            showSnackbarCoroutine.cancel()
-                                        }
-                                    }
-                                }
+                                event.action?.onClick?.invoke()
                             }
 
                             SnackbarResult.Dismissed -> {

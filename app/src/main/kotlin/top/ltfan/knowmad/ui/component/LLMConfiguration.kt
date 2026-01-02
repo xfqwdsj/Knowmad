@@ -147,10 +147,7 @@ fun LLMProviderConfig(
                 coroutineScope.launch {
                     GlobalViewModel.showSnackbar(
                         message = R.string.label_deleted.asStringRes(),
-                        action = SnackbarAction(R.string.label_undo.asStringRes()) { dismiss ->
-                            dismiss()
-                            onUndo()
-                        },
+                        action = SnackbarAction(R.string.label_undo.asStringRes(), onUndo),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,
                     )
@@ -163,10 +160,7 @@ fun LLMProviderConfig(
                 coroutineScope.launch {
                     GlobalViewModel.showSnackbar(
                         message = R.string.label_deleted.asStringRes(),
-                        action = SnackbarAction(R.string.label_undo.asStringRes()) { dismiss ->
-                            dismiss()
-                            onUndo()
-                        },
+                        action = SnackbarAction(R.string.label_undo.asStringRes(), onUndo),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,
                     )
