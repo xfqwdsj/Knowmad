@@ -20,6 +20,11 @@ package top.ltfan.knowmad.ui.component
 
 import android.content.ClipData
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.PlainTooltip
@@ -29,14 +34,18 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 
@@ -189,6 +198,67 @@ fun OpenUriIconButton(
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
                 modifier = iconModifier,
             )
+        }
+    }
+}
+
+@Composable
+fun ExpandOrCollapseIconButton(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes expandedContentDescriptionRes: Int = R.string.label_collapse,
+    @StringRes expandedTooltipTextRes: Int = expandedContentDescriptionRes,
+    @StringRes collapsedContentDescriptionRes: Int = R.string.label_expand,
+    @StringRes collapsedTooltipTextRes: Int = collapsedContentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            PlainTooltip {
+                Text(
+                    stringResource(
+                        if (expanded) expandedTooltipTextRes
+                        else collapsedTooltipTextRes,
+                    ),
+                )
+            }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = { onExpandedChange(!expanded) },
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            val expandedRotation =
+                if (LocalLayoutDirection.current == LayoutDirection.Ltr) -180f else 180f
+            val expandIconRotation by animateFloatAsState(if (!expanded) 0f else expandedRotation)
+            val collapseIconRotation by animateFloatAsState(if (expanded) 0f else -expandedRotation)
+            AnimatedContent(
+                targetState = expanded,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+            ) { expanded ->
+                Icon(
+                    painterResource(
+                        if (!expanded) R.drawable.arrow_drop_down_24px
+                        else R.drawable.arrow_drop_up_24px,
+                    ),
+                    contentDescription = stringResource(
+                        if (expanded) expandedContentDescriptionRes
+                        else collapsedContentDescriptionRes,
+                    ),
+                    modifier = iconModifier
+                        .rotate(
+                            if (!expanded) expandIconRotation
+                            else collapseIconRotation,
+                        ),
+                )
+            }
         }
     }
 }
