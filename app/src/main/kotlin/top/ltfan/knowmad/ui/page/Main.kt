@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -37,7 +36,7 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
-import top.ltfan.knowmad.ui.component.SnackbarEffect
+import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
@@ -50,7 +49,9 @@ class MainPage : Page() {
     override fun Content() {
         val viewModel = LocalAppViewModel.current
 
-        val scaffoldState = rememberBottomSheetScaffoldState()
+        val scaffoldState = rememberBottomSheetScaffoldState(
+            snackbarHostState = viewModel.snackbarHostState,
+        )
 
         BottomSheetScaffold(
             sheetContent = {
@@ -76,12 +77,10 @@ class MainPage : Page() {
             },
             scaffoldState = scaffoldState,
             sheetPeekHeight = 128.dp,
-            snackbarHost = { SnackbarHost(it) },
+            snackbarHost = { SnackbarHost() },
         ) {
 
         }
-
-        SnackbarEffect(scaffoldState.snackbarHostState)
     }
 
 }

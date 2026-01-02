@@ -69,8 +69,6 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -129,7 +127,7 @@ import top.ltfan.knowmad.ui.component.MarkdownView
 import top.ltfan.knowmad.ui.component.ModelCapabilitiesFlow
 import top.ltfan.knowmad.ui.component.OpenUriIconButton
 import top.ltfan.knowmad.ui.component.RetryIconButton
-import top.ltfan.knowmad.ui.component.SnackbarEffect
+import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
 import top.ltfan.knowmad.ui.theme.AppTheme
@@ -170,8 +168,6 @@ class WizardPage(
 
         val backStack = viewModel.backStack
         val currentPage = backStack.last()
-
-        val snackbarHostState = remember { SnackbarHostState() }
 
         val insets = AppWindowInsets + contentPadding
 
@@ -253,7 +249,7 @@ class WizardPage(
                                         entryProvider = { it.navEntry() },
                                     )
                                 }
-                                SnackbarHost(snackbarHostState)
+                                SnackbarHost()
                             }
                         }
                     }
@@ -310,8 +306,6 @@ class WizardPage(
                 }
             }
         }
-
-        SnackbarEffect(snackbarHostState)
     }
 
     @Composable

@@ -30,8 +30,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -67,7 +65,7 @@ import top.ltfan.knowmad.ui.component.LLMProviderSelectionDialog
 import top.ltfan.knowmad.ui.component.LocalAgentScreenIsStandalone
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
-import top.ltfan.knowmad.ui.component.SnackbarEffect
+import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.copy
@@ -93,8 +91,6 @@ class AgentMainPage : AgentSubPage() {
 
         val coroutineScope = rememberCoroutineScope()
         val layoutDirection = LocalLayoutDirection.current
-
-        val snackbarHostState = remember { SnackbarHostState() }
 
         ModalNavigationDrawer(
             drawerContent = {
@@ -196,7 +192,11 @@ class AgentMainPage : AgentSubPage() {
                         ),
                     )
                 },
-                snackbarHost = { SnackbarHost(snackbarHostState) },
+                snackbarHost = {
+                    if (LocalAgentScreenIsStandalone.current) {
+                        SnackbarHost()
+                    }
+                },
                 containerColor = ContainerColor.scaffoldContainer,
                 contentColor = ScaffoldContentColor,
                 contentWindowInsets = AppWindowInsets,
@@ -205,10 +205,6 @@ class AgentMainPage : AgentSubPage() {
 
 
             }
-        }
-
-        if (LocalAgentScreenIsStandalone.current) {
-            SnackbarEffect(snackbarHostState)
         }
     }
 
@@ -227,8 +223,6 @@ class AgentConfigPage : AgentSubPage() {
         contentPadding: PaddingValues,
     ) {
         val viewModel = LocalAgentViewModel.current
-
-        val snackbarHostState = remember { SnackbarHostState() }
 
         var isSelectingNewProvider by remember { mutableStateOf(false) }
         var creatingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
@@ -292,7 +286,11 @@ class AgentConfigPage : AgentSubPage() {
                     ),
                 )
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            snackbarHost = {
+                if (LocalAgentScreenIsStandalone.current) {
+                    SnackbarHost()
+                }
+            },
             containerColor = ContainerColor.scaffoldContainer,
             contentColor = ScaffoldContentColor,
             contentWindowInsets = AppWindowInsets,
@@ -339,10 +337,6 @@ class AgentConfigPage : AgentSubPage() {
                 onDismissRequest = { creatingProvider = null },
                 isNew = true,
             )
-        }
-
-        if (LocalAgentScreenIsStandalone.current) {
-            SnackbarEffect(snackbarHostState)
         }
     }
 }

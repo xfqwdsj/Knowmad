@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,6 +27,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -102,6 +106,44 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                 navigateToMainPage()
             }
             appReady = true
+        }
+    }
+
+    val snackbarHostState = SnackbarHostState()
+
+    init {
+        val resources = application.resources
+        viewModelScope.launch {
+            GlobalViewModel.snackbarEvent.filterNotNull().collect { event ->
+                val message = event.message.get(resources)
+                val actionLabel = event.action?.label?.get(resources)
+                launch {
+                    val showSnackbarCoroutine = this
+                    snackbarHostState.showSnackbar(
+                        message,
+                        actionLabel,
+                        event.withDismissAction,
+                        event.duration,
+                    ).let {
+                        when (it) {
+                            SnackbarResult.ActionPerformed -> {
+                                viewModelScope.launch {
+                                    event.action?.onClick?.invoke {
+                                        event.onDismissed?.invoke()
+                                        launch { GlobalViewModel.dismissSnackbar() }.invokeOnCompletion {
+                                            showSnackbarCoroutine.cancel()
+                                        }
+                                    }
+                                }
+                            }
+
+                            SnackbarResult.Dismissed -> {
+                                event.onDismissed?.invoke()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
