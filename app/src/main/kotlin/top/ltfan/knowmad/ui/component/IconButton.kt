@@ -46,8 +46,8 @@ fun RetryIconButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes tooltipTextRes: Int? = R.string.label_retry,
-    @StringRes contentDescriptionRes: Int? = tooltipTextRes,
+    @StringRes contentDescriptionRes: Int? = R.string.label_retry,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
