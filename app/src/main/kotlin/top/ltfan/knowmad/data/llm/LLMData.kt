@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
 import ai.koog.prompt.executor.clients.dashscope.DashscopeClientSettings
 import ai.koog.prompt.executor.clients.dashscope.DashscopeLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
-import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.executor.clients.google.GoogleClientSettings
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient
@@ -41,6 +40,7 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModuleBuilder
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.client.DeepSeekLLMClient
 import top.ltfan.knowmad.util.CryptoManager
 import kotlin.uuid.Uuid
 
