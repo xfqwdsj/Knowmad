@@ -158,7 +158,6 @@ fun LLMProviderApiKeyTextField(
                 providerInfo?.let { providerInfo ->
                     OpenUriIconButton(
                         uri = providerInfo.platformUrl,
-                        tooltipTextRes = R.string.llm_api_key_guidance_get,
                         contentDescriptionRes = R.string.llm_api_key_guidance_get,
                     )
                 }

@@ -700,9 +700,8 @@ class WizardModelPage : WizardSubPage() {
                                 uri = viewModel.currentProviderInfo?.let { providerInfo ->
                                     model?.let { providerInfo.getModelCapabilitiesUrl(it.id) }
                                 },
-                                tooltipTextRes = R.string.llm_capability_guidance_query,
-                                contentDescriptionRes = R.string.llm_capability_guidance_query,
                                 modifier = Modifier.size(24.dp),
+                                contentDescriptionRes = R.string.llm_capability_guidance_query,
                             )
                             Spacer(Modifier.width(16.dp))
                         }

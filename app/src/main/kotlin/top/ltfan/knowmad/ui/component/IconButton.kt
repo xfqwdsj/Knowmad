@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ fun RetryIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     @StringRes tooltipTextRes: Int? = R.string.label_retry,
-    @StringRes contentDescriptionRes: Int? = R.string.label_retry,
+    @StringRes contentDescriptionRes: Int? = tooltipTextRes,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -75,8 +75,8 @@ fun CopyIconButton(
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes tooltipTextRes: Int? = android.R.string.copy,
     @StringRes contentDescriptionRes: Int? = android.R.string.copy,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -114,8 +114,8 @@ fun PasteIconButton(
     onPaste: (text: String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes tooltipTextRes: Int? = android.R.string.paste,
     @StringRes contentDescriptionRes: Int? = android.R.string.paste,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -156,10 +156,10 @@ fun PasteIconButton(
 @Composable
 fun OpenUriIconButton(
     uri: String?,
-    @StringRes tooltipTextRes: Int?,
-    @StringRes contentDescriptionRes: Int?,
     modifier: Modifier = Modifier,
     enabled: Boolean = uri != null,
+    @StringRes contentDescriptionRes: Int?,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
 ) {
     val uriHandler = LocalUriHandler.current
 
