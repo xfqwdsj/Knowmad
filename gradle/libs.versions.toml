@@ -81,7 +81,7 @@ all = [
     "compose-runtime",
     "compose-foundation",
     "compose-ui",
-    "compose-uiTooling",
+    "compose-uiToolingPreview",
     "compose-uiGraphics",
     "compose-animation",
     "compose-material3",
@@ -104,11 +104,11 @@ all = [
     # calendar
     "calendar",
     # webview
-    "webview"
+    "webview",
 ]
 debug = [
     # compose
-    "compose-uiToolingPreview"
+    "compose-uiTooling",
 ]
 
 [plugins]
