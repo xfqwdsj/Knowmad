@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
@@ -108,6 +109,14 @@ fun rememberSavedMarkdownState(markdownFlow: Flow<String>): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
     return remember(coroutineScope, markdownFlow) {
         SavedMarkdownState(coroutineScope, markdownFlow)
+    }
+}
+
+@Composable
+fun rememberSavedMarkdownState(markdownText: String): SavedMarkdownState {
+    val coroutineScope = rememberCoroutineScope()
+    return remember(coroutineScope, markdownText) {
+        SavedMarkdownState(coroutineScope, flowOf(markdownText))
     }
 }
 
