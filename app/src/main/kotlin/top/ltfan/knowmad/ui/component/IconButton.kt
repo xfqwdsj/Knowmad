@@ -44,6 +44,7 @@ import top.ltfan.knowmad.R
 fun RetryIconButton(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     enabled: Boolean = true,
     @StringRes tooltipTextRes: Int? = R.string.label_retry,
     @StringRes contentDescriptionRes: Int? = tooltipTextRes,
@@ -65,6 +66,7 @@ fun RetryIconButton(
             Icon(
                 painterResource(R.drawable.refresh_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
             )
         }
     }
@@ -74,6 +76,7 @@ fun RetryIconButton(
 fun CopyIconButton(
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     enabled: Boolean = true,
     @StringRes contentDescriptionRes: Int? = android.R.string.copy,
     @StringRes tooltipTextRes: Int? = contentDescriptionRes,
@@ -104,6 +107,7 @@ fun CopyIconButton(
             Icon(
                 painterResource(R.drawable.content_copy_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
             )
         }
     }
@@ -113,6 +117,7 @@ fun CopyIconButton(
 fun PasteIconButton(
     onPaste: (text: String) -> Unit,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     enabled: Boolean = true,
     @StringRes contentDescriptionRes: Int? = android.R.string.paste,
     @StringRes tooltipTextRes: Int? = contentDescriptionRes,
@@ -148,6 +153,7 @@ fun PasteIconButton(
             Icon(
                 painterResource(R.drawable.content_paste_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
             )
         }
     }
@@ -157,6 +163,7 @@ fun PasteIconButton(
 fun OpenUriIconButton(
     uri: String?,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     enabled: Boolean = uri != null,
     @StringRes contentDescriptionRes: Int?,
     @StringRes tooltipTextRes: Int? = contentDescriptionRes,
@@ -180,6 +187,7 @@ fun OpenUriIconButton(
             Icon(
                 painterResource(R.drawable.open_in_new_24px),
                 contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
             )
         }
     }
