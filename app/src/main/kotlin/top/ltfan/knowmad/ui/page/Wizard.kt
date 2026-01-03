@@ -99,7 +99,6 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
@@ -130,7 +129,6 @@ import top.ltfan.knowmad.ui.component.RetryIconButton
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.component.StepItem
 import top.ltfan.knowmad.ui.component.Stepper
-import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ContentContainerColor
 import top.ltfan.knowmad.ui.theme.ContentContainerPadding
 import top.ltfan.knowmad.ui.theme.ContentContainerShape
@@ -472,20 +470,6 @@ class WizardProviderPage : WizardSubPage() {
                     }
                 }
             }
-        }
-    }
-
-    @Preview
-    @Composable
-    fun PreviewContent() {
-        var selected: LLMProvider? by remember { mutableStateOf(LLMProvider.OpenAI) }
-
-        AppTheme {
-            PageContent(
-                contentPadding = PaddingValues(),
-                selectedProvider = selected,
-                onSelectedProviderChange = { selected = it },
-            )
         }
     }
 

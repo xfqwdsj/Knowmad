@@ -27,20 +27,14 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
-import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
-import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 
 @Composable
@@ -84,22 +78,3 @@ data object AgentScreenSharedKey
 val LocalAgentScreenTransparentContainer = staticCompositionLocalOf { false }
 val LocalAgentScreenPreferredContainerColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalAgentScreenIsStandalone = staticCompositionLocalOf { false }
-
-@Preview
-@Composable
-fun AgentScreenPreview() {
-    ApplicationPreview {
-        val viewModel = (this as? KnowmadApplication)?.let {
-            viewModel<AgentViewModel> {
-                AgentViewModel(it)
-            }
-        } ?: run {
-            Text("Preview not available")
-            return@ApplicationPreview
-        }
-
-        CompositionLocalProvider(LocalAgentViewModel provides viewModel) {
-            AgentScreen()
-        }
-    }
-}

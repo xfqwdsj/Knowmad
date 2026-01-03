@@ -46,7 +46,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,7 +55,6 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,24 +68,19 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.ui.page.AgentConfigPage
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
-import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
-import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.asStringRes
@@ -382,27 +375,4 @@ fun ConversationNameTextField(
         label = { Text(stringResource(R.string.agent_conversation_label_name)) },
         lineLimits = TextFieldLineLimits.SingleLine,
     )
-}
-
-@Preview
-@Composable
-fun ConversationListPreview() {
-    ApplicationPreview {
-        val viewModel = (this as? KnowmadApplication)?.let {
-            viewModel<AgentViewModel> {
-                AgentViewModel(it)
-            }
-        } ?: run {
-            Text("Preview not available")
-            return@ApplicationPreview
-        }
-
-        Scaffold(
-            contentWindowInsets = AppWindowInsets,
-        ) { contentPadding ->
-            CompositionLocalProvider(LocalAgentViewModel provides viewModel) {
-                ConversationList(contentPadding)
-            }
-        }
-    }
 }

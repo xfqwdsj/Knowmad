@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,14 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.toStdlibInstant
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.ui.theme.AppTheme
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -169,28 +166,6 @@ fun ReasoningMessage(
     }
 }
 
-@Preview
-@Composable
-fun ReasoningMessagePreview() {
-    var endedAt by remember { mutableStateOf<Instant?>(null) }
-    var visible by remember { mutableStateOf(true) }
-    AppTheme {
-        Column {
-            Button({ endedAt = Clock.System.now() }) {
-                Text("End Reasoning")
-            }
-            ReasoningMessage(
-                flow = flowOf("This is a sample reasoning message.\n\n- Step 1: Do this.\n- Step 2: Do that.\n\n**Conclusion:** This is the result."),
-                startedAt = remember { Clock.System.now() },
-                endedAt = endedAt,
-                visible = visible,
-                onVisibilityChange = { visible = it },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
 @Composable
 fun MessageActions(
     current: Int,
@@ -243,17 +218,4 @@ fun MessageBranchIndicator(
             contentDescriptionRes = R.string.chat_message_branch_label_next,
         )
     }
-}
-
-@Preview
-@Composable
-fun MessageActionsPreview() {
-    MessageActions(
-        current = 1,
-        total = 5,
-        onPrevious = {},
-        onNext = {},
-        onCopy = { null to "Sample copied text" },
-        onRegenerate = {},
-    )
 }

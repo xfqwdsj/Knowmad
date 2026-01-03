@@ -81,7 +81,6 @@ all = [
     "compose-runtime",
     "compose-foundation",
     "compose-ui",
-    "compose-uiToolingPreview",
     "compose-uiGraphics",
     "compose-animation",
     "compose-material3",
@@ -109,6 +108,7 @@ all = [
 debug = [
     # compose
     "compose-uiTooling",
+    "compose-uiToolingPreview",
 ]
 
 [plugins]

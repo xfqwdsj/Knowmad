@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.ui.component
 
-import ai.koog.prompt.llm.LLMProvider
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -26,7 +25,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,12 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMProviderInfo
-import top.ltfan.knowmad.data.llm.SupportedLLMProviders
-import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
@@ -79,25 +74,6 @@ fun LLMProviderInfo(
             },
         ) {
             Text(stringResource(info.label))
-        }
-    }
-}
-
-@Preview
-@Composable
-fun LLMProviderInfoPreview() {
-    AppTheme {
-        Column {
-            LLMProviderInfo(
-                info = SupportedLLMProviders[LLMProvider.DeepSeek]!!,
-                checked = true,
-                onCheckedChange = {},
-            )
-            LLMProviderInfo(
-                info = SupportedLLMProviders[LLMProvider.OpenAI]!!,
-                checked = false,
-                onCheckedChange = {},
-            )
         }
     }
 }

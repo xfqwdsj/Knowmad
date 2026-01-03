@@ -33,8 +33,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -42,7 +40,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -81,7 +78,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -97,7 +93,6 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
@@ -105,11 +100,8 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.llm.decryptedApiKey
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.SnackbarAction
-import top.ltfan.knowmad.ui.util.only
-import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.CryptoManager
@@ -936,83 +928,4 @@ sealed interface LLMConfigItemSharedKey {
     val id: Uuid
 
     data class Container(override val id: Uuid) : LLMConfigItemSharedKey
-}
-
-@Preview
-@Composable
-fun LLMProviderConfigLazyColumnPreview() {
-    ApplicationPreview {
-        val coroutineScope = rememberCoroutineScope()
-        val dao = remember { AppDatabase.buildDatabase().llmConfigDao() }
-
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.windowInsetsPadding(AppWindowInsets.only { top }),
-            ) {
-                Button(
-                    onClick = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            SupportedLLMProviders.keys.forEach { provider ->
-                                dao.insertProviderAtEnd(
-                                    LLMProviderConfigEntity(
-                                        provider = provider,
-                                        apiKey = "sample_api_key_for_${provider.id}".toByteArray(),
-                                        iv = null,
-                                    ),
-                                )
-                            }
-                        }
-                    },
-                ) {
-                    Text("Add Sample Data")
-                }
-                Button(
-                    onClick = {},
-                ) {
-                    Text("Clear All")
-                }
-            }
-            LLMProviderConfigLazyColumn(
-                dao = dao,
-                state = rememberLLMProviderConfigLazyListState(
-                    entitiesFactory = { dao.getAllProviders() },
-                ),
-                modelState = rememberLLMConfigLazyListStateFactory(dao),
-                onEditProvider = {},
-                onDeleteProvider = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        dao.deleteProvider(it)
-                    }
-                },
-                onEditModel = { _, _ -> },
-                onDeleteModel = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        dao.deleteModel(it)
-                    }
-                },
-                onAddModel = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        dao.insertModelAtEnd(
-                            LLMConfigEntity(
-                                providerConfigId = it.id,
-                                model = LLModel(
-                                    provider = it.provider,
-                                    id = "sample-model-for-${it.provider.id}",
-                                    capabilities = listOf(),
-                                    contextLength = 1024,
-                                ),
-                            ),
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = AppWindowInsets.only { horizontal + bottom }
-                    .asPaddingValues() + PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            )
-        }
-    }
 }
