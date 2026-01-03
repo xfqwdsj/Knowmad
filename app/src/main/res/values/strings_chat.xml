@@ -24,11 +24,13 @@
     <string name="chat_message_reasoning_label_expand">Expand Reasoning</string>
     <string name="chat_message_reasoning_label_collapse">Collapse Reasoning</string>
     <plurals name="chat_message_reasoning_label_in_progress">
-        <item quantity="one">Thinking for %d second</item>
-        <item quantity="other">Thinking for %d seconds</item>
+        <item quantity="one">Thinking for %1$d second</item>
+        <item quantity="other">Thinking for %1$d seconds</item>
     </plurals>
     <plurals name="chat_message_reasoning_label_completed">
-        <item quantity="one">Thinking took %d second</item>
-        <item quantity="other">Thinking took %d seconds</item>
+        <item quantity="one">Thinking took %1$d second</item>
+        <item quantity="other">Thinking took %1$d seconds</item>
     </plurals>
+    <string name="chat_message_tool_label_call">Calling %1$s tool</string>
+    <string name="chat_message_tool_label_result">%1$s tool call result</string>
 </resources>

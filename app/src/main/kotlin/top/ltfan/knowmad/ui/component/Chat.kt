@@ -47,6 +47,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.toStdlibInstant
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import top.ltfan.knowmad.R
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -54,34 +56,68 @@ import kotlin.time.Instant
 
 @Composable
 fun AssistantMessage(
-    messages: List<Message.Response>,
-    reasoningVisible: Boolean,
-    onReasoningVisibilityChange: (Boolean) -> Unit,
+    parts: List<Message>,
+    current: Int,
+    total: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onRegenerate: () -> Unit,
+    initialReasoningVisibility: Boolean,
+    onAnyReasoningVisibilityChange: (Boolean) -> Unit,
+    initialToolVisibility: Boolean,
+    onAnyToolVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        for (message in messages) {
+        for (message in parts) {
             when (message) {
                 is Message.Reasoning -> ReasoningMessage(
                     message = message,
-                    startedAt = message.metaInfo.metadata?.get("startedAt")
-                        ?.let { Instant.parse(it.toString()) }
+                    startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
+                        ?.let { Instant.parse(it) }
                         ?: message.metaInfo.timestamp.toStdlibInstant(),
                     endedAt = message.metaInfo.timestamp.toStdlibInstant(),
-                    visible = reasoningVisible,
-                    onVisibilityChange = onReasoningVisibilityChange,
+                    initialVisibility = initialReasoningVisibility,
+                    onVisibilityChange = onAnyReasoningVisibilityChange,
                     modifier = Modifier.padding(8.dp),
                 )
 
-                is Message.Assistant -> {
-                    /* TODO */
-                }
+                is Message.Assistant -> AssistantMessageContent(
+                    message = message,
+                    modifier = Modifier.padding(8.dp),
+                )
 
-                is Message.Tool.Call -> {
-                    /* TODO */
-                }
+                is Message.Tool -> ToolMessage(
+                    message = message,
+                    modifier = Modifier.padding(8.dp),
+                    initialVisibility = initialToolVisibility,
+                    onVisibilityChange = onAnyToolVisibilityChange,
+                )
+
+                is Message.System, is Message.User -> {}
             }
         }
+        MessageActions(
+            current = current,
+            total = total,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            onCopy = {
+                val combinedText = buildString {
+                    for (message in parts) {
+                        when (message) {
+                            is Message.Assistant -> append(message.content)
+                            is Message.Reasoning -> append(message.content)
+                            is Message.Tool -> append(message.content)
+                            is Message.System, is Message.User -> {}
+                        }
+                        append("\n")
+                    }
+                }.trim()
+                null to combinedText
+            },
+            onRegenerate = onRegenerate,
+        )
     }
 }
 
@@ -90,15 +126,15 @@ fun ReasoningMessage(
     message: Message.Reasoning,
     startedAt: Instant,
     endedAt: Instant,
-    visible: Boolean,
+    initialVisibility: Boolean,
     onVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ReasoningMessage(
-        flow = flowOf(message.content),
+        flow = remember(message) { flowOf(message.content) },
         startedAt = startedAt,
         endedAt = endedAt,
-        visible = visible,
+        initialVisibility = initialVisibility,
         onVisibilityChange = onVisibilityChange,
         modifier = modifier,
     )
@@ -109,11 +145,11 @@ fun ReasoningMessage(
     flow: Flow<String>,
     startedAt: Instant,
     endedAt: Instant?,
-    visible: Boolean,
+    initialVisibility: Boolean,
     onVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val state = rememberSavedMarkdownState(flow)
+    var visible by remember { mutableStateOf(initialVisibility) }
 
     val isEnded = endedAt != null
     var endedAt by remember(endedAt) { mutableStateOf(endedAt ?: Clock.System.now()) }
@@ -134,7 +170,12 @@ fun ReasoningMessage(
             ) {
                 ExpandOrCollapseIconButton(
                     expanded = visible,
-                    onExpandedChange = onVisibilityChange,
+                    onExpandedChange = {
+                        visible = it
+                        onVisibilityChange(it)
+                    },
+                    expandedContentDescriptionRes = R.string.chat_message_reasoning_label_collapse,
+                    collapsedContentDescriptionRes = R.string.chat_message_reasoning_label_expand,
                 )
                 Text(
                     pluralStringResource(
@@ -151,8 +192,12 @@ fun ReasoningMessage(
                 exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
             ) {
                 MarkdownView(
-                    state,
-                    modifier = Modifier.padding(16.dp),
+                    rememberSavedMarkdownState(flow),
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 16.dp,
+                    ),
                 )
             }
         }
@@ -162,6 +207,89 @@ fun ReasoningMessage(
         while (!isEnded) {
             delay(1.seconds)
             endedAt = Clock.System.now()
+        }
+    }
+}
+
+@Composable
+fun AssistantMessageContent(
+    message: Message.Assistant,
+    modifier: Modifier = Modifier,
+) {
+    AssistantMessageContent(
+        flow = remember(message) { flowOf(message.content) },
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun AssistantMessageContent(
+    flow: Flow<String>,
+    modifier: Modifier = Modifier,
+) {
+    MarkdownView(
+        rememberSavedMarkdownState(flow),
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ToolMessage(
+    message: Message.Tool,
+    initialVisibility: Boolean,
+    onVisibilityChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var visible by remember { mutableStateOf(initialVisibility) }
+
+    val label = stringResource(
+        when (message) {
+            is Message.Tool.Call -> R.string.chat_message_tool_label_call
+            is Message.Tool.Result -> R.string.chat_message_tool_label_result
+        },
+        message.tool,
+    )
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ExpandOrCollapseIconButton(
+                    expanded = visible,
+                    onExpandedChange = {
+                        visible = it
+                        onVisibilityChange(it)
+                    },
+                )
+                Text(label)
+            }
+            AnimatedVisibility(
+                visible = visible,
+                modifier = Modifier.fillMaxWidth(),
+                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+            ) {
+                MarkdownView(
+                    rememberSavedMarkdownState(
+                        """
+                            ```
+                            ${message.content.trim()}
+                            ```
+                        """.trimIndent(),
+                    ),
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 16.dp,
+                    ),
+                )
+            }
         }
     }
 }

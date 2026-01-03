@@ -24,9 +24,11 @@
     <string name="chat_message_reasoning_label_expand">展开推理过程</string>
     <string name="chat_message_reasoning_label_collapse">折叠推理过程</string>
     <plurals name="chat_message_reasoning_label_in_progress">
-        <item quantity="other">目前思考了%d秒</item>
+        <item quantity="other">目前思考了%1$d秒</item>
     </plurals>
     <plurals name="chat_message_reasoning_label_completed">
-        <item quantity="other">思考花费了%d秒</item>
+        <item quantity="other">思考花费了%1$d秒</item>
     </plurals>
+    <string name="chat_message_tool_label_call">调用%1$s工具</string>
+    <string name="chat_message_tool_label_result">工具%1$s调用结果</string>
 </resources>
