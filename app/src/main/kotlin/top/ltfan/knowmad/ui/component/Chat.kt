@@ -74,7 +74,7 @@ fun AssistantMessage(
                 is Message.Reasoning -> ReasoningMessage(
                     message = message,
                     startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
-                        ?.let { Instant.parse(it) }
+                        ?.let { Instant.parseOrNull(it) }
                         ?: message.metaInfo.timestamp.toStdlibInstant(),
                     endedAt = message.metaInfo.timestamp.toStdlibInstant(),
                     initialVisibility = initialReasoningVisibility,
