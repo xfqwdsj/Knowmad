@@ -97,7 +97,7 @@ fun AssistantMessage(
                 is Message.System, is Message.User -> {}
             }
         }
-        MessageActions(
+        AssistantMessageActions(
             current = current,
             total = total,
             onPrevious = onPrevious,
@@ -295,7 +295,7 @@ fun ToolMessage(
 }
 
 @Composable
-fun MessageActions(
+fun AssistantMessageActions(
     current: Int,
     total: Int,
     onPrevious: () -> Unit,
