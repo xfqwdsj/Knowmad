@@ -21,20 +21,11 @@ package top.ltfan.knowmad.ui.component
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -42,29 +33,6 @@ import top.ltfan.knowmad.ui.theme.AppTheme
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
-
-@Preview
-@Composable
-fun ReasoningMessagePreview() {
-    var endedAt by remember { mutableStateOf<Instant?>(null) }
-
-    AppTheme {
-        Column {
-            Button({ endedAt = Clock.System.now() }) {
-                Text("End Reasoning")
-            }
-            ReasoningMessage(
-                flow = remember { flowOf("This is a sample reasoning message.\n\n- Step 1: Do this.\n- Step 2: Do that.\n\n**Conclusion:** This is the result.") },
-                startedAt = remember { Clock.System.now() },
-                endedAt = endedAt,
-                initialVisibility = true,
-                onVisibilityChange = {},
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
 
 @Preview
 @Composable
@@ -122,17 +90,4 @@ fun AssistantMessagePreview() {
             )
         }
     }
-}
-
-@Preview
-@Composable
-fun MessageActionsPreview() {
-    MessageActions(
-        current = 1,
-        total = 5,
-        onPrevious = {},
-        onNext = {},
-        onCopy = { null to "Sample copied text" },
-        onRegenerate = {},
-    )
 }
