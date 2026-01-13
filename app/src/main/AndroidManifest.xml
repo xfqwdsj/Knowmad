@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   ~ Knowmad - Knowledge nomad
-  ~ Copyright (C) 2025 LTFan (aka xfqwdsj)
+  ~ Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -43,10 +43,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name="androidx.compose.ui.tooling.PreviewActivity"
-            android:theme="@style/Theme.Knowmad"
-            tools:replace="android:theme" />
     </application>
 </manifest>
