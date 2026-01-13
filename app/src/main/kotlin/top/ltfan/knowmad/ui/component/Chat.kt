@@ -19,17 +19,27 @@
 package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.message.Message
+import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,22 +47,101 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.chat.MessageEntityRole
+import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+
+@Composable
+fun ChatMessageList(
+    getMessageCount: () -> Int,
+    getMessageKey: (index: Int) -> Any,
+    getMessageAt: (index: Int) -> MessageWithFilesAndBranchInfo,
+    onPrevious: (index: Int) -> Unit,
+    onNext: (index: Int) -> Unit,
+    onRegenerate: (index: Int) -> Unit,
+    initialReasoningVisibility: Boolean,
+    onAnyReasoningVisibilityChange: (index: Int, visible: Boolean) -> Unit,
+    initialToolVisibility: Boolean,
+    onAnyToolVisibilityChange: (index: Int, visible: Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
+    reverseLayout: Boolean = false,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding,
+        reverseLayout = reverseLayout,
+    ) {
+        items(
+            count = getMessageCount(),
+            key = getMessageKey,
+        ) {
+            val data = getMessageAt(it)
+
+            val messageEntity = data.message
+            when (messageEntity.role) {
+                MessageEntityRole.Assistant -> {
+                    AssistantMessage(
+                        parts = messageEntity.parts,
+                        current = data.branchIndex,
+                        total = data.branchCount,
+                        onPrevious = { onPrevious(it) },
+                        onNext = { onNext(it) },
+                        onRegenerate = { onRegenerate(it) },
+                        initialReasoningVisibility = initialReasoningVisibility,
+                        onAnyReasoningVisibilityChange = { visible ->
+                            onAnyReasoningVisibilityChange(it, visible)
+                        },
+                        initialToolVisibility = initialToolVisibility,
+                        onAnyToolVisibilityChange = { visible ->
+                            onAnyToolVisibilityChange(it, visible)
+                        },
+                        modifier = Modifier.fillParentMaxWidth(),
+                    )
+                }
+
+                MessageEntityRole.User -> {
+                    Box(
+                        modifier = Modifier.fillParentMaxWidth(),
+                        contentAlignment = Alignment.TopEnd,
+                    ) {
+                        UserMessage(
+                            message = messageEntity.parts.filterIsInstance<Message.User>()
+                                .firstOrNull() ?: return@items,
+                            current = data.branchIndex,
+                            total = data.branchCount,
+                            onPrevious = { onPrevious(it) },
+                            onNext = { onNext(it) },
+                        )
+                    }
+                }
+
+                MessageEntityRole.System -> {}
+            }
+        }
+    }
+}
 
 @Composable
 fun AssistantMessage(
@@ -68,7 +157,9 @@ fun AssistantMessage(
     onAnyToolVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Column(modifier) { // TODO: add menu
         for (message in parts) {
             when (message) {
                 is Message.Reasoning -> ReasoningMessage(
@@ -118,6 +209,12 @@ fun AssistantMessage(
             },
             onRegenerate = onRegenerate,
         )
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            // TODO
+        }
     }
 }
 
@@ -307,12 +404,14 @@ fun AssistantMessageActions(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MessageBranchIndicator(
-            current = current,
-            total = total,
-            onPrevious = onPrevious,
-            onNext = onNext,
-        )
+        if (total > 1) {
+            MessageBranchIndicator(
+                current = current,
+                total = total,
+                onPrevious = onPrevious,
+                onNext = onNext,
+            )
+        }
         CopyIconButton(
             onCopy = onCopy,
         )
@@ -321,6 +420,84 @@ fun AssistantMessageActions(
             contentDescriptionRes = R.string.chat_message_action_label_retry,
         )
     }
+}
+
+@Composable
+fun UserMessage(
+    message: Message.User,
+    current: Int,
+    total: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = Alignment.End,
+    ) {
+        Box(
+            modifier = modifier
+                .padding(8.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .combinedClickable(
+                    onLongClick = { menuExpanded = true },
+                    onClick = {},
+                ),
+            contentAlignment = Alignment.TopEnd,
+        ) {
+            UserMessageContent(
+                message = message,
+                modifier = Modifier.padding(16.dp),
+            )
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                val coroutineScope = rememberCoroutineScope()
+                val clipboard = LocalClipboard.current
+
+                DropdownMenuItem(
+                    text = { Text(stringResource(android.R.string.copy)) },
+                    shape = MenuDefaults.middleItemShape,
+                    onClick = {
+                        coroutineScope.launch {
+                            val clipData = ClipData.newPlainText(null, message.content)
+                            clipboard.setClipEntry(ClipEntry(clipData))
+                        }
+                        menuExpanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.content_copy_24px),
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
+        }
+        if (total > 1) {
+            MessageBranchIndicator(
+                current = current,
+                total = total,
+                onPrevious = onPrevious,
+                onNext = onNext,
+            )
+        }
+    }
+}
+
+@Composable
+fun UserMessageContent(
+    message: Message.User,
+    modifier: Modifier = Modifier,
+) {
+    MarkdownView(
+        rememberSavedMarkdownState(message.content),
+        modifier = modifier,
+    )
 }
 
 @Composable

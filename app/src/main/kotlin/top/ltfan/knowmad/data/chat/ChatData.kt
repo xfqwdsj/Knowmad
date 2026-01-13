@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,10 @@ import kotlin.uuid.Uuid
 
 const val ATTACHMENT_STORAGE_PATH = "attachments"
 const val ATTACHMENT_STORAGE_SCHEME = "knowmad-attachment"
+
+enum class MessageEntityRole {
+    System, User, Assistant
+}
 
 context(viewModel: AppViewModel)
 suspend fun List<ContentPart>.storeAll(ref: MutableList<Uuid>) =

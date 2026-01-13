@@ -76,10 +76,10 @@ data class MessageEntity(
     val conversationId: Uuid,
     val parentId: Uuid? = null,
     val depth: Int,
-    val message: Message,
-    val role: Message.Role = message.role,
-    val searchableContent: String = message.content,
-    val generatedBy: LLModel,
+    val parts: List<Message>,
+    val role: MessageEntityRole,
+    val searchableContent: String = parts.joinToString("\n") { it.content },
+    val generatedBy: LLModel?,
     val createdAt: Instant = Clock.System.now(),
 )
 
