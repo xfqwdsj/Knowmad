@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.component
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,10 +38,10 @@ import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
@@ -115,8 +116,15 @@ fun rememberSavedMarkdownState(markdownFlow: Flow<String>): SavedMarkdownState {
 @Composable
 fun rememberSavedMarkdownState(markdownText: String): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
-    return remember(coroutineScope, markdownText) {
-        SavedMarkdownState(coroutineScope, flowOf(markdownText))
+
+    val flow = remember { MutableStateFlow(markdownText) }
+
+    LaunchedEffect(markdownText) {
+        flow.value = markdownText
+    }
+
+    return remember(coroutineScope, flow) {
+        SavedMarkdownState(coroutineScope, flow)
     }
 }
 
