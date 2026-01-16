@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.component
 
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
@@ -43,8 +44,12 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,14 +63,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.chat.AssistantMessageContent
+import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import kotlin.time.Clock
@@ -86,24 +94,43 @@ fun ChatMessageList(
     onAnyToolVisibilityChange: (index: Int, visible: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    reverseLayout: Boolean = false,
+    topToBottom: Boolean = false,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val states = remember { mutableStateMapOf<Any, AssistantMessageState>() }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding,
-        reverseLayout = reverseLayout,
+        reverseLayout = !topToBottom,
     ) {
         items(
             count = getMessageCount(),
             key = getMessageKey,
         ) {
-            val data = getMessageAt(it)
+            val index = getMessageCount() - 1 - it
+            val key = getMessageKey(index)
+            val data = getMessageAt(index)
 
             val messageEntity = data.message
             when (messageEntity.role) {
                 MessageEntityRole.Assistant -> {
                     AssistantMessage(
-                        parts = messageEntity.parts,
+                        state = states.getOrPut(key) {
+                            AssistantMessageState.Finished(
+                                messageEntity.parts.mapNotNull { part ->
+                                    when (part) {
+                                        is Message.Assistant, is Message.Reasoning, is Message.Tool -> AssistantMessageContent.Finished(
+                                            message = part,
+                                            coroutineScope = coroutineScope,
+                                        )
+
+                                        is Message.System, is Message.User -> null
+                                    }
+                                },
+                            )
+                        },
                         current = data.branchIndex,
                         total = data.branchCount,
                         onPrevious = { onPrevious(it) },
@@ -145,7 +172,7 @@ fun ChatMessageList(
 
 @Composable
 fun AssistantMessage(
-    parts: List<Message>,
+    state: AssistantMessageState,
     current: Int,
     total: Int,
     onPrevious: () -> Unit,
@@ -160,86 +187,95 @@ fun AssistantMessage(
     var menuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier) { // TODO: add menu
-        for (message in parts) {
-            when (message) {
-                is Message.Reasoning -> ReasoningMessage(
-                    message = message,
-                    startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
-                        ?.let { Instant.parseOrNull(it) }
-                        ?: message.metaInfo.timestamp.toStdlibInstant(),
-                    endedAt = message.metaInfo.timestamp.toStdlibInstant(),
-                    initialVisibility = initialReasoningVisibility,
-                    onVisibilityChange = onAnyReasoningVisibilityChange,
-                    modifier = Modifier.padding(8.dp),
-                )
+        for (content in state.contents) {
+            when (content) {
+                is AssistantMessageContent.Streaming -> {
+                    when (content.type) {
+                        AssistantStreamingMessageType.Reasoning -> ReasoningMessage(
+                            savedMarkdownState = content.markdownState,
+                            startedAt = content.startedAt,
+                            endedAt = content.endedAt,
+                            initialVisibility = initialReasoningVisibility,
+                            onVisibilityChange = onAnyReasoningVisibilityChange,
+                            modifier = Modifier.padding(8.dp),
+                        )
 
-                is Message.Assistant -> AssistantMessageContent(
-                    message = message,
-                    modifier = Modifier.padding(8.dp),
-                )
+                        AssistantStreamingMessageType.Content -> AssistantMessageContent(
+                            savedMarkdownState = content.markdownState,
+                            modifier = Modifier.padding(8.dp),
+                        )
+                    }
+                }
 
-                is Message.Tool -> ToolMessage(
-                    message = message,
-                    modifier = Modifier.padding(8.dp),
-                    initialVisibility = initialToolVisibility,
-                    onVisibilityChange = onAnyToolVisibilityChange,
-                )
+                is AssistantMessageContent.Finished -> when (val message = content.message) {
+                    is Message.Reasoning -> ReasoningMessage(
+                        savedMarkdownState = content.markdownState,
+                        startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
+                            ?.let { Instant.parseOrNull(it) }
+                            ?: message.metaInfo.timestamp.toStdlibInstant(),
+                        endedAt = message.metaInfo.timestamp.toStdlibInstant(),
+                        initialVisibility = initialReasoningVisibility,
+                        onVisibilityChange = onAnyReasoningVisibilityChange,
+                        modifier = Modifier.padding(8.dp),
+                    )
 
-                is Message.System, is Message.User -> {}
+                    is Message.Assistant -> AssistantMessageContent(
+                        savedMarkdownState = content.markdownState,
+                        modifier = Modifier.padding(8.dp),
+                    )
+
+                    is Message.Tool -> ToolMessage(
+                        message = message,
+                        modifier = Modifier.padding(8.dp),
+                        initialVisibility = initialToolVisibility,
+                        onVisibilityChange = onAnyToolVisibilityChange,
+                    )
+
+                    is Message.System, is Message.User -> {}
+                }
             }
         }
-        AssistantMessageActions(
-            current = current,
-            total = total,
-            onPrevious = onPrevious,
-            onNext = onNext,
-            onCopy = {
-                val combinedText = buildString {
-                    for (message in parts) {
-                        when (message) {
-                            is Message.Assistant -> append(message.content)
-                            is Message.Reasoning -> append(message.content)
-                            is Message.Tool -> append(message.content)
-                            is Message.System, is Message.User -> {}
-                        }
-                        append("\n")
-                    }
-                }.trim()
-                null to combinedText
-            },
-            onRegenerate = onRegenerate,
-        )
-        DropdownMenu(
-            expanded = menuExpanded,
-            onDismissRequest = { menuExpanded = false },
+        AnimatedVisibility(
+            visible = state.finished,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
-            // TODO
+            AssistantMessageActions(
+                current = current,
+                total = total,
+                onPrevious = onPrevious,
+                onNext = onNext,
+                onCopy = {
+                    null to state.contents.joinToString("\n") {
+                        when (it) {
+                            is AssistantMessageContent.Streaming -> it.flow.value
+                            is AssistantMessageContent.Finished -> when (val message = it.message) {
+                                is Message.Assistant -> message.content
+                                is Message.Reasoning -> message.content
+                                is Message.Tool -> message.content
+                                is Message.System, is Message.User -> ""
+                            }
+                        }
+                    }
+                },
+                onRegenerate = onRegenerate,
+                enabled = state.finished,
+            )
+        }
+        if (state.finished) {
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                // TODO
+            }
         }
     }
 }
 
 @Composable
 fun ReasoningMessage(
-    message: Message.Reasoning,
-    startedAt: Instant,
-    endedAt: Instant,
-    initialVisibility: Boolean,
-    onVisibilityChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    ReasoningMessage(
-        flow = remember(message) { flowOf(message.content) },
-        startedAt = startedAt,
-        endedAt = endedAt,
-        initialVisibility = initialVisibility,
-        onVisibilityChange = onVisibilityChange,
-        modifier = modifier,
-    )
-}
-
-@Composable
-fun ReasoningMessage(
-    flow: Flow<String>,
+    savedMarkdownState: SavedMarkdownState,
     startedAt: Instant,
     endedAt: Instant?,
     initialVisibility: Boolean,
@@ -289,7 +325,7 @@ fun ReasoningMessage(
                 exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
             ) {
                 MarkdownView(
-                    rememberSavedMarkdownState(flow),
+                    savedMarkdownState,
                     modifier = Modifier.padding(
                         start = 16.dp,
                         end = 16.dp,
@@ -310,22 +346,11 @@ fun ReasoningMessage(
 
 @Composable
 fun AssistantMessageContent(
-    message: Message.Assistant,
-    modifier: Modifier = Modifier,
-) {
-    AssistantMessageContent(
-        flow = remember(message) { flowOf(message.content) },
-        modifier = modifier,
-    )
-}
-
-@Composable
-fun AssistantMessageContent(
-    flow: Flow<String>,
+    savedMarkdownState: SavedMarkdownState,
     modifier: Modifier = Modifier,
 ) {
     MarkdownView(
-        rememberSavedMarkdownState(flow),
+        savedMarkdownState,
         modifier = modifier,
     )
 }
@@ -399,6 +424,7 @@ fun AssistantMessageActions(
     onNext: () -> Unit,
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     onRegenerate: () -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -414,9 +440,11 @@ fun AssistantMessageActions(
         }
         CopyIconButton(
             onCopy = onCopy,
+            enabled = enabled,
         )
         RetryIconButton(
             onRetry = onRegenerate,
+            enabled = enabled,
             contentDescriptionRes = R.string.chat_message_action_label_retry,
         )
     }
@@ -506,6 +534,7 @@ fun MessageBranchIndicator(
     total: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -513,14 +542,116 @@ fun MessageBranchIndicator(
     ) {
         BackChevronIconButton(
             onClick = onPrevious,
-            enabled = current > 1,
+            enabled = enabled && current > 1,
             contentDescriptionRes = R.string.chat_message_branch_label_previous,
         )
         Text(stringResource(R.string.chat_message_branch_indicator, current, total))
         ForwardChevronIconButton(
             onClick = onNext,
-            enabled = current < total,
+            enabled = enabled && current < total,
             contentDescriptionRes = R.string.chat_message_branch_label_next,
         )
     }
+}
+
+sealed interface AssistantMessageState {
+    val contents: List<AssistantMessageContent>
+    val finished: Boolean
+
+    @Stable
+    class Streaming(
+        eventFlow: Flow<AssistantMessageStreamingEvent>,
+        model: LLModel?,
+        coroutineScope: CoroutineScope,
+    ) : AssistantMessageState {
+        override val contents = mutableStateListOf<AssistantMessageContent>()
+        override var finished by mutableStateOf(false)
+
+        init {
+            coroutineScope.launch {
+                eventFlow.collect { event ->
+                    when (event) {
+                        is AssistantMessageStreamingEvent.AddString -> {
+                            val content = contents.getOrElse(event.partIndex) { index ->
+                                require(contents.size == index) { "Parts must be added in order." }
+
+                                (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
+                                    if (it.endedAt == null) {
+                                        it.endedAt = Clock.System.now()
+                                    }
+                                }
+
+                                val newContent = AssistantMessageContent.Streaming(
+                                    type = event.messageType,
+                                    flow = MutableStateFlow(""),
+                                    model = model,
+                                    coroutineScope = coroutineScope,
+                                )
+                                contents.add(newContent)
+                                newContent
+                            } as? AssistantMessageContent.Streaming ?: return@collect
+
+                            val flow = content.flow as? MutableStateFlow<String> ?: return@collect
+                            flow.value += event.content
+                        }
+
+                        is AssistantMessageStreamingEvent.SetMessage -> {
+                            val index = event.partIndex
+                            if (contents.size <= index) {
+                                (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
+                                    if (it.endedAt == null) {
+                                        it.endedAt = Clock.System.now()
+                                    }
+                                }
+                            }
+
+                            contents.add(
+                                index,
+                                AssistantMessageContent.Finished(
+                                    message = event.message,
+                                    coroutineScope = coroutineScope,
+                                ),
+                            )
+                        }
+
+                        AssistantMessageStreamingEvent.Finish -> {
+                            finished = true
+                            val endedAt = Clock.System.now()
+                            contents.asSequence()
+                                .filterIsInstance<AssistantMessageContent.Streaming>()
+                                .forEach {
+                                    if (it.endedAt == null) {
+                                        it.endedAt = endedAt
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Immutable
+    data class Finished(
+        override val contents: List<AssistantMessageContent.Finished>,
+    ) : AssistantMessageState {
+        override val finished: Boolean = true
+    }
+}
+
+sealed interface AssistantMessageStreamingEvent {
+    @Immutable
+    data class AddString(
+        val partIndex: Int,
+        val content: String,
+        val messageType: AssistantStreamingMessageType,
+    ) : AssistantMessageStreamingEvent
+
+    @Immutable
+    data class SetMessage(
+        val partIndex: Int,
+        val message: Message,
+    ) : AssistantMessageStreamingEvent
+
+    data object Finish : AssistantMessageStreamingEvent
 }

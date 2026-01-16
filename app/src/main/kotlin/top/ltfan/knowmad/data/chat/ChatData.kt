@@ -18,19 +18,37 @@
 
 package top.ltfan.knowmad.data.chat
 
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
+import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.ResponseMetaInfo
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toDeprecatedInstant
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
+import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 const val ATTACHMENT_STORAGE_PATH = "attachments"
@@ -114,4 +132,67 @@ fun ContentPart.Attachment.updateContent(newContent: AttachmentContent) = when (
     is ContentPart.File -> copy(content = newContent)
     is ContentPart.Image -> copy(content = newContent)
     is ContentPart.Video -> copy(content = newContent)
+}
+
+sealed interface MessageWithBranchInfo {
+    /** 1-based */
+    val branchIndex: Int
+    val branchCount: Int
+}
+
+@Immutable
+data class AssistantStreamingMessage(
+    val content: AssistantMessageContent.Streaming,
+    override val branchIndex: Int,
+    override val branchCount: Int,
+) : MessageWithBranchInfo
+
+sealed class AssistantMessageContent(
+    coroutineScope: CoroutineScope,
+    contentFlow: Flow<String>,
+) {
+    val markdownState = SavedMarkdownState(coroutineScope, contentFlow)
+
+    @Stable
+    class Streaming(
+        val type: AssistantStreamingMessageType,
+        val flow: StateFlow<String>,
+        val model: LLModel?,
+        coroutineScope: CoroutineScope,
+        val startedAt: Instant = Clock.System.now(),
+    ) : AssistantMessageContent(coroutineScope, flow) {
+        var endedAt by mutableStateOf<Instant?>(null)
+
+        fun toMessage(): Message.Response {
+            val metaInfo = ResponseMetaInfo(
+                timestamp = endedAt?.toDeprecatedInstant() ?: Clock.System.now()
+                    .also { endedAt = it }
+                    .toDeprecatedInstant(),
+                metadata = JsonObject(
+                    mapOf("startedAt" to JsonPrimitive(startedAt.toString())),
+                ),
+            )
+            return when (type) {
+                AssistantStreamingMessageType.Content -> Message.Assistant(
+                    content = flow.value,
+                    metaInfo = metaInfo,
+                )
+
+                AssistantStreamingMessageType.Reasoning -> Message.Reasoning(
+                    content = flow.value,
+                    metaInfo = metaInfo,
+                )
+            }
+        }
+    }
+
+    @Immutable
+    class Finished(
+        val message: Message,
+        coroutineScope: CoroutineScope,
+    ) : AssistantMessageContent(coroutineScope, flowOf(message.content))
+}
+
+enum class AssistantStreamingMessageType {
+    Reasoning, Content
 }

@@ -21,21 +21,35 @@ package top.ltfan.knowmad.ui.component
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.datetime.toDeprecatedClock
 import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.ui.theme.AppTheme
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
@@ -150,5 +164,175 @@ fun ChatMessageListPreview() {
                 onAnyToolVisibilityChange = { _, _ -> },
             )
         }
+    }
+}
+
+@Preview
+@Composable
+fun StreamingAssistantMessagePreview() {
+    if (LocalInspectionMode.current) {
+        Text("Streaming preview not available in Inspection Mode")
+        return
+    }
+
+    val eventFlow = remember { MutableSharedFlow<AssistantMessageStreamingEvent>() }
+    val coroutineScope = rememberCoroutineScope()
+
+    var state by
+    remember(coroutineScope) {
+        mutableStateOf(
+            AssistantMessageState.Streaming(
+                eventFlow,
+                DeepSeekModels.DeepSeekReasoner,
+                coroutineScope,
+            ),
+        )
+    }
+
+    suspend fun generate() {
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                0, "This is a streaming ", AssistantStreamingMessageType.Reasoning,
+            ),
+        )
+        delay(600.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                0, "message with ", AssistantStreamingMessageType.Reasoning,
+            ),
+        )
+        delay(600.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                0, "some reasoning content.\n\n", AssistantStreamingMessageType.Reasoning,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.SetMessage(
+                1,
+                Message.Tool.Call(
+                    id = "web_search",
+                    tool = "Web Search",
+                    content = "Knowmad",
+                    metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ),
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.SetMessage(
+                2,
+                Message.Tool.Result(
+                    id = "web_search",
+                    tool = "Web Search",
+                    content = "Knowmad is an AI-powered knowledge nomad application designed to help users manage and explore information seamlessly.",
+                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ),
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                3, "Now adding some contents.", AssistantStreamingMessageType.Content,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                3,
+                " Is there anything else I can help you with?",
+                AssistantStreamingMessageType.Content,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.SetMessage(
+                4,
+                Message.Tool.Call(
+                    id = "calculator",
+                    tool = "Calculator",
+                    content = "2 + 2",
+                    metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ),
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.SetMessage(
+                5,
+                Message.Tool.Result(
+                    id = "calculator",
+                    tool = "Calculator",
+                    content = "4",
+                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ),
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                6, "Wow, the result", AssistantStreamingMessageType.Content,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                6, " of `2 + 2` is `4`!", AssistantStreamingMessageType.Content,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                7, "Now I need", AssistantStreamingMessageType.Reasoning,
+            ),
+        )
+        delay(600.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                7, " to wrap up.", AssistantStreamingMessageType.Reasoning,
+            ),
+        )
+        delay(300.milliseconds)
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.AddString(
+                8,
+                "**Conclusion:** This is the end of the streaming message.",
+                AssistantStreamingMessageType.Content,
+            ),
+        )
+        eventFlow.emit(AssistantMessageStreamingEvent.Finish)
+    }
+
+    AppTheme {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            AssistantMessage(
+                state = state,
+                current = 2,
+                total = 5,
+                onPrevious = {},
+                onNext = {},
+                onRegenerate = {
+                    state = AssistantMessageState.Streaming(
+                        eventFlow,
+                        DeepSeekModels.DeepSeekReasoner,
+                        coroutineScope,
+                    )
+                    coroutineScope.launch {
+                        generate()
+                    }
+                },
+                initialReasoningVisibility = true,
+                onAnyReasoningVisibilityChange = {},
+                initialToolVisibility = true,
+                onAnyToolVisibilityChange = {},
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        generate()
     }
 }

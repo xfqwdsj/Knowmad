@@ -159,11 +159,9 @@ data class MessageWithFilesAndBranchInfo(
         ),
     )
     val files: List<FileEntity>,
-
-    /** 1-based */
-    val branchIndex: Int,
-    val branchCount: Int,
-)
+    override val branchIndex: Int,
+    override val branchCount: Int,
+) : MessageWithBranchInfo
 
 data class MessageWithConversation(
     @Embedded
