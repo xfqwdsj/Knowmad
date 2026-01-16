@@ -67,6 +67,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.json.JsonPrimitive
@@ -98,7 +99,8 @@ fun ChatMessageList(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val states = remember { mutableStateMapOf<Any, AssistantMessageState>() }
+    val assistantMessageStates = remember { mutableStateMapOf<Any, AssistantMessageState>() }
+    val userMessageStates = remember { mutableStateMapOf<Any, UserMessageState>() }
 
     LazyColumn(
         modifier = modifier,
@@ -117,7 +119,7 @@ fun ChatMessageList(
             when (messageEntity.role) {
                 MessageEntityRole.Assistant -> {
                     AssistantMessage(
-                        state = states.getOrPut(key) {
+                        state = assistantMessageStates.getOrPut(key) {
                             AssistantMessageState.Finished(
                                 messageEntity.parts.mapNotNull { part ->
                                     when (part) {
@@ -154,8 +156,14 @@ fun ChatMessageList(
                         contentAlignment = Alignment.TopEnd,
                     ) {
                         UserMessage(
-                            message = messageEntity.parts.filterIsInstance<Message.User>()
-                                .firstOrNull() ?: return@items,
+                            state = userMessageStates.getOrPut(key) {
+                                UserMessageState(
+                                    message = messageEntity.parts.filterIsInstance<Message.User>()
+                                        .firstOrNull()
+                                        ?: error("User message must contain a User part."),
+                                    coroutineScope = coroutineScope,
+                                )
+                            },
                             current = data.branchIndex,
                             total = data.branchCount,
                             onPrevious = { onPrevious(it) },
@@ -452,7 +460,7 @@ fun AssistantMessageActions(
 
 @Composable
 fun UserMessage(
-    message: Message.User,
+    state: UserMessageState,
     current: Int,
     total: Int,
     onPrevious: () -> Unit,
@@ -477,7 +485,7 @@ fun UserMessage(
             contentAlignment = Alignment.TopEnd,
         ) {
             UserMessageContent(
-                message = message,
+                savedMarkdownState = state.savedMarkdownState,
                 modifier = Modifier.padding(16.dp),
             )
             DropdownMenu(
@@ -492,7 +500,7 @@ fun UserMessage(
                     shape = MenuDefaults.middleItemShape,
                     onClick = {
                         coroutineScope.launch {
-                            val clipData = ClipData.newPlainText(null, message.content)
+                            val clipData = ClipData.newPlainText(null, state.message.content)
                             clipboard.setClipEntry(ClipEntry(clipData))
                         }
                         menuExpanded = false
@@ -519,11 +527,11 @@ fun UserMessage(
 
 @Composable
 fun UserMessageContent(
-    message: Message.User,
+    savedMarkdownState: SavedMarkdownState,
     modifier: Modifier = Modifier,
 ) {
     MarkdownView(
-        rememberSavedMarkdownState(message.content),
+        savedMarkdownState = savedMarkdownState,
         modifier = modifier,
     )
 }
@@ -637,6 +645,14 @@ sealed interface AssistantMessageState {
     ) : AssistantMessageState {
         override val finished: Boolean = true
     }
+}
+
+@Immutable
+class UserMessageState(
+    val message: Message.User,
+    coroutineScope: CoroutineScope,
+) {
+    val savedMarkdownState = SavedMarkdownState(coroutineScope, flowOf(message.content))
 }
 
 sealed interface AssistantMessageStreamingEvent {
