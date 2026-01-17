@@ -23,23 +23,31 @@ import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -47,11 +55,14 @@ import kotlinx.datetime.toDeprecatedClock
 import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
+import top.ltfan.knowmad.data.chat.ChatListErrorMessage
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.ui.theme.AppTheme
+import top.ltfan.knowmad.ui.util.AppWindowInsets
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
@@ -201,6 +212,7 @@ fun ChatMessageListPreview() {
                 branchIndex = 2,
                 branchCount = 5,
             ),
+            ChatListErrorMessage("I don't know what error happened."),
             MessageWithFilesAndBranchInfo(
                 message = MessageEntity(
                     conversationId = conversationId,
@@ -225,7 +237,7 @@ fun ChatMessageListPreview() {
             CompositionLocalProvider(LocalMarkdownViewBlockParsing provides true) {
                 ChatMessageList(
                     getMessageCount = { messages.size },
-                    getMessageKey = { messages[it].message.id },
+                    getMessageKey = { messages[it].key },
                     getMessageAt = { messages[it] },
                     onPrevious = {},
                     onNext = {},
@@ -240,6 +252,40 @@ fun ChatMessageListPreview() {
     }
 }
 
+@Composable
+fun StreamingAssistantMessagePreviewWithoutBackground() {
+    val coroutineScope = rememberCoroutineScope()
+
+    val states = remember(coroutineScope) {
+        mutableStateListOf(StreamingAssistantMessagePreviewState(coroutineScope))
+    }
+    var current by remember { mutableIntStateOf(0) }
+
+    AssistantMessage(
+        state = states[current].state,
+        current = current + 1,
+        total = states.size,
+        onPrevious = { current = (current - 1).coerceAtLeast(0) },
+        onNext = { current = (current + 1).coerceAtMost(states.size - 1) },
+        onRegenerate = {
+            states.add(StreamingAssistantMessagePreviewState(coroutineScope))
+            current += 1
+            coroutineScope.launch {
+                states[current].generate("The message $current has been regenerated.")
+            }
+        },
+        initialReasoningVisibility = true,
+        onAnyReasoningVisibilityChange = {},
+        initialToolVisibility = true,
+        onAnyToolVisibilityChange = {},
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+    )
+
+    LaunchedEffect(Unit) {
+        states[current].generate("The message $current has been regenerated.")
+    }
+}
+
 @Preview
 @Composable
 fun StreamingAssistantMessagePreview() {
@@ -248,21 +294,40 @@ fun StreamingAssistantMessagePreview() {
         return
     }
 
-    val eventFlow = remember { MutableSharedFlow<AssistantMessageStreamingEvent>() }
-    val coroutineScope = rememberCoroutineScope()
+    AppTheme {
+        Surface(
+            modifier = Modifier.windowInsetsPadding(AppWindowInsets),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            StreamingAssistantMessagePreviewWithoutBackground()
+        }
+    }
+}
 
-    var state by
-    remember(coroutineScope) {
-        mutableStateOf(
-            AssistantMessageState.Streaming(
-                eventFlow,
-                DeepSeekModels.DeepSeekReasoner,
-                coroutineScope,
-            ),
+@Stable
+class StreamingAssistantMessagePreviewState(
+    private val coroutineScope: CoroutineScope,
+) {
+    private val eventFlow = MutableSharedFlow<AssistantMessageStreamingEvent>()
+
+    var state by mutableStateOf<AssistantMessageState>(
+        AssistantMessageState.Streaming(
+            eventFlow,
+            DeepSeekModels.DeepSeekReasoner,
+            coroutineScope,
+        ),
+    )
+        private set
+
+    fun recreate() {
+        state = AssistantMessageState.Streaming(
+            eventFlow,
+            DeepSeekModels.DeepSeekReasoner,
+            coroutineScope,
         )
     }
 
-    suspend fun generate() {
+    suspend fun generate(finishMessage: String = "Finished.") {
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 0, "This is a streaming ", AssistantStreamingMessageType.Reasoning,
@@ -280,7 +345,7 @@ fun StreamingAssistantMessagePreview() {
                 0, "some reasoning content.\n\n", AssistantStreamingMessageType.Reasoning,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.SetMessage(
                 1,
@@ -292,7 +357,7 @@ fun StreamingAssistantMessagePreview() {
                 ),
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.SetMessage(
                 2,
@@ -304,13 +369,13 @@ fun StreamingAssistantMessagePreview() {
                 ),
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 3, "Now adding some contents.", AssistantStreamingMessageType.Content,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 3,
@@ -318,7 +383,7 @@ fun StreamingAssistantMessagePreview() {
                 AssistantStreamingMessageType.Content,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.SetMessage(
                 4,
@@ -330,7 +395,7 @@ fun StreamingAssistantMessagePreview() {
                 ),
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.SetMessage(
                 5,
@@ -342,31 +407,31 @@ fun StreamingAssistantMessagePreview() {
                 ),
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 6, "Wow, the result", AssistantStreamingMessageType.Content,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 6, " of `2 + 2` is `4`!", AssistantStreamingMessageType.Content,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 7, "Now I need", AssistantStreamingMessageType.Reasoning,
             ),
         )
-        delay(600.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 7, " to wrap up.", AssistantStreamingMessageType.Reasoning,
             ),
         )
-        delay(300.milliseconds)
+        delay(20.milliseconds)
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 8,
@@ -375,37 +440,19 @@ fun StreamingAssistantMessagePreview() {
             ),
         )
         eventFlow.emit(AssistantMessageStreamingEvent.Finish)
-    }
-
-    AppTheme {
-        Surface(
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            AssistantMessage(
-                state = state,
-                current = 2,
-                total = 5,
-                onPrevious = {},
-                onNext = {},
-                onRegenerate = {
-                    state = AssistantMessageState.Streaming(
-                        eventFlow,
-                        DeepSeekModels.DeepSeekReasoner,
+        (state as? AssistantMessageState.Streaming)?.let {
+            val finished = it.awaitFinished()
+            state = finished.copy(
+                contents = finished.contents + listOf(
+                    AssistantMessageContent.Finished(
+                        Message.Assistant(
+                            content = finishMessage,
+                            metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                        ),
                         coroutineScope,
-                    )
-                    coroutineScope.launch {
-                        generate()
-                    }
-                },
-                initialReasoningVisibility = true,
-                onAnyReasoningVisibilityChange = {},
-                initialToolVisibility = true,
-                onAnyToolVisibilityChange = {},
+                    ),
+                ),
             )
         }
-    }
-
-    LaunchedEffect(Unit) {
-        generate()
     }
 }

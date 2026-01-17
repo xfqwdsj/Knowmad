@@ -44,6 +44,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
+import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
@@ -140,18 +141,34 @@ sealed interface MessageWithBranchInfo {
     val branchCount: Int
 }
 
-@Immutable
+sealed interface ChatListMessage {
+    val key: Any
+
+    sealed interface Branched : ChatListMessage, MessageWithBranchInfo
+    sealed interface Standalone : ChatListMessage
+}
+
+@Stable
 data class AssistantStreamingMessage(
-    val content: AssistantMessageContent.Streaming,
+    val state: AssistantMessageState.Streaming,
     override val branchIndex: Int,
     override val branchCount: Int,
-) : MessageWithBranchInfo
+) : ChatListMessage.Branched {
+    override val key = state.id
+}
 
-sealed class AssistantMessageContent(
-    coroutineScope: CoroutineScope,
-    contentFlow: Flow<String>,
-) {
-    val markdownState = SavedMarkdownState(coroutineScope, contentFlow)
+@Immutable
+data class ChatListErrorMessage(
+    val error: String,
+) : ChatListMessage.Standalone {
+    override val key = Uuid.generateV7()
+}
+
+sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
+    constructor(
+        coroutineScope: CoroutineScope,
+        contentFlow: Flow<String>,
+    ) : this(SavedMarkdownState(coroutineScope, contentFlow))
 
     @Stable
     class Streaming(
@@ -163,9 +180,9 @@ sealed class AssistantMessageContent(
     ) : AssistantMessageContent(coroutineScope, flow) {
         var endedAt by mutableStateOf<Instant?>(null)
 
-        fun toMessage(): Message.Response {
+        fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
             val metaInfo = ResponseMetaInfo(
-                timestamp = endedAt?.toDeprecatedInstant() ?: Clock.System.now()
+                timestamp = endedAt?.toDeprecatedInstant() ?: defaultEndedAt
                     .also { endedAt = it }
                     .toDeprecatedInstant(),
                 metadata = JsonObject(
@@ -184,13 +201,53 @@ sealed class AssistantMessageContent(
                 )
             }
         }
+
+        suspend fun finished(
+            defaultEndedAt: Instant = Clock.System.now(),
+        ) = Finished.fromStreaming(
+            this,
+            defaultEndedAt,
+        )
     }
 
     @Immutable
-    class Finished(
+    class Finished private constructor(
         val message: Message,
-        coroutineScope: CoroutineScope,
-    ) : AssistantMessageContent(coroutineScope, flowOf(message.content))
+        markdownState: SavedMarkdownState,
+    ) : AssistantMessageContent(markdownState) {
+        constructor(
+            message: Message,
+            coroutineScope: CoroutineScope,
+        ) : this(
+            message,
+            SavedMarkdownState(
+                coroutineScope,
+                flowOf(
+                    when (message) {
+                        is Message.Reasoning, is Message.Assistant -> message.content
+                        else -> ""
+                    },
+                ),
+            ),
+        )
+
+        companion object {
+            suspend fun fromStreaming(
+                streaming: Streaming,
+                defaultEndedAt: Instant = Clock.System.now(),
+            ): Finished {
+                return Finished(
+                    streaming.toMessage(defaultEndedAt),
+                    streaming.markdownState.let {
+                        when (it) {
+                            is SavedMarkdownState.Dynamic -> it.fixed()
+                            is SavedMarkdownState.Fixed -> it
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
 
 enum class AssistantStreamingMessageType {

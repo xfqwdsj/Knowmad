@@ -25,6 +25,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Fts4
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.Junction
 import androidx.room.PrimaryKey
@@ -161,7 +162,10 @@ data class MessageWithFilesAndBranchInfo(
     val files: List<FileEntity>,
     override val branchIndex: Int,
     override val branchCount: Int,
-) : MessageWithBranchInfo
+) : MessageWithBranchInfo, ChatListMessage.Branched {
+    @Ignore
+    override val key = message.id
+}
 
 data class MessageWithConversation(
     @Embedded

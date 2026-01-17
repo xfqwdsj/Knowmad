@@ -22,9 +22,13 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.animateBounds
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -71,9 +75,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
@@ -81,13 +87,17 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
+import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
+import top.ltfan.knowmad.data.chat.ChatListErrorMessage
+import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.uuid.Uuid
 
 @Composable
 fun ChatInput(
@@ -147,7 +157,7 @@ fun ChatInput(
 fun ChatMessageList(
     getMessageCount: () -> Int,
     getMessageKey: (index: Int) -> Any,
-    getMessageAt: (index: Int) -> MessageWithFilesAndBranchInfo,
+    getMessageAt: (index: Int) -> ChatListMessage,
     onPrevious: (index: Int) -> Unit,
     onNext: (index: Int) -> Unit,
     onRegenerate: (index: Int) -> Unit,
@@ -175,66 +185,96 @@ fun ChatMessageList(
         ) {
             val index = getMessageCount() - 1 - it
             val key = getMessageKey(index)
-            val data = getMessageAt(index)
-
-            val messageEntity = data.message
-            when (messageEntity.role) {
-                MessageEntityRole.Assistant -> {
+            when (val data = getMessageAt(index)) {
+                is AssistantStreamingMessage -> {
                     AssistantMessage(
-                        state = assistantMessageStates.getOrPut(key) {
-                            AssistantMessageState.Finished(
-                                messageEntity.parts.mapNotNull { part ->
-                                    when (part) {
-                                        is Message.Assistant, is Message.Reasoning, is Message.Tool -> AssistantMessageContent.Finished(
-                                            message = part,
-                                            coroutineScope = coroutineScope,
-                                        )
-
-                                        is Message.System, is Message.User -> null
-                                    }
-                                },
-                            )
-                        },
+                        state = assistantMessageStates.getOrPut(key) { data.state },
                         current = data.branchIndex,
                         total = data.branchCount,
-                        onPrevious = { onPrevious(it) },
-                        onNext = { onNext(it) },
-                        onRegenerate = { onRegenerate(it) },
+                        onPrevious = { onPrevious(index) },
+                        onNext = { onNext(index) },
+                        onRegenerate = { onRegenerate(index) },
                         initialReasoningVisibility = initialReasoningVisibility,
                         onAnyReasoningVisibilityChange = { visible ->
-                            onAnyReasoningVisibilityChange(it, visible)
+                            onAnyReasoningVisibilityChange(index, visible)
                         },
                         initialToolVisibility = initialToolVisibility,
                         onAnyToolVisibilityChange = { visible ->
-                            onAnyToolVisibilityChange(it, visible)
+                            onAnyToolVisibilityChange(index, visible)
                         },
                         modifier = Modifier.fillParentMaxWidth(),
                     )
                 }
 
-                MessageEntityRole.User -> {
-                    Box(
-                        modifier = Modifier.fillParentMaxWidth(),
-                        contentAlignment = Alignment.TopEnd,
-                    ) {
-                        UserMessage(
-                            state = userMessageStates.getOrPut(key) {
-                                UserMessageState(
-                                    message = messageEntity.parts.filterIsInstance<Message.User>()
-                                        .firstOrNull()
-                                        ?: error("User message must contain a User part."),
-                                    coroutineScope = coroutineScope,
+                is MessageWithFilesAndBranchInfo -> {
+                    val messageEntity = data.message
+                    when (messageEntity.role) {
+                        MessageEntityRole.Assistant -> {
+                            AssistantMessage(
+                                state = assistantMessageStates.getOrPut(key) {
+                                    AssistantMessageState.Finished(
+                                        messageEntity.parts.mapNotNull { part ->
+                                            when (part) {
+                                                is Message.Assistant, is Message.Reasoning, is Message.Tool -> AssistantMessageContent.Finished(
+                                                    message = part,
+                                                    coroutineScope = coroutineScope,
+                                                )
+
+                                                is Message.System, is Message.User -> null
+                                            }
+                                        },
+                                    )
+                                },
+                                current = data.branchIndex,
+                                total = data.branchCount,
+                                onPrevious = { onPrevious(it) },
+                                onNext = { onNext(it) },
+                                onRegenerate = { onRegenerate(it) },
+                                initialReasoningVisibility = initialReasoningVisibility,
+                                onAnyReasoningVisibilityChange = { visible ->
+                                    onAnyReasoningVisibilityChange(it, visible)
+                                },
+                                initialToolVisibility = initialToolVisibility,
+                                onAnyToolVisibilityChange = { visible ->
+                                    onAnyToolVisibilityChange(it, visible)
+                                },
+                                modifier = Modifier.fillParentMaxWidth(),
+                            )
+                        }
+
+                        MessageEntityRole.User -> {
+                            Box(
+                                modifier = Modifier.fillParentMaxWidth(),
+                                contentAlignment = Alignment.TopEnd,
+                            ) {
+                                UserMessage(
+                                    state = userMessageStates.getOrPut(key) {
+                                        UserMessageState(
+                                            message = messageEntity.parts.filterIsInstance<Message.User>()
+                                                .firstOrNull()
+                                                ?: error("User message must contain a User part."),
+                                            coroutineScope = coroutineScope,
+                                        )
+                                    },
+                                    current = data.branchIndex,
+                                    total = data.branchCount,
+                                    onPrevious = { onPrevious(it) },
+                                    onNext = { onNext(it) },
                                 )
-                            },
-                            current = data.branchIndex,
-                            total = data.branchCount,
-                            onPrevious = { onPrevious(it) },
-                            onNext = { onNext(it) },
-                        )
+                            }
+                        }
+
+                        MessageEntityRole.System -> {}
                     }
+
                 }
 
-                MessageEntityRole.System -> {}
+                is ChatListErrorMessage -> ErrorMessage(
+                    data.error,
+                    modifier = Modifier
+                        .fillParentMaxWidth()
+                        .padding(8.dp),
+                )
             }
         }
     }
@@ -306,7 +346,7 @@ fun AssistantMessage(
             }
         }
         AnimatedVisibility(
-            visible = state.finished,
+            visible = total > 1 || state.finished,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
@@ -329,7 +369,8 @@ fun AssistantMessage(
                     }
                 },
                 onRegenerate = onRegenerate,
-                enabled = state.finished,
+                indicatorVisible = total > 1,
+                otherActionsVisible = state.finished,
             )
         }
         if (state.finished) {
@@ -494,29 +535,48 @@ fun AssistantMessageActions(
     onNext: () -> Unit,
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     onRegenerate: () -> Unit,
-    enabled: Boolean = true,
+    indicatorVisible: Boolean = true,
+    indicatorEnabled: Boolean = indicatorVisible,
+    otherActionsVisible: Boolean = true,
+    otherActionsEnabled: Boolean = otherActionsVisible,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (total > 1) {
+        AnimatedVisibility(
+            visible = indicatorVisible,
+            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+        ) {
             MessageBranchIndicator(
                 current = current,
                 total = total,
                 onPrevious = onPrevious,
                 onNext = onNext,
+                enabled = indicatorEnabled,
             )
         }
-        CopyIconButton(
-            onCopy = onCopy,
-            enabled = enabled,
-        )
-        RetryIconButton(
-            onRetry = onRegenerate,
-            enabled = enabled,
-            contentDescriptionRes = R.string.chat_message_action_label_retry,
-        )
+        AnimatedVisibility(
+            visible = otherActionsVisible,
+            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CopyIconButton(
+                    onCopy = onCopy,
+                    enabled = otherActionsEnabled,
+                )
+                RetryIconButton(
+                    onRetry = onRegenerate,
+                    enabled = otherActionsEnabled,
+                    contentDescriptionRes = R.string.chat_message_action_label_retry,
+                )
+            }
+        }
     }
 }
 
@@ -615,11 +675,36 @@ fun MessageBranchIndicator(
             enabled = enabled && current > 1,
             contentDescriptionRes = R.string.chat_message_branch_label_previous,
         )
-        Text(stringResource(R.string.chat_message_branch_indicator, current, total))
+        SharedTransitionLayout {
+            Text(
+                stringResource(R.string.chat_message_branch_indicator, current, total),
+                modifier = Modifier
+                    .animateBounds(this)
+                    .skipToLookaheadSize { true },
+            )
+        }
         ForwardChevronIconButton(
             onClick = onNext,
             enabled = enabled && current < total,
             contentDescriptionRes = R.string.chat_message_branch_label_next,
+        )
+    }
+}
+
+@Composable
+fun ErrorMessage(
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.errorContainer,
+        shadowElevation = 2.dp,
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(8.dp),
         )
     }
 }
@@ -633,9 +718,11 @@ sealed interface AssistantMessageState {
         eventFlow: Flow<AssistantMessageStreamingEvent>,
         model: LLModel?,
         coroutineScope: CoroutineScope,
+        val id: Uuid = Uuid.generateV7(),
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var finished by mutableStateOf(false)
+        private val completedlyFinished = MutableStateFlow(false)
 
         init {
             coroutineScope.launch {
@@ -686,16 +773,45 @@ sealed interface AssistantMessageState {
 
                         AssistantMessageStreamingEvent.Finish -> {
                             finished = true
-                            val endedAt = Clock.System.now()
-                            contents.asSequence()
-                                .filterIsInstance<AssistantMessageContent.Streaming>()
-                                .forEach {
-                                    if (it.endedAt == null) {
-                                        it.endedAt = endedAt
-                                    }
-                                }
+                            replaceContentsToFinished(Clock.System.now())
+                            completedlyFinished.value = true
+                            cancel()
                         }
                     }
+                }
+            }
+        }
+
+        val finishedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Finished>()
+
+        fun finishedOrNull() = if (completedlyFinished.value) {
+            Finished(finishedContents)
+        } else {
+            null
+        }
+
+        suspend fun finished(): Finished {
+            finish()
+            return awaitFinished()
+        }
+
+        suspend fun awaitFinished(): Finished {
+            completedlyFinished.first { it }
+            return Finished(finishedContents)
+        }
+
+        private suspend fun finish() {
+            finished = true
+            replaceContentsToFinished(Clock.System.now())
+            completedlyFinished.value = true
+        }
+
+        private suspend fun replaceContentsToFinished(endedAt: Instant = Clock.System.now()) {
+            val iterator = contents.listIterator()
+            while (iterator.hasNext()) {
+                val item = iterator.next()
+                if (item is AssistantMessageContent.Streaming) {
+                    iterator.set(item.finished(endedAt))
                 }
             }
         }

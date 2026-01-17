@@ -41,11 +41,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 
 @Composable
@@ -82,7 +84,7 @@ fun MarkdownView(
     val blockParsing = LocalMarkdownViewBlockParsing.current
     val initialState = remember(blockParsing) {
         if (blockParsing) {
-            runBlocking { stateFlow.first { it !is State.Loading } }
+            runBlocking(Dispatchers.Default) { stateFlow.first { it !is State.Loading } }
         } else {
             stateFlow.value
         }
@@ -118,14 +120,39 @@ fun MarkdownView(
     )
 }
 
-@Immutable
-class SavedMarkdownState(coroutineScope: CoroutineScope, markdownFlow: Flow<String>) {
-    val state = markdownFlow
-        .flatMapLatest { parseMarkdownFlow(it) }
-        .filter { it !is State.Loading }
-        .flowOn(Dispatchers.Default)
-        .stateIn(coroutineScope, SharingStarted.Eagerly, State.Loading())
+sealed interface SavedMarkdownState {
+    val state: StateFlow<State>
+
+    @Immutable
+    class Dynamic(
+        coroutineScope: CoroutineScope,
+        markdownFlow: Flow<String>,
+    ) : SavedMarkdownState {
+        private val originalState = markdownFlow
+            .flatMapLatest { parseMarkdownFlow(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(coroutineScope + Dispatchers.Default, SharingStarted.Eagerly, State.Loading())
+
+        override val state = originalState
+            .filter { it !is State.Loading }
+            .stateIn(coroutineScope + Dispatchers.Default, SharingStarted.Eagerly, State.Loading())
+
+        suspend fun fixed() = Fixed(originalState.first { it !is State.Loading })
+    }
+
+    @Immutable
+    class Fixed(state: State) : SavedMarkdownState {
+        override val state = MutableStateFlow(state).asStateFlow()
+    }
 }
+
+fun SavedMarkdownState(
+    coroutineScope: CoroutineScope,
+    markdownFlow: Flow<String>,
+) = SavedMarkdownState.Dynamic(
+    coroutineScope,
+    markdownFlow,
+)
 
 @Composable
 fun rememberSavedMarkdownState(markdownFlow: Flow<String>): SavedMarkdownState {
