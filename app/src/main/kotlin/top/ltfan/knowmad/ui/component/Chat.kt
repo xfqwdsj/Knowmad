@@ -33,12 +33,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
@@ -77,9 +84,64 @@ import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
+import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+
+@Composable
+fun ChatInput(
+    textState: TextFieldState,
+    sendEnabled: Boolean,
+    onSend: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .widthIn(max = TextFieldMaxWidth)
+            .padding(8.dp),
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            BasicTextField(
+                state = textState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                textStyle = LocalTextStyle.current,
+                decorator = {
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (textState.text.isEmpty()) {
+                            Text(
+                                stringResource(R.string.chat_input_placeholder),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        it()
+                    }
+                },
+            )
+            Row(Modifier.fillMaxWidth()) {
+                Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = onSend,
+                    enabled = sendEnabled,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.send_24px),
+                        contentDescription = stringResource(R.string.chat_input_label_send),
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ChatMessageList(

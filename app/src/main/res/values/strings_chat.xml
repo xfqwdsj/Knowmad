@@ -33,4 +33,6 @@
     </plurals>
     <string name="chat_message_tool_label_call">Calling %1$s tool</string>
     <string name="chat_message_tool_label_result">%1$s tool call result</string>
+    <string name="chat_input_placeholder">Type your message here…</string>
+    <string name="chat_input_label_send">Send Message</string>
 </resources>

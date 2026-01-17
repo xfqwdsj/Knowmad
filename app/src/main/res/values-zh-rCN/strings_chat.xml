@@ -31,4 +31,6 @@
     </plurals>
     <string name="chat_message_tool_label_call">调用%1$s工具</string>
     <string name="chat_message_tool_label_result">工具%1$s调用结果</string>
+    <string name="chat_input_placeholder">在此输入您的消息…</string>
+    <string name="chat_input_label_send">发送消息</string>
 </resources>

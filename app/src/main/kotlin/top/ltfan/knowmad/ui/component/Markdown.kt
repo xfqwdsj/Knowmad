@@ -21,10 +21,10 @@ package top.ltfan.knowmad.ui.component
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,34 +40,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-
-@Composable
-fun MarkdownView(
-    markdown: String,
-    modifier: Modifier = Modifier,
-) {
-    val markdownState = rememberMarkdownState(markdown, retainState = true)
-    MarkdownView(
-        markdownState,
-        modifier = modifier,
-    )
-}
-
-@Composable
-fun MarkdownView(
-    markdownState: MarkdownState,
-    modifier: Modifier = Modifier,
-) {
-    val state by markdownState.state.collectAsState()
-    MarkdownView(
-        state,
-        modifier = modifier,
-    )
-}
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun MarkdownView(
@@ -85,13 +64,56 @@ fun MarkdownView(
 
 @Composable
 fun MarkdownView(
+    markdown: String,
+    modifier: Modifier = Modifier,
+) {
+    val markdownState = rememberMarkdownState(markdown, retainState = true)
+    MarkdownView(
+        markdownState,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun MarkdownView(
+    stateFlow: StateFlow<State>,
+    modifier: Modifier = Modifier,
+) {
+    val blockParsing = LocalMarkdownViewBlockParsing.current
+    val initialState = remember(blockParsing) {
+        if (blockParsing) {
+            runBlocking { stateFlow.first { it !is State.Loading } }
+        } else {
+            stateFlow.value
+        }
+    }
+
+    val state by stateFlow.collectAsStateWithLifecycle(initialState)
+
+    MarkdownView(
+        state,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun MarkdownView(
+    markdownState: MarkdownState,
+    modifier: Modifier = Modifier,
+) {
+    MarkdownView(
+        markdownState.state,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun MarkdownView(
     savedMarkdownState: SavedMarkdownState,
     modifier: Modifier = Modifier,
 ) {
-    val markdownState by savedMarkdownState.state.collectAsStateWithLifecycle()
-
     MarkdownView(
-        markdownState,
+        savedMarkdownState.state,
         modifier = modifier,
     )
 }
@@ -133,3 +155,5 @@ fun SavedMarkdownState(markdownFlow: Flow<String>) = SavedMarkdownState(
     viewModel.viewModelScope,
     markdownFlow,
 )
+
+val LocalMarkdownViewBlockParsing = staticCompositionLocalOf { false }

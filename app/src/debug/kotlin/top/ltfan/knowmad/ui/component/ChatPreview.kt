@@ -23,10 +23,13 @@ import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +38,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -52,6 +57,72 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
+
+@Preview
+@Composable
+fun ChatInputPreviewEnabled(
+    @PreviewParameter(ChatPreviewStateProvider::class) state: ChatPreviewState,
+) {
+    AppTheme {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            ChatInput(
+                textState = rememberTextFieldState(state.text),
+                sendEnabled = state.sendEnabled,
+                onSend = {},
+            )
+        }
+    }
+}
+
+class ChatPreviewStateProvider : PreviewParameterProvider<ChatPreviewState> {
+    override val values = sequenceOf(
+        ChatPreviewState(
+            text = "",
+            sendEnabled = false,
+        ),
+        ChatPreviewState(
+            text = "Hello, world!",
+            sendEnabled = true,
+        ),
+        ChatPreviewState(
+            text = "This is a longer message to test the chat input field. It should handle multiple lines and wrap text correctly.",
+            sendEnabled = true,
+        ),
+        ChatPreviewState(
+            text = "Here is a message with special characters: !@#$%^&*()_+-=[]{}|;':\",.<>/?`~",
+            sendEnabled = true,
+        ),
+        ChatPreviewState(
+            text = "最后，这是一条包含非拉丁字符的消息，以测试国际化支持。",
+            sendEnabled = true,
+        ),
+    )
+}
+
+data class ChatPreviewState(
+    val text: String,
+    val sendEnabled: Boolean,
+)
+
+@Preview
+@Composable
+fun ChatInputInteractivePreview() {
+    val state = rememberTextFieldState()
+
+    AppTheme {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            ChatInput(
+                textState = state,
+                sendEnabled = state.text.isNotBlank(),
+                onSend = { state.clearText() },
+            )
+        }
+    }
+}
 
 @Preview
 @Composable
@@ -151,18 +222,20 @@ fun ChatMessageListPreview() {
         Surface(
             color = MaterialTheme.colorScheme.background,
         ) {
-            ChatMessageList(
-                getMessageCount = { messages.size },
-                getMessageKey = { messages[it].message.id },
-                getMessageAt = { messages[it] },
-                onPrevious = {},
-                onNext = {},
-                onRegenerate = {},
-                initialReasoningVisibility = true,
-                onAnyReasoningVisibilityChange = { _, _ -> },
-                initialToolVisibility = true,
-                onAnyToolVisibilityChange = { _, _ -> },
-            )
+            CompositionLocalProvider(LocalMarkdownViewBlockParsing provides true) {
+                ChatMessageList(
+                    getMessageCount = { messages.size },
+                    getMessageKey = { messages[it].message.id },
+                    getMessageAt = { messages[it] },
+                    onPrevious = {},
+                    onNext = {},
+                    onRegenerate = {},
+                    initialReasoningVisibility = true,
+                    onAnyReasoningVisibilityChange = { _, _ -> },
+                    initialToolVisibility = true,
+                    onAnyToolVisibilityChange = { _, _ -> },
+                )
+            }
         }
     }
 }
