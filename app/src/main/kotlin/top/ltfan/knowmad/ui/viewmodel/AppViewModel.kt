@@ -100,7 +100,7 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     init {
         viewModelScope.launch {
             if (wizardStateStore.data.first().data == null) {
-                backStack.add(WizardPage(::onFinishWizard, ::onSkipWizard))
+                backStack.add(WizardPage())
             } else {
                 navigateToMainPage()
             }

@@ -112,9 +112,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
-import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.ui.component.CopyIconButton
 import top.ltfan.knowmad.ui.component.LLMContextLengthTextField
 import top.ltfan.knowmad.ui.component.LLMMaxOutputTokensTextField
@@ -143,14 +141,7 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.ui.viewmodel.WizardPageViewModel
 
 @Serializable
-class WizardPage(
-    val onFinishWizard: (
-        entry: LLMConfigEntry,
-        firstJoinedData: FirstJoinedData,
-        onFailed: (message: String) -> Unit,
-    ) -> Unit,
-    val onSkipWizard: () -> Unit,
-) : Page() {
+class WizardPage : Page() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
@@ -159,8 +150,8 @@ class WizardPage(
             WizardPageViewModel(
                 appViewModel.application,
                 WizardWelcomePage(),
-                onFinishWizard,
-                onSkipWizard,
+                appViewModel::onFinishWizard,
+                appViewModel::onSkipWizard,
             )
         }
 
