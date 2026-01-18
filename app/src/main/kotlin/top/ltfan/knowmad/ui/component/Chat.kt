@@ -695,6 +695,7 @@ fun MessageBranchIndicator(
 fun ErrorMessage(
     message: String,
     modifier: Modifier = Modifier,
+    onDelete: (() -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -702,10 +703,21 @@ fun ErrorMessage(
         color = MaterialTheme.colorScheme.errorContainer,
         shadowElevation = 2.dp,
     ) {
-        Text(
-            text = message,
+        Row(
             modifier = Modifier.padding(8.dp),
-        )
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painterResource(R.drawable.error_24px),
+                contentDescription = null,
+            )
+            Text(message)
+            Spacer(Modifier.weight(1f))
+            if (onDelete != null) {
+                DeleteIconButton(onDelete)
+            }
+        }
     }
 }
 

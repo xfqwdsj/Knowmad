@@ -82,6 +82,38 @@ fun RetryIconButton(
 }
 
 @Composable
+fun DeleteIconButton(
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes contentDescriptionRes: Int? = R.string.label_delete,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onDelete,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                painterResource(R.drawable.delete_24px),
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
+            )
+        }
+    }
+}
+
+@Composable
 fun CopyIconButton(
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     modifier: Modifier = Modifier,
