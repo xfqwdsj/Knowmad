@@ -821,9 +821,10 @@ sealed interface AssistantMessageState {
         private suspend fun replaceContentsToFinished(endedAt: Instant = Clock.System.now()) {
             val iterator = contents.listIterator()
             while (iterator.hasNext()) {
-                val item = iterator.next()
-                if (item is AssistantMessageContent.Streaming) {
-                    iterator.set(item.finished(endedAt))
+                val content = iterator.next()
+                if (content is AssistantMessageContent.Streaming) {
+                    content.endedAt = endedAt
+                    iterator.set(content.finished(endedAt))
                 }
             }
         }

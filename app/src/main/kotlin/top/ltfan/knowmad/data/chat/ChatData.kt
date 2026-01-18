@@ -182,9 +182,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
 
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
             val metaInfo = ResponseMetaInfo(
-                timestamp = endedAt?.toDeprecatedInstant() ?: defaultEndedAt
-                    .also { endedAt = it }
-                    .toDeprecatedInstant(),
+                timestamp = (endedAt ?: defaultEndedAt).toDeprecatedInstant(),
                 metadata = JsonObject(
                     mapOf("startedAt" to JsonPrimitive(startedAt.toString())),
                 ),
