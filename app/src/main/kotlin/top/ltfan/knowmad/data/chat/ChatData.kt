@@ -219,11 +219,13 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             this,
             defaultEndedAt,
         )
+
+        override val uiMessage get() = UiMessage.Koog(toMessage())
     }
 
     @Immutable
     class Completed private constructor(
-        val message: UiMessage,
+        override val uiMessage: UiMessage,
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
         constructor(
@@ -271,6 +273,8 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             }
         }
     }
+
+    abstract val uiMessage: UiMessage
 }
 
 enum class AssistantStreamingMessageType {

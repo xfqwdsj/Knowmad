@@ -487,7 +487,7 @@ fun AssistantMessage(
                     }
                 }
 
-                is Completed -> when (val uiMessage = content.message) {
+                is Completed -> when (val uiMessage = content.uiMessage) {
                     is Koog -> when (val message = uiMessage.message) {
                         is Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
@@ -536,7 +536,7 @@ fun AssistantMessage(
                     null to state.contents.joinToString("\n") {
                         when (it) {
                             is Streaming -> it.flow.value
-                            is Completed -> when (val uiMessage = it.message) {
+                            is Completed -> when (val uiMessage = it.uiMessage) {
                                 is Koog -> when (val message = uiMessage.message) {
                                     is Assistant, is Reasoning, is Tool -> message.content
                                     else -> ""
