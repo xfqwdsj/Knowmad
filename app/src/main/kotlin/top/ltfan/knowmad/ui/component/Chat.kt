@@ -402,6 +402,7 @@ fun ChatMessageList(
                                             }
                                         },
                                         id = messageEntity.id,
+                                        createdAt = messageEntity.createdAt,
                                     )
                             } ?: error("`null` returned when getting assistant message state."),
                             current = data.branchIndex,
@@ -905,6 +906,7 @@ sealed interface AssistantMessageState {
     val id: Uuid
     val contents: List<AssistantMessageContent>
     val completed: Boolean
+    val createdAt: Instant
 
     @Stable
     class Streaming(
@@ -912,6 +914,7 @@ sealed interface AssistantMessageState {
         model: LLModel?,
         coroutineScope: CoroutineScope,
         override val id: Uuid = Uuid.generateV7(),
+        override val createdAt: Instant = Clock.System.now(),
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
@@ -978,7 +981,7 @@ sealed interface AssistantMessageState {
         val completedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
         fun completedStateOrNull() = if (completedlyFinished.value) {
-            Completed(completedContents, id)
+            Completed(completedContents, id, createdAt)
         } else {
             null
         }
@@ -990,7 +993,7 @@ sealed interface AssistantMessageState {
 
         suspend fun awaitCompletedState(): Completed {
             completedlyFinished.first { it }
-            return Completed(completedContents, id)
+            return Completed(completedContents, id, createdAt)
         }
 
         private suspend fun complete() {
@@ -1014,7 +1017,8 @@ sealed interface AssistantMessageState {
     @Immutable
     data class Completed(
         override val contents: List<AssistantMessageContent.Completed>,
-        override val id: Uuid = Uuid.generateV7(),
+        override val id: Uuid,
+        override val createdAt: Instant,
     ) : AssistantMessageState {
         override val completed: Boolean = true
     }
