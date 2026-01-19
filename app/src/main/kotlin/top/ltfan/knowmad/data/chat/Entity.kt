@@ -84,8 +84,8 @@ data class MessageEntity(
     val role: MessageEntityRole,
     val searchableContent: String = parts.joinToString("\n") { it.content },
     val generatedBy: LLModel?,
-    val createdAt: Instant = Clock.System.now(),
     val completed: Boolean = true,
+    val createdAt: Instant = Clock.System.now(),
 )
 
 @Entity(
