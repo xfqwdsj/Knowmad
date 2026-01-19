@@ -213,16 +213,16 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             }
         }
 
-        suspend fun finished(
+        suspend fun completed(
             defaultEndedAt: Instant = Clock.System.now(),
-        ) = Finished.fromStreaming(
+        ) = Completed.fromStreaming(
             this,
             defaultEndedAt,
         )
     }
 
     @Immutable
-    class Finished private constructor(
+    class Completed private constructor(
         val message: UiMessage,
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
@@ -258,8 +258,8 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             suspend fun fromStreaming(
                 streaming: Streaming,
                 defaultEndedAt: Instant = Clock.System.now(),
-            ): Finished {
-                return Finished(
+            ): Completed {
+                return Completed(
                     streaming.toMessage(defaultEndedAt).toUiMessage(),
                     streaming.markdownState.let {
                         when (it) {

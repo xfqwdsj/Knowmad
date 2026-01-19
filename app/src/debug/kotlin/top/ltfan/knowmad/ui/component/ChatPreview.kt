@@ -337,7 +337,7 @@ class StreamingAssistantMessagePreviewState(
         )
     }
 
-    suspend fun generate(finishMessage: String = "Finished.") {
+    suspend fun generate(finishMessage: String = "Completed.") {
         eventFlow.emit(
             AssistantMessageStreamingEvent.AddString(
                 0, "This is a streaming ", AssistantStreamingMessageType.Reasoning,
@@ -451,10 +451,10 @@ class StreamingAssistantMessagePreviewState(
         )
         eventFlow.emit(AssistantMessageStreamingEvent.Finish)
         (state as? AssistantMessageState.Streaming)?.let {
-            val finished = it.awaitFinished()
+            val finished = it.awaitCompletedState()
             state = finished.copy(
                 contents = finished.contents + listOf(
-                    AssistantMessageContent.Finished(
+                    AssistantMessageContent.Completed(
                         Message.Assistant(
                             content = finishMessage,
                             metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),

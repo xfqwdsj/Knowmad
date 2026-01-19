@@ -382,12 +382,12 @@ fun ChatMessageList(
                     when (messageEntity.role) {
                         Assistant -> AssistantMessage(
                             state = assistantMessageStates.compute(key) { _, state ->
-                                state as? AssistantMessageState.Finished
-                                    ?: AssistantMessageState.Finished(
+                                state as? AssistantMessageState.Completed
+                                    ?: AssistantMessageState.Completed(
                                         messageEntity.parts.mapNotNull { part ->
                                             when (part) {
                                                 is Koog -> when (val message = part.message) {
-                                                    is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Finished(
+                                                    is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Completed(
                                                         message = message,
                                                         coroutineScope = coroutineScope,
                                                     )
@@ -395,7 +395,7 @@ fun ChatMessageList(
                                                     else -> null
                                                 }
 
-                                                else -> AssistantMessageContent.Finished(
+                                                else -> AssistantMessageContent.Completed(
                                                     message = part,
                                                     coroutineScope = coroutineScope,
                                                 )
@@ -487,7 +487,7 @@ fun AssistantMessage(
                     }
                 }
 
-                is Finished -> when (val uiMessage = content.message) {
+                is Completed -> when (val uiMessage = content.message) {
                     is Koog -> when (val message = uiMessage.message) {
                         is Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
@@ -523,7 +523,7 @@ fun AssistantMessage(
             }
         }
         AnimatedVisibility(
-            visible = total > 1 || state.finished,
+            visible = total > 1 || state.completed,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
@@ -536,7 +536,7 @@ fun AssistantMessage(
                     null to state.contents.joinToString("\n") {
                         when (it) {
                             is Streaming -> it.flow.value
-                            is Finished -> when (val uiMessage = it.message) {
+                            is Completed -> when (val uiMessage = it.message) {
                                 is Koog -> when (val message = uiMessage.message) {
                                     is Assistant, is Reasoning, is Tool -> message.content
                                     else -> ""
@@ -549,10 +549,10 @@ fun AssistantMessage(
                 },
                 onRegenerate = onRegenerate,
                 indicatorVisible = total > 1,
-                otherActionsVisible = state.finished,
+                otherActionsVisible = state.completed,
             )
         }
-        if (state.finished) {
+        if (state.completed) {
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
@@ -902,7 +902,7 @@ fun ErrorMessage(
 
 sealed interface AssistantMessageState {
     val contents: List<AssistantMessageContent>
-    val finished: Boolean
+    val completed: Boolean
 
     @Stable
     class Streaming(
@@ -912,7 +912,7 @@ sealed interface AssistantMessageState {
         val id: Uuid = Uuid.generateV7(),
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
-        override var finished by mutableStateOf(false)
+        override var completed by mutableStateOf(false)
         private val completedlyFinished = MutableStateFlow(false)
 
         init {
@@ -955,7 +955,7 @@ sealed interface AssistantMessageState {
 
                             contents.add(
                                 index,
-                                AssistantMessageContent.Finished(
+                                AssistantMessageContent.Completed(
                                     message = event.message,
                                     coroutineScope = coroutineScope,
                                 ),
@@ -963,8 +963,8 @@ sealed interface AssistantMessageState {
                         }
 
                         is Finish -> {
-                            finished = true
-                            replaceContentsToFinished(Clock.System.now())
+                            completed = true
+                            replaceContentsToCompleted(Clock.System.now())
                             completedlyFinished.value = true
                             cancel()
                         }
@@ -973,47 +973,47 @@ sealed interface AssistantMessageState {
             }
         }
 
-        val finishedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Finished>()
+        val completedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
-        fun finishedOrNull() = if (completedlyFinished.value) {
-            Finished(finishedContents)
+        fun completedStateOrNull() = if (completedlyFinished.value) {
+            Completed(completedContents)
         } else {
             null
         }
 
-        suspend fun finished(): Finished {
-            finish()
-            return awaitFinished()
+        suspend fun completeAndGetState(): Completed {
+            complete()
+            return awaitCompletedState()
         }
 
-        suspend fun awaitFinished(): Finished {
+        suspend fun awaitCompletedState(): Completed {
             completedlyFinished.first { it }
-            return Finished(finishedContents)
+            return Completed(completedContents)
         }
 
-        private suspend fun finish() {
-            finished = true
-            replaceContentsToFinished(Clock.System.now())
+        private suspend fun complete() {
+            completed = true
+            replaceContentsToCompleted(Clock.System.now())
             completedlyFinished.value = true
         }
 
-        private suspend fun replaceContentsToFinished(endedAt: Instant = Clock.System.now()) {
+        private suspend fun replaceContentsToCompleted(endedAt: Instant = Clock.System.now()) {
             val iterator = contents.listIterator()
             while (iterator.hasNext()) {
                 val content = iterator.next()
                 if (content is AssistantMessageContent.Streaming) {
                     content.endedAt = endedAt
-                    iterator.set(content.finished(endedAt))
+                    iterator.set(content.completed(endedAt))
                 }
             }
         }
     }
 
     @Immutable
-    data class Finished(
-        override val contents: List<AssistantMessageContent.Finished>,
+    data class Completed(
+        override val contents: List<AssistantMessageContent.Completed>,
     ) : AssistantMessageState {
-        override val finished: Boolean = true
+        override val completed: Boolean = true
     }
 }
 
