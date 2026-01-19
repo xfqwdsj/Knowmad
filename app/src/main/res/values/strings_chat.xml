@@ -35,4 +35,9 @@
     <string name="chat_message_tool_label_result">%1$s tool call result</string>
     <string name="chat_input_placeholder">Type your message here…</string>
     <string name="chat_input_label_send">Send Message</string>
+    <string name="chat_input_model_label_select">Select Model</string>
+    <string name="chat_input_model_label_expand">Expand Model Selection</string>
+    <string name="chat_input_model_label_collapse">Collapse Model Selection</string>
+    <string name="chat_input_model_label_no_providers">No model providers configured</string>
+    <string name="chat_input_model_label_no_models">No models configured for this provider</string>
 </resources>

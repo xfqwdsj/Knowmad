@@ -57,10 +57,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
-import top.ltfan.knowmad.data.chat.ChatListErrorMessage
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
+import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import kotlin.random.Random
@@ -82,6 +83,10 @@ fun ChatInputPreviewEnabled(
                 textState = rememberTextFieldState(state.text),
                 sendEnabled = state.sendEnabled,
                 onSend = {},
+                providers = listOf(),
+                getModels = { listOf() },
+                selectedModel = null,
+                onSelectModel = {},
             )
         }
     }
@@ -130,6 +135,10 @@ fun ChatInputInteractivePreview() {
                 textState = state,
                 sendEnabled = state.text.isNotBlank(),
                 onSend = { state.clearText() },
+                providers = listOf(),
+                getModels = { listOf() },
+                selectedModel = null,
+                onSelectModel = {},
             )
         }
     }
@@ -147,7 +156,7 @@ fun ChatMessageListPreview() {
                     depth = 0,
                     parts = prompt("1") {
                         user("Hello, world!")
-                    }.messages,
+                    }.messages.map { it.toUiMessage() },
                     role = MessageEntityRole.User,
                     generatedBy = null,
                 ),
@@ -161,7 +170,7 @@ fun ChatMessageListPreview() {
                     depth = 0,
                     parts = prompt("1") {
                         user("How are you today?")
-                    }.messages,
+                    }.messages.map { it.toUiMessage() },
                     role = MessageEntityRole.User,
                     generatedBy = null,
                 ),
@@ -204,7 +213,9 @@ fun ChatMessageListPreview() {
                             )
                         }
                         assistant("Is there anything else I can help you with?")
-                    }.messages,
+                    }.messages.map { it.toUiMessage() } + listOf(
+                        UiMessage.Error("I don't know what error happened."),
+                    ),
                     role = MessageEntityRole.Assistant,
                     generatedBy = DeepSeekModels.DeepSeekChat,
                 ),
@@ -212,14 +223,13 @@ fun ChatMessageListPreview() {
                 branchIndex = 2,
                 branchCount = 5,
             ),
-            ChatListErrorMessage("I don't know what error happened."),
             MessageWithFilesAndBranchInfo(
                 message = MessageEntity(
                     conversationId = conversationId,
                     depth = 0,
                     parts = prompt("1") {
                         assistant("Bye!")
-                    }.messages,
+                    }.messages.map { it.toUiMessage() },
                     role = MessageEntityRole.Assistant,
                     generatedBy = null,
                 ),
@@ -243,9 +253,9 @@ fun ChatMessageListPreview() {
                     onNext = {},
                     onRegenerate = {},
                     initialReasoningVisibility = true,
-                    onAnyReasoningVisibilityChange = { _, _ -> },
+                    onAnyReasoningVisibilityChange = {},
                     initialToolVisibility = true,
-                    onAnyToolVisibilityChange = { _, _ -> },
+                    onAnyToolVisibilityChange = {},
                 )
             }
         }

@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedInstant
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
@@ -66,9 +67,9 @@ suspend fun List<ContentPart>.storeAll(ref: MutableList<Uuid>) =
 context(viewModel: AppViewModel)
 suspend fun ContentPart.stored(ref: MutableList<Uuid>): ContentPart {
     val part = this
-    if (part !is ContentPart.Attachment) return part
+    if (part !is Attachment) return part
     val content = part.content
-    if (content !is AttachmentContent.Binary) return part
+    if (content !is Binary) return part
 
     val bytes = content.asBytes()
 
@@ -97,9 +98,9 @@ suspend fun ContentPart.stored(ref: MutableList<Uuid>): ContentPart {
 
 context(viewModel: AppViewModel)
 suspend fun ContentPart.load(): ContentPart = when (this) {
-    is ContentPart.Attachment -> {
+    is Attachment -> {
         val content = this.content
-        if (content !is AttachmentContent.URL) return this
+        if (content !is URL) return this
 
         val url = URLBuilder(content.url).build()
         if (url.protocol.name != ATTACHMENT_STORAGE_SCHEME) return this
@@ -129,10 +130,10 @@ suspend fun ContentPart.load(): ContentPart = when (this) {
 }
 
 fun ContentPart.Attachment.updateContent(newContent: AttachmentContent) = when (this) {
-    is ContentPart.Audio -> copy(content = newContent)
-    is ContentPart.File -> copy(content = newContent)
-    is ContentPart.Image -> copy(content = newContent)
-    is ContentPart.Video -> copy(content = newContent)
+    is Audio -> copy(content = newContent)
+    is File -> copy(content = newContent)
+    is Image -> copy(content = newContent)
+    is Video -> copy(content = newContent)
 }
 
 sealed interface MessageWithBranchInfo {
@@ -141,10 +142,29 @@ sealed interface MessageWithBranchInfo {
     val branchCount: Int
 }
 
+@Serializable
+sealed interface UiMessage {
+    val content: String
+
+    @Serializable
+    @Immutable
+    class Koog(val message: Message) : UiMessage {
+        override val content get() = message.content
+    }
+
+    @Serializable
+    @Immutable
+    data class Error(override val content: String) : UiMessage
+
+}
+
 sealed interface ChatListMessage {
     val key: Any
 
-    sealed interface Branched : ChatListMessage, MessageWithBranchInfo
+    sealed interface Branched : ChatListMessage, MessageWithBranchInfo {
+        override val key: Uuid
+    }
+
     sealed interface Standalone : ChatListMessage
 }
 
@@ -155,13 +175,6 @@ data class AssistantStreamingMessage(
     override val branchCount: Int,
 ) : ChatListMessage.Branched {
     override val key = state.id
-}
-
-@Immutable
-data class ChatListErrorMessage(
-    val error: String,
-) : ChatListMessage.Standalone {
-    override val key = Uuid.generateV7()
 }
 
 sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
@@ -210,11 +223,11 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
 
     @Immutable
     class Finished private constructor(
-        val message: Message,
+        val message: UiMessage,
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
         constructor(
-            message: Message,
+            message: UiMessage,
             coroutineScope: CoroutineScope,
         ) : this(
             message,
@@ -222,11 +235,23 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
                 coroutineScope,
                 flowOf(
                     when (message) {
-                        is Message.Reasoning, is Message.Assistant -> message.content
-                        else -> ""
+                        is Koog -> when (val message = message.message) {
+                            is Reasoning, is Assistant -> message.content
+                            else -> ""
+                        }
+
+                        else -> message.content
                     },
                 ),
             ),
+        )
+
+        constructor(
+            message: Message,
+            coroutineScope: CoroutineScope,
+        ) : this(
+            message.toUiMessage(),
+            coroutineScope,
         )
 
         companion object {
@@ -235,11 +260,11 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
                 defaultEndedAt: Instant = Clock.System.now(),
             ): Finished {
                 return Finished(
-                    streaming.toMessage(defaultEndedAt),
+                    streaming.toMessage(defaultEndedAt).toUiMessage(),
                     streaming.markdownState.let {
                         when (it) {
-                            is SavedMarkdownState.Dynamic -> it.fixed()
-                            is SavedMarkdownState.Fixed -> it
+                            is Dynamic -> it.fixed()
+                            is Fixed -> it
                         }
                     },
                 )
@@ -251,3 +276,5 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
 enum class AssistantStreamingMessageType {
     Reasoning, Content
 }
+
+fun Message.toUiMessage(): UiMessage = UiMessage.Koog(this)

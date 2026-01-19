@@ -19,8 +19,12 @@
 package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.llm.LLModel
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.Icon
@@ -47,17 +51,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMaxOfOrNull
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.AgentScreen
+import top.ltfan.knowmad.ui.component.ChatInput
+import top.ltfan.knowmad.ui.component.ChatMessageList
 import top.ltfan.knowmad.ui.component.ConversationList
 import top.ltfan.knowmad.ui.component.LLMProviderConfig
 import top.ltfan.knowmad.ui.component.LLMProviderConfigEditingDialog
@@ -77,8 +88,7 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 @Serializable
 class AgentMainPage : AgentSubPage() {
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun Content() {
+    context(contentPadding: PaddingValues) override fun Content() {
         PageContent(contentPadding)
     }
 
@@ -200,10 +210,84 @@ class AgentMainPage : AgentSubPage() {
                 containerColor = ContainerColor.scaffoldContainer,
                 contentColor = ScaffoldContentColor,
                 contentWindowInsets = AppWindowInsets,
-            ) {
-                val contentPadding = it + contentPadding + PaddingValues(16.dp)
+            ) { scaffoldPaddingValues ->
+                val contentPadding = scaffoldPaddingValues + contentPadding + PaddingValues(16.dp)
 
+                val messages = viewModel.messagesState?.flow?.collectAsLazyPagingItems()
 
+                SubcomposeLayout { constraints ->
+                    val inputPlaceables = subcompose("input") {
+                        ChatInput(
+                            textState = viewModel.chatMessageTextInputState,
+                            sendEnabled = viewModel.canSendMessage,
+                            onSend = viewModel::sendMessage,
+                            providers = viewModel.providers,
+                            getModels = viewModel::getModels,
+                            selectedModel = viewModel.selectedModel,
+                            onSelectModel = { model -> viewModel.selectedModelId = model.id },
+                            modifier = Modifier
+                                .padding(
+                                    contentPadding.copy(
+                                        layoutDirection,
+                                        top = 0.dp,
+                                    ),
+                                )
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp),
+                        )
+                    }.map { it.measure(constraints) }
+
+                    val inputHeight = inputPlaceables.fastMaxOfOrNull { it.height } ?: 0
+
+                    val listPlaceables = subcompose("messageList") {
+                        val padding = contentPadding.copy(
+                            layoutDirection,
+                            bottom = inputHeight.toDp(),
+                        )
+
+                        if (messages == null) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(padding)
+                                    .fillMaxSize(),
+                            ) {
+
+                            }
+                            return@subcompose
+                        }
+
+                        ChatMessageList(
+                            getMessageCount = { messages.itemCount },
+                            getMessageKey = messages.itemKey { it.key },
+                            getMessageAt = { index ->
+                                val message = messages[index] ?: return@ChatMessageList null
+                                messages[index]?.takeIf { it.message.completed }
+                                    ?: viewModel.streamingMessages[message.key]
+                            },
+                            onPrevious = viewModel::messageOnPrevious,
+                            onNext = viewModel::messageOnNext,
+                            onRegenerate = viewModel::messageOnRegenerate,
+                            initialReasoningVisibility = viewModel.defaultReasoningVisibility,
+                            onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
+                            initialToolVisibility = viewModel.defaultToolVisibility,
+                            onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = padding,
+                        )
+                    }.map { it.measure(constraints) }
+
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        listPlaceables.fastForEach {
+                            it.place(0, 0)
+                        }
+                        inputPlaceables.fastForEach {
+                            it.place(
+                                (constraints.maxWidth - it.width) / 2,
+                                constraints.maxHeight - it.height,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -213,8 +297,7 @@ class AgentMainPage : AgentSubPage() {
 @Serializable
 class AgentConfigPage : AgentSubPage() {
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun Content() {
+    context(contentPadding: PaddingValues) override fun Content() {
         PageContent(contentPadding)
     }
 
@@ -347,8 +430,7 @@ sealed class AgentSubPage : SubPage<AgentSubPage>()
 @Serializable
 class AgentPage : Page() {
     @Composable
-    context(contentPadding: PaddingValues)
-    override fun Content() {
+    context(contentPadding: PaddingValues) override fun Content() {
         CompositionLocalProvider(LocalAgentScreenIsStandalone provides true) {
             AgentScreen(
                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
@@ -365,9 +447,8 @@ private val DrawerContainerColor
     @Composable inline get() = if (LocalAgentScreenTransparentContainer.current) MaterialTheme.colorScheme.surface else DrawerDefaults.modalContainerColor
 
 private val ContainerColor
-    @Composable inline get() =
-        if (LocalAgentScreenTransparentContainer.current) LocalAgentScreenPreferredContainerColor.current.takeOrElse { Color.Transparent }
-        else Color.Unspecified
+    @Composable inline get() = if (LocalAgentScreenTransparentContainer.current) LocalAgentScreenPreferredContainerColor.current.takeOrElse { Color.Transparent }
+    else Color.Unspecified
 
 private val Color.scaffoldContainer
     @Composable inline get() = takeOrElse { MaterialTheme.colorScheme.background }

@@ -110,6 +110,9 @@ interface LLMConfigDao {
     @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY rank ASC")
     fun getAllProviders(): PagingSource<Int, LLMProviderConfigEntity>
 
+    @Query("SELECT * FROM LLMProviderConfigEntity ORDER BY rank ASC")
+    fun getAllProvidersFlow(): Flow<List<LLMProviderConfigEntity>>
+
     @Query("SELECT * FROM LLMProviderConfigEntity WHERE id = :id")
     suspend fun getProviderById(id: Uuid): LLMProviderConfigEntity?
 
@@ -127,6 +130,9 @@ interface LLMConfigDao {
 
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     fun getModelsByProvider(providerConfigId: Uuid): PagingSource<Int, LLMConfigEntity>
+
+    @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
+    fun getModelsByProviderFlow(providerConfigId: Uuid): Flow<List<LLMConfigEntity>>
 
     @Query("SELECT * FROM LLMConfigEntity WHERE providerConfigId = :providerConfigId ORDER BY rank ASC")
     suspend fun getModelsByProviderOnce(providerConfigId: Uuid): List<LLMConfigEntity>

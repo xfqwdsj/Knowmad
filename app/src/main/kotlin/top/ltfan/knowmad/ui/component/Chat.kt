@@ -40,10 +40,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -52,6 +54,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,11 +72,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
@@ -89,11 +97,13 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
-import top.ltfan.knowmad.data.chat.ChatListErrorMessage
 import top.ltfan.knowmad.data.chat.ChatListMessage
-import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
-import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
+import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.llm.LLMConfigEntity
+import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
+import top.ltfan.knowmad.ui.util.itemThemedShape
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -104,11 +114,16 @@ fun ChatInput(
     textState: TextFieldState,
     sendEnabled: Boolean,
     onSend: () -> Unit,
+    providers: List<LLMProviderConfigEntity>,
+    getModels: suspend (provider: LLMProviderConfigEntity) -> List<LLMConfigEntity>,
+    selectedModel: LLMConfigEntity?,
+    onSelectModel: (LLMConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .widthIn(max = TextFieldMaxWidth)
+        modifier = Modifier
+            .widthIn(max = 640.dp)
+            .then(modifier)
             .padding(8.dp),
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 4.dp,
@@ -133,7 +148,17 @@ fun ChatInput(
                     }
                 },
             )
-            Row(Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.width(4.dp))
+                ChatModelSelector(
+                    providers = providers,
+                    getModels = getModels,
+                    selectedModel = selectedModel,
+                    onSelectModel = onSelectModel,
+                )
                 Spacer(Modifier.weight(1f))
                 IconButton(
                     onClick = onSend,
@@ -154,17 +179,163 @@ fun ChatInput(
 }
 
 @Composable
+fun ChatModelSelector(
+    providers: List<LLMProviderConfigEntity>,
+    getModels: suspend (provider: LLMProviderConfigEntity) -> List<LLMConfigEntity>,
+    selectedModel: LLMConfigEntity?,
+    onSelectModel: (LLMConfigEntity) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val size = SplitButtonDefaults.ExtraSmallContainerHeight
+    val colors = ButtonDefaults.textButtonColors()
+    val border = null
+
+    var expanded by remember { mutableStateOf(false) }
+
+    SplitButtonLayout(
+        leadingButton = {
+            ProvideCompatibleShapes {
+                SplitButtonDefaults.LeadingButton(
+                    onClick = { expanded = true },
+                    shapes = SplitButtonDefaults.leadingButtonShapesFor(size),
+                    colors = colors,
+                    border = border,
+                    contentPadding = SplitButtonDefaults.leadingButtonContentPaddingFor(size),
+                ) {
+                    SharedTransitionLayout {
+                        Text(
+                            selectedModel?.name
+                                ?: stringResource(R.string.chat_input_model_label_select),
+                            modifier = Modifier
+                                .animateBounds(this)
+                                .skipToLookaheadSize { true },
+                        )
+                    }
+                }
+            }
+        },
+        trailingButton = {
+            ProvideCompatibleShapes {
+                SplitButtonDefaults.TrailingButton(
+                    checked = expanded,
+                    onCheckedChange = { expanded = it },
+                    shapes = SplitButtonDefaults.trailingButtonShapesFor(size),
+                    colors = colors,
+                    border = border,
+                    contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(size),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.arrow_drop_down_24px),
+                        contentDescription = stringResource(
+                            if (!expanded) R.string.chat_input_model_label_expand
+                            else R.string.chat_input_model_label_collapse,
+                        ),
+                    )
+                }
+            }
+
+            var modelsExpanded by remember { mutableStateOf(false) }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {
+                    expanded = false
+                    modelsExpanded = false
+                },
+            ) {
+                if (providers.isEmpty()) {
+                    DropdownMenuItem(
+                        onClick = {},
+                        text = { Text(stringResource(R.string.chat_input_model_label_no_providers)) },
+                        enabled = false,
+                    )
+                    return@DropdownMenu
+                }
+
+                providers.forEachIndexed { index, provider ->
+                    var models by remember { mutableStateOf<List<LLMConfigEntity>?>(null) }
+
+                    val density = LocalDensity.current
+                    val layoutDirection = LocalLayoutDirection.current
+                    var offset by remember { mutableStateOf(DpOffset.Zero) }
+
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        DropdownMenuItem(
+                            onClick = {
+                                coroutineScope.launch {
+                                    models = getModels(provider)
+                                    modelsExpanded = true
+                                }
+                            },
+                            text = { Text(provider.name) },
+                            shape = MenuDefaults.itemThemedShape(
+                                index,
+                                providers.size,
+                            ),
+                            modifier = Modifier.onGloballyPositioned {
+                                with(density) {
+                                    val factor = if (layoutDirection == Ltr) 1 else -1
+                                    offset = DpOffset(
+                                        it.size.width.toDp() * factor,
+                                        0.dp,
+                                    )
+                                }
+                            },
+                        )
+
+                        DropdownMenu(
+                            expanded = modelsExpanded && models != null,
+                            onDismissRequest = { modelsExpanded = false },
+                            offset = offset,
+                        ) {
+                            val models = models
+
+                            if (models.isNullOrEmpty()) {
+                                DropdownMenuItem(
+                                    onClick = {},
+                                    text = { Text(stringResource(R.string.chat_input_model_label_no_models)) },
+                                    enabled = false,
+                                )
+                                return@DropdownMenu
+                            }
+
+                            models.forEachIndexed { modelIndex, model ->
+                                DropdownMenuItem(
+                                    onClick = {
+                                        onSelectModel(model)
+                                        modelsExpanded = false
+                                        expanded = false
+                                    },
+                                    text = { Text(model.name) },
+                                    shape = MenuDefaults.itemThemedShape(
+                                        modelIndex,
+                                        models.size,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun ChatMessageList(
     getMessageCount: () -> Int,
     getMessageKey: (index: Int) -> Any,
-    getMessageAt: (index: Int) -> ChatListMessage,
-    onPrevious: (index: Int) -> Unit,
-    onNext: (index: Int) -> Unit,
-    onRegenerate: (index: Int) -> Unit,
+    getMessageAt: (index: Int) -> ChatListMessage?,
+    onPrevious: (message: ChatListMessage) -> Unit,
+    onNext: (message: ChatListMessage) -> Unit,
+    onRegenerate: (message: ChatListMessage) -> Unit,
     initialReasoningVisibility: Boolean,
-    onAnyReasoningVisibilityChange: (index: Int, visible: Boolean) -> Unit,
+    onAnyReasoningVisibilityChange: (visible: Boolean) -> Unit,
     initialToolVisibility: Boolean,
-    onAnyToolVisibilityChange: (index: Int, visible: Boolean) -> Unit,
+    onAnyToolVisibilityChange: (visible: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     topToBottom: Boolean = false,
@@ -185,22 +356,27 @@ fun ChatMessageList(
         ) {
             val index = getMessageCount() - 1 - it
             val key = getMessageKey(index)
-            when (val data = getMessageAt(index)) {
+            when (val data = getMessageAt(index) ?: return@items) {
                 is AssistantStreamingMessage -> {
+                    assistantMessageStates.compute(key) { _, state ->
+                        state as? AssistantMessageState.Streaming ?: data.state
+                    }
                     AssistantMessage(
-                        state = assistantMessageStates.getOrPut(key) { data.state },
+                        state = assistantMessageStates.compute(key) { _, state ->
+                            state as? AssistantMessageState.Streaming ?: data.state
+                        } ?: error("`null` returned when getting assistant message state."),
                         current = data.branchIndex,
                         total = data.branchCount,
-                        onPrevious = { onPrevious(index) },
-                        onNext = { onNext(index) },
-                        onRegenerate = { onRegenerate(index) },
+                        onPrevious = { onPrevious(data) },
+                        onNext = { onNext(data) },
+                        onRegenerate = { onRegenerate(data) },
                         initialReasoningVisibility = initialReasoningVisibility,
                         onAnyReasoningVisibilityChange = { visible ->
-                            onAnyReasoningVisibilityChange(index, visible)
+                            onAnyReasoningVisibilityChange(visible)
                         },
                         initialToolVisibility = initialToolVisibility,
                         onAnyToolVisibilityChange = { visible ->
-                            onAnyToolVisibilityChange(index, visible)
+                            onAnyToolVisibilityChange(visible)
                         },
                         modifier = Modifier.fillParentMaxWidth(),
                     )
@@ -209,72 +385,71 @@ fun ChatMessageList(
                 is MessageWithFilesAndBranchInfo -> {
                     val messageEntity = data.message
                     when (messageEntity.role) {
-                        MessageEntityRole.Assistant -> {
-                            AssistantMessage(
-                                state = assistantMessageStates.getOrPut(key) {
-                                    AssistantMessageState.Finished(
+                        Assistant -> AssistantMessage(
+                            state = assistantMessageStates.compute(key) { _, state ->
+                                state as? AssistantMessageState.Finished
+                                    ?: AssistantMessageState.Finished(
                                         messageEntity.parts.mapNotNull { part ->
                                             when (part) {
-                                                is Message.Assistant, is Message.Reasoning, is Message.Tool -> AssistantMessageContent.Finished(
+                                                is Koog -> when (val message = part.message) {
+                                                    is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Finished(
+                                                        message = message,
+                                                        coroutineScope = coroutineScope,
+                                                    )
+
+                                                    else -> null
+                                                }
+
+                                                else -> AssistantMessageContent.Finished(
                                                     message = part,
                                                     coroutineScope = coroutineScope,
                                                 )
-
-                                                is Message.System, is Message.User -> null
                                             }
                                         },
+                                    )
+                            } ?: error("`null` returned when getting assistant message state."),
+                            current = data.branchIndex,
+                            total = data.branchCount,
+                            onPrevious = { onPrevious(data) },
+                            onNext = { onNext(data) },
+                            onRegenerate = { onRegenerate(data) },
+                            initialReasoningVisibility = initialReasoningVisibility,
+                            onAnyReasoningVisibilityChange = { visible ->
+                                onAnyReasoningVisibilityChange(visible)
+                            },
+                            initialToolVisibility = initialToolVisibility,
+                            onAnyToolVisibilityChange = { visible ->
+                                onAnyToolVisibilityChange(visible)
+                            },
+                            modifier = Modifier.fillParentMaxWidth(),
+                        )
+
+                        User -> Box(
+                            modifier = Modifier.fillParentMaxWidth(),
+                            contentAlignment = Alignment.TopEnd,
+                        ) {
+                            UserMessage(
+                                state = userMessageStates.getOrPut(key) {
+                                    UserMessageState(
+                                        message = messageEntity.parts.asSequence()
+                                            .filterIsInstance<UiMessage.Koog>()
+                                            .map { uiMessage -> uiMessage.message }
+                                            .filterIsInstance<Message.User>()
+                                            .firstOrNull()
+                                            ?: error("User message must contain a User part."),
+                                        coroutineScope = coroutineScope,
                                     )
                                 },
                                 current = data.branchIndex,
                                 total = data.branchCount,
-                                onPrevious = { onPrevious(it) },
-                                onNext = { onNext(it) },
-                                onRegenerate = { onRegenerate(it) },
-                                initialReasoningVisibility = initialReasoningVisibility,
-                                onAnyReasoningVisibilityChange = { visible ->
-                                    onAnyReasoningVisibilityChange(it, visible)
-                                },
-                                initialToolVisibility = initialToolVisibility,
-                                onAnyToolVisibilityChange = { visible ->
-                                    onAnyToolVisibilityChange(it, visible)
-                                },
-                                modifier = Modifier.fillParentMaxWidth(),
+                                onPrevious = { onPrevious(data) },
+                                onNext = { onNext(data) },
                             )
                         }
 
-                        MessageEntityRole.User -> {
-                            Box(
-                                modifier = Modifier.fillParentMaxWidth(),
-                                contentAlignment = Alignment.TopEnd,
-                            ) {
-                                UserMessage(
-                                    state = userMessageStates.getOrPut(key) {
-                                        UserMessageState(
-                                            message = messageEntity.parts.filterIsInstance<Message.User>()
-                                                .firstOrNull()
-                                                ?: error("User message must contain a User part."),
-                                            coroutineScope = coroutineScope,
-                                        )
-                                    },
-                                    current = data.branchIndex,
-                                    total = data.branchCount,
-                                    onPrevious = { onPrevious(it) },
-                                    onNext = { onNext(it) },
-                                )
-                            }
-                        }
-
-                        MessageEntityRole.System -> {}
+                        else -> {}
                     }
-
                 }
-
-                is ChatListErrorMessage -> ErrorMessage(
-                    data.error,
-                    modifier = Modifier
-                        .fillParentMaxWidth()
-                        .padding(8.dp),
-                )
             }
         }
     }
@@ -299,7 +474,7 @@ fun AssistantMessage(
     Column(modifier) { // TODO: add menu
         for (content in state.contents) {
             when (content) {
-                is AssistantMessageContent.Streaming -> {
+                is Streaming -> {
                     when (content.type) {
                         AssistantStreamingMessageType.Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
@@ -317,31 +492,38 @@ fun AssistantMessage(
                     }
                 }
 
-                is AssistantMessageContent.Finished -> when (val message = content.message) {
-                    is Message.Reasoning -> ReasoningMessage(
-                        savedMarkdownState = content.markdownState,
-                        startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
-                            ?.let { Instant.parseOrNull(it) }
-                            ?: message.metaInfo.timestamp.toStdlibInstant(),
-                        endedAt = message.metaInfo.timestamp.toStdlibInstant(),
-                        initialVisibility = initialReasoningVisibility,
-                        onVisibilityChange = onAnyReasoningVisibilityChange,
+                is Finished -> when (val uiMessage = content.message) {
+                    is Koog -> when (val message = uiMessage.message) {
+                        is Reasoning -> ReasoningMessage(
+                            savedMarkdownState = content.markdownState,
+                            startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
+                                ?.let { Instant.parseOrNull(it) }
+                                ?: message.metaInfo.timestamp.toStdlibInstant(),
+                            endedAt = message.metaInfo.timestamp.toStdlibInstant(),
+                            initialVisibility = initialReasoningVisibility,
+                            onVisibilityChange = onAnyReasoningVisibilityChange,
+                            modifier = Modifier.padding(8.dp),
+                        )
+
+                        is Assistant -> AssistantMessageContent(
+                            savedMarkdownState = content.markdownState,
+                            modifier = Modifier.padding(8.dp),
+                        )
+
+                        is Tool -> ToolMessage(
+                            message = message,
+                            modifier = Modifier.padding(8.dp),
+                            initialVisibility = initialToolVisibility,
+                            onVisibilityChange = onAnyToolVisibilityChange,
+                        )
+
+                        else -> {}
+                    }
+
+                    is UiMessage.Error -> ErrorMessage(
+                        uiMessage.content,
                         modifier = Modifier.padding(8.dp),
                     )
-
-                    is Message.Assistant -> AssistantMessageContent(
-                        savedMarkdownState = content.markdownState,
-                        modifier = Modifier.padding(8.dp),
-                    )
-
-                    is Message.Tool -> ToolMessage(
-                        message = message,
-                        modifier = Modifier.padding(8.dp),
-                        initialVisibility = initialToolVisibility,
-                        onVisibilityChange = onAnyToolVisibilityChange,
-                    )
-
-                    is Message.System, is Message.User -> {}
                 }
             }
         }
@@ -358,12 +540,14 @@ fun AssistantMessage(
                 onCopy = {
                     null to state.contents.joinToString("\n") {
                         when (it) {
-                            is AssistantMessageContent.Streaming -> it.flow.value
-                            is AssistantMessageContent.Finished -> when (val message = it.message) {
-                                is Message.Assistant -> message.content
-                                is Message.Reasoning -> message.content
-                                is Message.Tool -> message.content
-                                is Message.System, is Message.User -> ""
+                            is Streaming -> it.flow.value
+                            is Finished -> when (val uiMessage = it.message) {
+                                is Koog -> when (val message = uiMessage.message) {
+                                    is Assistant, is Reasoning, is Tool -> message.content
+                                    else -> ""
+                                }
+
+                                else -> uiMessage.content
                             }
                         }
                     }
@@ -740,7 +924,7 @@ sealed interface AssistantMessageState {
             coroutineScope.launch {
                 eventFlow.collect { event ->
                     when (event) {
-                        is AssistantMessageStreamingEvent.AddString -> {
+                        is AddString -> {
                             val content = contents.getOrElse(event.partIndex) { index ->
                                 require(contents.size == index) { "Parts must be added in order." }
 
@@ -764,7 +948,7 @@ sealed interface AssistantMessageState {
                             flow.value += event.content
                         }
 
-                        is AssistantMessageStreamingEvent.SetMessage -> {
+                        is SetMessage -> {
                             val index = event.partIndex
                             if (contents.size <= index) {
                                 (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {

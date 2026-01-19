@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.data.chat
 
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.message.Message
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -53,7 +52,11 @@ data class ConversationEntity(
 
 @Entity(
     indices = [
+        // Supports recursive path fetch + branch selection: filter by conversation, parent and traverse by depth.
         Index("conversationId", "parentId", "depth"),
+        // Supports root fetch/order by createdAt among messages in a conversation.
+        Index("conversationId", "createdAt"),
+        // Supports sibling counts/ordering with stable tie-break by id.
         Index("parentId", "createdAt", "id"),
     ],
     foreignKeys = [
@@ -77,11 +80,12 @@ data class MessageEntity(
     val conversationId: Uuid,
     val parentId: Uuid? = null,
     val depth: Int,
-    val parts: List<Message>,
+    val parts: List<UiMessage>,
     val role: MessageEntityRole,
     val searchableContent: String = parts.joinToString("\n") { it.content },
     val generatedBy: LLModel?,
     val createdAt: Instant = Clock.System.now(),
+    val completed: Boolean = true,
 )
 
 @Entity(

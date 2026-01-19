@@ -26,7 +26,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -69,6 +68,45 @@ interface ChatDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setMessageBranchSelection(selection: MessageBranchSelectionEntity)
 
+    @Transaction
+    suspend fun selectMessageOnBranch(selectedMessageId: Uuid) {
+        val message = getMessageById(selectedMessageId) ?: return
+        val parentId = message.parentId ?: return
+
+        val selection = MessageBranchSelectionEntity(
+            conversationId = message.conversationId,
+            parentId = parentId,
+            selectedChildId = selectedMessageId,
+        )
+        setMessageBranchSelection(selection)
+    }
+
+    @Transaction
+    suspend fun selectPreviousMessageOnBranch(currentMessageId: Uuid) {
+        val currentMessage = getMessageWithFilesAndBranchInfoById(currentMessageId) ?: return
+        val parentId = currentMessage.message.parentId ?: return
+
+        // branchIndex is 1-based; convert to zero-based for offset query
+        val previousIndex = currentMessage.branchIndex - 2
+        if (previousIndex < 0) return
+
+        val previousSiblingId = getSiblingMessageIdByIndex(parentId, previousIndex) ?: return
+        selectMessageOnBranch(previousSiblingId)
+    }
+
+    @Transaction
+    suspend fun selectNextMessageOnBranch(currentMessageId: Uuid) {
+        val currentMessage = getMessageWithFilesAndBranchInfoById(currentMessageId) ?: return
+        val parentId = currentMessage.message.parentId ?: return
+
+        // branchIndex is 1-based; convert to zero-based for offset query
+        val nextIndex = currentMessage.branchIndex
+        if (nextIndex >= currentMessage.branchCount) return
+
+        val nextSiblingId = getSiblingMessageIdByIndex(parentId, nextIndex) ?: return
+        selectMessageOnBranch(nextSiblingId)
+    }
+
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity): Int
 
@@ -93,7 +131,7 @@ interface ChatDao {
     fun getAllConversations(): PagingSource<Int, ConversationEntity>
 
     @Query("SELECT * FROM ConversationEntity WHERE id = :conversationId")
-    fun getConversationById(conversationId: Uuid): Flow<ConversationEntity?>
+    suspend fun getConversationById(conversationId: Uuid): ConversationEntity?
 
     @Query("SELECT * FROM MessageEntity WHERE id = :messageId")
     suspend fun getMessageById(messageId: Uuid): MessageEntity?
@@ -134,6 +172,32 @@ interface ChatDao {
     """,
     )
     fun getAllMessagesByConversation(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
+
+    @Transaction
+    @Query(
+        """
+        SELECT
+            m.*,
+            (
+                SELECT COUNT(*) + 1
+                FROM MessageEntity AS s
+                WHERE (s.parentId IS m.parentId)
+                  AND s.createdAt < m.createdAt
+            ) AS branchIndex,
+
+            (
+                SELECT COUNT(*)
+                FROM MessageEntity AS s
+                WHERE (s.parentId IS m.parentId)
+            ) AS branchCount
+        FROM MessageEntity AS m
+        WHERE m.id = :messageId
+    """,
+    )
+    suspend fun getMessageWithFilesAndBranchInfoById(messageId: Uuid): MessageWithFilesAndBranchInfo?
+
+    @Query("SELECT COUNT(*) FROM MessageEntity WHERE conversationId = :conversationId AND completed = 1")
+    suspend fun getMessageCountByConversation(conversationId: Uuid): Int
 
     @Query(
         """

@@ -20,7 +20,6 @@ package top.ltfan.knowmad.data
 
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.message.Message
 import androidx.room.TypeConverter
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -28,6 +27,7 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
+import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.util.Cbor
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -115,12 +115,12 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
-    fun fromMessageList(data: List<Message>): ByteArray {
+    fun fromUiMessageList(data: List<UiMessage>): ByteArray {
         return Cbor.encodeToByteArray(data)
     }
 
     @TypeConverter
-    fun toMessageList(data: ByteArray): List<Message> {
+    fun toUiMessageList(data: ByteArray): List<UiMessage> {
         return Cbor.decodeFromByteArray(data)
     }
 }

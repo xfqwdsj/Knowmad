@@ -18,23 +18,35 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import ai.koog.prompt.message.ContentPart
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
+import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
@@ -43,6 +55,7 @@ import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
+import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
@@ -67,23 +80,93 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         application.appDatabase.chatDao().getAllConversations()
     }
 
+    var messageListLoading by mutableStateOf(false)
+
+    private val currentConversationIdFlow = chatDataStore.data.map { it.conversation }
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
-        transformOut = { copy(conversation = it) },
+        transformOut = {
+            messageListLoading = true
+            copy(conversation = it)
+        },
     )
-    val currentConversation by snapshotFlow { currentConversationId }
-        .flatMapLatest { id ->
-            id?.let { chatDao.getConversationById(it) } ?: flowOf(null)
+
+    private val conversationAndChatData by currentConversationIdFlow
+        .map { id ->
+            ConversationAndChatData(
+                conversation = id?.let {
+                    chatDao.getConversationById(it)
+                },
+                messageCount = id?.let {
+                    chatDao.getMessageCountByConversation(it)
+                } ?: 0,
+                messagesState = id?.let {
+                    PagingLazyListState {
+                        chatDao.getAllMessagesByConversation(it)
+                    }
+                },
+            )
+        }
+        .onEach {
+            messageListLoading = false
         }
         .stateIn(
             viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = null,
+            initialValue = ConversationAndChatData(null, 0, null),
         )
         .collectAsState()
 
+    val currentConversation get() = conversationAndChatData.conversation
+    val messageCount get() = conversationAndChatData.messageCount
+    val messagesState get() = conversationAndChatData.messagesState
+
+    val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
+
+    val chatMessageTextInputState = TextFieldState("")
+
+    init {
+        viewModelScope.launch {
+            val initialDraft = chatDataStore.data.first().draftMessageText
+
+            if (chatMessageTextInputState.text.isEmpty()) {
+                chatMessageTextInputState.setTextAndPlaceCursorAtEnd(initialDraft)
+            }
+
+            snapshotFlow { chatMessageTextInputState.text.toString() }
+                .drop(1)
+                .distinctUntilChanged()
+                .collect { text ->
+                    chatDataStore.updateData { it.copy(draftMessageText = text) }
+                }
+        }
+    }
+
+    fun messageOnPrevious(message: ChatListMessage) {
+        if (message is Branched) {
+            viewModelScope.launch(Dispatchers.IO) {
+                chatDao.selectPreviousMessageOnBranch(message.key)
+            }
+        }
+    }
+
+    fun messageOnNext(message: ChatListMessage) {
+        if (message is Branched) {
+            viewModelScope.launch(Dispatchers.IO) {
+                chatDao.selectNextMessageOnBranch(message.key)
+            }
+        }
+    }
+
+    fun messageOnRegenerate(message: ChatListMessage) {
+
+    }
+
     fun newConversation() {
-//        currentConversationId = null
+        currentConversationId = null
+    }
+
+    private fun createNewConversation() {
         viewModelScope.launch(Dispatchers.IO) {
             val conversation = ConversationEntity(
                 name = application.getString(R.string.agent_conversation_label_new),
@@ -120,6 +203,43 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val providerConfigLazyListState = LLMProviderConfigLazyListState {
         llmConfigDao.getAllProviders()
+    }
+    val providers by llmConfigDao.getAllProvidersFlow()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            emptyList(),
+        )
+        .collectAsState()
+
+    suspend fun getModels(provider: LLMProviderConfigEntity) =
+        llmConfigDao.getModelsByProviderOnce(provider.id)
+
+    var selectedModelId by chatData.transform(
+        transformIn = { selectedModelId },
+        transformOut = { copy(selectedModelId = it) },
+    )
+    val selectedModel by chatDataStore.data
+        .map { it.selectedModelId?.let { id -> llmConfigDao.getModelById(id) } }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            null,
+        )
+        .collectAsState()
+
+    val canSendMessage
+        inline get() = selectedModel != null &&
+                !messageListLoading &&
+                chatMessageTextInputState.text.isNotEmpty()
+
+    fun sendMessage() {
+        if (!canSendMessage) return
+        val parts = listOf(
+            ContentPart.Text(
+                text = chatMessageTextInputState.text.toString(),
+            ),
+        )
     }
 
     fun editProviderConfig(
@@ -173,7 +293,27 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             }
         }
     }
+
+    var defaultReasoningVisibility by chatData.transform(
+        transformIn = { defaultReasoningVisibility },
+        transformOut = {
+            copy(defaultReasoningVisibility = it)
+        },
+    )
+
+    var defaultToolVisibility by chatData.transform(
+        transformIn = { defaultToolVisibility },
+        transformOut = {
+            copy(defaultToolVisibility = it)
+        },
+    )
 }
+
+data class ConversationAndChatData(
+    val conversation: ConversationEntity?,
+    val messageCount: Int,
+    val messagesState: PagingLazyListState<Int, MessageWithFilesAndBranchInfo>?,
+)
 
 val LocalAgentViewModel = staticCompositionLocalOf<AgentViewModel> {
     error("No AgentViewModel provided")

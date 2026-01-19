@@ -42,3 +42,16 @@ val MenuDefaults.trailingItemThemedShape: Shape
         bottomEnd = AppRadiusMedium,
         bottomStart = AppRadiusMedium,
     )
+
+@Composable
+fun MenuDefaults.itemThemedShape(index: Int, count: Int): Shape {
+    if (count == 1) {
+        return standaloneItemShape
+    }
+
+    return when (index) {
+        0 -> leadingItemThemedShape
+        count - 1 -> trailingItemThemedShape
+        else -> middleItemShape
+    }
+}

@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 package top.ltfan.knowmad.ui.component
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
@@ -38,4 +40,19 @@ open class PagingLazyListState<Key : Any, Value : Any>(
         config = pagingConfig,
         pagingSourceFactory = pagingSourceFactory,
     ).flow.cachedIn(coroutineScope)
+}
+
+context(viewModel: ViewModel)
+fun <Key : Any, Value : Any> PagingLazyListState(
+    pagingConfig: PagingConfig = PagingConfig(
+        pageSize = 20,
+        enablePlaceholders = false,
+    ),
+    pagingSourceFactory: () -> PagingSource<Key, Value>,
+): PagingLazyListState<Key, Value> {
+    return PagingLazyListState(
+        coroutineScope = viewModel.viewModelScope,
+        pagingConfig = pagingConfig,
+        pagingSourceFactory = pagingSourceFactory,
+    )
 }
