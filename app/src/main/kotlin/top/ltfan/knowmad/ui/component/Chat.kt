@@ -964,7 +964,7 @@ sealed interface AssistantMessageState {
 
                         is Finish -> {
                             completed = true
-                            replaceContentsToCompleted(Clock.System.now())
+                            replaceContentsToCompleted()
                             completedlyFinished.value = true
                             cancel()
                         }
@@ -993,7 +993,7 @@ sealed interface AssistantMessageState {
 
         private suspend fun complete() {
             completed = true
-            replaceContentsToCompleted(Clock.System.now())
+            replaceContentsToCompleted()
             completedlyFinished.value = true
         }
 
