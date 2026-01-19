@@ -99,8 +99,11 @@ import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.data.chat.ChatListMessage
+import top.ltfan.knowmad.data.chat.MessageEntity
+import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.chat.UiMessage.Koog
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
@@ -384,27 +387,9 @@ fun ChatMessageList(
                         Assistant -> AssistantMessage(
                             state = assistantMessageStates.compute(key) { _, state ->
                                 state as? AssistantMessageState.Completed
-                                    ?: AssistantMessageState.Completed(
-                                        contents = messageEntity.parts.mapNotNull { part ->
-                                            when (part) {
-                                                is Koog -> when (val message = part.message) {
-                                                    is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Completed(
-                                                        message = message,
-                                                        coroutineScope = coroutineScope,
-                                                    )
-
-                                                    else -> null
-                                                }
-
-                                                else -> AssistantMessageContent.Completed(
-                                                    message = part,
-                                                    coroutineScope = coroutineScope,
-                                                )
-                                            }
-                                        },
-                                        model = messageEntity.generatedBy ?: UnknownLLModel,
-                                        id = messageEntity.id,
-                                        createdAt = messageEntity.createdAt,
+                                    ?: AssistantMessageState.Completed.fromEntity(
+                                        messageEntity,
+                                        coroutineScope,
                                     )
                             } ?: error("`null` returned when getting assistant message state."),
                             current = data.branchIndex,
@@ -906,7 +891,11 @@ fun ErrorMessage(
 
 sealed interface AssistantMessageState {
     val id: Uuid
+    val conversationId: Uuid
+    val parentId: Uuid?
+    val depth: Int
     val contents: List<AssistantMessageContent>
+    val completedContents: List<AssistantMessageContent.Completed>
     val model: LLModel
     val completed: Boolean
     val createdAt: Instant
@@ -917,6 +906,9 @@ sealed interface AssistantMessageState {
         override val model: LLModel,
         coroutineScope: CoroutineScope,
         override val id: Uuid = Uuid.generateV7(),
+        override val conversationId: Uuid,
+        override val parentId: Uuid? = null,
+        override val depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
@@ -981,13 +973,9 @@ sealed interface AssistantMessageState {
             }
         }
 
-        val completedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
+        override val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
-        fun completedStateOrNull() = if (completedlyFinished.value) {
-            Completed(completedContents, model, id, createdAt)
-        } else {
-            null
-        }
+        fun completedStateOrNull() = if (completedlyFinished.value) toCompleted() else null
 
         suspend fun completeAndGetState(): Completed {
             complete()
@@ -996,8 +984,18 @@ sealed interface AssistantMessageState {
 
         suspend fun awaitCompletedState(): Completed {
             completedlyFinished.first { it }
-            return Completed(completedContents, model, id, createdAt)
+            return toCompleted()
         }
+
+        private fun toCompleted() = Completed(
+            contents = completedContents,
+            model = model,
+            id = id,
+            conversationId = conversationId,
+            parentId = parentId,
+            depth = depth,
+            createdAt = createdAt,
+        )
 
         private suspend fun complete() {
             completed = true
@@ -1022,9 +1020,63 @@ sealed interface AssistantMessageState {
         override val contents: List<AssistantMessageContent.Completed>,
         override val model: LLModel,
         override val id: Uuid,
+        override val conversationId: Uuid,
+        override val parentId: Uuid? = null,
+        override val depth: Int = 0,
         override val createdAt: Instant,
     ) : AssistantMessageState {
+        override val completedContents = contents
         override val completed: Boolean = true
+
+        companion object {
+            fun fromEntity(entity: MessageEntity, coroutineScope: CoroutineScope) = Completed(
+                contents = entity.parts.mapNotNull { part ->
+                    when (part) {
+                        is Koog -> when (val message = part.message) {
+                            is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Completed(
+                                message = message,
+                                coroutineScope = coroutineScope,
+                            )
+
+                            else -> null
+                        }
+
+                        else -> AssistantMessageContent.Completed(
+                            message = part,
+                            coroutineScope = coroutineScope,
+                        )
+                    }
+                },
+                model = entity.generatedBy ?: UnknownLLModel,
+                id = entity.id,
+                conversationId = entity.conversationId,
+                parentId = entity.parentId,
+                createdAt = entity.createdAt,
+            )
+        }
+    }
+
+    fun toEntity() = MessageEntity(
+        id = id,
+        conversationId = conversationId,
+        parentId = parentId,
+        depth = depth,
+        parts = completedContents.toUiMessageList(),
+        role = MessageEntityRole.Assistant,
+        generatedBy = model,
+        completed = completed,
+        createdAt = createdAt,
+    )
+
+    private fun List<AssistantMessageContent.Completed>.toUiMessageList() = mapNotNull { content ->
+        when (val uiMessage = content.uiMessage) {
+            is Koog -> when (uiMessage.message) {
+                is Assistant, is Reasoning, is Tool -> uiMessage
+                else -> null
+            }
+
+            else -> uiMessage
+        }
     }
 }
 
