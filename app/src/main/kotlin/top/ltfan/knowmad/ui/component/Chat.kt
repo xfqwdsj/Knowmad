@@ -384,7 +384,7 @@ fun ChatMessageList(
                             state = assistantMessageStates.compute(key) { _, state ->
                                 state as? AssistantMessageState.Completed
                                     ?: AssistantMessageState.Completed(
-                                        messageEntity.parts.mapNotNull { part ->
+                                        contents = messageEntity.parts.mapNotNull { part ->
                                             when (part) {
                                                 is Koog -> when (val message = part.message) {
                                                     is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Completed(
@@ -401,6 +401,7 @@ fun ChatMessageList(
                                                 )
                                             }
                                         },
+                                        id = messageEntity.id,
                                     )
                             } ?: error("`null` returned when getting assistant message state."),
                             current = data.branchIndex,
@@ -901,6 +902,7 @@ fun ErrorMessage(
 }
 
 sealed interface AssistantMessageState {
+    val id: Uuid
     val contents: List<AssistantMessageContent>
     val completed: Boolean
 
@@ -909,7 +911,7 @@ sealed interface AssistantMessageState {
         eventFlow: Flow<AssistantMessageStreamingEvent>,
         model: LLModel?,
         coroutineScope: CoroutineScope,
-        val id: Uuid = Uuid.generateV7(),
+        override val id: Uuid = Uuid.generateV7(),
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
@@ -976,7 +978,7 @@ sealed interface AssistantMessageState {
         val completedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
         fun completedStateOrNull() = if (completedlyFinished.value) {
-            Completed(completedContents)
+            Completed(completedContents, id)
         } else {
             null
         }
@@ -988,7 +990,7 @@ sealed interface AssistantMessageState {
 
         suspend fun awaitCompletedState(): Completed {
             completedlyFinished.first { it }
-            return Completed(completedContents)
+            return Completed(completedContents, id)
         }
 
         private suspend fun complete() {
@@ -1012,6 +1014,7 @@ sealed interface AssistantMessageState {
     @Immutable
     data class Completed(
         override val contents: List<AssistantMessageContent.Completed>,
+        override val id: Uuid = Uuid.generateV7(),
     ) : AssistantMessageState {
         override val completed: Boolean = true
     }
