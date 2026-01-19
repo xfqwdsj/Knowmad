@@ -322,20 +322,13 @@ class StreamingAssistantMessagePreviewState(
 
     var state by mutableStateOf<AssistantMessageState>(
         AssistantMessageState.Streaming(
-            eventFlow,
-            DeepSeekModels.DeepSeekReasoner,
-            coroutineScope,
+            eventFlow = eventFlow,
+            model = DeepSeekModels.DeepSeekReasoner,
+            coroutineScope = coroutineScope,
+            conversationId = Uuid.generateV7(),
         ),
     )
         private set
-
-    fun recreate() {
-        state = AssistantMessageState.Streaming(
-            eventFlow,
-            DeepSeekModels.DeepSeekReasoner,
-            coroutineScope,
-        )
-    }
 
     suspend fun generate(finishMessage: String = "Completed.") {
         eventFlow.emit(
