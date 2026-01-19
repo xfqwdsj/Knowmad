@@ -103,6 +103,7 @@ import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import kotlin.time.Clock
@@ -401,6 +402,7 @@ fun ChatMessageList(
                                                 )
                                             }
                                         },
+                                        model = messageEntity.generatedBy ?: UnknownLLModel,
                                         id = messageEntity.id,
                                         createdAt = messageEntity.createdAt,
                                     )
@@ -905,13 +907,14 @@ fun ErrorMessage(
 sealed interface AssistantMessageState {
     val id: Uuid
     val contents: List<AssistantMessageContent>
+    val model: LLModel
     val completed: Boolean
     val createdAt: Instant
 
     @Stable
     class Streaming(
         eventFlow: Flow<AssistantMessageStreamingEvent>,
-        model: LLModel?,
+        override val model: LLModel,
         coroutineScope: CoroutineScope,
         override val id: Uuid = Uuid.generateV7(),
         override val createdAt: Instant = Clock.System.now(),
@@ -981,7 +984,7 @@ sealed interface AssistantMessageState {
         val completedContents inline get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
         fun completedStateOrNull() = if (completedlyFinished.value) {
-            Completed(completedContents, id, createdAt)
+            Completed(completedContents, model, id, createdAt)
         } else {
             null
         }
@@ -993,7 +996,7 @@ sealed interface AssistantMessageState {
 
         suspend fun awaitCompletedState(): Completed {
             completedlyFinished.first { it }
-            return Completed(completedContents, id, createdAt)
+            return Completed(completedContents, model, id, createdAt)
         }
 
         private suspend fun complete() {
@@ -1017,6 +1020,7 @@ sealed interface AssistantMessageState {
     @Immutable
     data class Completed(
         override val contents: List<AssistantMessageContent.Completed>,
+        override val model: LLModel,
         override val id: Uuid,
         override val createdAt: Instant,
     ) : AssistantMessageState {
