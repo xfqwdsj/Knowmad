@@ -962,7 +962,7 @@ sealed interface AssistantMessageState {
                             )
                         }
 
-                        AssistantMessageStreamingEvent.Finish -> {
+                        is Finish -> {
                             finished = true
                             replaceContentsToFinished(Clock.System.now())
                             completedlyFinished.value = true
