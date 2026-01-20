@@ -961,13 +961,14 @@ sealed interface AssistantMessageState {
                             )
                         }
 
-                        is Finish -> {
-                            completed = true
-                            replaceContentsToCompleted()
-                            fullyCompleted.value = true
-                            cancel()
-                        }
+                        is Finish -> cancel()
                     }
+                }
+            }.invokeOnCompletion {
+                coroutineScope.launch {
+                    completed = true
+                    replaceContentsToCompleted()
+                    fullyCompleted.value = true
                 }
             }
         }
