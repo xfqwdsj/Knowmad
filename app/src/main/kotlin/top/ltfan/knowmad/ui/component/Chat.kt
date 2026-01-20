@@ -88,6 +88,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -910,10 +911,11 @@ sealed interface AssistantMessageState {
         override val depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
         requestCancellation: () -> Unit = {},
+        onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
-        private val fullyCompleted = MutableStateFlow(false)
+        private val completedStateFlow = MutableStateFlow<Completed?>(null)
 
         init {
             coroutineScope.launch {
@@ -968,41 +970,36 @@ sealed interface AssistantMessageState {
             }.invokeOnCompletion {
                 coroutineScope.launch {
                     requestCancellation()
-                    completed = true
-                    replaceContentsToCompleted()
-                    fullyCompleted.value = true
+                    complete()
+                    val completedState = Completed(
+                        contents = completedContents,
+                        model = model,
+                        id = id,
+                        conversationId = conversationId,
+                        parentId = parentId,
+                        depth = depth,
+                        createdAt = createdAt,
+                    )
+                    completedStateFlow.value = completedState
+                    onCompleted(completedState)
                 }
             }
         }
 
         val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
-        fun completedStateOrNull() = if (fullyCompleted.value) toCompleted() else null
+        fun completedStateOrNull() = completedStateFlow.value
 
         suspend fun completeAndGetState(): Completed {
             complete()
             return awaitCompletedState()
         }
 
-        suspend fun awaitCompletedState(): Completed {
-            fullyCompleted.first { it }
-            return toCompleted()
-        }
-
-        private fun toCompleted() = Completed(
-            contents = completedContents,
-            model = model,
-            id = id,
-            conversationId = conversationId,
-            parentId = parentId,
-            depth = depth,
-            createdAt = createdAt,
-        )
+        suspend fun awaitCompletedState() = completedStateFlow.filterNotNull().first()
 
         private suspend fun complete() {
             completed = true
             replaceContentsToCompleted()
-            fullyCompleted.value = true
         }
 
         private suspend fun replaceContentsToCompleted(endedAt: Instant = Clock.System.now()) {
