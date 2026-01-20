@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ package top.ltfan.knowmad.util
 
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.cbor.CborBuilder
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonBuilder
 import kotlinx.serialization.modules.SerializersModule
 
 val Cbor = Cbor {
@@ -29,3 +31,11 @@ val Cbor = Cbor {
 }
 
 fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(top.ltfan.knowmad.util.Cbor, builderAction)
+
+val Json = Json {
+    serializersModule = SerializersModule {
+        llmProvidersPolymorphic()
+    }
+}
+
+fun Json(builderAction: JsonBuilder.() -> Unit) = Json(top.ltfan.knowmad.util.Json, builderAction)
