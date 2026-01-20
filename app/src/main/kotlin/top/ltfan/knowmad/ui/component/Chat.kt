@@ -1077,16 +1077,17 @@ sealed interface AssistantMessageState {
         }
     }
 
-    private fun List<AssistantMessageContent>.toUiMessageList() = mapNotNull { content ->
-        when (val uiMessage = content.uiMessage) {
-            is Koog -> when (uiMessage.message) {
-                is Assistant, is Reasoning, is Tool -> uiMessage
-                else -> null
-            }
+    private fun List<AssistantMessageContent>.toUiMessageList() = toList() // TODO
+        .mapNotNull { content ->
+            when (val uiMessage = content.uiMessage) {
+                is Koog -> when (uiMessage.message) {
+                    is Assistant, is Reasoning, is Tool -> uiMessage
+                    else -> null
+                }
 
-            else -> uiMessage
+                else -> uiMessage
+            }
         }
-    }
 }
 
 @Immutable

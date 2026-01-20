@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -32,7 +33,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -40,15 +44,23 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.getChatAgent
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.MessageEntity
+import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
+import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.data.llm.toClient
+import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
@@ -82,7 +94,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     var messageListLoading by mutableStateOf(false)
 
-    private val currentConversationIdFlow = chatDataStore.data.map { it.conversation }
+    private val currentConversationIdFlow = chatDataStore.data
+        .map { it.conversation }.distinctUntilChanged()
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
         transformOut = {
@@ -122,6 +135,13 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val messagesState get() = conversationAndChatData.messagesState
 
     val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
+
+    fun setMessageToCompleted(message: MessageEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            chatDao.updateMessage(message.copy(completed = true))
+            streamingMessages.remove(message.id)
+        }
+    }
 
     val chatMessageTextInputState = TextFieldState("")
 
@@ -227,19 +247,127 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             null,
         )
     val selectedModelEntity by selectedModelEntityFlow.collectAsState()
+    private val currentAgent = selectedModelEntityFlow
+        .combine(currentConversationIdFlow) { model, conversationId ->
+            val client = model?.let {
+                withContext(Dispatchers.IO) { llmConfigDao.getProviderById(it.providerConfigId) }
+            }?.toClient() ?: return@combine null
+            conversationId ?: return@combine null
+            val messages = withContext(Dispatchers.IO) {
+                chatDao.getAllMessagesByConversationOnce(conversationId)
+            }.flatMap { entity ->
+                entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
+            }
+            getChatAgent(
+                promptExecutor = SingleLLMPromptExecutor(client),
+                model = model.model,
+                newStreamingState = { eventFlow, cancelStreaming ->
+                    AssistantMessageState.Streaming(
+                        eventFlow = eventFlow,
+                        model = model.model,
+                        coroutineScope = viewModelScope,
+                        conversationId = conversationId,
+                        requestCancellation = {
+                            viewModelScope.launch {
+                                runCatching { cancelStreaming.send(Unit) }
+                            }
+                        },
+                        onUpdate = {
+                            viewModelScope.launch(Dispatchers.IO) {
+                                chatDao.updateMessage(toEntity())
+                            }
+                        },
+                        onCompleted = {
+                            viewModelScope.launch(Dispatchers.IO) {
+                                chatDao.updateMessage(it.toEntity())
+                                streamingMessages.remove(it.id)
+                            }
+                        },
+                    ).apply {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            chatDao.insertMessageAndGet(
+                                message = toEntity(),
+                                fileIds = emptyList(),
+                            ) {
+                                it ?: return@insertMessageAndGet
+                                parentId = it.message.parentId
+                                depth = it.message.depth
+                                streamingMessages[it.message.id] = AssistantStreamingMessage(
+                                    state = this@apply,
+                                    branchIndex = it.branchIndex,
+                                    branchCount = it.branchCount,
+                                )
+                            }
+                        }
+                    }
+                },
+                onStreamingCancelled = {
+                    userMessageFlow.replayCache.firstOrNull()?.let { parts ->
+                        chatMessageTextInputState.setTextAndPlaceCursorAtEnd(
+                            parts.filterIsInstance<ContentPart.Text>()
+                                .joinToString("\n") { it.text },
+                        )
+                    }
+                    userMessageFlow.resetReplayCache()
+                },
+                getUserMessage = { userMessageFlow.first() },
+                resources = application.resources,
+            ) { system ->
+                if (messages.isEmpty()) {
+                    system().also {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            chatDao.insertMessage(
+                                message = MessageEntity(
+                                    conversationId = conversationId,
+                                    parts = listOf(it.toUiMessage()),
+                                    role = MessageEntityRole.System,
+                                    generatedBy = model.model,
+                                ),
+                                fileIds = emptyList(),
+                            )
+                        }
+                    }
+                } else {
+                    messages(messages)
+                }
+            }
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            null,
+        )
+
+    init {
+        viewModelScope.launch {
+            currentAgent.collect {
+                try {
+                    it?.run(Unit)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    private val userMessageFlow = MutableSharedFlow<List<ContentPart>>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
 
     val canSendMessage
-        inline get() = selectedModelEntity != null &&
+        get() = selectedModelEntity != null &&
                 !messageListLoading &&
                 chatMessageTextInputState.text.isNotEmpty()
 
     fun sendMessage() {
         if (!canSendMessage) return
-        val parts = listOf(
-            ContentPart.Text(
-                text = chatMessageTextInputState.text.toString(),
-            ),
-        )
+        val parts = listOf(ContentPart.Text(chatMessageTextInputState.text.toString()))
+        chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
+        if (currentConversationId == null) {
+            createNewConversation()
+        }
+        userMessageFlow.tryEmit(parts)
     }
 
     fun editProviderConfig(
