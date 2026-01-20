@@ -219,17 +219,17 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         transformIn = { selectedModelId },
         transformOut = { copy(selectedModelId = it) },
     )
-    val selectedModel by chatDataStore.data
+    val selectedModelEntityFlow = chatDataStore.data
         .map { it.selectedModelId?.let { id -> llmConfigDao.getModelById(id) } }
         .stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
             null,
         )
-        .collectAsState()
+    val selectedModelEntity by selectedModelEntityFlow.collectAsState()
 
     val canSendMessage
-        inline get() = selectedModel != null &&
+        inline get() = selectedModelEntity != null &&
                 !messageListLoading &&
                 chatMessageTextInputState.text.isNotEmpty()
 

@@ -223,7 +223,7 @@ class AgentMainPage : AgentSubPage() {
                             onSend = viewModel::sendMessage,
                             providers = viewModel.providers,
                             getModels = viewModel::getModels,
-                            selectedModel = viewModel.selectedModel,
+                            selectedModel = viewModel.selectedModelEntity,
                             onSelectModel = { model -> viewModel.selectedModelId = model.id },
                             modifier = Modifier
                                 .padding(
