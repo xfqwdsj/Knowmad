@@ -173,6 +173,43 @@ interface ChatDao {
     )
     fun getAllMessagesByConversation(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
 
+    @Transaction
+    @Query(
+        """
+        WITH RECURSIVE SelectedPath AS (
+            SELECT * FROM MessageEntity
+            WHERE conversationId = :conversationId AND parentId IS NULL
+
+            UNION ALL
+
+            SELECT child.* FROM MessageEntity AS child
+            JOIN SelectedPath AS parent ON child.parentId = parent.id 
+                AND child.depth = parent.depth + 1
+                AND child.conversationId = parent.conversationId
+            JOIN MessageBranchSelectionEntity AS bs ON bs.parentId = parent.id AND bs.selectedChildId = child.id
+        )
+
+        SELECT 
+            sp.*,
+            (
+                SELECT COUNT(*) + 1 
+                FROM MessageEntity AS s 
+                WHERE (s.parentId IS sp.parentId)
+                  AND s.createdAt < sp.createdAt
+            ) AS branchIndex,
+
+            (
+                SELECT COUNT(*) 
+                FROM MessageEntity AS s 
+                WHERE (s.parentId IS sp.parentId)
+            ) AS branchCount
+
+        FROM SelectedPath AS sp
+        ORDER BY sp.depth ASC
+    """,
+    )
+    suspend fun getAllMessagesByConversationOnce(conversationId: Uuid): List<MessageWithFilesAndBranchInfo>
+
     @Query(
         """
         WITH RECURSIVE SelectedPath AS (

@@ -98,7 +98,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     chatDao.getConversationById(it)
                 },
                 messageCount = id?.let {
-                    chatDao.getMessageCountByConversation(it)
+                    chatDao.getMessageCountInCurrentTreeByConversation(it)
                 } ?: 0,
                 messagesState = id?.let {
                     PagingLazyListState {

@@ -357,7 +357,7 @@ class StreamingAssistantMessagePreviewState(
                     tool = "Web Search",
                     content = "Knowmad",
                     metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
-                ),
+                ).toUiMessage(),
             ),
         )
         delay(20.milliseconds)
@@ -369,7 +369,7 @@ class StreamingAssistantMessagePreviewState(
                     tool = "Web Search",
                     content = "Knowmad is an AI-powered knowledge nomad application designed to help users manage and explore information seamlessly.",
                     metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                ),
+                ).toUiMessage(),
             ),
         )
         delay(20.milliseconds)
@@ -395,7 +395,7 @@ class StreamingAssistantMessagePreviewState(
                     tool = "Calculator",
                     content = "2 + 2",
                     metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
-                ),
+                ).toUiMessage(),
             ),
         )
         delay(20.milliseconds)
@@ -407,7 +407,7 @@ class StreamingAssistantMessagePreviewState(
                     tool = "Calculator",
                     content = "4",
                     metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                ),
+                ).toUiMessage(),
             ),
         )
         delay(20.milliseconds)

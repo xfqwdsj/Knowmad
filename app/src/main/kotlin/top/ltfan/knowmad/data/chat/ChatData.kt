@@ -229,20 +229,20 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
         constructor(
-            message: UiMessage,
+            uiMessage: UiMessage,
             coroutineScope: CoroutineScope,
         ) : this(
-            message,
+            uiMessage,
             SavedMarkdownState(
                 coroutineScope,
                 flowOf(
-                    when (message) {
-                        is Koog -> when (val message = message.message) {
+                    when (uiMessage) {
+                        is Koog -> when (val message = uiMessage.message) {
                             is Reasoning, is Assistant -> message.content
                             else -> ""
                         }
 
-                        else -> message.content
+                        else -> uiMessage.content
                     },
                 ),
             ),

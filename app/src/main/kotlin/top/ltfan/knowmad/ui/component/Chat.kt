@@ -103,6 +103,7 @@ import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
@@ -894,7 +895,6 @@ sealed interface AssistantMessageState {
     val parentId: Uuid?
     val depth: Int
     val contents: List<AssistantMessageContent>
-    val completedContents: List<AssistantMessageContent.Completed>
     val model: LLModel
     val completed: Boolean
     val createdAt: Instant
@@ -955,7 +955,7 @@ sealed interface AssistantMessageState {
                             contents.add(
                                 index,
                                 AssistantMessageContent.Completed(
-                                    message = event.message,
+                                    uiMessage = event.uiMessage,
                                     coroutineScope = coroutineScope,
                                 ),
                             )
@@ -972,7 +972,7 @@ sealed interface AssistantMessageState {
             }
         }
 
-        override val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
+        val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
         fun completedStateOrNull() = if (completedlyFinished.value) toCompleted() else null
 
@@ -1024,7 +1024,6 @@ sealed interface AssistantMessageState {
         override val depth: Int = 0,
         override val createdAt: Instant,
     ) : AssistantMessageState {
-        override val completedContents = contents
         override val completed: Boolean = true
 
         companion object {
@@ -1041,7 +1040,7 @@ sealed interface AssistantMessageState {
                         }
 
                         else -> AssistantMessageContent.Completed(
-                            message = part,
+                            uiMessage = part,
                             coroutineScope = coroutineScope,
                         )
                     }
@@ -1060,14 +1059,21 @@ sealed interface AssistantMessageState {
         conversationId = conversationId,
         parentId = parentId,
         depth = depth,
-        parts = completedContents.toUiMessageList(),
+        parts = contents.toUiMessageList(),
         role = MessageEntityRole.Assistant,
         generatedBy = model,
         completed = completed,
         createdAt = createdAt,
     )
 
-    private fun List<AssistantMessageContent.Completed>.toUiMessageList() = mapNotNull { content ->
+    fun toResponseMessagesList() = contents.mapNotNull { content ->
+        when (val uiMessage = content.uiMessage) {
+            is Koog -> uiMessage.message as? Message.Response
+            else -> null
+        }
+    }
+
+    private fun List<AssistantMessageContent>.toUiMessageList() = mapNotNull { content ->
         when (val uiMessage = content.uiMessage) {
             is Koog -> when (uiMessage.message) {
                 is Assistant, is Reasoning, is Tool -> uiMessage
@@ -1098,8 +1104,16 @@ sealed interface AssistantMessageStreamingEvent {
     @Immutable
     data class SetMessage(
         val partIndex: Int,
-        val message: Message,
-    ) : AssistantMessageStreamingEvent
+        val uiMessage: UiMessage,
+    ) : AssistantMessageStreamingEvent {
+        constructor(
+            partIndex: Int,
+            message: Message,
+        ) : this(
+            partIndex,
+            message.toUiMessage(),
+        )
+    }
 
     data object Finish : AssistantMessageStreamingEvent
 }
