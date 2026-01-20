@@ -29,6 +29,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.util.Cbor
+import top.ltfan.knowmad.util.Json
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -115,12 +116,12 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
-    fun fromUiMessageList(data: List<UiMessage>): ByteArray {
-        return Cbor.encodeToByteArray(data)
+    fun fromUiMessageList(data: List<UiMessage>): String {
+        return Json.encodeToString(data)
     }
 
     @TypeConverter
-    fun toUiMessageList(data: ByteArray): List<UiMessage> {
-        return Cbor.decodeFromByteArray(data)
+    fun toUiMessageList(data: String): List<UiMessage> {
+        return Json.decodeFromString(data)
     }
 }
