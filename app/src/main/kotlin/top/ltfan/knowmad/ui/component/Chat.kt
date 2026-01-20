@@ -912,7 +912,7 @@ sealed interface AssistantMessageState {
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
-        private val completedlyFinished = MutableStateFlow(false)
+        private val fullyCompleted = MutableStateFlow(false)
 
         init {
             coroutineScope.launch {
@@ -964,7 +964,7 @@ sealed interface AssistantMessageState {
                         is Finish -> {
                             completed = true
                             replaceContentsToCompleted()
-                            completedlyFinished.value = true
+                            fullyCompleted.value = true
                             cancel()
                         }
                     }
@@ -974,7 +974,7 @@ sealed interface AssistantMessageState {
 
         val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
 
-        fun completedStateOrNull() = if (completedlyFinished.value) toCompleted() else null
+        fun completedStateOrNull() = if (fullyCompleted.value) toCompleted() else null
 
         suspend fun completeAndGetState(): Completed {
             complete()
@@ -982,7 +982,7 @@ sealed interface AssistantMessageState {
         }
 
         suspend fun awaitCompletedState(): Completed {
-            completedlyFinished.first { it }
+            fullyCompleted.first { it }
             return toCompleted()
         }
 
@@ -999,7 +999,7 @@ sealed interface AssistantMessageState {
         private suspend fun complete() {
             completed = true
             replaceContentsToCompleted()
-            completedlyFinished.value = true
+            fullyCompleted.value = true
         }
 
         private suspend fun replaceContentsToCompleted(endedAt: Instant = Clock.System.now()) {
