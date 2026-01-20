@@ -909,6 +909,7 @@ sealed interface AssistantMessageState {
         override val parentId: Uuid? = null,
         override val depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
+        requestCancellation: () -> Unit = {},
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
@@ -966,6 +967,7 @@ sealed interface AssistantMessageState {
                 }
             }.invokeOnCompletion {
                 coroutineScope.launch {
+                    requestCancellation()
                     completed = true
                     replaceContentsToCompleted()
                     fullyCompleted.value = true
