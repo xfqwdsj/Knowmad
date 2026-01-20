@@ -69,15 +69,22 @@ interface ChatDao {
     }
 
     @Transaction
-    suspend fun insertMessage(message: MessageEntity, fileIds: List<Uuid>): Long {
+    suspend fun insertMessage(
+        message: MessageEntity,
+        fileIds: List<Uuid>,
+        getUpdatedEntity: (MessageEntity) -> Unit = {},
+    ): Long {
         val lastMessage = getLastMessageInCurrentTreeByConversation(message.conversationId)
-        return insertMessageWithoutSettingBranch(
-            message = message.copy(
-                parentId = lastMessage?.id,
-                depth = if (lastMessage == null) 0 else lastMessage.depth + 1,
-            ),
-            fileIds = fileIds,
+        val updatedMessage = message.copy(
+            parentId = lastMessage?.id,
+            depth = if (lastMessage == null) 0 else lastMessage.depth + 1,
         )
+        return insertMessageWithoutSettingBranch(
+            message = updatedMessage,
+            fileIds = fileIds,
+        ).also {
+            getUpdatedEntity(updatedMessage)
+        }
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
