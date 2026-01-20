@@ -911,6 +911,7 @@ sealed interface AssistantMessageState {
         override val depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
         requestCancellation: () -> Unit = {},
+        onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
         override val contents = mutableStateListOf<AssistantMessageContent>()
@@ -938,11 +939,13 @@ sealed interface AssistantMessageState {
                                     coroutineScope = coroutineScope,
                                 )
                                 contents.add(newContent)
+                                onUpdate()
                                 newContent
                             } as? AssistantMessageContent.Streaming ?: return@collect
 
                             val flow = content.flow as? MutableStateFlow<String> ?: return@collect
                             flow.value += event.content
+                            onUpdate()
                         }
 
                         is SetMessage -> {
@@ -962,6 +965,7 @@ sealed interface AssistantMessageState {
                                     coroutineScope = coroutineScope,
                                 ),
                             )
+                            onUpdate()
                         }
 
                         is Finish -> cancel()
