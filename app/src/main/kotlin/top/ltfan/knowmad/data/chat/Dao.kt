@@ -41,7 +41,10 @@ interface ChatDao {
     suspend fun insertMessageFileCrossRef(ref: MessageFileCrossRef): Long
 
     @Transaction
-    suspend fun insertMessage(message: MessageEntity, fileIds: List<Uuid>): Long {
+    suspend fun insertMessageWithoutSettingBranch(
+        message: MessageEntity,
+        fileIds: List<Uuid>,
+    ): Long {
         val messageRowId = insertMessageInternalUnsafe(message)
         val messageId = message.id
 
@@ -63,6 +66,18 @@ interface ChatDao {
         }
 
         return messageRowId
+    }
+
+    @Transaction
+    suspend fun insertMessage(message: MessageEntity, fileIds: List<Uuid>): Long {
+        val lastMessage = getLastMessageInCurrentTreeByConversation(message.conversationId)
+        return insertMessageWithoutSettingBranch(
+            message = message.copy(
+                parentId = lastMessage?.id,
+                depth = if (lastMessage == null) 0 else lastMessage.depth + 1,
+            ),
+            fileIds = fileIds,
+        )
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -79,7 +79,7 @@ data class MessageEntity(
     val id: Uuid = Uuid.generateV7(),
     val conversationId: Uuid,
     val parentId: Uuid? = null,
-    val depth: Int,
+    val depth: Int = 0,
     val parts: List<UiMessage>,
     val role: MessageEntityRole,
     val searchableContent: String = parts.joinToString("\n") { it.content },
