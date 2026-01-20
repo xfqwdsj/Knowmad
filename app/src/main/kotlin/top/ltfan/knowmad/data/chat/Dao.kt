@@ -87,6 +87,20 @@ interface ChatDao {
         }
     }
 
+    @Transaction
+    suspend fun insertMessageAndGet(
+        message: MessageEntity,
+        fileIds: List<Uuid>,
+        getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit = {},
+    ): Long {
+        return insertMessage(
+            message = message,
+            fileIds = fileIds,
+        ).also {
+            getUpdatedEntity(getMessageWithFilesAndBranchInfoById(message.id))
+        }
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setMessageBranchSelection(selection: MessageBranchSelectionEntity)
 
