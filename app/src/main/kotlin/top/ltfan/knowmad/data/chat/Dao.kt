@@ -142,6 +142,9 @@ interface ChatDao {
         return updateConversationWithoutInstant(updatedConversation)
     }
 
+    @Update
+    suspend fun updateMessage(message: MessageEntity): Int
+
     @Query("SELECT * FROM ConversationEntity WHERE isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllConversations(): PagingSource<Int, ConversationEntity>
 
