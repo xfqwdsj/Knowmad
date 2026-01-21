@@ -142,6 +142,7 @@ fun getChatAgent(
                             frames.add(frame)
                             when (frame) {
                                 is Append -> {
+                                    if (frame.text.isEmpty()) return@collect
                                     if (lastIsToolCall == true) partIndex++
                                     lastIsToolCall = false
                                     eventFlow.emit(
