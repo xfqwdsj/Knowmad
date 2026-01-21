@@ -30,7 +30,6 @@ import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.environment.executeTools
 import ai.koog.agents.core.environment.result
 import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.PromptBuilder
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
@@ -299,11 +298,7 @@ fun getChatAgent(
         strategy = strategy,
         agentConfig = agentConfig,
         toolRegistry = toolRegistry,
-    ) {
-        install(EventHandler) {
-            onLLMStreamingFailed { }
-        }
-    }
+    )
 }
 
 private data class ChatAgentData<T>(
