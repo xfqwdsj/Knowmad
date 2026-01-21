@@ -98,8 +98,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     var messageListLoading by mutableStateOf(false)
 
-    private val currentConversationIdFlow = chatDataStore.data
-        .map { it.conversation }.distinctUntilChanged()
+    private val currentConversationIdFlow = chatDataStore.dataFlowOf { it.conversation }
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
         transformOut = {
@@ -243,8 +242,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         transformIn = { selectedModelId },
         transformOut = { copy(selectedModelId = it) },
     )
-    val selectedModelEntityFlow = chatDataStore.data
-        .map { it.selectedModelId?.let { id -> llmConfigDao.getModelById(id) } }
+    val selectedModelEntityFlow = chatDataStore.dataFlowOf { it.selectedModelId }
+        .map { it?.let { id -> llmConfigDao.getModelById(id) } }
         .stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
