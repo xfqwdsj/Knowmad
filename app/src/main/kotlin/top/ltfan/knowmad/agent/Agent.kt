@@ -119,7 +119,7 @@ fun getChatAgent(
         }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
             val (eventFlow, cancellation, state, userParts) = data
-            var partIndex = data.partIndex + 1
+            var partIndex = data.partIndex
             llm.writeSession {
                 appendPrompt {
                     userParts.takeIf { it.isNotEmpty() }?.let {
@@ -143,7 +143,7 @@ fun getChatAgent(
                             when (frame) {
                                 is Append -> {
                                     if (frame.text.isEmpty()) return@collect
-                                    if (lastIsToolCall == true) partIndex++
+                                    if (lastIsToolCall != false) partIndex++
                                     lastIsToolCall = false
                                     eventFlow.emit(
                                         AddString(
@@ -155,7 +155,6 @@ fun getChatAgent(
                                 }
 
                                 is StreamFrame.ToolCall -> {
-                                    partIndex++
                                     lastIsToolCall = true
                                     val toolCall = Message.Tool.Call(
                                         id = frame.id,
@@ -165,7 +164,7 @@ fun getChatAgent(
                                     )
                                     eventFlow.emit(
                                         SetMessage(
-                                            partIndex = partIndex,
+                                            partIndex = ++partIndex,
                                             message = toolCall,
                                         ),
                                     )
