@@ -38,6 +38,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -66,6 +68,9 @@ class AppDataStore<T>(
     scope = scope,
     produceFile = produceFile,
 ) {
+    inline fun <R> dataFlowOf(crossinline transform: suspend (T) -> R) =
+        data.map(transform).distinctUntilChanged()
+
     fun asMutableState(
         coroutineScope: CoroutineScope,
         started: SharingStarted = SharingStarted.Eagerly,
