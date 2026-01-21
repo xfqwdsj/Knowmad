@@ -20,6 +20,8 @@ package top.ltfan.knowmad.ui.viewmodel
 
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
+import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.RequestMetaInfo
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DrawerState
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.getChatAgent
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -67,6 +70,7 @@ import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
@@ -310,7 +314,26 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     }
                     userMessageFlow.resetReplayCache()
                 },
-                getUserMessage = { userMessageFlow.first() },
+                getUserMessage = {
+                    userMessageFlow.first().also {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            chatDao.insertMessage(
+                                message = MessageEntity(
+                                    conversationId = conversationId,
+                                    parts = listOf(
+                                        Message.User(
+                                            parts = it,
+                                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                                        ).toUiMessage(),
+                                    ),
+                                    role = MessageEntityRole.User,
+                                    generatedBy = null,
+                                ),
+                                fileIds = emptyList(),
+                            )
+                        }
+                    }
+                },
                 resources = application.resources,
             ) { system ->
                 if (messages.isEmpty()) {
@@ -341,7 +364,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     init {
         viewModelScope.launch {
             currentAgent.collect {
-                try {
+                try { // TODO: recreate agent on network error
                     it?.run(Unit)
                 } catch (e: Throwable) {
                     e.printStackTrace()
@@ -367,7 +390,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         if (currentConversationId == null) {
             createNewConversation()
         }
-        userMessageFlow.tryEmit(parts)
+        viewModelScope.launch {
+            userMessageFlow.emit(parts)
+        }
     }
 
     fun editProviderConfig(
