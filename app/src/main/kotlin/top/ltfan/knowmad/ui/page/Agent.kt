@@ -23,9 +23,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -244,7 +244,6 @@ class AgentMainPage : AgentSubPage() {
                                     contentPadding.copy(
                                         layoutDirection,
                                         top = 0.dp,
-                                        bottom = 0.dp,
                                     ),
                                 )
                                 .fillMaxWidth()
@@ -255,23 +254,44 @@ class AgentMainPage : AgentSubPage() {
                     val inputHeight = inputPlaceables.fastMaxOfOrNull { it.height } ?: 0
 
                     val scrimPlaceables = subcompose("scrim") {
-                        Spacer(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(inputHeight.toDp())
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color.Transparent,
-                                            ContainerColor.scaffoldContainer,
+                        val color = ContainerColor.scaffoldContainer.copy(alpha = .8f)
+
+                        Column(Modifier.fillMaxSize()) {
+                            Spacer(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 64.dp)
+                                    .fillMaxHeight()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.Transparent,
+                                                color,
+                                            ),
                                         ),
                                     ),
-                                ),
+                            )
+                            Spacer(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .background(color),
+                            )
+                        }
+                    }.map {
+                        it.measure(
+                            constraints.copy(
+                                minHeight = inputHeight,
+                                maxHeight = inputHeight,
+                            ),
                         )
-                    }.map { it.measure(constraints) }
+                    }
 
                     val listPlaceables = subcompose("messageList") {
-                        val padding = contentPadding + PaddingValues(bottom = inputHeight.toDp())
+                        val padding = contentPadding.copy(
+                            layoutDirection,
+                            bottom = inputHeight.toDp(),
+                        )
 
                         if (messages == null) {
                             Column(
@@ -317,13 +337,13 @@ class AgentMainPage : AgentSubPage() {
                         scrimPlaceables.fastForEach {
                             it.place(
                                 0,
-                                constraints.maxHeight - it.height - safeBottomPadding,
+                                constraints.maxHeight - it.height,
                             )
                         }
                         inputPlaceables.fastForEach {
                             it.place(
                                 (constraints.maxWidth - it.width) / 2,
-                                constraints.maxHeight - it.height - bottomPadding,
+                                constraints.maxHeight - it.height,
                             )
                         }
                     }
