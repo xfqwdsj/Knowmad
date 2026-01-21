@@ -103,7 +103,7 @@ fun getChatAgent(
     }
 
     val strategy = strategy("chat") {
-        val nodeGetState by node<List<ContentPart>, ChatAgentData<List<ContentPart>>> {
+        val nodeGetState by node<List<ContentPart>, ChatAgentData<List<ContentPart>>> { parts ->
             val eventFlow =
                 MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
             val cancellation = Channel<Unit>()
@@ -112,15 +112,15 @@ fun getChatAgent(
                 eventFlow = eventFlow,
                 cancelStreaming = cancellation,
                 state = state,
-                content = it,
-                partIndex = 0,
+                content = parts,
+                partIndex = -1,
             ).also {
                 logger.debug { "New $it" }
             }
         }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
             val (eventFlow, cancellation, state, userParts) = data
-            var partIndex = data.partIndex
+            var partIndex = data.partIndex + 1
             llm.writeSession {
                 appendPrompt {
                     userParts.takeIf { it.isNotEmpty() }?.let {
