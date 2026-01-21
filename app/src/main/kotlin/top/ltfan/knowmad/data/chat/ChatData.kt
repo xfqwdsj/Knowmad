@@ -192,6 +192,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         val startedAt: Instant = Clock.System.now(),
     ) : AssistantMessageContent(coroutineScope, flow) {
         var endedAt by mutableStateOf<Instant?>(null)
+        override val content get() = flow.value
 
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
             val metaInfo = ResponseMetaInfo(
@@ -228,6 +229,8 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         override val uiMessage: UiMessage,
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
+        override val content get() = uiMessage.content
+
         constructor(
             uiMessage: UiMessage,
             coroutineScope: CoroutineScope,
@@ -275,6 +278,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
     }
 
     abstract val uiMessage: UiMessage
+    abstract val content: String
 }
 
 enum class AssistantStreamingMessageType {
