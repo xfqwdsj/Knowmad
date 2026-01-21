@@ -42,7 +42,6 @@ import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponses
 import android.content.res.Resources
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
@@ -58,9 +57,10 @@ import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.AddString
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.SetMessage
+import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 
-private val logger = KotlinLogging.logger("ChatAgent")
+private val logger = Logger("ChatAgent")
 
 fun getChatAgent(
     promptExecutor: PromptExecutor,
