@@ -220,7 +220,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             defaultEndedAt,
         )
 
-        override val uiMessage get() = UiMessage.Koog(toMessage())
+        override val uiMessage get() = toMessage().toUiMessage()
     }
 
     @Immutable
