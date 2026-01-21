@@ -1016,6 +1016,18 @@ sealed interface AssistantMessageState {
                 }
             }
         }
+
+        override fun toString(): String {
+            return "AssistantMessageState.Streaming(" +
+                    "id=$id, " +
+                    "conversationId=$conversationId, " +
+                    "parentId=$parentId, " +
+                    "depth=$depth, " +
+                    "model=$model, " +
+                    "completed=$completed, " +
+                    "createdAt=$createdAt" +
+                    ")"
+        }
     }
 
     @Immutable
