@@ -19,3 +19,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keepattributes Signature
+
+# Keep Generic signatures for `typeOf<T>` usage
+-keep,allowobfuscation class top.ltfan.knowmad.agent.ChatAgentData
+
+# First found in io.ktor.util.debug.IntellijIdeaDebugDetector
+-dontwarn java.lang.management.**
