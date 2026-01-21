@@ -26,6 +26,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -170,6 +171,9 @@ interface ChatDao {
     fun getAllConversations(): PagingSource<Int, ConversationEntity>
 
     @Query("SELECT * FROM ConversationEntity WHERE id = :conversationId")
+    fun getConversationFlowById(conversationId: Uuid): Flow<ConversationEntity?>
+
+    @Query("SELECT * FROM ConversationEntity WHERE id = :conversationId")
     suspend fun getConversationById(conversationId: Uuid): ConversationEntity?
 
     @Query("SELECT * FROM MessageEntity WHERE id = :messageId")
@@ -294,6 +298,26 @@ interface ChatDao {
     """,
     )
     suspend fun getMessageWithFilesAndBranchInfoById(messageId: Uuid): MessageWithFilesAndBranchInfo?
+
+    @Query(
+        """
+        WITH RECURSIVE SelectedPath AS (
+            SELECT * FROM MessageEntity
+            WHERE conversationId = :conversationId AND parentId IS NULL
+
+            UNION ALL
+
+            SELECT child.* FROM MessageEntity AS child
+            JOIN SelectedPath AS parent ON child.parentId = parent.id
+                AND child.depth = parent.depth + 1
+                AND child.conversationId = parent.conversationId
+            JOIN MessageBranchSelectionEntity AS bs ON bs.parentId = parent.id AND bs.selectedChildId = child.id
+        )
+
+        SELECT COUNT(*) FROM SelectedPath
+    """,
+    )
+    fun getMessageCountFlowInCurrentTreeByConversation(conversationId: Uuid): Flow<Int>
 
     @Query(
         """

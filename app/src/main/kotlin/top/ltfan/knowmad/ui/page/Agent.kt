@@ -46,6 +46,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -106,6 +107,8 @@ class AgentMainPage : AgentSubPage() {
         val coroutineScope = rememberCoroutineScope()
         val layoutDirection = LocalLayoutDirection.current
 
+        val currentConversation by viewModel.currentConversationFlow.collectAsState(null)
+
         ModalNavigationDrawer(
             drawerContent = {
                 ModalDrawerSheet(
@@ -137,7 +140,7 @@ class AgentMainPage : AgentSubPage() {
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Text(viewModel.currentConversation?.name ?: "")
+                            Text(currentConversation?.name ?: "")
                         },
                         navigationIcon = {
                             TooltipBox(
@@ -218,7 +221,7 @@ class AgentMainPage : AgentSubPage() {
                 val safeContentPadding = scaffoldPaddingValues + contentPadding
                 val contentPadding = safeContentPadding + PaddingValues(16.dp)
 
-                val messages = viewModel.messagesState?.flow?.collectAsLazyPagingItems()
+                val messages = viewModel.currentMessagesState?.flow?.collectAsLazyPagingItems()
 
                 SubcomposeLayout { constraints ->
                     val inputPlaceables = subcompose("input") {

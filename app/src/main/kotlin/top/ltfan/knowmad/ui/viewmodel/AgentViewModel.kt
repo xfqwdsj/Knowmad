@@ -36,6 +36,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -115,12 +117,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     private val conversationAndChatData by currentConversationIdFlow
         .map { id ->
             ConversationAndChatData(
-                conversation = id?.let {
-                    chatDao.getConversationById(it)
-                },
-                messageCount = id?.let {
-                    chatDao.getMessageCountInCurrentTreeByConversation(it)
-                } ?: 0,
+                conversationFlow = id?.let {
+                    chatDao.getConversationFlowById(it)
+                } ?: flowOf(null),
+                messageCountFlow = id?.let {
+                    chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
+                } ?: flowOf(0),
                 messagesState = id?.let {
                     PagingLazyListState {
                         chatDao.getAllMessagesByConversation(it)
@@ -134,13 +136,17 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         .stateIn(
             viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = ConversationAndChatData(null, 0, null),
+            initialValue = ConversationAndChatData(
+                conversationFlow = flowOf(null),
+                messageCountFlow = flowOf(0),
+                messagesState = null,
+            ),
         )
         .collectAsState()
 
-    val currentConversation get() = conversationAndChatData.conversation
-    val messageCount get() = conversationAndChatData.messageCount
-    val messagesState get() = conversationAndChatData.messagesState
+    val currentConversationFlow get() = conversationAndChatData.conversationFlow
+    val currentMessageCountFlow get() = conversationAndChatData.messageCountFlow
+    val currentMessagesState get() = conversationAndChatData.messagesState
 
     val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
 
@@ -473,8 +479,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 }
 
 data class ConversationAndChatData(
-    val conversation: ConversationEntity?,
-    val messageCount: Int,
+    val conversationFlow: Flow<ConversationEntity?>,
+    val messageCountFlow: Flow<Int>,
     val messagesState: PagingLazyListState<Int, MessageWithFilesAndBranchInfo>?,
 )
 
