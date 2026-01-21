@@ -118,4 +118,5 @@ dependencies {
     implementation(libs.bundles.all)
     ksp(libs.room.compiler)
     debugImplementation(libs.bundles.debug)
+    testImplementation(libs.bundles.test)
 }

@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,9 +24,13 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import biweekly.component.VAlarm
+import biweekly.parameter.Related
+import biweekly.property.Trigger
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -61,7 +65,6 @@ data class CourseEntity(
     val name: String,
     val instructor: String,
     val location: String,
-    val color: Int,
 )
 
 @Entity(
@@ -89,12 +92,25 @@ data class EventEntity(
     val name: String?,
     val instructor: String?,
     val location: String?,
-    val color: Int?,
+    val color: ICalendarColor,
     val startTime: Instant,
     val endTime: Instant,
     val reminders: List<Duration> = emptyList(),
     val notes: String? = null,
-)
+    val createdAt: Instant = Clock.System.now(),
+    val updatedAt: Instant = createdAt,
+) {
+    val vAlarms
+        get() = reminders.map { reminder ->
+            VAlarm.display(
+                Trigger(
+                    biweekly.util.Duration.fromMillis(-reminder.inWholeMilliseconds),
+                    Related.START,
+                ),
+                name,
+            )
+        }
+}
 
 data class EventWithSemesterAndCourse(
     @Embedded val event: EventEntity,
