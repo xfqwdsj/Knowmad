@@ -22,20 +22,24 @@ import ai.koog.agents.core.agent.context.DetachedPromptExecutorAPI
 import ai.koog.agents.core.dsl.builder.AIAgentBuilderDslMarker
 import ai.koog.agents.core.dsl.builder.AIAgentSubgraphBuilderBase
 import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import android.content.res.Resources
 import top.ltfan.knowmad.R
 
 @OptIn(DetachedPromptExecutorAPI::class)
 @AIAgentBuilderDslMarker
-inline fun <reified T> AIAgentSubgraphBuilderBase<*, *>.nodeLLMGenerateConversationTitle(
+inline fun AIAgentSubgraphBuilderBase<*, *>.nodeLLMGenerateConversationTitle(
     name: String? = null,
     resources: Resources,
     crossinline onGenerated: (String) -> Unit,
-) = node<T, T>(name) { ignored ->
+) = node<List<ContentPart>, List<ContentPart>>(name) { parts ->
     val chatMessages = llm.readSession { prompt }.messages
+        .asSequence()
         .filterNot { message -> message is Message.System }
-        .joinToString("\n\n") { it.content }
+        .map { it.content }
+        .plus(parts.filterIsInstance<ContentPart.Text>().joinToString("\n") { it.text })
+        .joinToString("\n\n")
 
     val prompt = prompt("conversation-title") {
         system(
@@ -57,5 +61,5 @@ inline fun <reified T> AIAgentSubgraphBuilderBase<*, *>.nodeLLMGenerateConversat
         .onSuccess { onGenerated(it) }
         .onFailure { it.printStackTrace() }
 
-    ignored
+    parts
 }

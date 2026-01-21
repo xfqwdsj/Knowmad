@@ -252,7 +252,7 @@ fun getChatAgent(
             it.close()
             getUserMessage(it.state)
         }
-        val nodeGenerateTitle by nodeLLMGenerateConversationTitle<List<ContentPart>>(
+        val nodeGenerateTitle by nodeLLMGenerateConversationTitle(
             resources = resources,
             onGenerated = onGeneratedTitle,
         )
