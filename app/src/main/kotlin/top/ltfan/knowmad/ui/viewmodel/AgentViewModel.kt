@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -191,16 +192,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     fun newConversation() {
         currentConversationId = null
-    }
-
-    private fun createNewConversation() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val conversation = ConversationEntity(
-                name = application.getString(R.string.agent_conversation_label_new),
-            )
-            application.appDatabase.chatDao().insertConversation(conversation)
-            currentConversationId = conversation.id
-        }
     }
 
     fun editConversation(
@@ -395,12 +386,23 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         if (!canSendMessage) return
         val parts = listOf(ContentPart.Text(chatMessageTextInputState.text.toString()))
         chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
-        if (currentConversationId == null) {
-            createNewConversation()
-        }
         viewModelScope.launch {
+            if (currentConversationId == null) {
+                createNewConversation()
+            }
+            currentAgent.filterNotNull().first()
             userMessageFlow.emit(parts)
         }
+    }
+
+    private suspend fun createNewConversation() {
+        val conversation = ConversationEntity(
+            name = application.getString(R.string.agent_conversation_label_new),
+        )
+        withContext(Dispatchers.IO) {
+            application.appDatabase.chatDao().insertConversation(conversation)
+        }
+        currentConversationId = conversation.id
     }
 
     fun editProviderConfig(
