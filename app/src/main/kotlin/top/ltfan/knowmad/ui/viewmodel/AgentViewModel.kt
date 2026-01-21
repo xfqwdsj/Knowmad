@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -68,12 +69,15 @@ import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
+import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+    private val logger = Logger("AgentViewModel")
+
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
 
     val chatDao = application.appDatabase.chatDao()
@@ -362,9 +366,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     init {
         viewModelScope.launch {
-            currentAgent.collect {
+            currentAgent.collectLatest {
+                it ?: run {
+                    logger.debug { "Current agent changed to null" }
+                    return@collectLatest
+                }
+                logger.debug { "Current agent changed: ${it.id}" }
                 try { // TODO: recreate agent on network error
-                    it?.run(Unit)
+                    it.run(Unit)
                 } catch (e: Throwable) {
                     e.printStackTrace()
                 }
