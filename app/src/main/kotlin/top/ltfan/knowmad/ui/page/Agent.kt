@@ -60,6 +60,7 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMaxOfOrNull
@@ -140,7 +141,12 @@ class AgentMainPage : AgentSubPage() {
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Text(currentConversation?.name ?: "")
+                            Text(
+                                currentConversation?.name ?: "",
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = false,
+                                maxLines = 1,
+                            )
                         },
                         navigationIcon = {
                             TooltipBox(

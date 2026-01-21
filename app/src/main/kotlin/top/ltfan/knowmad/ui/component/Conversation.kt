@@ -68,6 +68,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -176,7 +177,14 @@ fun ConversationList(
                 var showDialog by remember { mutableStateOf(false) }
 
                 NavigationDrawerItem(
-                    label = { Text(conversation.name) },
+                    label = {
+                        Text(
+                            conversation.name,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
+                            maxLines = 1,
+                        )
+                    },
                     selected = currentConversationId == conversation.id,
                     onClick = { onConversationSelected(conversation.id) },
                     modifier = Modifier.animateItem(),
