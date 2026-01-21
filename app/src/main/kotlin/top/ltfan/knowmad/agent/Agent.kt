@@ -115,7 +115,7 @@ fun getChatAgent(
                 content = it,
                 partIndex = 0,
             ).also {
-                logger.debug { "New $this" }
+                logger.debug { "New $it" }
             }
         }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
