@@ -293,6 +293,7 @@ fun getChatAgent(
         maxAgentIterations = maxAgentIterations,
     )
 
+    logger.debug { "Creating Agent instance." }
     return AIAgent(
         promptExecutor = promptExecutor,
         strategy = strategy,
