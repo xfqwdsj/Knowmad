@@ -335,6 +335,19 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     }
                 },
                 resources = application.resources,
+                onGeneratedTitle = {
+                    viewModelScope.launch {
+                        val conversation = withContext(Dispatchers.IO) {
+                            chatDao.getConversationById(conversationId)
+                        } ?: return@launch
+                        val newName = it.trim().ifEmpty { return@launch }
+                        withContext(Dispatchers.IO) {
+                            chatDao.updateConversation(
+                                conversation.copy(name = newName),
+                            )
+                        }
+                    }
+                },
             ) { system ->
                 if (messages.isEmpty()) {
                     system().also {

@@ -71,6 +71,7 @@ fun getChatAgent(
     onStreamingCancelled: (state: AssistantMessageState.Streaming) -> Unit,
     getUserMessage: suspend (state: AssistantMessageState.Streaming?) -> List<ContentPart>,
     resources: Resources,
+    onGeneratedTitle: (String) -> Unit = {},
     maxAgentIterations: Int = 50,
     toolRegistry: ToolRegistry = ToolRegistry {
         tool(TimeTool(resources))
@@ -251,9 +252,17 @@ fun getChatAgent(
             it.close()
             getUserMessage(it.state)
         }
+        val nodeGenerateTitle by nodeLLMGenerateConversationTitle<List<ContentPart>>(
+            resources = resources,
+            onGenerated = onGeneratedTitle,
+        )
 
         // TODO: recognize and restore uncompleted tool calls at every session start
         edge(nodeStart forwardTo nodeReceiveFirstMessage)
+        edge(
+            nodeReceiveFirstMessage forwardTo nodeGenerateTitle
+                    onCondition { llm.readSession { prompt.messages.count { it !is Message.System } <= 11 } },
+        )
         edge(nodeReceiveFirstMessage forwardTo nodeGetState)
         edge(nodeGetState forwardTo nodeLLMRequest)
         edge(
@@ -269,7 +278,12 @@ fun getChatAgent(
         edge(nodeExecuteTools forwardTo nodeAppendToolResults)
         edge(nodeAppendToolResults forwardTo nodeLLMRequest)
         edge(nodeLLMRequest forwardTo nodeReceiveUserMessage)
+        edge(
+            nodeReceiveUserMessage forwardTo nodeGenerateTitle
+                    onCondition { llm.readSession { prompt.messages.count { it !is Message.System } <= 11 } },
+        )
         edge(nodeReceiveUserMessage forwardTo nodeGetState)
+        edge(nodeGenerateTitle forwardTo nodeGetState)
         edge(
             nodeExecuteTools forwardTo nodeFinish
                     onCondition { it.content.singleOrNull()?.tool == ExitTool.name }
