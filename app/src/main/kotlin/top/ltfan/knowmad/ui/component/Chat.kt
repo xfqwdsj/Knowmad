@@ -1070,13 +1070,6 @@ sealed interface AssistantMessageState {
         createdAt = createdAt,
     )
 
-    fun toResponseMessagesList() = contents.mapNotNull { content ->
-        when (val uiMessage = content.uiMessage) {
-            is Koog -> uiMessage.message as? Message.Response
-            else -> null
-        }
-    }
-
     private fun List<AssistantMessageContent>.toUiMessageList() = toList() // TODO
         .mapNotNull { content ->
             when (val uiMessage = content.uiMessage) {
