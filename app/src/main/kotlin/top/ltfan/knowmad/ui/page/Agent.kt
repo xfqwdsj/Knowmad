@@ -215,7 +215,8 @@ class AgentMainPage : AgentSubPage() {
                 contentColor = ScaffoldContentColor,
                 contentWindowInsets = AppWindowInsets,
             ) { scaffoldPaddingValues ->
-                val contentPadding = scaffoldPaddingValues + contentPadding + PaddingValues(16.dp)
+                val safeContentPadding = scaffoldPaddingValues + contentPadding
+                val contentPadding = safeContentPadding + PaddingValues(16.dp)
 
                 val messages = viewModel.messagesState?.flow?.collectAsLazyPagingItems()
 
@@ -234,6 +235,7 @@ class AgentMainPage : AgentSubPage() {
                                     contentPadding.copy(
                                         layoutDirection,
                                         top = 0.dp,
+                                        bottom = 0.dp,
                                     ),
                                 )
                                 .fillMaxWidth()
@@ -260,10 +262,7 @@ class AgentMainPage : AgentSubPage() {
                     }.map { it.measure(constraints) }
 
                     val listPlaceables = subcompose("messageList") {
-                        val padding = contentPadding.copy(
-                            layoutDirection,
-                            bottom = inputHeight.toDp(),
-                        )
+                        val padding = contentPadding + PaddingValues(bottom = inputHeight.toDp())
 
                         if (messages == null) {
                             Column(
@@ -299,16 +298,23 @@ class AgentMainPage : AgentSubPage() {
                     }.map { it.measure(constraints) }
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
+                        val safeBottomPadding =
+                            safeContentPadding.calculateBottomPadding().roundToPx()
+                        val bottomPadding = contentPadding.calculateBottomPadding().roundToPx()
+
                         listPlaceables.fastForEach {
                             it.place(0, 0)
                         }
                         scrimPlaceables.fastForEach {
-                            it.place(0, constraints.maxHeight - it.height)
+                            it.place(
+                                0,
+                                constraints.maxHeight - it.height - safeBottomPadding,
+                            )
                         }
                         inputPlaceables.fastForEach {
                             it.place(
                                 (constraints.maxWidth - it.width) / 2,
-                                constraints.maxHeight - it.height,
+                                constraints.maxHeight - it.height - bottomPadding,
                             )
                         }
                     }
