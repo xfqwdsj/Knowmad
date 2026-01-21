@@ -282,7 +282,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             }
                         },
                     ).apply {
-                        viewModelScope.launch(Dispatchers.IO) {
+                        withContext(Dispatchers.IO) {
                             chatDao.insertMessageAndGet(
                                 message = toEntity(),
                                 fileIds = emptyList(),
@@ -310,7 +310,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 },
                 getUserMessage = {
                     userMessageFlow.first().also {
-                        viewModelScope.launch(Dispatchers.IO) {
+                        withContext(Dispatchers.IO) {
                             chatDao.insertMessage(
                                 message = MessageEntity(
                                     conversationId = conversationId,

@@ -64,7 +64,7 @@ private val logger = Logger("ChatAgent")
 fun getChatAgent(
     promptExecutor: PromptExecutor,
     model: LLModel,
-    newStreamingState: (
+    newStreamingState: suspend (
         eventFlow: Flow<AssistantMessageStreamingEvent>,
         cancelStreaming: SendChannel<Unit>,
     ) -> AssistantMessageState.Streaming,
