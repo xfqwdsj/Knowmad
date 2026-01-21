@@ -110,6 +110,7 @@ import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.itemThemedShape
+import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -914,6 +915,8 @@ sealed interface AssistantMessageState {
         onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
+        private val logger = Logger("StreamingState")
+
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)
         private val completedStateFlow = MutableStateFlow<Completed?>(null)
@@ -930,6 +933,9 @@ sealed interface AssistantMessageState {
                                     if (it.endedAt == null) {
                                         it.endedAt = Clock.System.now()
                                     }
+                                } ?: logger.debug {
+                                    "Trying to complete previous part at index ${index - 1}, " +
+                                            "but found the part is not Streaming or does not exist."
                                 }
 
                                 val newContent = AssistantMessageContent.Streaming(
@@ -941,7 +947,13 @@ sealed interface AssistantMessageState {
                                 contents.add(newContent)
                                 onUpdate()
                                 newContent
-                            } as? AssistantMessageContent.Streaming ?: return@collect
+                            } as? AssistantMessageContent.Streaming ?: run {
+                                logger.error {
+                                    "Received AddString for part index ${event.partIndex}, " +
+                                            "but the part is not Streaming."
+                                }
+                                return@collect
+                            }
 
                             val flow = content.flow as? MutableStateFlow<String> ?: return@collect
                             flow.value += event.content
@@ -955,7 +967,15 @@ sealed interface AssistantMessageState {
                                     if (it.endedAt == null) {
                                         it.endedAt = Clock.System.now()
                                     }
+                                } ?: logger.debug {
+                                    "Trying to complete previous part at index ${index - 1}, " +
+                                            "but found the part is not Streaming or does not exist."
                                 }
+                            }
+
+                            if (index == contents.size - 1) logger.warn {
+                                "Received SetMessage for part index $index, " +
+                                        "but the part is already existing. Overwriting it."
                             }
 
                             contents.add(
@@ -972,6 +992,10 @@ sealed interface AssistantMessageState {
                     }
                 }
             }.invokeOnCompletion {
+                it?.let { throwable ->
+                    logger.error(throwable) { "Streaming event collection encountered an error." }
+                }
+                logger.debug { "Streaming event collection completed." }
                 coroutineScope.launch {
                     requestCancellation()
                     complete()
@@ -1015,6 +1039,7 @@ sealed interface AssistantMessageState {
                     iterator.set(content.completed(endedAt))
                 }
             }
+            logger.debug { "Replaced streaming contents to completed contents." }
         }
 
         override fun toString(): String {
