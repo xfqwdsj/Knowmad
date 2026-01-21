@@ -42,6 +42,7 @@ import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponses
 import android.content.res.Resources
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
@@ -58,6 +59,8 @@ import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.AddString
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.SetMessage
 import kotlin.time.Clock
+
+private val logger = KotlinLogging.logger("ChatAgent")
 
 fun getChatAgent(
     promptExecutor: PromptExecutor,
@@ -84,6 +87,21 @@ fun getChatAgent(
         system()
     },
 ): AIAgent<Unit, String> {
+    suspend fun getUserMessage(state: AssistantMessageState.Streaming?): List<ContentPart> {
+        logger.debug {
+            "Waiting for user message... " +
+                    "State ID: ${state?.id} " +
+                    "Last message: ${state?.contents?.lastOrNull()?.content?.takeLast(50)}"
+        }
+        return getUserMessage.invoke(state).also {
+            logger.debug {
+                "Received user message. " +
+                        "State ID: ${state?.id} " +
+                        "Parts count: ${it.size} "
+            }
+        }
+    }
+
     val strategy = strategy("chat") {
         val nodeGetState by node<List<ContentPart>, ChatAgentData<List<ContentPart>>> {
             val eventFlow =
@@ -96,7 +114,9 @@ fun getChatAgent(
                 state = state,
                 content = it,
                 partIndex = 0,
-            )
+            ).also {
+                logger.debug { "New $this" }
+            }
         }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
             val (eventFlow, cancellation, state, userParts) = data
@@ -116,6 +136,7 @@ fun getChatAgent(
                 val llmRequest = launch {
                     llm.writeSession {
                         val stream = requestLLMStreaming()
+                        logger.debug { "Streaming for ${state.id} started." }
                         var lastIsToolCall: Boolean? = null
 
                         stream.collect { frame ->
@@ -150,7 +171,7 @@ fun getChatAgent(
                                     )
                                 }
 
-                                is StreamFrame.End -> {}
+                                is StreamFrame.End -> {} // TODO: make use of end frame
                             }
                         }
                     }
@@ -158,16 +179,22 @@ fun getChatAgent(
 
                 val cancellationReceiving = launch {
                     cancellation.receiveCatching().getOrNull()
+                    logger.debug { "Streaming for ${state.id} is requesting cancellation." }
                     cancelled = true
                     llmRequest.cancel()
+                    logger.debug { "Streaming job for ${state.id} cancelled." }
                     data.close()
                     onStreamingCancelled(state)
+                    logger.debug { "Streaming for ${state.id} is cancelled." }
                 }
 
                 llmRequest.join().also {
                     cancellationReceiving.cancel()
                 }
             }
+
+            if (!cancelled) logger.debug { "Streaming for ${state.id} completed." }
+            else logger.debug { "Streaming for ${state.id} ended due to cancellation." }
 
             val list = frames.toMessageResponses().run {
                 if (!cancelled) this
@@ -178,10 +205,19 @@ fun getChatAgent(
                     messages(list)
                 }
             }
-            data.copy(newContent = list, partIndex = partIndex)
+            data.copy(newContent = list, partIndex = partIndex).also {
+                logger.debug {
+                    "LLM request node completed " +
+                            "for ${it.state.id} with ${it.content.size} messages. " +
+                            "Part index: ${it.partIndex}"
+                }
+            }
         }
         val nodeExecuteTools by node<ChatAgentData<List<Message.Tool.Call>>, ChatAgentData<List<ReceivedToolResult>>> { data ->
-            data.copy(newContent = environment.executeTools(data.content))
+            logger.debug { "Executing tools for ${data.state.id}..." }
+            data.copy(newContent = environment.executeTools(data.content)).also {
+                logger.debug { "Executed tools for ${it.state.id}, got ${it.content.size} results." }
+            }
         }
         val nodeAppendToolResults by node<ChatAgentData<List<ReceivedToolResult>>, ChatAgentData<List<ContentPart>>> { data ->
             val (eventFlow, _, _, toolResults) = data
@@ -201,7 +237,12 @@ fun getChatAgent(
                     ),
                 )
             }
-            data.copy(newContent = emptyList(), partIndex = partIndex)
+            data.copy<List<ContentPart>>(newContent = emptyList(), partIndex = partIndex).also {
+                logger.debug {
+                    "Appended tool results for ${it.state.id}. " +
+                            "Part index: ${it.partIndex}"
+                }
+            }
         }
         val nodeCompressHistory by nodeLLMCompressHistory<ChatAgentData<List<ReceivedToolResult>>>()
         val nodeReceiveFirstMessage by node<Unit, List<ContentPart>> {
@@ -212,6 +253,7 @@ fun getChatAgent(
             getUserMessage(it.state)
         }
 
+        // TODO: recognize and restore uncompleted tool calls at every session start
         edge(nodeStart forwardTo nodeReceiveFirstMessage)
         edge(nodeReceiveFirstMessage forwardTo nodeGetState)
         edge(nodeGetState forwardTo nodeLLMRequest)
@@ -221,7 +263,8 @@ fun getChatAgent(
         )
         edge(
             nodeExecuteTools forwardTo nodeCompressHistory
-                    onCondition { llm.readSession { prompt.messages.size > 100 } },
+                    onCondition { llm.readSession { prompt.messages.size > 100 } }
+                    transformed { it.also { logger.debug { "Compressing history for ${it.state.id}..." } } },
         )
         edge(nodeCompressHistory forwardTo nodeAppendToolResults)
         edge(nodeExecuteTools forwardTo nodeAppendToolResults)
@@ -271,9 +314,11 @@ private data class ChatAgentData<T>(
     val partIndex: Int,
 ) {
     suspend fun close() {
+        logger.debug { "Closing $this" }
         cancelStreaming.trySend(Unit)
         cancelStreaming.close()
         eventFlow.emit(Finish)
+        logger.debug { "Closed $this" }
     }
 
     fun <NewT> copy(
