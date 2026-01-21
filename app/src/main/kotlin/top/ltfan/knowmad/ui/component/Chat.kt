@@ -237,13 +237,13 @@ fun ChatModelSelector(
                 }
             }
 
-            var modelsExpanded by remember { mutableStateOf(false) }
+            var expandedProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
 
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = {
                     expanded = false
-                    modelsExpanded = false
+                    expandedProvider = null
                 },
             ) {
                 if (providers.isEmpty()) {
@@ -267,7 +267,7 @@ fun ChatModelSelector(
                             onClick = {
                                 coroutineScope.launch {
                                     models = getModels(provider)
-                                    modelsExpanded = true
+                                    expandedProvider = provider
                                 }
                             },
                             text = { Text(provider.name) },
@@ -287,8 +287,8 @@ fun ChatModelSelector(
                         )
 
                         DropdownMenu(
-                            expanded = modelsExpanded && models != null,
-                            onDismissRequest = { modelsExpanded = false },
+                            expanded = expandedProvider == provider && models != null,
+                            onDismissRequest = { expandedProvider = null },
                             offset = offset,
                         ) {
                             val models = models
@@ -306,7 +306,7 @@ fun ChatModelSelector(
                                 DropdownMenuItem(
                                     onClick = {
                                         onSelectModel(model)
-                                        modelsExpanded = false
+                                        expandedProvider = null
                                         expanded = false
                                     },
                                     text = { Text(model.name) },
