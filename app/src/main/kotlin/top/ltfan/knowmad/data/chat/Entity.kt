@@ -24,6 +24,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Fts4
+import androidx.room.FtsOptions
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.Junction
@@ -197,7 +198,10 @@ data class FileWithMessages(
     val messages: List<MessageWithConversation>,
 )
 
-@Fts4(contentEntity = MessageEntity::class)
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = MessageEntity::class,
+)
 @Entity
 data class MessageFtsEntity(
     @PrimaryKey
