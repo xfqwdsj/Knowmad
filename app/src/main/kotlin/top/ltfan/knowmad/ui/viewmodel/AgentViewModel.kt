@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.viewmodel
 
 import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedException
+import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
@@ -224,6 +225,52 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
+    suspend fun autoGenerateConversationName(conversation: ConversationEntity): String? {
+        val chatMessages = withContext(Dispatchers.IO) {
+            chatDao.getAllMessagesByConversationOnce(conversation.id)
+        }.asSequence()
+            .flatMap { it.message.parts }
+            .filterIsInstance<UiMessage.Koog>()
+            .map { it.message }
+            .filterNot { message -> message is Message.System }
+            .joinToString("\n\n") { it.content }
+            .trim()
+            .replace("\\s+".toRegex(), " ")
+            .takeLast(2000)
+            .ifBlank { return null }
+
+        val service = currentAgentService.value ?: return null // TODO: use custom executor
+        val executor = service.promptExecutor
+        val model = service.agentConfig.model
+
+        val prompt = prompt("conversation-title") {
+            system(
+                application.getString(
+                    R.string.llm_prompt_generate_conversation_title,
+                    chatMessages,
+                ),
+            )
+        }
+
+        return runCatching {
+            logger.debug { "Generating conversation title with LLM..." }
+            executor.execute(
+                prompt = prompt,
+                model = model,
+            ).filterIsInstance<Message.Assistant>()
+                .joinToString(" ") { it.content }
+                .trim()
+                .replace("\\s+".toRegex(), " ")
+                .ifEmpty {
+                    logger.warn { "LLM generated empty title" }
+                    return null
+                }
+        }
+            .onSuccess { logger.debug { "Generated conversation title: $it" } }
+            .onFailure { logger.error(it) { "Error generating conversation title" } }
+            .getOrNull()
+    }
+
     fun deleteConversation(
         conversation: ConversationEntity,
         onDeleted: (onUndo: () -> Unit) -> Unit,
@@ -323,9 +370,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             val eventFlow =
                 MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
             val service = currentAgentService.filterNotNull().first()
-            val messages = withContext(Dispatchers.IO) {
+            val databaseMessages = withContext(Dispatchers.IO) {
                 chatDao.getAllMessagesByConversationOnce(conversationId)
-            }.flatMap { entity ->
+            }
+            val messages = databaseMessages.flatMap { entity ->
                 entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
             }
             val system = if (messages.isEmpty()) {
@@ -360,6 +408,17 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     ),
                     fileIds = emptyList(),
                 )
+            }
+            if (databaseMessages.size % 6 < 2) {
+                viewModelScope.launch {
+                    val conversation = withContext(Dispatchers.IO) {
+                        chatDao.getConversationById(conversationId)
+                    } ?: return@launch
+                    val title = autoGenerateConversationName(conversation) ?: return@launch
+                    withContext(Dispatchers.IO) {
+                        chatDao.updateConversation(conversation.copy(name = title))
+                    }
+                }
             }
             val updateChannel = Channel<Unit>(Channel.CONFLATED)
             val state = AssistantMessageState.Streaming(

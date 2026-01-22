@@ -37,6 +37,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -94,11 +95,12 @@ fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
     ConversationList(
         state = viewModel.conversationListState,
         currentConversationId = viewModel.currentConversationId,
-        onConversationSelected = { viewModel.currentConversationId = it },
+        onConversationSelected = viewModel::currentConversationId::set,
         onSettingsClick = { viewModel.backStack.add(AgentConfigPage()) },
         onEditConversation = viewModel::editConversation,
         onDeleteConversation = viewModel::deleteConversation,
         contentPadding = contentPadding,
+        onAutoGenerateName = viewModel::autoGenerateConversationName,
     )
 }
 
@@ -111,6 +113,7 @@ fun ConversationList(
     onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
+    onAutoGenerateName: (suspend (conversation: ConversationEntity) -> String?)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -322,6 +325,9 @@ fun ConversationList(
                             onEditConversation(newEntity) {}
                             showDialog = false
                         },
+                        onAutoGenerateName = onAutoGenerateName?.let {
+                            { onAutoGenerateName(conversation) }
+                        },
                     )
                 }
             }
@@ -334,6 +340,7 @@ fun ConversationEditingDialog(
     conversation: ConversationEntity,
     onDismissRequest: () -> Unit,
     onConfirm: (newEntity: ConversationEntity) -> Unit,
+    onAutoGenerateName: (suspend () -> String?)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -360,6 +367,7 @@ fun ConversationEditingDialog(
             ConversationNameTextField(
                 state = state,
                 focusRequester = focusRequester,
+                onAutoGenerateName = onAutoGenerateName,
             )
 
             LaunchedEffect(Unit) {
@@ -374,13 +382,50 @@ fun ConversationEditingDialog(
 fun ConversationNameTextField(
     state: TextFieldState,
     focusRequester: FocusRequester = remember { FocusRequester() },
+    onAutoGenerateName: (suspend () -> String?)? = null,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
+    var generatingName by remember { mutableStateOf(false) }
+
     TextField(
         state = state,
         modifier = Modifier
             .widthIn(max = TextFieldMaxWidth)
             .focusRequester(focusRequester),
         label = { Text(stringResource(R.string.agent_conversation_label_name)) },
+        trailingIcon = onAutoGenerateName?.let {
+            {
+                TooltipBox(
+                    TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above,
+                    ),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(stringResource(R.string.agent_conversation_name_label_auto_generate))
+                        }
+                    },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(
+                        onClick = {
+                            generatingName = true
+                            coroutineScope.launch {
+                                val newName = onAutoGenerateName()
+                                newName?.let { text -> state.setTextAndPlaceCursorAtEnd(text) }
+                                generatingName = false
+                            }
+                        },
+                        enabled = !generatingName,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.autorenew_24px),
+                            contentDescription = stringResource(R.string.agent_conversation_name_label_auto_generate),
+                        )
+                    }
+                }
+            }
+        },
         lineLimits = TextFieldLineLimits.SingleLine,
     )
 }

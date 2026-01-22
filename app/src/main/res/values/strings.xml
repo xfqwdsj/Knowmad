@@ -53,6 +53,7 @@
     <string name="agent_conversation_label_new">New Conversation</string>
     <string name="agent_conversation_label_edit">Edit Conversation</string>
     <string name="agent_conversation_label_name">Conversation Name</string>
+    <string name="agent_conversation_name_label_auto_generate">Auto-generate</string>
     <string name="setup_wizard_welcome_label">Welcome</string>
     <string name="setup_wizard_welcome_title">Welcome to Knowmad</string>
     <string name="setup_wizard_welcome_message">Let\'s set up your knowledge companion in a few easy steps</string>

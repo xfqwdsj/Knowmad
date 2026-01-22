@@ -53,6 +53,7 @@
     <string name="agent_conversation_label_new">新对话</string>
     <string name="agent_conversation_label_edit">编辑对话</string>
     <string name="agent_conversation_label_name">对话名称</string>
+    <string name="agent_conversation_name_label_auto_generate">自动生成</string>
     <string name="setup_wizard_welcome_label">欢迎</string>
     <string name="setup_wizard_welcome_title">欢迎使用知行</string>
     <string name="setup_wizard_welcome_message">让我们通过几个简单的步骤来设置您的知识助手</string>
