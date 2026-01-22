@@ -20,6 +20,8 @@ package top.ltfan.knowmad.ui.page
 
 import ai.koog.prompt.llm.LLModel
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -75,6 +77,7 @@ import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.ChatInput
 import top.ltfan.knowmad.ui.component.ChatMessageList
+import top.ltfan.knowmad.ui.component.ConversationEditingDialog
 import top.ltfan.knowmad.ui.component.ConversationList
 import top.ltfan.knowmad.ui.component.LLMProviderConfig
 import top.ltfan.knowmad.ui.component.LLMProviderConfigEditingDialog
@@ -139,6 +142,8 @@ class AgentMainPage : AgentSubPage() {
         ) {
             Scaffold(
                 topBar = {
+                    var showDialog by remember { mutableStateOf(false) }
+
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
@@ -148,6 +153,11 @@ class AgentMainPage : AgentSubPage() {
                                 maxLines = 1,
                             )
                         },
+                        modifier = Modifier.clickable(
+                            onClick = { showDialog = true },
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                        ),
                         navigationIcon = {
                             TooltipBox(
                                 TooltipDefaults.rememberTooltipPositionProvider(
@@ -214,6 +224,22 @@ class AgentMainPage : AgentSubPage() {
                             scrolledContainerColor = ContainerColor,
                         ),
                     )
+
+                    if (showDialog) {
+                        currentConversation?.let { currentConversation ->
+                            ConversationEditingDialog(
+                                conversation = currentConversation,
+                                onDismissRequest = { showDialog = false },
+                                onConfirm = {
+                                    viewModel.editConversation(it)
+                                    showDialog = false
+                                },
+                                onAutoGenerateName = {
+                                    viewModel.autoGenerateConversationName(currentConversation)
+                                },
+                            )
+                        }
+                    }
                 },
                 snackbarHost = {
                     if (LocalAgentScreenIsStandalone.current) {

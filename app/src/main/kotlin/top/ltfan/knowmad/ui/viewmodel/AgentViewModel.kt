@@ -217,7 +217,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     fun editConversation(
         conversation: ConversationEntity,
-        onFinished: () -> Unit,
+        onFinished: () -> Unit = {},
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             application.appDatabase.chatDao().updateConversation(conversation)
