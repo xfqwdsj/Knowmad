@@ -18,7 +18,8 @@
 
 package top.ltfan.knowmad.agent
 
-import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.agent.AIAgentService
+import ai.koog.agents.core.agent.GraphAIAgentService
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.dsl.builder.AIAgentEdgeBuilderIntermediate
 import ai.koog.agents.core.dsl.builder.EdgeTransformationDslMarker
@@ -87,7 +88,7 @@ fun getChatAgent(
     ) -> Unit = { system ->
         system()
     },
-): AIAgent<Unit, String> {
+): GraphAIAgentService<Unit, String> {
     suspend fun getUserMessage(state: AssistantMessageState.Streaming?): List<ContentPart> {
         logger.debug {
             "Waiting for user message... " +
@@ -309,7 +310,7 @@ fun getChatAgent(
     )
 
     logger.debug { "Creating Agent instance." }
-    return AIAgent(
+    return AIAgentService(
         promptExecutor = promptExecutor,
         strategy = strategy,
         agentConfig = agentConfig,

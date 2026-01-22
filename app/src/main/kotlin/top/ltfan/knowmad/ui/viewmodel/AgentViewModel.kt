@@ -254,7 +254,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             null,
         )
     val selectedModelEntity by selectedModelEntityFlow.collectAsState()
-    private val currentAgent = selectedModelEntityFlow
+    private val currentAgentService = selectedModelEntityFlow
         .combine(currentConversationIdFlow) { model, conversationId ->
             val client = model?.let {
                 withContext(Dispatchers.IO) { llmConfigDao.getProviderById(it.providerConfigId) }
@@ -379,16 +379,16 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     init {
         viewModelScope.launch {
-            currentAgent.collectLatest {
+            currentAgentService.collectLatest {
                 it ?: run {
-                    logger.debug { "Current agent changed to null" }
+                    logger.debug { "Current agent service changed to null" }
                     return@collectLatest
                 }
-                logger.debug { "Current agent changed: ${it.id}" }
+                logger.debug { "Current agent service changed" }
                 while (true) {
                     try { // TODO: UI feedback
                         logger.debug { "Running agent..." }
-                        it.run(Unit)
+                        it.createAgentAndRun(Unit)
                     } catch (e: AIAgentMaxNumberOfIterationsReachedException) {
                         logger.info { "Agent reached max number of iterations: ${e.message}" }
                     } catch (e: Throwable) {
@@ -421,7 +421,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             if (currentConversationId == null) {
                 createNewConversation()
             }
-            currentAgent.filterNotNull().first()
+            currentAgentService.filterNotNull().first()
             userMessageFlow.emit(parts)
         }
     }
