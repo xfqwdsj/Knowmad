@@ -121,6 +121,8 @@ fun ChatInput(
     textState: TextFieldState,
     sendEnabled: Boolean,
     onSend: () -> Unit,
+    isRunning: Boolean,
+    onCancel: () -> Unit,
     providers: List<LLMProviderConfigEntity>,
     getModels: suspend (provider: LLMProviderConfigEntity) -> List<LLMConfigEntity>,
     selectedModel: LLMConfigEntity?,
@@ -162,13 +164,21 @@ fun ChatInput(
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(
-                    onClick = onSend,
-                    enabled = sendEnabled,
+                    onClick = if (isRunning) onCancel else onSend,
+                    enabled = sendEnabled || isRunning,
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 ) {
+                    if (isRunning) {
+                        Icon(
+                            painterResource(R.drawable.stop_circle_24px),
+                            contentDescription = stringResource(android.R.string.cancel),
+                        )
+                        return@IconButton
+                    }
+
                     Icon(
                         painterResource(R.drawable.send_24px),
                         contentDescription = stringResource(R.string.chat_input_label_send),
@@ -911,7 +921,6 @@ sealed interface AssistantMessageState {
         override var parentId: Uuid? = null,
         override var depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
-        requestCancellation: () -> Unit = {},
         onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
@@ -997,7 +1006,6 @@ sealed interface AssistantMessageState {
                 }
                 logger.debug { "Streaming event collection completed." }
                 coroutineScope.launch {
-                    requestCancellation()
                     complete()
                     val completedState = Completed(
                         contents = completedContents,

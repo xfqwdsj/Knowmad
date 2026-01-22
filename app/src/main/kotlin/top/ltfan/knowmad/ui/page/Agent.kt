@@ -235,6 +235,8 @@ class AgentMainPage : AgentSubPage() {
                             textState = viewModel.chatMessageTextInputState,
                             sendEnabled = viewModel.canSendMessage,
                             onSend = viewModel::sendMessage,
+                            isRunning = viewModel.isRunning,
+                            onCancel = viewModel::cancelGeneration,
                             providers = viewModel.providers,
                             getModels = viewModel::getModels,
                             selectedModel = viewModel.selectedModelEntity,

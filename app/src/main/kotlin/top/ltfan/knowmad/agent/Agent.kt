@@ -25,7 +25,6 @@ import ai.koog.agents.core.dsl.builder.AIAgentEdgeBuilderIntermediate
 import ai.koog.agents.core.dsl.builder.EdgeTransformationDslMarker
 import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.strategy
-import ai.koog.agents.core.dsl.extension.nodeLLMCompressHistory
 import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
 import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.environment.executeTools
@@ -37,20 +36,15 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
-import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponses
 import android.content.res.Resources
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.tool.ExitTool
 import top.ltfan.knowmad.agent.tool.TimeTool
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.ui.component.AssistantMessageState
@@ -62,66 +56,14 @@ import kotlin.time.Clock
 
 private val logger = Logger("ChatAgent")
 
-fun getChatAgent(
+fun getChatAgentService(
     promptExecutor: PromptExecutor,
     model: LLModel,
-    newStreamingState: suspend (
-        eventFlow: Flow<AssistantMessageStreamingEvent>,
-        cancelStreaming: SendChannel<Unit>,
-    ) -> AssistantMessageState.Streaming,
-    onStreamingCancelled: (state: AssistantMessageState.Streaming) -> Unit,
-    getUserMessage: suspend (state: AssistantMessageState.Streaming?) -> List<ContentPart>,
-    resources: Resources,
-    onGeneratedTitle: (String) -> Unit = {},
     maxAgentIterations: Int = 50,
-    defaultTools: ToolRegistry.Builder.() -> Unit = {
-        tool(TimeTool(resources))
-    },
-    additionalTools: ToolRegistry.Builder.() -> Unit = {},
-    systemPrompt: String = resources.systemPrompt(
-        R.string.llm_prompt_head,
-        R.string.llm_prompt_intro_medium,
-        R.string.llm_agent_chat_prompt,
-    ),
-    buildPrompt: PromptBuilder.(
-        system: PromptBuilder.() -> Message.System,
-    ) -> Unit = { system ->
-        system()
-    },
-): GraphAIAgentService<Unit, String> {
-    suspend fun getUserMessage(state: AssistantMessageState.Streaming?): List<ContentPart> {
-        logger.debug {
-            "Waiting for user message... " +
-                    "State ID: ${state?.id} " +
-                    "Last message: ${state?.contents?.lastOrNull()?.content?.takeLast(50)}"
-        }
-        return getUserMessage.invoke(state).also {
-            logger.debug {
-                "Received user message. " +
-                        "State ID: ${state?.id} " +
-                        "Parts count: ${it.size} "
-            }
-        }
-    }
-
+): GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>> {
     val strategy = strategy("chat") {
-        val nodeGetState by node<List<ContentPart>, ChatAgentData<List<ContentPart>>> { parts ->
-            val eventFlow =
-                MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
-            val cancellation = Channel<Unit>()
-            val state = newStreamingState(eventFlow, cancellation)
-            ChatAgentData(
-                eventFlow = eventFlow,
-                cancelStreaming = cancellation,
-                state = state,
-                content = parts,
-                partIndex = -1,
-            ).also {
-                logger.debug { "New $it" }
-            }
-        }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
-            val (eventFlow, cancellation, state, userParts) = data
+            val (eventFlow, state, userParts) = data
             var partIndex = data.partIndex
             llm.writeSession {
                 appendPrompt {
@@ -132,7 +74,6 @@ fun getChatAgent(
             }
 
             val frames = mutableListOf<StreamFrame>()
-            var cancelled = false
 
             coroutineScope {
                 val llmRequest = launch {
@@ -179,29 +120,10 @@ fun getChatAgent(
                     }
                 }
 
-                val cancellationReceiving = launch {
-                    cancellation.receiveCatching().getOrNull()
-                    logger.debug { "Streaming for ${state.id} is requesting cancellation." }
-                    cancelled = true
-                    llmRequest.cancel()
-                    logger.debug { "Streaming job for ${state.id} cancelled." }
-                    data.close()
-                    onStreamingCancelled(state)
-                    logger.debug { "Streaming for ${state.id} is cancelled." }
-                }
-
-                llmRequest.join().also {
-                    cancellationReceiving.cancel()
-                }
+                llmRequest.join()
             }
 
-            if (!cancelled) logger.debug { "Streaming for ${state.id} completed." }
-            else logger.debug { "Streaming for ${state.id} ended due to cancellation." }
-
-            val list = frames.toMessageResponses().run {
-                if (!cancelled) this
-                else filter { it !is Message.Tool }
-            }
+            val list = frames.toMessageResponses()
             llm.withPrompt {
                 prompt(this) {
                     messages(list)
@@ -222,7 +144,7 @@ fun getChatAgent(
             }
         }
         val nodeAppendToolResults by node<ChatAgentData<List<ReceivedToolResult>>, ChatAgentData<List<ContentPart>>> { data ->
-            val (eventFlow, _, _, toolResults) = data
+            val (eventFlow, _, toolResults) = data
             var partIndex = data.partIndex
             llm.writeSession {
                 appendPrompt {
@@ -246,92 +168,83 @@ fun getChatAgent(
                 }
             }
         }
-        val nodeCompressHistory by nodeLLMCompressHistory<ChatAgentData<List<ReceivedToolResult>>>()
-        val nodeReceiveFirstMessage by node<Unit, List<ContentPart>> {
-            getUserMessage(null)
-        }
-        val nodeReceiveUserMessage by node<ChatAgentData<List<Message.Response>>, List<ContentPart>> {
-            it.close()
-            getUserMessage(it.state)
-        }
-        val nodeGenerateTitle by nodeLLMGenerateConversationTitle(
-            resources = resources,
-            onGenerated = onGeneratedTitle,
-        )
 
         // TODO: recognize and restore uncompleted tool calls at every session start
-        edge(nodeStart forwardTo nodeReceiveFirstMessage)
-        edge(
-            nodeReceiveFirstMessage forwardTo nodeGenerateTitle
-                    onCondition { llm.readSession { prompt.messages.count { it !is Message.System } <= 11 } },
-        )
-        edge(nodeReceiveFirstMessage forwardTo nodeGetState)
-        edge(nodeGetState forwardTo nodeLLMRequest)
+        edge(nodeStart forwardTo nodeLLMRequest)
         edge(
             nodeLLMRequest forwardTo nodeExecuteTools
                     extracted { onMultipleToolCalls { true } },
         )
-        edge(
-            nodeExecuteTools forwardTo nodeCompressHistory
-                    onCondition { llm.readSession { prompt.messages.size > 100 } }
-                    transformed { it.also { logger.debug { "Compressing history for ${it.state.id}..." } } },
-        )
-        edge(nodeCompressHistory forwardTo nodeAppendToolResults)
         edge(nodeExecuteTools forwardTo nodeAppendToolResults)
         edge(nodeAppendToolResults forwardTo nodeLLMRequest)
-        edge(nodeLLMRequest forwardTo nodeReceiveUserMessage)
         edge(
-            nodeReceiveUserMessage forwardTo nodeGenerateTitle
-                    onCondition { llm.readSession { prompt.messages.count { it !is Message.System } <= 11 } },
-        )
-        edge(nodeReceiveUserMessage forwardTo nodeGetState)
-        edge(nodeGenerateTitle forwardTo nodeGetState)
-        edge(
-            nodeExecuteTools forwardTo nodeFinish
-                    onCondition { it.content.singleOrNull()?.tool == ExitTool.name }
-                    transformed { it.also { it.close() } }
-                    transformed { it.content.singleOrNull()?.result?.toString() ?: "" },
+            nodeLLMRequest forwardTo nodeFinish
+                    transformed { it.content },
         )
     }
 
     val agentConfig = AIAgentConfig(
-        prompt = prompt("chat") {
-            buildPrompt {
-                Message.System(
-                    content = systemPrompt,
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                ).also {
-                    message(it)
-                }
-            }
-        },
+        prompt = prompt("chat") {},
         model = model,
         maxAgentIterations = maxAgentIterations,
     )
 
-    logger.debug { "Creating Agent instance." }
     return AIAgentService(
         promptExecutor = promptExecutor,
         strategy = strategy,
         agentConfig = agentConfig,
-        toolRegistry = ToolRegistry {
-            defaultTools()
-            additionalTools()
-        },
     )
 }
 
-private data class ChatAgentData<T>(
+val Resources.chatSystemPrompt
+    inline get() = systemPrompt(
+        R.string.llm_prompt_head,
+        R.string.llm_prompt_intro_medium,
+        R.string.llm_agent_chat_prompt,
+    )
+
+suspend fun GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>.run(
+    userParts: List<ContentPart>,
+    eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
+    state: AssistantMessageState.Streaming,
+    tools: ToolRegistry.Builder.() -> Unit = {},
+    buildPrompt: PromptBuilder.() -> Unit = {},
+) {
+    createAgentAndRun(
+        agentInput = ChatAgentData(
+            eventFlow = eventFlow,
+            state = state,
+            content = userParts,
+            partIndex = -1,
+        ),
+        id = state.id.toString(),
+        additionalToolRegistry = ToolRegistry {
+            tools()
+        },
+        agentConfig = AIAgentConfig(
+            prompt = prompt(agentConfig.prompt) {
+                buildPrompt()
+            },
+            model = agentConfig.model,
+            maxAgentIterations = agentConfig.maxAgentIterations,
+            missingToolsConversionStrategy = agentConfig.missingToolsConversionStrategy,
+            responseProcessor = agentConfig.responseProcessor,
+        ),
+    )
+}
+
+fun ToolRegistry.Builder.defaultTools(resources: Resources) {
+    tool(TimeTool(resources))
+}
+
+data class ChatAgentData<T>(
     val eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
-    val cancelStreaming: Channel<Unit>,
     val state: AssistantMessageState.Streaming,
     val content: T,
     val partIndex: Int,
 ) {
     suspend fun close() {
         logger.debug { "Closing $this" }
-        cancelStreaming.trySend(Unit)
-        cancelStreaming.close()
         eventFlow.emit(Finish)
         logger.debug { "Closed $this" }
     }
@@ -341,7 +254,6 @@ private data class ChatAgentData<T>(
         partIndex: Int = this.partIndex,
     ) = ChatAgentData(
         eventFlow = eventFlow,
-        cancelStreaming = cancelStreaming,
         state = state,
         content = newContent,
         partIndex = partIndex,

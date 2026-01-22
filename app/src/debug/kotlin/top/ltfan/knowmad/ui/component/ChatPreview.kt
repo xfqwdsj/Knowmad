@@ -83,6 +83,8 @@ fun ChatInputPreviewEnabled(
                 textState = rememberTextFieldState(state.text),
                 sendEnabled = state.sendEnabled,
                 onSend = {},
+                isRunning = state.isRunning,
+                onCancel = {},
                 providers = listOf(),
                 getModels = { listOf() },
                 selectedModel = null,
@@ -97,22 +99,27 @@ class ChatPreviewStateProvider : PreviewParameterProvider<ChatPreviewState> {
         ChatPreviewState(
             text = "",
             sendEnabled = false,
+            isRunning = false,
         ),
         ChatPreviewState(
             text = "Hello, world!",
             sendEnabled = true,
+            isRunning = false,
         ),
         ChatPreviewState(
             text = "This is a longer message to test the chat input field. It should handle multiple lines and wrap text correctly.",
             sendEnabled = true,
+            isRunning = true,
         ),
         ChatPreviewState(
             text = "Here is a message with special characters: !@#$%^&*()_+-=[]{}|;':\",.<>/?`~",
             sendEnabled = true,
+            isRunning = true,
         ),
         ChatPreviewState(
             text = "最后，这是一条包含非拉丁字符的消息，以测试国际化支持。",
             sendEnabled = true,
+            isRunning = false,
         ),
     )
 }
@@ -120,12 +127,15 @@ class ChatPreviewStateProvider : PreviewParameterProvider<ChatPreviewState> {
 data class ChatPreviewState(
     val text: String,
     val sendEnabled: Boolean,
+    val isRunning: Boolean,
 )
 
 @Preview
 @Composable
 fun ChatInputInteractivePreview() {
     val state = rememberTextFieldState()
+
+    var isRunning by remember { mutableStateOf(false) }
 
     AppTheme {
         Surface(
@@ -135,6 +145,8 @@ fun ChatInputInteractivePreview() {
                 textState = state,
                 sendEnabled = state.text.isNotBlank(),
                 onSend = { state.clearText() },
+                isRunning = isRunning,
+                onCancel = { isRunning = false },
                 providers = listOf(),
                 getModels = { listOf() },
                 selectedModel = null,
