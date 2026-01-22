@@ -125,15 +125,21 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         },
     )
 
+    init {
+        viewModelScope.launch {
+            val id = currentConversationIdFlow.filterNotNull().first()
+            withContext(Dispatchers.IO) {
+                chatDao.getConversationById(id)
+            } ?: run { currentConversationId = null }
+        }
+    }
+
     private val conversationAndChatData by currentConversationIdFlow
         .map { id ->
             ConversationAndChatData(
                 conversationFlow = id?.let {
                     chatDao.getConversationFlowById(it)
-                } ?: run {
-                    currentConversationId = null
-                    flowOf(null)
-                },
+                } ?: flowOf(null),
                 messageCountFlow = id?.let {
                     chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
                 } ?: flowOf(0),
