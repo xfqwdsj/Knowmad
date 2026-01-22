@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,4 +26,25 @@ interface DatabaseCompanion<T : RoomDatabase> {
 
     context(application: Application)
     fun buildDatabase(): T
+}
+
+interface FtsDao {
+    /**
+     * SQLite FTS uses double quotes to wrap phrases and operators like AND,
+     * OR, NOT.
+     *
+     * Raw user input might contain special characters that cause syntax
+     * errors.
+     *
+     * We sanitize the input by:
+     * 1. Removing double quotes to prevent syntax errors.
+     * 2. Splitting by whitespace.
+     * 3. Appending '*' to each token for prefix matching (search-as-you-type
+     *    behavior).
+     */
+    fun String.sanitizeForFts() = replace("\"", "")
+        .split(Regex("\\s+"))
+        .asSequence()
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { "$it*" }
 }

@@ -27,11 +27,12 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import top.ltfan.knowmad.data.FtsDao
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 @Dao
-interface ChatDao {
+interface ChatDao : FtsDao {
     @Insert
     suspend fun insertConversation(conversation: ConversationEntity): Long
 
@@ -368,20 +369,7 @@ interface ChatDao {
 
     @Transaction
     suspend fun searchMessages(query: String): List<MessageEntity> {
-        // SQLite FTS uses double quotes to wrap phrases and operators like AND, OR, NOT.
-        // Raw user input might contain special characters that cause syntax errors.
-        // We sanitize the input by:
-        // 1. Removing double quotes to prevent syntax errors.
-        // 2. Splitting by whitespace.
-        // 3. Appending '*' to each token for prefix matching (search-as-you-type behavior).
-        val sanitized = query.replace("\"", "")
-            .split(Regex("\\s+"))
-            .asSequence()
-            .filter { it.isNotBlank() }
-            .joinToString(" ") { "$it*" }
-
-        if (sanitized.isBlank()) return emptyList()
-
+        val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
         return searchMessagesInternal(sanitized)
     }
 }
