@@ -37,6 +37,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -170,11 +171,23 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
 
-    fun setMessageToCompleted(message: MessageEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            chatDao.updateMessage(message.copy(completed = true))
-            streamingMessages.remove(message.id)
+    fun getMessage(message: MessageWithFilesAndBranchInfo?): ChatListMessage? {
+        if (message == null) return null
+
+        if (!message.message.completed) {
+            val streamingMessage = streamingMessages[message.key]
+            if (streamingMessage == null) {
+                logger.warn { "Streaming message not found for incomplete message ${message.key}" }
+                viewModelScope.launch(Dispatchers.IO) {
+                    chatDao.updateMessage(message.message.copy(completed = true))
+                }
+            } else {
+                return streamingMessage
+            }
         }
+
+        streamingMessages.remove(message.key)
+        return message
     }
 
     fun messageOnPrevious(message: ChatListMessage) {
@@ -348,19 +361,25 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     fileIds = emptyList(),
                 )
             }
+            val updateChannel = Channel<Unit>(Channel.CONFLATED)
             val state = AssistantMessageState.Streaming(
                 eventFlow = eventFlow,
                 model = service.agentConfig.model,
                 coroutineScope = viewModelScope,
                 conversationId = conversationId,
                 onUpdate = {
-                    viewModelScope.launch(Dispatchers.IO) {
-                        chatDao.updateMessage(toEntity())
-                    }
+                    updateChannel.trySend(Unit)
                 },
                 onCompleted = {
-                    viewModelScope.launch(Dispatchers.IO) {
-                        saveCompletedMessage(it)
+                    viewModelScope.launch {
+                        updateChannel.close()
+                        while (updateChannel.receiveCatching().isSuccess) {
+                            logger.trace { "Dropping update event before completing message." }
+                        }
+                        withContext(Dispatchers.IO) {
+                            chatDao.updateMessage(it.toEntity())
+                        }
+                        logger.debug { "Message completed." }
                     }
                 },
             ).apply {
@@ -377,6 +396,13 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             branchIndex = it.branchIndex,
                             branchCount = it.branchCount,
                         )
+                    }
+                }
+            }
+            launch {
+                while (updateChannel.receiveCatching().isSuccess) {
+                    withContext(Dispatchers.IO) {
+                        chatDao.updateMessage(state.toEntity())
                     }
                 }
             }
@@ -422,6 +448,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 logger.debug { "Agent run completed." }
                 eventFlow.emit(Finish)
                 state.awaitCompletedState()
+                cancel()
             }
         }
     }
@@ -429,13 +456,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     fun cancelGeneration() {
         logger.debug { "UI requested to cancel generation." }
         cancellationEvent.trySend(Unit)
-    }
-
-    private suspend fun saveCompletedMessage(state: AssistantMessageState) {
-        withContext(Dispatchers.IO) {
-            chatDao.updateMessage(state.toEntity())
-            streamingMessages.remove(state.id)
-        }
     }
 
     private suspend fun createNewConversation() {

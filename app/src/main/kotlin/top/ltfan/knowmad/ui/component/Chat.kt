@@ -396,8 +396,9 @@ fun ChatMessageList(
                             state = assistantMessageStates.compute(key) { _, state ->
                                 state as? AssistantMessageState.Completed
                                     ?: AssistantMessageState.Completed.fromEntity(
-                                        messageEntity,
-                                        coroutineScope,
+                                        entity = messageEntity,
+                                        coroutineScope = coroutineScope,
+                                        existingState = state,
                                     )
                             } ?: error("`null` returned when getting assistant message state."),
                             current = data.branchIndex,
@@ -902,6 +903,9 @@ sealed interface AssistantMessageState {
     val completed: Boolean
     val createdAt: Instant
 
+    val completedContents: List<AssistantMessageContent.Completed>
+        get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
+
     @Stable
     class Streaming(
         eventFlow: Flow<AssistantMessageStreamingEvent>,
@@ -1013,8 +1017,6 @@ sealed interface AssistantMessageState {
             }
         }
 
-        val completedContents get() = contents.filterIsInstance<AssistantMessageContent.Completed>()
-
         fun completedStateOrNull() = completedStateFlow.value
 
         suspend fun completeAndGetState(): Completed {
@@ -1067,30 +1069,49 @@ sealed interface AssistantMessageState {
         override val completed: Boolean = true
 
         companion object {
-            fun fromEntity(entity: MessageEntity, coroutineScope: CoroutineScope) = Completed(
-                contents = entity.parts.mapNotNull { part ->
-                    when (part) {
-                        is Koog -> when (val message = part.message) {
-                            is Assistant, is Reasoning, is Tool -> AssistantMessageContent.Completed(
-                                message = message,
+            private val logger = Logger("CompletedState")
+
+            fun fromEntity(
+                entity: MessageEntity,
+                coroutineScope: CoroutineScope,
+                existingState: AssistantMessageState? = null,
+            ): Completed {
+                val existingCompletedContents = existingState?.completedContents?.toMutableList()
+                return Completed(
+                    contents = entity.parts.mapNotNull { part ->
+                        when (part) {
+                            is Koog -> when (val message = part.message) {
+                                is Assistant, is Reasoning, is Tool -> existingCompletedContents
+                                    ?.find { it.content == message.content }
+                                    ?.also {
+                                        logger.debug {
+                                            "Reusing existing Completed content for message: ${
+                                                message.content.take(30)
+                                            }"
+                                        }
+                                        existingCompletedContents.remove(it)
+                                    }
+                                    ?: AssistantMessageContent.Completed(
+                                        message = message,
+                                        coroutineScope = coroutineScope,
+                                    )
+
+                                else -> null
+                            }
+
+                            else -> AssistantMessageContent.Completed(
+                                uiMessage = part,
                                 coroutineScope = coroutineScope,
                             )
-
-                            else -> null
                         }
-
-                        else -> AssistantMessageContent.Completed(
-                            uiMessage = part,
-                            coroutineScope = coroutineScope,
-                        )
-                    }
-                },
-                model = entity.generatedBy ?: UnknownLLModel,
-                id = entity.id,
-                conversationId = entity.conversationId,
-                parentId = entity.parentId,
-                createdAt = entity.createdAt,
-            )
+                    },
+                    model = entity.generatedBy ?: UnknownLLModel,
+                    id = entity.id,
+                    conversationId = entity.conversationId,
+                    parentId = entity.parentId,
+                    createdAt = entity.createdAt,
+                )
+            }
         }
     }
 

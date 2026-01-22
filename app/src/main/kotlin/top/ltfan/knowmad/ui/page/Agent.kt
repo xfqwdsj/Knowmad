@@ -309,13 +309,7 @@ class AgentMainPage : AgentSubPage() {
                         ChatMessageList(
                             getMessageCount = { messages.itemCount },
                             getMessageKey = messages.itemKey { it.key },
-                            getMessageAt = { index ->
-                                val message = messages[index] ?: return@ChatMessageList null
-                                message.takeIf { it.message.completed }
-                                    ?: viewModel.streamingMessages[message.key].also {
-                                        it ?: viewModel.setMessageToCompleted(message.message)
-                                    }
-                            },
+                            getMessageAt = { viewModel.getMessage(messages[it]) },
                             onPrevious = viewModel::messageOnPrevious,
                             onNext = viewModel::messageOnNext,
                             onRegenerate = viewModel::messageOnRegenerate,
