@@ -74,7 +74,8 @@ class WizardPageViewModel(
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
 
     private val wizardDataStore = WizardData.createDataStore()
-    private val wizardData = wizardDataStore.asMutableState()
+    private val wizardDataStateFlow = wizardDataStore.dataStateFlow()
+    private val wizardData = wizardDataStore.asMutableState(wizardDataStateFlow)
 
     fun generateCryptoKey(
         setReady: (Boolean) -> Unit,

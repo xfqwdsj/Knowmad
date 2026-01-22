@@ -37,9 +37,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -68,20 +67,31 @@ class AppDataStore<T>(
     scope = scope,
     produceFile = produceFile,
 ) {
-    inline fun <R> dataFlowOf(crossinline transform: suspend (T) -> R) =
-        data.map(transform).distinctUntilChanged()
-
-    fun asMutableState(
+    fun dataStateFlow(
         coroutineScope: CoroutineScope,
         started: SharingStarted = SharingStarted.Eagerly,
-    ) = object : ReadWriteProperty<Any?, T> {
-        private val dataState = data.stateIn(
-            scope = coroutineScope,
-            started = started,
-            initialValue = defaultValue,
-        )
+        initialValue: T = defaultValue,
+    ) = data.stateIn(
+        scope = coroutineScope,
+        started = started,
+        initialValue = initialValue,
+    )
 
-        private var state by mutableStateOf(dataState.value)
+    context(viewModel: ViewModel)
+    fun dataStateFlow(
+        started: SharingStarted = SharingStarted.Eagerly,
+        initialValue: T = defaultValue,
+    ) = dataStateFlow(
+        coroutineScope = viewModel.viewModelScope,
+        started = started,
+        initialValue = initialValue,
+    )
+
+    fun asMutableState(
+        dataStateFlow: StateFlow<T>,
+        coroutineScope: CoroutineScope,
+    ) = object : ReadWriteProperty<Any?, T> {
+        private var state by mutableStateOf(dataStateFlow.value)
 
         private val writeRequest = MutableSharedFlow<T>(
             replay = 0,
@@ -105,7 +115,7 @@ class AppDataStore<T>(
             }
 
             coroutineScope.launch {
-                dataState.collect { value ->
+                dataStateFlow.collect { value ->
                     state = value
                 }
             }
@@ -122,22 +132,20 @@ class AppDataStore<T>(
     }
 
     context(viewModel: ViewModel)
-    fun asMutableState(
-        started: SharingStarted = SharingStarted.Eagerly,
-    ) = asMutableState(
+    fun asMutableState(dataStateFlow: StateFlow<T>) = asMutableState(
+        dataStateFlow = dataStateFlow,
         coroutineScope = viewModel.viewModelScope,
-        started = started,
     )
 
     @Composable
     fun asMutableState(
-        started: SharingStarted = SharingStarted.Eagerly,
+        dataStateFlow: StateFlow<T>,
     ): ReadWriteProperty<Any?, T> {
         val coroutineScope = rememberCoroutineScope()
-        return remember(started, coroutineScope) {
+        return remember(dataStateFlow, coroutineScope) {
             asMutableState(
+                dataStateFlow = dataStateFlow,
                 coroutineScope = coroutineScope,
-                started = started,
             )
         }
     }

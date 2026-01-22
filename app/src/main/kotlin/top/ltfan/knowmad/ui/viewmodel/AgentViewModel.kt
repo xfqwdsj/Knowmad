@@ -96,7 +96,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val scheduleDao = application.appDatabase.scheduleDao()
 
     val chatDataStore = ChatData.createDataStore()
-    val chatData = chatDataStore.asMutableState()
+    val chatDataStateFlow = chatDataStore.dataStateFlow()
+    val chatData = chatDataStore.asMutableState(chatDataStateFlow)
 
     val drawerState = DrawerState(DrawerValue.Closed)
 
@@ -114,7 +115,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     var messageListLoading by mutableStateOf(false)
 
-    private val currentConversationIdFlow = chatDataStore.dataFlowOf { it.conversation }
+    private val currentConversationIdFlow = chatDataStateFlow.map { it.conversation }
+        .distinctUntilChanged()
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
         transformOut = {
@@ -233,7 +235,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         transformIn = { selectedModelId },
         transformOut = { copy(selectedModelId = it) },
     )
-    val selectedModelEntityFlow = chatDataStore.dataFlowOf { it.selectedModelId }
+    val selectedModelEntityFlow = chatDataStateFlow.map { it.selectedModelId }
+        .distinctUntilChanged()
         .map { it?.let { id -> llmConfigDao.getModelById(id) } }
         .stateIn(
             viewModelScope,
