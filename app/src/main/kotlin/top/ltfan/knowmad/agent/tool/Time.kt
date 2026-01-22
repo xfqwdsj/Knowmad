@@ -23,6 +23,10 @@ import android.content.res.Resources
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
+import kotlinx.datetime.format.DayOfWeekNames
+import kotlinx.datetime.format.alternativeParsing
+import kotlinx.datetime.format.char
+import kotlinx.datetime.format.optional
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
@@ -35,7 +39,25 @@ class TimeTool(resources: Resources) : SimpleTool<TimeTool.Args>(
 ) {
     override suspend fun execute(args: Args) = Clock.System.now()
         .toLocalDateTime(TimeZone.currentSystemDefault())
-        .format(LocalDateTime.Formats.ISO)
+        .format(
+            LocalDateTime.Format {
+                year(); char('-'); monthNumber(); char('-'); day()
+                alternativeParsing({ char('t') }) { char('T') }
+                hour()
+                char(':')
+                minute()
+                alternativeParsing({}) {
+                    char(':')
+                    second()
+                    optional {
+                        char('.')
+                        secondFraction(1, 9)
+                    }
+                }
+                char(' ')
+                dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+            },
+        )
 
     @Serializable
     data object Args
