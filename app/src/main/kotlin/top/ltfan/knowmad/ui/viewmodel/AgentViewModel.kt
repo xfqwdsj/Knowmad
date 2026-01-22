@@ -130,7 +130,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             ConversationAndChatData(
                 conversationFlow = id?.let {
                     chatDao.getConversationFlowById(it)
-                } ?: flowOf(null),
+                } ?: run {
+                    currentConversationId = null
+                    flowOf(null)
+                },
                 messageCountFlow = id?.let {
                     chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
                 } ?: flowOf(0),
