@@ -73,9 +73,10 @@ fun getChatAgent(
     resources: Resources,
     onGeneratedTitle: (String) -> Unit = {},
     maxAgentIterations: Int = 50,
-    toolRegistry: ToolRegistry = ToolRegistry {
+    defaultTools: ToolRegistry.Builder.() -> Unit = {
         tool(TimeTool(resources))
     },
+    additionalTools: ToolRegistry.Builder.() -> Unit = {},
     systemPrompt: String = resources.systemPrompt(
         R.string.llm_prompt_head,
         R.string.llm_prompt_intro_medium,
@@ -312,7 +313,10 @@ fun getChatAgent(
         promptExecutor = promptExecutor,
         strategy = strategy,
         agentConfig = agentConfig,
-        toolRegistry = toolRegistry,
+        toolRegistry = ToolRegistry {
+            defaultTools()
+            additionalTools()
+        },
     )
 }
 
