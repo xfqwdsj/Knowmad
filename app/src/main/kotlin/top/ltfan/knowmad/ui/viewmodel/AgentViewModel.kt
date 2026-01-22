@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedException
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
@@ -36,6 +37,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -76,6 +78,7 @@ import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
@@ -382,10 +385,19 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     return@collectLatest
                 }
                 logger.debug { "Current agent changed: ${it.id}" }
-                try { // TODO: recreate agent on network error
-                    it.run(Unit)
-                } catch (e: Throwable) {
-                    e.printStackTrace()
+                while (true) {
+                    try { // TODO: UI feedback
+                        logger.debug { "Running agent..." }
+                        it.run(Unit)
+                    } catch (e: AIAgentMaxNumberOfIterationsReachedException) {
+                        logger.info { "Agent reached max number of iterations: ${e.message}" }
+                    } catch (e: Throwable) {
+                        logger.error(e) { "Agent run error" }
+                        delay(1.seconds)
+                    } finally {
+                        logger.debug { "Agent run completed." }
+                        streamingMessages.clear()
+                    }
                 }
             }
         }
