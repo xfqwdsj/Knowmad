@@ -142,7 +142,8 @@ fun ChatInput(
             OutlinedTextField(
                 state = textState,
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
                 placeholder = { Text(stringResource(R.string.chat_input_placeholder)) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent,
