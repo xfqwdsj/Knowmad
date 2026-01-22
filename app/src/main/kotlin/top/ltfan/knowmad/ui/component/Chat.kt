@@ -368,9 +368,6 @@ fun ChatMessageList(
             val key = getMessageKey(index)
             when (val data = getMessageAt(index) ?: return@items) {
                 is AssistantStreamingMessage -> {
-                    assistantMessageStates.compute(key) { _, state ->
-                        state as? AssistantMessageState.Streaming ?: data.state
-                    }
                     AssistantMessage(
                         state = assistantMessageStates.compute(key) { _, state ->
                             state as? AssistantMessageState.Streaming ?: data.state
