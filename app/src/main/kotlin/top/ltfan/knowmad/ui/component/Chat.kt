@@ -83,6 +83,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -997,6 +998,7 @@ sealed interface AssistantMessageState {
                 }
             }.invokeOnCompletion {
                 it?.let { throwable ->
+                    if (throwable is CancellationException) return@let
                     logger.error(throwable) { "Streaming event collection encountered an error." }
                 }
                 logger.debug { "Streaming event collection completed." }
