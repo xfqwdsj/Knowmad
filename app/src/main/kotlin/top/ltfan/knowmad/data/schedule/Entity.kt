@@ -18,9 +18,12 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Fts4
+import androidx.room.FtsOptions
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
@@ -36,7 +39,12 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 @Serializable
-@Entity
+@Entity(
+    indices = [
+        Index("startDate"),
+        Index("startDate", "endDate")
+    ],
+)
 data class SemesterEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
@@ -44,6 +52,18 @@ data class SemesterEntity(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val timeZone: TimeZone,
+)
+
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = SemesterEntity::class,
+)
+@Entity
+data class SemesterFtsEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "rowid")
+    val rowId: Long,
+    val name: String,
 )
 
 @Serializable
@@ -67,8 +87,27 @@ data class CourseEntity(
     val location: String,
 )
 
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = CourseEntity::class,
+)
+@Entity
+data class CourseFtsEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "rowid")
+    val rowId: Long,
+    val name: String,
+    val instructor: String,
+    val location: String,
+)
+
+@Serializable
 @Entity(
-    indices = [Index("semesterId"), Index("courseId")],
+    indices = [
+        Index("semesterId"),
+        Index("courseId"),
+        Index("semesterId", "startTime", "endTime", "createdAt"),
+    ],
     foreignKeys = [
         ForeignKey(
             entity = SemesterEntity::class,
@@ -112,6 +151,22 @@ data class EventEntity(
         }
 }
 
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = EventEntity::class,
+)
+@Entity
+data class EventFtsEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "rowid")
+    val rowId: Long,
+    val name: String?,
+    val instructor: String?,
+    val location: String?,
+    val notes: String?,
+)
+
+@Serializable
 data class EventWithSemesterAndCourse(
     @Embedded val event: EventEntity,
     @Relation(

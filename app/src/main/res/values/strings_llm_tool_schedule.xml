@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>
+    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">Start date of the query (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">End date of the query (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_not_found">No semesters found</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_start_date">Invalid startDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_end_date">Invalid endDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_internal_error">Internal error while querying semesters</string>
+
+    <string name="llm_tool_schedule_search_semesters_description">Search semesters by full-text query</string>
+    <string name="llm_tool_schedule_search_semesters_arg_query_description">Full-text query string to search semesters</string>
+    <string name="llm_tool_schedule_search_semesters_result_failure_reason_empty_query">Query cannot be empty</string>
+    <string name="llm_tool_schedule_search_semesters_result_failure_reason_internal_error">Internal error while searching semesters</string>
+
+    <string name="llm_tool_schedule_create_semester_description">Create a new semester</string>
+    <string name="llm_tool_schedule_create_semester_arg_name_description">Semester name</string>
+    <string name="llm_tool_schedule_create_semester_arg_start_date_description">Semester start date (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_create_semester_arg_end_date_description">Semester end date (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_create_semester_arg_time_zone_description">Time zone ID (e.g., UTC). Do not specify unless explicitly requested to use system settings</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_start_date">Invalid startDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_end_date">Invalid endDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_time_zone">Invalid timeZone ID</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_internal_error">Internal error while creating semester</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_insert_failed">Failed to create semester</string>
+
+    <string name="llm_tool_schedule_update_semester_description">Update information of an existing semester</string>
+    <string name="llm_tool_schedule_update_semester_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_update_semester_arg_name_description">Semester name</string>
+    <string name="llm_tool_schedule_update_semester_arg_start_date_description">Semester start date (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_update_semester_arg_end_date_description">Semester end date (yyyy-MM-dd)</string>
+    <string name="llm_tool_schedule_update_semester_arg_time_zone_description">Time zone ID (e.g., UTC). Do not specify unless explicitly requested to use system settings</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_start_date">Invalid startDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_end_date">Invalid endDate format, expected yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_time_zone">Invalid timeZone ID</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_not_found">Specified semester not found</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_internal_error">Internal error while updating semester</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_update_failed">Failed to update semester</string>
+
+    <string name="llm_tool_schedule_search_courses_description">Search courses in a semester by full-text query</string>
+    <string name="llm_tool_schedule_search_courses_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_search_courses_arg_query_description">Full-text query string to search courses</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">Query cannot be empty</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">Internal error while searching courses</string>
+
+    <string name="llm_tool_schedule_create_course_description">Create a course in a semester</string>
+    <string name="llm_tool_schedule_create_course_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_create_course_arg_name_description">Course name</string>
+    <string name="llm_tool_schedule_create_course_arg_instructor_description">Instructor name</string>
+    <string name="llm_tool_schedule_create_course_arg_location_description">Course location</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">Internal error while creating course</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">Failed to create course</string>
+
+    <string name="llm_tool_schedule_query_events_description">Query events in a semester within a time range</string>
+    <string name="llm_tool_schedule_query_events_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_query_events_arg_start_time_description">Start time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_query_events_arg_end_time_description">End time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_internal_error">Internal error while querying events</string>
+
+    <string name="llm_tool_schedule_search_events_description">Search events in a semester by full-text query</string>
+    <string name="llm_tool_schedule_search_events_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_search_events_arg_query_description">Full-text query string to search events</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">Query cannot be empty</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">Internal error while searching events</string>
+
+    <string name="llm_tool_schedule_create_event_description">Create an event (normal or course) in a semester</string>
+    <string name="llm_tool_schedule_create_event_arg_semester_id_description">Semester ID (UUID)</string>
+    <string name="llm_tool_schedule_create_event_arg_start_time_description">Start time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_create_event_arg_end_time_description">End time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_create_event_arg_course_id_description">Course ID (UUID), required if this is a course event</string>
+    <string name="llm_tool_schedule_create_event_arg_name_description">Event name (required for normal events)</string>
+    <string name="llm_tool_schedule_create_event_arg_instructor_description">Instructor name</string>
+    <string name="llm_tool_schedule_create_event_arg_location_description">Location (required for normal events)</string>
+    <string name="llm_tool_schedule_create_event_arg_color_description">ICalendar color name (optional)</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_description">Reminder offsets relative to event start time, positive for before (ISO-8601 Duration)</string>
+    <string name="llm_tool_schedule_create_event_arg_notes_description">Notes for the event</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_course_id">Invalid courseId format, expected UUID</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_name_location_required">Name and location are required for normal events</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_internal_error">Internal error while creating event</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_insert_failed">Failed to create event</string>
+
+    <string name="llm_tool_schedule_update_course_description">Update information of an existing course</string>
+    <string name="llm_tool_schedule_update_course_arg_course_id_description">Course ID (UUID)</string>
+    <string name="llm_tool_schedule_update_course_arg_name_description">Course name</string>
+    <string name="llm_tool_schedule_update_course_arg_instructor_description">Instructor name</string>
+    <string name="llm_tool_schedule_update_course_arg_location_description">Course location</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_invalid_course_id">Invalid courseId format, expected UUID</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_not_found">Specified course not found</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_internal_error">Internal error while updating course</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_update_failed">Failed to update course</string>
+
+    <string name="llm_tool_schedule_update_event_description">Update information of an existing event</string>
+    <string name="llm_tool_schedule_update_event_arg_event_id_description">Event ID (UUID)</string>
+    <string name="llm_tool_schedule_update_event_arg_start_time_description">Start time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_update_event_arg_end_time_description">End time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_update_event_arg_name_description">Event name</string>
+    <string name="llm_tool_schedule_update_event_arg_instructor_description">Instructor name</string>
+    <string name="llm_tool_schedule_update_event_arg_location_description">Location</string>
+    <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar color name</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_description">Reminder offsets relative to event start time, positive for before (ISO-8601 Duration)</string>
+    <string name="llm_tool_schedule_update_event_arg_notes_description">Notes for the event</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">Invalid eventId format, expected UUID</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_not_found">Specified event not found</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_internal_error">Internal error while updating event</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_update_failed">Failed to update event</string>
+</resources>

@@ -56,6 +56,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.getChatAgent
+import top.ltfan.knowmad.agent.tool.scheduleTools
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
@@ -88,6 +89,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val chatDao = application.appDatabase.chatDao()
     val llmConfigDao = application.appDatabase.llmConfigDao()
+    val scheduleDao = application.appDatabase.scheduleDao()
 
     val chatDataStore = ChatData.createDataStore()
     val chatData = chatDataStore.asMutableState()
@@ -350,6 +352,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             )
                         }
                     }
+                },
+                additionalTools = {
+                    scheduleTools(application.resources, scheduleDao)
                 },
             ) { system ->
                 if (messages.isEmpty()) {

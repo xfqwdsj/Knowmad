@@ -37,17 +37,23 @@ import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.schedule.CourseEntity
+import top.ltfan.knowmad.data.schedule.CourseFtsEntity
 import top.ltfan.knowmad.data.schedule.EventEntity
+import top.ltfan.knowmad.data.schedule.EventFtsEntity
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
+import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
 
 @Database(
     entities = [
         LLMProviderConfigEntity::class,
         LLMConfigEntity::class,
         SemesterEntity::class,
+        SemesterFtsEntity::class,
         CourseEntity::class,
+        CourseFtsEntity::class,
         EventEntity::class,
+        EventFtsEntity::class,
         FileEntity::class,
         ConversationEntity::class,
         MessageEntity::class,

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_tool_schedule_query_semesters_description">查询与给定日期范围存在交集的学期或所有已存在的学期</string>
+    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">查询起始日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">查询结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_not_found">未找到学期</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_end_date">endDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_query_semesters_result_failure_reason_internal_error">查询学期时发生内部错误</string>
+
+    <string name="llm_tool_schedule_search_semesters_description">通过全文搜索学期</string>
+    <string name="llm_tool_schedule_search_semesters_arg_query_description">搜索学期的全文查询字符串</string>
+    <string name="llm_tool_schedule_search_semesters_result_failure_reason_empty_query">查询内容不能为空</string>
+    <string name="llm_tool_schedule_search_semesters_result_failure_reason_internal_error">搜索学期时发生内部错误</string>
+
+    <string name="llm_tool_schedule_create_semester_description">创建一个新学期</string>
+    <string name="llm_tool_schedule_create_semester_arg_name_description">学期名称</string>
+    <string name="llm_tool_schedule_create_semester_arg_start_date_description">学期开始日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_create_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_create_semester_arg_time_zone_description">时区ID（如UTC）。除非用户明确要求，否则请勿指定，以便使用系统设置</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_end_date">endDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_time_zone">时区ID无效</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_internal_error">创建学期时发生内部错误</string>
+    <string name="llm_tool_schedule_create_semester_result_failure_reason_insert_failed">创建学期失败</string>
+
+    <string name="llm_tool_schedule_update_semester_description">更新现有学期的信息</string>
+    <string name="llm_tool_schedule_update_semester_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_update_semester_arg_name_description">学期名称</string>
+    <string name="llm_tool_schedule_update_semester_arg_start_date_description">学期开始日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_update_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_update_semester_arg_time_zone_description">时区ID（如UTC）。除非用户明确要求，否则请勿指定，以便使用系统设置</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_end_date">endDate格式无效，期望yyyy-MM-dd</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_time_zone">时区ID无效</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_not_found">未找到指定的学期</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_internal_error">更新学期时发生内部错误</string>
+    <string name="llm_tool_schedule_update_semester_result_failure_reason_update_failed">更新学期失败</string>
+
+    <string name="llm_tool_schedule_search_courses_description">在学期内通过全文搜索课程</string>
+    <string name="llm_tool_schedule_search_courses_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_search_courses_arg_query_description">搜索课程的全文查询字符串</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">查询内容不能为空</string>
+    <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">搜索课程时发生内部错误</string>
+
+    <string name="llm_tool_schedule_create_course_description">在学期下创建课程</string>
+    <string name="llm_tool_schedule_create_course_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_create_course_arg_name_description">课程名称</string>
+    <string name="llm_tool_schedule_create_course_arg_instructor_description">讲师姓名</string>
+    <string name="llm_tool_schedule_create_course_arg_location_description">课程地点</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">创建课程时发生内部错误</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">创建课程失败</string>
+
+    <string name="llm_tool_schedule_query_events_description">查询学期内指定时间范围的事件</string>
+    <string name="llm_tool_schedule_query_events_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_query_events_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_query_events_arg_end_time_description">结束时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_query_events_result_failure_reason_internal_error">查询事件时发生内部错误</string>
+
+    <string name="llm_tool_schedule_search_events_description">在学期内通过全文搜索事件</string>
+    <string name="llm_tool_schedule_search_events_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_search_events_arg_query_description">搜索事件的全文查询字符串</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">查询内容不能为空</string>
+    <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">搜索事件时发生内部错误</string>
+
+    <string name="llm_tool_schedule_create_event_description">在学期中创建事件（普通事件或课程事件）</string>
+    <string name="llm_tool_schedule_create_event_arg_semester_id_description">学期ID（UUID）</string>
+    <string name="llm_tool_schedule_create_event_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_create_event_arg_end_time_description">结束时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_create_event_arg_course_id_description">课程ID（UUID），若为课程事件则必填</string>
+    <string name="llm_tool_schedule_create_event_arg_name_description">事件名称（普通事件必填）</string>
+    <string name="llm_tool_schedule_create_event_arg_instructor_description">讲师姓名</string>
+    <string name="llm_tool_schedule_create_event_arg_location_description">地点（普通事件必填）</string>
+    <string name="llm_tool_schedule_create_event_arg_color_description">ICalendar颜色名称（可选）</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_description">相对于事件开始时间的提醒偏移时长，正值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_create_event_arg_notes_description">事件备注</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_course_id">courseId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_name_location_required">普通事件必须提供名称和地点</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_internal_error">创建事件时发生内部错误</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_insert_failed">创建事件失败</string>
+
+    <string name="llm_tool_schedule_update_course_description">更新现有课程的信息</string>
+    <string name="llm_tool_schedule_update_course_arg_course_id_description">课程ID（UUID）</string>
+    <string name="llm_tool_schedule_update_course_arg_name_description">课程名称</string>
+    <string name="llm_tool_schedule_update_course_arg_instructor_description">讲师姓名</string>
+    <string name="llm_tool_schedule_update_course_arg_location_description">课程地点</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_invalid_course_id">courseId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_not_found">未找到指定的课程</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_internal_error">更新课程时发生内部错误</string>
+    <string name="llm_tool_schedule_update_course_result_failure_reason_update_failed">更新课程失败</string>
+
+    <string name="llm_tool_schedule_update_event_description">更新现有事件的信息</string>
+    <string name="llm_tool_schedule_update_event_arg_event_id_description">事件ID（UUID）</string>
+    <string name="llm_tool_schedule_update_event_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_update_event_arg_end_time_description">结束时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_update_event_arg_name_description">事件名称</string>
+    <string name="llm_tool_schedule_update_event_arg_instructor_description">讲师姓名</string>
+    <string name="llm_tool_schedule_update_event_arg_location_description">地点</string>
+    <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar颜色名称</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_description">相对于事件开始时间的提醒偏移时长，正值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_update_event_arg_notes_description">事件备注</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">eventId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_not_found">未找到指定的事件</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_internal_error">更新事件时发生内部错误</string>
+    <string name="llm_tool_schedule_update_event_result_failure_reason_update_failed">更新事件失败</string>
+</resources>
