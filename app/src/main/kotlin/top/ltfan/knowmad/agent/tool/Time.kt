@@ -31,34 +31,36 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 class TimeTool(resources: Resources) : SimpleTool<TimeTool.Args>(
     argsSerializer = Args.serializer(),
     name = "time",
     description = resources.getString(R.string.llm_tool_time_description),
 ) {
-    override suspend fun execute(args: Args) = Clock.System.now()
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .format(
-            LocalDateTime.Format {
-                year(); char('-'); monthNumber(); char('-'); day()
-                alternativeParsing({ char('t') }) { char('T') }
-                hour()
-                char(':')
-                minute()
-                alternativeParsing({}) {
-                    char(':')
-                    second()
-                    optional {
-                        char('.')
-                        secondFraction(1, 9)
-                    }
-                }
-                char(' ')
-                dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-            },
-        )
+    override suspend fun execute(args: Args) = Clock.System.now().formatAgentTime()
 
     @Serializable
     data object Args
 }
+
+fun Instant.formatAgentTime(): String = toLocalDateTime(TimeZone.currentSystemDefault())
+    .format(
+        LocalDateTime.Format {
+            year(); char('-'); monthNumber(); char('-'); day()
+            alternativeParsing({ char('t') }) { char('T') }
+            hour()
+            char(':')
+            minute()
+            alternativeParsing({}) {
+                char(':')
+                second()
+                optional {
+                    char('.')
+                    secondFraction(1, 9)
+                }
+            }
+            char(' ')
+            dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+        },
+    )

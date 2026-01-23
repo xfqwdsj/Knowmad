@@ -62,6 +62,7 @@ import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.defaultTools
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
+import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.scheduleTools
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
@@ -368,6 +369,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 createNewConversation()
             }
             val conversationId = currentConversationId ?: return@launch
+            val conversation = withContext(Dispatchers.IO) {
+                chatDao.getConversationById(conversationId)
+            } ?: return@launch
             val eventFlow =
                 MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
             val service = currentAgentService.filterNotNull().first()
@@ -480,7 +484,17 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                                 defaultTools(application.resources)
                                 scheduleTools(application.resources, scheduleDao)
                             },
-                            buildPrompt = { system?.let { message(it) } ?: messages(messages) },
+                            buildPrompt = {
+                                system?.let { message(it) }
+                                system(
+                                    application.getString(
+                                        R.string.llm_prompt_environment,
+                                        Clock.System.now().formatAgentTime(),
+                                        conversation.name,
+                                    ),
+                                )
+                                messages(messages)
+                            },
                         )
                         false
                     }
