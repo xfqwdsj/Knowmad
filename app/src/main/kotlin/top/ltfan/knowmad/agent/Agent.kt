@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.tool.TimeTool
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
@@ -235,10 +234,6 @@ suspend fun GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.R
             responseProcessor = agentConfig.responseProcessor,
         ),
     )
-}
-
-fun ToolRegistry.Builder.defaultTools(resources: Resources) {
-    tool(TimeTool(resources))
 }
 
 data class ChatAgentData<T>(

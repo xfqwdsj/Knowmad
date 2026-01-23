@@ -59,7 +59,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.chatSystemPrompt
-import top.ltfan.knowmad.agent.defaultTools
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
 import top.ltfan.knowmad.agent.tool.formatAgentTime
@@ -481,7 +480,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             eventFlow = eventFlow,
                             state = state,
                             tools = {
-                                defaultTools(application.resources)
                                 scheduleTools(application.resources, scheduleDao)
                             },
                             buildPrompt = {
