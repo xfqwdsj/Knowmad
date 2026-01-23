@@ -1063,6 +1063,45 @@ sealed interface AssistantMessageState {
             logger.debug { "Replaced streaming contents to completed contents." }
         }
 
+        inline fun cleanUncompletedToolCalls(
+            onFound: (
+                iterator: MutableListIterator<AssistantMessageContent>,
+                toolCall: Message.Tool.Call,
+            ) -> Unit,
+        ) {
+            val iterator = contents.listIterator()
+            var pendingToolCall: Message.Tool.Call? = null
+
+            while (iterator.hasNext()) {
+                val content = iterator.next()
+
+                if (pendingToolCall != null) {
+                    val isResult = (content.uiMessage as? Koog)?.message is Message.Tool.Result
+
+                    if (!isResult) {
+                        iterator.previous()
+                        onFound(iterator, pendingToolCall)
+                        iterator.next()
+                        pendingToolCall = null
+                    } else {
+                        pendingToolCall = null
+                    }
+                }
+
+                val uiMessage = content.uiMessage
+                if (uiMessage is Koog) {
+                    val message = uiMessage.message
+                    if (message is Message.Tool.Call) {
+                        pendingToolCall = message
+                    }
+                }
+            }
+
+            if (pendingToolCall != null) {
+                onFound(iterator, pendingToolCall)
+            }
+        }
+
         override fun toString(): String {
             return "AssistantMessageState.Streaming(" +
                     "id=$id, " +

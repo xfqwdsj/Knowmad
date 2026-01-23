@@ -33,6 +33,8 @@
     </plurals>
     <string name="chat_message_tool_label_call">Calling %1$s tool</string>
     <string name="chat_message_tool_label_result">%1$s tool call result</string>
+    <string name="chat_message_error">Runtime Error</string>
+    <string name="chat_message_error_max_iterations_exceeded">Maximum iteration limit reached, please retry</string>
     <string name="chat_input_placeholder">Type your message here…</string>
     <string name="chat_input_label_send">Send Message</string>
     <string name="chat_input_model_label_select">Select Model</string>

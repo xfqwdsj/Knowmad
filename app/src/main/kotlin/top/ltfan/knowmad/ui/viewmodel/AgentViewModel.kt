@@ -64,6 +64,7 @@ import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
 import top.ltfan.knowmad.agent.tool.scheduleTools
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
@@ -409,7 +410,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     fileIds = emptyList(),
                 )
             }
-            if (databaseMessages.size % 6 < 2) {
+            if (databaseMessages.size % 6 < 2) { // TODO: refactor with tool
                 viewModelScope.launch {
                     val conversation = withContext(Dispatchers.IO) {
                         chatDao.getConversationById(conversationId)
@@ -500,8 +501,51 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 }.takeIf { it }?.let { logger.info { "Agent run cancelled." } }
             } catch (e: AIAgentMaxNumberOfIterationsReachedException) {
                 logger.info { "Agent reached max number of iterations: ${e.message}" }
+
+                val errorMessage =
+                    application.getString(R.string.chat_message_error_max_iterations_exceeded)
+
+                state.cleanUncompletedToolCalls { iterator, toolCall ->
+                    iterator.add(
+                        AssistantMessageContent.Completed(
+                            message = Message.Tool.Result(
+                                id = toolCall.id,
+                                tool = toolCall.tool,
+                                content = errorMessage,
+                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            ),
+                            coroutineScope = viewModelScope,
+                        ),
+                    )
+                }
+
+                state.contents += AssistantMessageContent.Completed(
+                    uiMessage = UiMessage.Error(errorMessage),
+                    coroutineScope = viewModelScope,
+                )
             } catch (e: Throwable) {
                 logger.error(e) { "Agent run error" }
+
+                val errorMessage = application.getString(R.string.chat_message_error)
+
+                state.cleanUncompletedToolCalls { iterator, toolCall ->
+                    iterator.add(
+                        AssistantMessageContent.Completed(
+                            message = Message.Tool.Result(
+                                id = toolCall.id,
+                                tool = toolCall.tool,
+                                content = errorMessage,
+                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            ),
+                            coroutineScope = viewModelScope,
+                        ),
+                    )
+                }
+
+                state.contents += AssistantMessageContent.Completed(
+                    uiMessage = UiMessage.Error(errorMessage),
+                    coroutineScope = viewModelScope,
+                )
             } finally {
                 isRunning = false
                 logger.debug { "Agent run completed." }
