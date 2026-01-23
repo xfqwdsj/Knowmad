@@ -22,7 +22,7 @@ capsule = "1.1.0"
 reorderable = "3.0.0"
 markdown = "0.39.1"
 biweekly = "0.6.8"
-calendar = "2.9.0"
+calendar = "2.10.0"
 webview = "2.0.3"
 
 [libraries]
