@@ -49,8 +49,6 @@ import top.ltfan.knowmad.agent.tool.TimeTool
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
-import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.AddString
-import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.SetMessage
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 
@@ -90,7 +88,7 @@ fun getChatAgentService(
                                     if (lastIsToolCall != false) partIndex++
                                     lastIsToolCall = false
                                     eventFlow.emit(
-                                        AddString(
+                                        AssistantMessageStreamingEvent.AddString(
                                             partIndex = partIndex,
                                             content = frame.text,
                                             messageType = AssistantStreamingMessageType.Content,
@@ -98,7 +96,7 @@ fun getChatAgentService(
                                     )
                                 }
 
-                                is StreamFrame.ToolCall -> {
+                                is ToolCall -> {
                                     lastIsToolCall = true
                                     val toolCall = Message.Tool.Call(
                                         id = frame.id,
@@ -107,14 +105,20 @@ fun getChatAgentService(
                                         metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
                                     )
                                     eventFlow.emit(
-                                        SetMessage(
+                                        AssistantMessageStreamingEvent.SetMessage(
                                             partIndex = ++partIndex,
                                             message = toolCall,
                                         ),
                                     )
                                 }
 
-                                is StreamFrame.End -> {} // TODO: make use of end frame
+                                is End -> {
+                                    eventFlow.emit(
+                                        AssistantMessageStreamingEvent.SetMetaInfo(
+                                            metaInfo = frame.metaInfo,
+                                        ),
+                                    )
+                                }
                             }
                         }
                     }
@@ -155,7 +159,7 @@ fun getChatAgentService(
             }
             toolResults.forEach { toolResult ->
                 eventFlow.emit(
-                    SetMessage(
+                    AssistantMessageStreamingEvent.SetMessage(
                         partIndex = ++partIndex,
                         message = toolResult.toMessage(),
                     ),

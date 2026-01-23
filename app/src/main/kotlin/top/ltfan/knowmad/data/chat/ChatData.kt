@@ -191,16 +191,11 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         coroutineScope: CoroutineScope,
         val startedAt: Instant = Clock.System.now(),
     ) : AssistantMessageContent(coroutineScope, flow) {
-        var endedAt by mutableStateOf<Instant?>(null)
+        var metaInfo by mutableStateOf<ResponseMetaInfo?>(null)
         override val content get() = flow.value
 
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
-            val metaInfo = ResponseMetaInfo(
-                timestamp = (endedAt ?: defaultEndedAt).toDeprecatedInstant(),
-                metadata = JsonObject(
-                    mapOf("startedAt" to JsonPrimitive(startedAt.toString())),
-                ),
-            )
+            val metaInfo = metaInfo ?: createMetaInfo(defaultEndedAt)
             return when (type) {
                 AssistantStreamingMessageType.Content -> Message.Assistant(
                     content = flow.value,
@@ -213,6 +208,11 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
                 )
             }
         }
+
+        fun createMetaInfo(timestamp: Instant = Clock.System.now()) = ResponseMetaInfo(
+            timestamp = timestamp.toDeprecatedInstant(),
+            metadata = JsonObject(mapOf("startedAt" to JsonPrimitive(startedAt.toString()))),
+        ).also { metaInfo = it }
 
         suspend fun completed(
             defaultEndedAt: Instant = Clock.System.now(),

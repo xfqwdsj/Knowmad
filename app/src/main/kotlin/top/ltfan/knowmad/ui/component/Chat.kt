@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.ResponseMetaInfo
 import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SharedTransitionLayout
@@ -94,6 +95,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
@@ -468,7 +470,7 @@ fun AssistantMessage(
                         AssistantStreamingMessageType.Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
                             startedAt = content.startedAt,
-                            endedAt = content.endedAt,
+                            endedAt = content.metaInfo?.timestamp?.toStdlibInstant(),
                             initialVisibility = initialReasoningVisibility,
                             onVisibilityChange = onAnyReasoningVisibilityChange,
                             modifier = Modifier.padding(8.dp),
@@ -935,9 +937,7 @@ sealed interface AssistantMessageState {
                                 require(contents.size == index) { "Parts must be added in order." }
 
                                 (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
-                                    if (it.endedAt == null) {
-                                        it.endedAt = Clock.System.now()
-                                    }
+                                    it.metaInfo ?: it.createMetaInfo()
                                 } ?: logger.debug {
                                     "Trying to complete previous part at index ${index - 1}, " +
                                             "but found the part is not Streaming or does not exist."
@@ -965,13 +965,31 @@ sealed interface AssistantMessageState {
                             onUpdate()
                         }
 
+                        is SetMetaInfo -> {
+                            val content = contents
+                                .lastOrNull { it is AssistantMessageContent.Streaming }
+                                    as? AssistantMessageContent.Streaming
+                                ?: run {
+                                    logger.error {
+                                        "Received SetMetaInfo, but no Streaming content found."
+                                    }
+                                    return@collect
+                                }
+                            val metadata = buildJsonObject {
+                                event.metaInfo.metadata?.forEach { put(it.key, it.value) }
+                                put("startedAt", JsonPrimitive(content.startedAt.toString()))
+                            }
+                            content.metaInfo = event.metaInfo.copy(
+                                metadata = metadata,
+                            )
+                            onUpdate()
+                        }
+
                         is SetMessage -> {
                             val index = event.partIndex
                             if (contents.size <= index) {
                                 (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
-                                    if (it.endedAt == null) {
-                                        it.endedAt = Clock.System.now()
-                                    }
+                                    it.metaInfo ?: it.createMetaInfo()
                                 } ?: logger.debug {
                                     "Trying to complete previous part at index ${index - 1}, " +
                                             "but found the part is not Streaming or does not exist."
@@ -1038,7 +1056,7 @@ sealed interface AssistantMessageState {
             while (iterator.hasNext()) {
                 val content = iterator.next()
                 if (content is AssistantMessageContent.Streaming) {
-                    content.endedAt = endedAt
+                    content.metaInfo ?: content.createMetaInfo()
                     iterator.set(content.completed(endedAt))
                 }
             }
@@ -1148,6 +1166,11 @@ sealed interface AssistantMessageStreamingEvent {
         val partIndex: Int,
         val content: String,
         val messageType: AssistantStreamingMessageType,
+    ) : AssistantMessageStreamingEvent
+
+    @Immutable
+    data class SetMetaInfo(
+        val metaInfo: ResponseMetaInfo,
     ) : AssistantMessageStreamingEvent
 
     @Immutable
