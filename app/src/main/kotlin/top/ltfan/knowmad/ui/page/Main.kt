@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.page
 
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,14 +35,23 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import androidx.navigationevent.NavigationEventDispatcher
+import androidx.navigationevent.NavigationEventDispatcherOwner
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentChatIcon
@@ -77,11 +87,31 @@ class MainPage : Page() {
 
             BottomSheetScaffold(
                 sheetContent = {
+                    var backProgress by remember { mutableFloatStateOf(0f) }
+
+                    val localEventDispatcher =
+                        LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+                            ?: error("No NavigationEventDispatcherOwner provided")
+
+                    val eventDispatcherOwner = remember(localEventDispatcher) {
+                        object : NavigationEventDispatcherOwner {
+                            override val navigationEventDispatcher =
+                                NavigationEventDispatcher(localEventDispatcher)
+                        }
+                    }
+
                     BoxWithConstraints(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(max = 600.dp)
-                            .consumeWindowInsets(AppWindowInsets.only { top }),
+                            .consumeWindowInsets(AppWindowInsets.only { top })
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                val offset = (200.dp * backProgress).roundToPx()
+                                layout(placeable.width, placeable.height - offset) {
+                                    placeable.placeRelative(x = 0, y = 0)
+                                }
+                            },
                     ) {
                         val density = LocalDensity.current
                         val layoutDirection = LocalLayoutDirection.current
@@ -106,10 +136,29 @@ class MainPage : Page() {
                         CompositionLocalProvider(
                             LocalAgentScreenTransparentContainer provides true,
                             LocalAgentScreenPreferredContainerColor provides BottomSheetDefaults.ContainerColor,
+                            LocalNavigationEventDispatcherOwner provides eventDispatcherOwner,
                         ) {
                             Box(Modifier.consumeWindowInsets(consumedPadding)) {
                                 AgentScreen(LocalNavAnimatedContentScope.current)
                             }
+                        }
+                    }
+
+                    LaunchedEffect(scaffoldState.bottomSheetState.isVisible) {
+                        eventDispatcherOwner.navigationEventDispatcher.isEnabled =
+                            scaffoldState.bottomSheetState.isVisible
+                    }
+
+                    PredictiveBackHandler(
+                        enabled = scaffoldState.bottomSheetState.targetValue != Hidden,
+                    ) { progress ->
+                        try {
+                            progress.collect { backEvent ->
+                                backProgress = backEvent.progress
+                            }
+                        } finally {
+                            scaffoldState.bottomSheetState.hide()
+                            backProgress = 0f
                         }
                     }
                 },
