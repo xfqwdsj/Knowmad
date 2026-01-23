@@ -484,15 +484,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                                 scheduleTools(application.resources, scheduleDao)
                             },
                             buildPrompt = {
-                                system?.let { message(it) }
-                                system(
+                                system?.let { message(it) } ?: messages(messages)
+                                user(
                                     application.getString(
                                         R.string.llm_prompt_environment,
                                         Clock.System.now().formatAgentTime(),
                                         conversation.name,
                                     ),
                                 )
-                                messages(messages)
                             },
                         )
                         false
