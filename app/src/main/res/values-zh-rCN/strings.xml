@@ -46,8 +46,7 @@
     <string name="label_deleted">已删除</string>
     <string name="label_need_attention">需要注意</string>
     <string name="label_not_changed">未更改</string>
-    <string name="agent_label_chat">与助手对话</string>
-    <!--    <string name="agent_bottom_sheet_label_close">关闭助手页面</string>-->
+    <string name="agent_label_chat">与诺玛对话</string>
     <string name="agent_standalone_label_enter">进入独立页面</string>
     <string name="agent_standalone_label_exit">关闭独立页面</string>
     <string name="agent_drawer_label_open">打开对话列表</string>

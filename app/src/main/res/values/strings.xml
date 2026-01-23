@@ -46,8 +46,7 @@
     <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
     <string name="label_not_changed">Not Changed</string>
-    <string name="agent_label_chat">Chat with Assistant</string>
-    <!--    <string name="agent_bottom_sheet_label_close">Close Agent Page</string>-->
+    <string name="agent_label_chat">Chat with Noma</string>
     <string name="agent_standalone_label_enter">Enter Standalone Page</string>
     <string name="agent_standalone_label_exit">Exit Standalone Page</string>
     <string name="agent_drawer_label_open">Open Conversation List</string>
