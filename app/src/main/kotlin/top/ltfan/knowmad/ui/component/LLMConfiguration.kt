@@ -100,8 +100,8 @@ import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.llm.decryptedApiKey
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.SnackbarAction
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.CryptoManager
@@ -521,7 +521,7 @@ fun LLMProviderConfigLazyColumn(
             },
             modifier = Modifier.run {
                 if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
+                else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(
                             LLMProviderConfigItemSharedKey.Container(entity.id),
@@ -775,7 +775,7 @@ fun LLMConfigLazyColumn(
             onDelete = { onDeleteModel(entity) },
             modifier = Modifier.run {
                 if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
+                else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(
                             LLMProviderConfigItemSharedKey.Container(entity.id),

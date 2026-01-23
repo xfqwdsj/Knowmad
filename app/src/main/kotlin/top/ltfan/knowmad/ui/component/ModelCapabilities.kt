@@ -57,7 +57,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMCapabilities
 import top.ltfan.knowmad.data.llm.LLMCapabilityInfo
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 
 @Composable
 fun ModelCapabilitiesFlow(
@@ -140,7 +140,7 @@ private fun CapabilityToggleButton(
                         this.selected = selected
                     }.run {
                         if (animatedVisibilityScope == null) this
-                        else with(LocalSharedTransitionScope.current) {
+                        else localSharedTransitionScope {
                             sharedBounds(
                                 rememberSharedContentState(SharedKey.Container(item)),
                                 animatedVisibilityScope,
@@ -158,7 +158,7 @@ private fun CapabilityToggleButton(
                     stringResource(item.label),
                     modifier = Modifier.run {
                         if (animatedVisibilityScope == null) this
-                        else with(LocalSharedTransitionScope.current) {
+                        else localSharedTransitionScope {
                             sharedBounds(
                                 rememberSharedContentState(SharedKey.Label(item)),
                                 animatedVisibilityScope,
@@ -276,7 +276,7 @@ private fun CapabilityItem(
         onClick = { onSelectedChange(!selected) },
         modifier = Modifier.run {
             if (animatedVisibilityScope == null) this
-            else with(LocalSharedTransitionScope.current) {
+            else localSharedTransitionScope {
                 sharedBounds(
                     rememberSharedContentState(SharedKey.Container(item)),
                     animatedVisibilityScope,
@@ -291,7 +291,7 @@ private fun CapabilityItem(
             stringResource(item.label),
             modifier = Modifier.run {
                 if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
+                else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(SharedKey.Label(item)),
                         animatedVisibilityScope,

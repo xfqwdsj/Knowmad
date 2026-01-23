@@ -26,7 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 @Composable
@@ -35,7 +35,7 @@ fun SnackbarHost(
 ) {
     val viewModel = LocalAppViewModel.current
 
-    with(LocalSharedTransitionScope.current) {
+    localSharedTransitionScope {
         SnackbarHost(
             viewModel.snackbarHostState,
             modifier = Modifier.animateBounds(this),

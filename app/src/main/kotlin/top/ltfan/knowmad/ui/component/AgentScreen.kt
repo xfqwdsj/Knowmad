@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 
 @Composable
@@ -50,7 +50,7 @@ fun AgentScreen(
             .fillMaxSize()
             .run {
                 if (animatedVisibilityScope == null) this
-                else with(LocalSharedTransitionScope.current) {
+                else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(AgentScreenSharedKey),
                         animatedVisibilityScope,
