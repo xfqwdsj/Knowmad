@@ -61,6 +61,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
+import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.scheduleTools
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -368,7 +369,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 createNewConversation()
             }
             val conversationId = currentConversationId ?: return@launch
-            val conversation = withContext(Dispatchers.IO) {
+            var conversation = withContext(Dispatchers.IO) {
                 chatDao.getConversationById(conversationId)
             } ?: return@launch
             val eventFlow =
@@ -413,15 +414,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     fileIds = emptyList(),
                 )
             }
-            if (databaseMessages.size % 6 < 2) { // TODO: refactor with tool
+            if (databaseMessages.isEmpty()) {
                 viewModelScope.launch {
-                    val conversation = withContext(Dispatchers.IO) {
-                        chatDao.getConversationById(conversationId)
-                    } ?: return@launch
                     val title = autoGenerateConversationName(conversation) ?: return@launch
+                    val newConversation = conversation.copy(name = title)
                     withContext(Dispatchers.IO) {
-                        chatDao.updateConversation(conversation.copy(name = title))
+                        chatDao.updateConversation(newConversation)
                     }
+                    conversation = newConversation
                 }
             }
             val updateChannel = Channel<Unit>(Channel.CONFLATED)
@@ -480,6 +480,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             eventFlow = eventFlow,
                             state = state,
                             tools = {
+                                conversationTools(application.resources, conversation, chatDao)
                                 scheduleTools(application.resources, scheduleDao)
                             },
                             buildPrompt = {
