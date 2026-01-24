@@ -22,6 +22,7 @@ import biweekly.component.VAlarm
 import biweekly.component.VEvent
 import biweekly.parameter.Related
 import biweekly.property.Trigger
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.temporal.ChronoUnit
 import java.util.Date
@@ -62,6 +63,7 @@ sealed interface Event {
     }
 
     @Serializable
+    @SerialName("Normal")
     data class Normal(
         override val id: Uuid = Uuid.generateV7(),
         override val semester: SemesterEntity,
@@ -105,6 +107,7 @@ sealed interface Event {
     }
 
     @Serializable
+    @SerialName("Course")
     data class Course(
         override val id: Uuid = Uuid.generateV7(),
         override val semester: SemesterEntity,
