@@ -225,7 +225,7 @@ sealed interface Event {
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
             val color = vEvent.color?.let { ICalendarColor.fromValue(it.value) }
-                ?: ICalendarColor.fromId(id)
+                ?: ICalendarColor.fromId(course?.id ?: semester.id)
             val startTime = vEvent.dateStart?.value?.toInstant()?.toKotlinInstant()
                 ?: return null
             val endTime = vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()

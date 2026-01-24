@@ -737,7 +737,7 @@ object ScheduleTools {
                 }
             }
             val color = args.color?.let { ICalendarColor.fromValue(it) }
-                ?: ICalendarColor.fromId(id)
+                ?: ICalendarColor.fromId(courseId ?: semesterId)
             val reminders =
                 args.reminders?.mapNotNull { Duration.parseOrNull(it) } ?: emptyList()
             val event = EventEntity(
