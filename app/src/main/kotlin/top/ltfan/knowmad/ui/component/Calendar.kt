@@ -141,7 +141,7 @@ fun Calendar(
                     events = events,
                     outOfMonth = day.position != MonthDate,
                     border = if (day.date == today) BorderStroke(
-                        width = 1.dp,
+                        width = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
                     ) else null,
                 )
