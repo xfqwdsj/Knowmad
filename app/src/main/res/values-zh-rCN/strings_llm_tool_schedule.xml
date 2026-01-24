@@ -18,8 +18,8 @@
 
 <resources>
     <string name="llm_tool_schedule_query_semesters_description">查询与给定日期范围存在交集的学期或所有已存在的学期</string>
-    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">查询起始日期（yyyy-MM-dd）</string>
-    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">查询结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">查询起始日期（yyyy-MM-dd），留空两个字段以查询所有学期</string>
+    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">查询结束日期（yyyy-MM-dd），留空以查询startDate当日</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_not_found">未找到学期</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_end_date">endDate格式无效，期望yyyy-MM-dd</string>
