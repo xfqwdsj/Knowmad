@@ -37,6 +37,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,6 +73,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -98,10 +100,12 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.number
+import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.contractColorFor
+import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
@@ -143,6 +147,12 @@ fun Calendar(
                         width = 1.dp,
                         color = MaterialTheme.colorScheme.primary,
                     ) else null,
+                )
+            },
+            monthHeader = {
+                MonthHeader(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    daysOfWeek = calendarState.daysOfWeek,
                 )
             },
         )
@@ -341,6 +351,24 @@ fun Event(
 }
 
 @Composable
+fun MonthHeader(
+    modifier: Modifier = Modifier,
+    daysOfWeek: List<DayOfWeek> = emptyList(),
+) {
+    Row(modifier.fillMaxWidth()) {
+        for (dayOfWeek in daysOfWeek) {
+            Text(
+                dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, Locale.getDefault()),
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                style = MaterialTheme.typography.bodyMediumEmphasized,
+            )
+        }
+    }
+}
+
+@Composable
 fun rememberCalendarState(
     initialTimeZone: TimeZone = rememberSystemTimeZone(),
     initialDate: LocalDate = rememberSystemDate(timeZone = initialTimeZone),
@@ -360,7 +388,7 @@ fun rememberCalendarState(
 class CalendarState(
     initialTimeZone: TimeZone = TimeZone.currentSystemDefault(),
     initialDate: LocalDate = LocalDate.now(timeZone = initialTimeZone),
-    daysOfWeek: List<DayOfWeek> = daysOfWeek(),
+    val daysOfWeek: List<DayOfWeek> = daysOfWeek(),
     private val coroutineScope: CoroutineScope,
 ) {
     val monthCalendarState = MonthCalendarState::class.constructors.first().call(
