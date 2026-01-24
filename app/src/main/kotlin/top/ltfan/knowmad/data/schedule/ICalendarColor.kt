@@ -20,6 +20,8 @@ package top.ltfan.knowmad.data.schedule
 
 import biweekly.property.Color
 import kotlinx.serialization.Serializable
+import kotlin.random.Random
+import kotlin.random.nextUInt
 import kotlin.uuid.Uuid
 
 @Serializable
@@ -177,9 +179,13 @@ enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: 
 
         fun fromValue(value: String) = map[value]
 
-        fun fromId(id: Uuid) = entries[
-            (id.hashCode().toUInt() % ICalendarColor.entries.size.toUInt()).toInt()
+        fun fromUInt(value: UInt) = entries[
+            (value % ICalendarColor.entries.size.toUInt()).toInt()
         ]
+
+        fun fromId(id: Uuid) = fromUInt(id.hashCode().toUInt())
+
+        fun fromRandom(random: Random) = fromUInt(random.nextUInt())
 
     }
 
