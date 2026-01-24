@@ -126,19 +126,20 @@ fun Calendar(
             dayContent = { day ->
                 val selected = day.date == calendarState.selectedDate
 
-                val events by remember(day.date) {
+                val events = remember(day) {
+                    if (day.position != MonthDate) return@remember null
                     snapshotFlow { calendarState.timeZone }.flatMapLatest {
                         val startOfDay = day.date.atStartOfDayIn(it)
                         val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
                         getEvents(startOfDay, endOfDay)
                     }
-                }.collectAsState(initial = emptyList())
+                }?.collectAsState(initial = emptyList())
 
                 Day(
                     date = day.date,
                     selected = selected && day.position == MonthDate,
                     onClick = { calendarState.selectedDate = day.date },
-                    events = events,
+                    events = events?.value,
                     outOfMonth = day.position != MonthDate,
                     border = if (day.date == today) BorderStroke(
                         width = 2.dp,
@@ -182,7 +183,7 @@ fun Day(
     date: LocalDate,
     selected: Boolean,
     onClick: () -> Unit,
-    events: List<Event> = emptyList(),
+    events: List<Event>? = null,
     outOfMonth: Boolean = false,
     border: BorderStroke? = null,
 ) {
@@ -234,12 +235,13 @@ fun Day(
             }
         }
 
-        Events(events)
+        events?.ifEmpty { null }?.let { Events(it) }
     }
 }
 
 @Composable
 fun Events(events: List<Event>) {
+    // TODO: enter animation
     SharedTransitionLayout {
         Column(
             modifier = Modifier
