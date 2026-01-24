@@ -34,6 +34,7 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +74,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
@@ -349,10 +349,11 @@ fun Event(
     ) {
         Text(
             text = event.name,
-            modifier = Modifier.padding(2.dp),
+            modifier = Modifier
+                .basicMarquee()
+                .padding(2.dp),
             color = MaterialTheme.colorScheme.contentColorFor(color)
                 .takeOrElse { contractColorFor(color) },
-            overflow = TextOverflow.Ellipsis,
             softWrap = false,
             maxLines = 1,
             style = MaterialTheme.typography.bodySmallEmphasized,
