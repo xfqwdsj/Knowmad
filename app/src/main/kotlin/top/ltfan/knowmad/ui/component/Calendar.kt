@@ -352,7 +352,7 @@ fun Event(
         Text(
             text = event.name,
             modifier = Modifier
-                .basicMarquee()
+                .basicMarquee(iterations = Int.MAX_VALUE)
                 .padding(2.dp),
             color = MaterialTheme.colorScheme.contentColorFor(color)
                 .takeOrElse { contractColorFor(color) },
