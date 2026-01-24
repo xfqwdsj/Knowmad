@@ -25,5 +25,13 @@
 # Keep Generic signatures for `typeOf<T>` usage
 -keep,allowobfuscation class top.ltfan.knowmad.agent.ChatAgentData
 
+# Keep CalendarState constructor for reflection usage
+-keep,allowobfuscation class com.kizitonwose.calendar.compose.CalendarState {
+    public <init>(...);
+}
+-keep,allowobfuscation class com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState {
+    public <init>(...);
+}
+
 # First found in io.ktor.util.debug.IntellijIdeaDebugDetector
 -dontwarn java.lang.management.**
