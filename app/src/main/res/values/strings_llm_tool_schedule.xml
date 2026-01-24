@@ -56,9 +56,7 @@
     <string name="llm_tool_schedule_update_semester_result_failure_reason_update_failed">Failed to update semester</string>
 
     <string name="llm_tool_schedule_search_courses_description">Search courses in a semester by full-text query</string>
-    <string name="llm_tool_schedule_search_courses_arg_semester_id_description">Semester ID (UUID)</string>
     <string name="llm_tool_schedule_search_courses_arg_query_description">Full-text query string to search courses</string>
-    <string name="llm_tool_schedule_search_courses_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">Query cannot be empty</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">Internal error while searching courses</string>
 
@@ -72,18 +70,14 @@
     <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">Failed to create course</string>
 
     <string name="llm_tool_schedule_query_events_description">Query events in a semester within a time range</string>
-    <string name="llm_tool_schedule_query_events_arg_semester_id_description">Semester ID (UUID)</string>
     <string name="llm_tool_schedule_query_events_arg_start_time_description">Start time (ISO-8601 with Offset)</string>
     <string name="llm_tool_schedule_query_events_arg_end_time_description">End time (ISO-8601 with Offset)</string>
-    <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_internal_error">Internal error while querying events</string>
 
     <string name="llm_tool_schedule_search_events_description">Search events in a semester by full-text query</string>
-    <string name="llm_tool_schedule_search_events_arg_semester_id_description">Semester ID (UUID)</string>
     <string name="llm_tool_schedule_search_events_arg_query_description">Full-text query string to search events</string>
-    <string name="llm_tool_schedule_search_events_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">Query cannot be empty</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">Internal error while searching events</string>
 

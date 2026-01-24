@@ -96,23 +96,44 @@ interface ScheduleDao : FtsDao {
         return searchSemestersInternal(sanitized)
     }
 
+    @Transaction
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
-    suspend fun getCourseById(id: Uuid): CourseEntity?
+    suspend fun getCourseById(id: Uuid): CourseWithSemester?
+
+    @Query("SELECT * FROM CourseEntity WHERE id = :id")
+    suspend fun getCourseEntityById(id: Uuid): CourseEntity?
+
+    @Transaction
+    @Query(
+        """
+            SELECT * FROM CourseEntity
+            WHERE semesterId = :semesterId
+            ORDER BY name ASC
+    """,
+    )
+    suspend fun getAllCoursesInSemester(semesterId: Uuid): List<CourseWithSemester>
+
+    @Transaction
+    suspend fun getAllCourses(): List<CourseWithSemester> {
+        return getAllSemesters().flatMap { semester ->
+            getAllCoursesInSemester(semester.id)
+        }
+    }
 
     @Transaction
     @Query(
         """
             SELECT CourseEntity.* FROM CourseEntity
             JOIN CourseFtsEntity ON CourseEntity.rowid = CourseFtsEntity.rowid
-            WHERE CourseEntity.semesterId = :semesterId AND CourseFtsEntity MATCH :query
+            WHERE CourseFtsEntity MATCH :query
     """,
     )
-    suspend fun searchCoursesInternal(semesterId: Uuid, query: String): List<CourseEntity>
+    suspend fun searchCoursesInternal(query: String): List<CourseWithSemester>
 
     @Transaction
-    suspend fun searchCourses(semesterId: Uuid, query: String): List<CourseEntity> {
+    suspend fun searchCourses(query: String): List<CourseWithSemester> {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
-        return searchCoursesInternal(semesterId, sanitized)
+        return searchCoursesInternal(sanitized)
     }
 
     @Transaction
@@ -149,7 +170,7 @@ interface ScheduleDao : FtsDao {
     @Query(
         """
             SELECT * FROM EventEntity
-            WHERE semesterId = :semesterId AND startTime <= :endTime AND endTime >= :startTime
+            WHERE startTime <= :endTime AND endTime >= :startTime
             ORDER BY
                 startTime ASC,
                 endTime DESC,
@@ -157,18 +178,13 @@ interface ScheduleDao : FtsDao {
     """,
     )
     suspend fun getOriginalEventsInRange(
-        semesterId: Uuid,
         startTime: Instant,
         endTime: Instant,
     ): List<EventWithSemesterAndCourse>
 
     @Transaction
-    suspend fun getEventsInRange(
-        semesterId: Uuid,
-        startTime: Instant,
-        endTime: Instant,
-    ): List<Event> {
-        return getOriginalEventsInRange(semesterId, startTime, endTime).map { it.toEvent() }
+    suspend fun getEventsInRange(startTime: Instant, endTime: Instant): List<Event> {
+        return getOriginalEventsInRange(startTime, endTime).map { it.toEvent() }
     }
 
     @Transaction
@@ -176,17 +192,14 @@ interface ScheduleDao : FtsDao {
         """
             SELECT EventEntity.* FROM EventEntity
             JOIN EventFtsEntity ON EventEntity.rowid = EventFtsEntity.rowid
-            WHERE EventEntity.semesterId = :semesterId AND EventFtsEntity MATCH :query
+            WHERE EventFtsEntity MATCH :query
     """,
     )
-    suspend fun searchEventsInternal(
-        semesterId: Uuid,
-        query: String,
-    ): List<EventWithSemesterAndCourse>
+    suspend fun searchEventsInternal(query: String): List<EventWithSemesterAndCourse>
 
     @Transaction
-    suspend fun searchEvents(semesterId: Uuid, query: String): List<Event> {
+    suspend fun searchEvents(query: String): List<Event> {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
-        return searchEventsInternal(semesterId, sanitized).map { it.toEvent() }
+        return searchEventsInternal(sanitized).map { it.toEvent() }
     }
 }

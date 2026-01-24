@@ -32,6 +32,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.CourseEntity
+import top.ltfan.knowmad.data.schedule.CourseWithSemester
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.ICalendarColor
@@ -114,6 +115,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val startDate: String? = null,
             val endDate: String? = null,
@@ -159,6 +161,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(val query: String)
 
         @Serializable
@@ -233,6 +236,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val name: String,
             val startDate: String,
@@ -332,6 +336,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val semesterId: String,
             val name: String? = null,
@@ -363,11 +368,6 @@ object ScheduleTools {
             description = resources.getString(R.string.llm_tool_schedule_search_courses_description),
             requiredParameters = listOf(
                 ToolParameterDescriptor(
-                    name = "semesterId",
-                    description = resources.getString(R.string.llm_tool_schedule_search_courses_arg_semester_id_description),
-                    type = ToolParameterType.String,
-                ),
-                ToolParameterDescriptor(
                     name = "query",
                     description = resources.getString(R.string.llm_tool_schedule_search_courses_arg_query_description),
                     type = ToolParameterType.String,
@@ -376,24 +376,23 @@ object ScheduleTools {
         ),
     ) {
         override suspend fun execute(args: Args): Result {
-            val semesterId = Uuid.parseOrNull(args.semesterId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_courses_result_failure_reason_invalid_semester_id))
             args.query.ifBlank { Result.Failure(resources.getString(R.string.llm_tool_schedule_search_courses_result_failure_reason_empty_query)) }
             val courses = withContext(Dispatchers.IO) {
-                runCatching { dao.searchCourses(semesterId, args.query) }
+                runCatching { dao.searchCourses(args.query) }
             }.onFailure { logger.error(it) { "Failed to search courses" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_courses_result_failure_reason_internal_error)) }
             return Result.Success(courses)
         }
 
         @Serializable
-        data class Args(val semesterId: String, val query: String)
+        @SerialName("Args")
+        data class Args(val query: String)
 
         @Serializable
         sealed interface Result {
             @Serializable
             @SerialName("Success")
-            data class Success(val courses: List<CourseEntity>) : Result
+            data class Success(val courses: List<CourseWithSemester>) : Result
 
             @Serializable
             @SerialName("Failure")
@@ -456,6 +455,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val semesterId: String,
             val name: String,
@@ -514,7 +514,7 @@ object ScheduleTools {
             val courseId = Uuid.parseOrNull(args.courseId)
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_invalid_course_id))
             val existingCourse = withContext(Dispatchers.IO) {
-                runCatching { dao.getCourseById(courseId) }
+                runCatching { dao.getCourseEntityById(courseId) }
             }.onFailure { logger.error(it) { "Failed to fetch existing course" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_internal_error)) }
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_not_found))
@@ -538,6 +538,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val courseId: String,
             val name: String? = null,
@@ -568,11 +569,6 @@ object ScheduleTools {
             description = resources.getString(R.string.llm_tool_schedule_query_events_description),
             requiredParameters = listOf(
                 ToolParameterDescriptor(
-                    name = "semesterId",
-                    description = resources.getString(R.string.llm_tool_schedule_query_events_arg_semester_id_description),
-                    type = ToolParameterType.String,
-                ),
-                ToolParameterDescriptor(
                     name = "startTime",
                     description = resources.getString(R.string.llm_tool_schedule_query_events_arg_start_time_description),
                     type = ToolParameterType.String,
@@ -586,22 +582,21 @@ object ScheduleTools {
         ),
     ) {
         override suspend fun execute(args: Args): Result {
-            val semesterId = Uuid.parseOrNull(args.semesterId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_semester_id))
             val instant1 = runCatching { Instant.parse(args.startTime) }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_start_time)) }
             val instant2 = runCatching { Instant.parse(args.endTime) }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_end_time)) }
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.getEventsInRange(semesterId, start, end) }
+                runCatching { dao.getEventsInRange(start, end) }
             }.onFailure { logger.error(it) { "Failed to query events in range" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
         }
 
         @Serializable
-        data class Args(val semesterId: String, val startTime: String, val endTime: String)
+        @SerialName("Args")
+        data class Args(val startTime: String, val endTime: String)
 
         @Serializable
         sealed interface Result {
@@ -626,11 +621,6 @@ object ScheduleTools {
             description = resources.getString(R.string.llm_tool_schedule_search_events_description),
             requiredParameters = listOf(
                 ToolParameterDescriptor(
-                    name = "semesterId",
-                    description = resources.getString(R.string.llm_tool_schedule_search_events_arg_semester_id_description),
-                    type = ToolParameterType.String,
-                ),
-                ToolParameterDescriptor(
                     name = "query",
                     description = resources.getString(R.string.llm_tool_schedule_search_events_arg_query_description),
                     type = ToolParameterType.String,
@@ -639,18 +629,17 @@ object ScheduleTools {
         ),
     ) {
         override suspend fun execute(args: Args): Result {
-            val semesterId = Uuid.parseOrNull(args.semesterId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_invalid_semester_id))
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_empty_query)) }
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.searchEvents(semesterId, args.query) }
+                runCatching { dao.searchEvents(args.query) }
             }.onFailure { logger.error(it) { "Failed to search events" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
         }
 
         @Serializable
-        data class Args(val semesterId: String, val query: String)
+        @SerialName("Args")
+        data class Args(val query: String)
 
         @Serializable
         sealed interface Result {
@@ -777,6 +766,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val semesterId: String,
             val startTime: String,
@@ -909,6 +899,7 @@ object ScheduleTools {
         }
 
         @Serializable
+        @SerialName("Args")
         data class Args(
             val eventId: String,
             val name: String? = null,

@@ -87,6 +87,16 @@ data class CourseEntity(
     val location: String,
 )
 
+@Serializable
+data class CourseWithSemester(
+    @Embedded val course: CourseEntity,
+    @Relation(
+        parentColumn = "semesterId",
+        entityColumn = "id",
+    )
+    val semester: SemesterEntity,
+)
+
 @Fts4(
     tokenizer = FtsOptions.TOKENIZER_ICU,
     contentEntity = CourseEntity::class,
@@ -151,21 +161,6 @@ data class EventEntity(
         }
 }
 
-@Fts4(
-    tokenizer = FtsOptions.TOKENIZER_ICU,
-    contentEntity = EventEntity::class,
-)
-@Entity
-data class EventFtsEntity(
-    @PrimaryKey
-    @ColumnInfo(name = "rowid")
-    val rowId: Long,
-    val name: String?,
-    val instructor: String?,
-    val location: String?,
-    val notes: String?,
-)
-
 @Serializable
 data class EventWithSemesterAndCourse(
     @Embedded val event: EventEntity,
@@ -179,4 +174,19 @@ data class EventWithSemesterAndCourse(
         entityColumn = "id",
     )
     val course: CourseEntity?,
+)
+
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = EventEntity::class,
+)
+@Entity
+data class EventFtsEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "rowid")
+    val rowId: Long,
+    val name: String?,
+    val instructor: String?,
+    val location: String?,
+    val notes: String?,
 )
