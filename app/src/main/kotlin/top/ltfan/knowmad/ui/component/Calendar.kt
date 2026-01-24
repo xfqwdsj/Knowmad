@@ -103,7 +103,6 @@ import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.contractColorFor
-import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
@@ -366,11 +365,12 @@ fun MonthHeader(
     modifier: Modifier = Modifier,
     daysOfWeek: List<DayOfWeek> = emptyList(),
 ) {
+    val configuration = LocalConfiguration.current
+
     Row(modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
-                // TODO: replace locale with state
-                dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, Locale.getDefault()),
+                dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, configuration.locales[0]),
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,

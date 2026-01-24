@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -69,7 +70,6 @@ import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
-import java.util.Locale
 
 @Serializable
 class MainPage : Page() {
@@ -78,6 +78,7 @@ class MainPage : Page() {
     override fun Content() {
         val viewModel = LocalAppViewModel.current
 
+        val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
 
         val scaffoldState = rememberBottomSheetScaffoldState(
@@ -184,9 +185,8 @@ class MainPage : Page() {
                         MediumTopAppBar(
                             title = {
                                 Text(
-                                    // TODO: replace locale with state
-                                    viewModel.calendarState.currentMonth.month
-                                        .toJavaMonth().getDisplayName(FULL, Locale.getDefault()),
+                                    viewModel.calendarState.currentMonth.month.toJavaMonth()
+                                        .getDisplayName(FULL, configuration.locales[0]),
                                 )
                             },
                         )
