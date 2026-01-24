@@ -24,6 +24,7 @@ import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DrawerState
@@ -84,6 +85,7 @@ import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
+import top.ltfan.knowmad.ui.util.SnapshotLruCache
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
@@ -104,6 +106,11 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val chatData = chatDataStore.asMutableState(chatDataStateFlow)
 
     val drawerState = DrawerState(DrawerValue.Closed)
+    val messagesListState = LazyListState()
+    val assistantMessageStates = SnapshotLruCache<Any, AssistantMessageState>(
+        snapshotStateMap = mutableStateMapOf(),
+        maxSize = 100,
+    )
 
     suspend fun toggleDrawer() {
         if (drawerState.isClosed) {
@@ -125,6 +132,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         transformIn = { conversation },
         transformOut = {
             messageListLoading = true
+            messagesListState.requestScrollToItem(0)
             copy(conversation = it)
         },
     )

@@ -336,6 +336,7 @@ class AgentMainPage : AgentSubPage() {
                             getMessageCount = { messages.itemCount },
                             getMessageKey = messages.itemKey { it.key },
                             getMessageAt = { viewModel.getMessage(messages[it]) },
+                            modifier = Modifier.fillMaxSize(),
                             onPrevious = viewModel::messageOnPrevious,
                             onNext = viewModel::messageOnNext,
                             onRegenerate = viewModel::messageOnRegenerate,
@@ -343,16 +344,13 @@ class AgentMainPage : AgentSubPage() {
                             onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
                             initialToolVisibility = viewModel.defaultToolVisibility,
                             onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
-                            modifier = Modifier.fillMaxSize(),
                             contentPadding = padding,
+                            lazyListState = viewModel.messagesListState,
+                            assistantMessageStates = viewModel.assistantMessageStates,
                         )
                     }.map { it.measure(constraints) }
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
-                        val safeBottomPadding =
-                            safeContentPadding.calculateBottomPadding().roundToPx()
-                        val bottomPadding = contentPadding.calculateBottomPadding().roundToPx()
-
                         listPlaceables.fastForEach {
                             it.place(0, 0)
                         }

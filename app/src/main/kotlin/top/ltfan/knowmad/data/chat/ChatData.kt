@@ -22,6 +22,8 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.Message.Assistant
+import ai.koog.prompt.message.Message.Reasoning
 import ai.koog.prompt.message.ResponseMetaInfo
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -44,6 +46,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
+import top.ltfan.knowmad.data.chat.UiMessage.Koog
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
@@ -238,16 +241,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             uiMessage,
             SavedMarkdownState(
                 coroutineScope,
-                flowOf(
-                    when (uiMessage) {
-                        is Koog -> when (val message = uiMessage.message) {
-                            is Reasoning, is Assistant -> message.content
-                            else -> ""
-                        }
-
-                        else -> uiMessage.content
-                    },
-                ),
+                flowOf(uiMessage.filteredContent),
             ),
         )
 
@@ -274,6 +268,25 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
                     },
                 )
             }
+
+            suspend operator fun invoke(uiMessage: UiMessage) = Completed(
+                uiMessage = uiMessage,
+                markdownState = SavedMarkdownState.Fixed(uiMessage.filteredContent),
+            )
+
+            suspend operator fun invoke(message: Message) = Completed(
+                uiMessage = message.toUiMessage(),
+            )
+
+            private val UiMessage.filteredContent
+                inline get() = when (this) {
+                    is Koog -> when (message) {
+                        is Reasoning, is Assistant -> message.content
+                        else -> ""
+                    }
+
+                    else -> content
+                }
         }
     }
 

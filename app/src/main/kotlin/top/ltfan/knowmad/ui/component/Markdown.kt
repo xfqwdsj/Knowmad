@@ -144,6 +144,15 @@ sealed interface SavedMarkdownState {
     class Fixed(state: State) : SavedMarkdownState {
         override val state = MutableStateFlow(state).asStateFlow()
     }
+
+    companion object {
+        suspend fun Fixed(markdownText: String): Fixed {
+            val state = parseMarkdownFlow(markdownText)
+                .flowOn(Dispatchers.Default)
+                .first { it !is State.Loading }
+            return Fixed(state)
+        }
+    }
 }
 
 fun SavedMarkdownState(

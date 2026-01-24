@@ -44,6 +44,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -343,30 +345,31 @@ fun ChatMessageList(
     getMessageCount: () -> Int,
     getMessageKey: (index: Int) -> Any,
     getMessageAt: (index: Int) -> ChatListMessage?,
-    onPrevious: (message: ChatListMessage) -> Unit,
-    onNext: (message: ChatListMessage) -> Unit,
-    onRegenerate: (message: ChatListMessage) -> Unit,
-    initialReasoningVisibility: Boolean,
-    onAnyReasoningVisibilityChange: (visible: Boolean) -> Unit,
-    initialToolVisibility: Boolean,
-    onAnyToolVisibilityChange: (visible: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onPrevious: (message: ChatListMessage) -> Unit = {},
+    onNext: (message: ChatListMessage) -> Unit = {},
+    onRegenerate: (message: ChatListMessage) -> Unit = {},
+    initialReasoningVisibility: Boolean = true,
+    onAnyReasoningVisibilityChange: (visible: Boolean) -> Unit = {},
+    initialToolVisibility: Boolean = true,
+    onAnyToolVisibilityChange: (visible: Boolean) -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(),
+    lazyListState: LazyListState = rememberLazyListState(),
+    assistantMessageStates: MutableMap<Any, AssistantMessageState> = remember { mutableStateMapOf() },
     topToBottom: Boolean = false,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val assistantMessageStates = remember { mutableStateMapOf<Any, AssistantMessageState>() }
-
     LazyColumn(
         modifier = modifier,
+        state = lazyListState,
         contentPadding = contentPadding,
         reverseLayout = !topToBottom,
     ) {
         items(
             count = getMessageCount(),
             key = getMessageKey,
-        ) {
+        ) {// TODO: refactor dao query
             val index = getMessageCount() - 1 - it
             val key = getMessageKey(index)
             when (val data = getMessageAt(index) ?: return@items) {
@@ -395,30 +398,35 @@ fun ChatMessageList(
                 is MessageWithFilesAndBranchInfo -> {
                     val messageEntity = data.message
                     when (messageEntity.role) {
-                        Assistant -> AssistantMessage(
-                            state = assistantMessageStates.compute(key) { _, state ->
-                                state as? AssistantMessageState.Completed
-                                    ?: AssistantMessageState.Completed.fromEntity(
+                        Assistant -> {
+                            val state = assistantMessageStates[key].let { state ->
+                                if (state is AssistantMessageState.Completed) return@let state
+                                coroutineScope.launch {
+                                    assistantMessageStates[key] = AssistantMessageState.fromEntity(
                                         entity = messageEntity,
-                                        coroutineScope = coroutineScope,
                                         existingState = state,
                                     )
-                            } ?: error("`null` returned when getting assistant message state."),
-                            current = data.branchIndex,
-                            total = data.branchCount,
-                            onPrevious = { onPrevious(data) },
-                            onNext = { onNext(data) },
-                            onRegenerate = { onRegenerate(data) },
-                            initialReasoningVisibility = initialReasoningVisibility,
-                            onAnyReasoningVisibilityChange = { visible ->
-                                onAnyReasoningVisibilityChange(visible)
-                            },
-                            initialToolVisibility = initialToolVisibility,
-                            onAnyToolVisibilityChange = { visible ->
-                                onAnyToolVisibilityChange(visible)
-                            },
-                            modifier = Modifier.fillParentMaxWidth(),
-                        )
+                                }
+                                return@items // TODO: animation or placeholder
+                            }
+                            AssistantMessage(
+                                state = state,
+                                current = data.branchIndex,
+                                total = data.branchCount,
+                                onPrevious = { onPrevious(data) },
+                                onNext = { onNext(data) },
+                                onRegenerate = { onRegenerate(data) },
+                                initialReasoningVisibility = initialReasoningVisibility,
+                                onAnyReasoningVisibilityChange = { visible ->
+                                    onAnyReasoningVisibilityChange(visible)
+                                },
+                                initialToolVisibility = initialToolVisibility,
+                                onAnyToolVisibilityChange = { visible ->
+                                    onAnyToolVisibilityChange(visible)
+                                },
+                                modifier = Modifier.fillParentMaxWidth(),
+                            )
+                        }
 
                         User -> Box(
                             modifier = Modifier.fillParentMaxWidth(),
@@ -1126,52 +1134,6 @@ sealed interface AssistantMessageState {
         override val createdAt: Instant,
     ) : AssistantMessageState {
         override val completed: Boolean = true
-
-        companion object {
-            private val logger = Logger("CompletedState")
-
-            fun fromEntity(
-                entity: MessageEntity,
-                coroutineScope: CoroutineScope,
-                existingState: AssistantMessageState? = null,
-            ): Completed {
-                val existingCompletedContents = existingState?.completedContents?.toMutableList()
-                return Completed(
-                    contents = entity.parts.mapNotNull { part ->
-                        when (part) {
-                            is Koog -> when (val message = part.message) {
-                                is Assistant, is Reasoning, is Tool -> existingCompletedContents
-                                    ?.find { it.content == message.content }
-                                    ?.also {
-                                        logger.debug {
-                                            "Reusing existing Completed content for message: ${
-                                                message.content.take(30)
-                                            }"
-                                        }
-                                        existingCompletedContents.remove(it)
-                                    }
-                                    ?: AssistantMessageContent.Completed(
-                                        message = message,
-                                        coroutineScope = coroutineScope,
-                                    )
-
-                                else -> null
-                            }
-
-                            else -> AssistantMessageContent.Completed(
-                                uiMessage = part,
-                                coroutineScope = coroutineScope,
-                            )
-                        }
-                    },
-                    model = entity.generatedBy ?: UnknownLLModel,
-                    id = entity.id,
-                    conversationId = entity.conversationId,
-                    parentId = entity.parentId,
-                    createdAt = entity.createdAt,
-                )
-            }
-        }
     }
 
     fun toEntity() = MessageEntity(
@@ -1197,6 +1159,49 @@ sealed interface AssistantMessageState {
                 else -> uiMessage
             }
         }
+
+    companion object {
+        private val logger = Logger("AssistantMessageState")
+
+        suspend fun fromEntity(
+            entity: MessageEntity,
+            existingState: AssistantMessageState? = null,
+        ): Completed {
+            val existingCompletedContents = existingState?.completedContents?.toMutableList()
+            return Completed(
+                contents = entity.parts.mapNotNull { part ->
+                    when (part) {
+                        is Koog -> when (val message = part.message) {
+                            is Assistant, is Reasoning, is Tool -> existingCompletedContents
+                                ?.find { it.content == message.content }
+                                ?.also {
+                                    logger.debug {
+                                        "Reusing existing Completed content for message: ${
+                                            message.content.take(30)
+                                        }"
+                                    }
+                                    existingCompletedContents.remove(it)
+                                }
+                                ?: AssistantMessageContent.Completed(
+                                    message = message,
+                                )
+
+                            else -> null
+                        }
+
+                        else -> AssistantMessageContent.Completed(
+                            uiMessage = part,
+                        )
+                    }
+                },
+                model = entity.generatedBy ?: UnknownLLModel,
+                id = entity.id,
+                conversationId = entity.conversationId,
+                parentId = entity.parentId,
+                createdAt = entity.createdAt,
+            )
+        }
+    }
 }
 
 sealed interface AssistantMessageStreamingEvent {
