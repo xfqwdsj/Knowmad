@@ -24,6 +24,8 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.data.FtsDao
 import kotlin.time.Clock
@@ -185,6 +187,28 @@ interface ScheduleDao : FtsDao {
     @Transaction
     suspend fun getEventsInRange(startTime: Instant, endTime: Instant): List<Event> {
         return getOriginalEventsInRange(startTime, endTime).map { it.toEvent() }
+    }
+
+    @Transaction
+    @Query(
+        """
+            SELECT * FROM EventEntity
+            WHERE startTime <= :endTime AND endTime >= :startTime
+            ORDER BY
+                startTime ASC,
+                endTime DESC,
+                createdAt ASC
+    """,
+    )
+    fun getOriginalEventsFlowInRange(
+        startTime: Instant,
+        endTime: Instant,
+    ): Flow<List<EventWithSemesterAndCourse>>
+
+    fun getEventsFlowInRange(startTime: Instant, endTime: Instant): Flow<List<Event>> {
+        return getOriginalEventsFlowInRange(startTime, endTime).map { list ->
+            list.map { it.toEvent() }
+        }
     }
 
     @Transaction

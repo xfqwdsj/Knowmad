@@ -59,7 +59,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -90,7 +89,6 @@ import com.kizitonwose.calendar.core.plusDays
 import com.kizitonwose.calendar.core.plusMonths
 import com.kyant.capsule.ContinuousRoundedRectangle
 import com.tyme.solar.SolarDay
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -156,6 +154,19 @@ fun Calendar(
                 )
             },
         )
+    }
+
+    LaunchedEffect(calendarState.selectedDate) {
+        launch {
+            calendarState.monthCalendarState.animateScrollToMonth(
+                calendarState.selectedDate.yearMonth,
+            )
+        }
+        launch {
+            calendarState.weekCalendarState.animateScrollToWeek(
+                calendarState.selectedDate,
+            )
+        }
     }
 
     var lastDay by remember { mutableStateOf(today) }
@@ -358,6 +369,7 @@ fun MonthHeader(
     Row(modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
+                // TODO: replace locale with state
                 dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, Locale.getDefault()),
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
@@ -373,13 +385,11 @@ fun rememberCalendarState(
     initialTimeZone: TimeZone = rememberSystemTimeZone(),
     initialDate: LocalDate = rememberSystemDate(timeZone = initialTimeZone),
     daysOfWeek: List<DayOfWeek> = rememberDaysOfWeek(),
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
 ): CalendarState {
-    return remember(initialDate, daysOfWeek, coroutineScope) {
+    return remember(initialDate, daysOfWeek) {
         CalendarState(
             initialDate = initialDate,
             daysOfWeek = daysOfWeek,
-            coroutineScope = coroutineScope,
         )
     }
 }
@@ -389,7 +399,6 @@ class CalendarState(
     initialTimeZone: TimeZone = TimeZone.currentSystemDefault(),
     initialDate: LocalDate = LocalDate.now(timeZone = initialTimeZone),
     val daysOfWeek: List<DayOfWeek> = daysOfWeek(),
-    private val coroutineScope: CoroutineScope,
 ) {
     val monthCalendarState = MonthCalendarState::class.constructors.first().call(
         initialDate.yearMonth.minusMonths(AdjacentMonths),
@@ -410,18 +419,9 @@ class CalendarState(
 
     var timeZone by mutableStateOf(initialTimeZone)
 
-    private var _selectedDate by mutableStateOf(initialDate)
-    var selectedDate
-        get() = _selectedDate
-        set(value) {
-            _selectedDate = value
-            coroutineScope.launch {
-                monthCalendarState.animateScrollToMonth(value.yearMonth)
-            }
-            coroutineScope.launch {
-                weekCalendarState.animateScrollToWeek(value)
-            }
-        }
+    var selectedDate by mutableStateOf(initialDate)
+
+    val currentMonth get() = monthCalendarState.firstVisibleMonth.yearMonth
 }
 
 @Composable

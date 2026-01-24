@@ -34,16 +34,20 @@ import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.ui.component.CalendarState
 import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
+
+    val scheduleDao = application.appDatabase.scheduleDao()
 
     private val wizardStateStore = WizardState.createDataStore()
     private val wizardStateFlow = wizardStateStore.dataStateFlow()
@@ -52,6 +56,11 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         transformIn = { data },
         transformOut = { copy(data = it) },
     )
+
+    val calendarState = CalendarState()
+
+    fun getEvents(startTime: Instant, endTime: Instant) =
+        scheduleDao.getEventsFlowInRange(startTime, endTime)
 
     fun onFinishWizard(
         entry: LLMConfigEntry,

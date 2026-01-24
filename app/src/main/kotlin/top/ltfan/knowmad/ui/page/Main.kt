@@ -27,10 +27,13 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.MediumFloatingActionButton
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -53,9 +56,11 @@ import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
+import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarHost
@@ -64,6 +69,7 @@ import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import java.util.Locale
 
 @Serializable
 class MainPage : Page() {
@@ -174,6 +180,17 @@ class MainPage : Page() {
                 snackbarHost = { SnackbarHost() },
             ) {
                 Scaffold(
+                    topBar = {
+                        MediumTopAppBar(
+                            title = {
+                                Text(
+                                    // TODO: replace locale with state
+                                    viewModel.calendarState.currentMonth.month
+                                        .toJavaMonth().getDisplayName(FULL, Locale.getDefault()),
+                                )
+                            },
+                        )
+                    },
                     floatingActionButton = {
                         MediumFloatingActionButton(
                             onClick = {
@@ -187,6 +204,11 @@ class MainPage : Page() {
                 ) {
                     val contentPadding = it + contentPadding
 
+                    Calendar(
+                        modifier = Modifier.padding(contentPadding),
+                        calendarState = viewModel.calendarState,
+                        getEvents = viewModel::getEvents,
+                    )
                 }
             }
         }
