@@ -22,21 +22,25 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.annotation.FloatRange
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,6 +87,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kizitonwose.calendar.compose.HorizontalCalendar
+import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
 import com.kizitonwose.calendar.core.OutDateStyle
 import com.kizitonwose.calendar.core.daysOfWeek
@@ -136,44 +141,79 @@ fun Calendar(
 ) {
     val today = rememberSystemDate(timeZone = calendarState.timeZone)
 
-    Box(modifier) {
-        HorizontalCalendar(
-            modifier = Modifier.fillMaxSize(),
-            state = calendarState.monthCalendarState,
-            contentHeightMode = Fill,
-            dayContent = { day ->
-                val selected = day.date == calendarState.selectedDate
+    val transition = rememberTransition(calendarState.transitionState)
 
-                val events = remember(day) {
-                    if (day.position != MonthDate) return@remember null
-                    snapshotFlow { calendarState.timeZone }.flatMapLatest {
-                        val startOfDay = day.date.atStartOfDayIn(it)
-                        val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                        getEvents(startOfDay, endOfDay)
-                    }
-                }?.collectAsState(initial = emptyList())
+    transition.AnimatedContent(
+        modifier = modifier,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+    ) { mode ->
+        when (mode) {
+            Month -> HorizontalCalendar(
+                modifier = Modifier.fillMaxSize(),
+                state = calendarState.monthCalendarState,
+                contentHeightMode = Fill,
+                dayContent = { day ->
+                    val selected = day.date == calendarState.selectedDate
 
-                Day(
-                    date = day.date,
-                    selected = selected && day.position == MonthDate,
-                    onClick = { calendarState.selectedDate = day.date },
-                    events = events?.value,
-                    outOfMonth = day.position != MonthDate,
-                    border = if (day.date == today) BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    ) else null,
-                )
-            },
-            monthHeader = {
-                MonthHeader(
-                    modifier = headerModifier,
-                    daysOfWeek = calendarState.daysOfWeek,
-                    locale = locale,
-                    textStyle = headerTextStyle,
-                )
-            },
-        )
+                    val events = remember(day) {
+                        if (day.position != MonthDate) return@remember null
+                        snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                            val startOfDay = day.date.atStartOfDayIn(it)
+                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                            getEvents(startOfDay, endOfDay)
+                        }
+                    }?.collectAsState(initial = emptyList())
+
+                    Day(
+                        date = day.date,
+                        selected = selected && day.position == MonthDate,
+                        onClick = { calendarState.selectedDate = day.date },
+                        events = events?.value,
+                        outOfMonth = day.position != MonthDate,
+                        border = if (day.date == today) BorderStroke(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) else null,
+                    )
+                },
+                monthHeader = {
+                    MonthHeader(
+                        modifier = headerModifier,
+                        daysOfWeek = calendarState.daysOfWeek,
+                        locale = locale,
+                        textStyle = headerTextStyle,
+                    )
+                },
+            )
+
+            Week -> WeekCalendar(
+                modifier = Modifier.fillMaxSize(),
+                state = calendarState.weekCalendarState,
+                dayContent = { day ->
+                    val selected = day.date == calendarState.selectedDate
+
+                    val events by remember(day) {
+                        snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                            val startOfDay = day.date.atStartOfDayIn(it)
+                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                            getEvents(startOfDay, endOfDay)
+                        }
+                    }.collectAsState(initial = emptyList())
+
+                    Day(
+                        date = day.date,
+                        selected = selected,
+                        onClick = { calendarState.selectedDate = day.date },
+                        hasEvents = events.isNotEmpty(),
+                        outOfMonth = false,
+                        border = if (day.date == today) BorderStroke(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) else null,
+                    )
+                },
+            )
+        }
     }
 
     LaunchedEffect(calendarState.selectedDate) {
@@ -213,6 +253,7 @@ fun Day(
     selected: Boolean,
     onClick: () -> Unit,
     events: List<Event>? = null,
+    hasEvents: Boolean? = null,
     outOfMonth: Boolean = false,
     border: BorderStroke? = null,
 ) {
@@ -270,7 +311,15 @@ fun Day(
             }
         }
 
-        events?.ifEmpty { null }?.let { Events(it) }
+        events?.ifEmpty { null }?.let { Events(it) } ?: hasEvents?.let { hasEvents ->
+            AnimatedVisibility(
+                visible = hasEvents,
+                enter = expandIn(),
+                exit = shrinkOut(),
+            ) {
+                Dot()
+            }
+        }
     }
 }
 
@@ -295,20 +344,14 @@ fun Events(events: List<Event>) {
                 val radius by transition.animateDp {
                     if (it == Visible) 2.dp else AppRadiusSmall
                 }
-                Spacer(
-                    Modifier
-                        .size(4.dp)
-                        .matchParentShortestSide()
-                        .clip(ContinuousRoundedRectangle(radius))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .run {
-                            if (positioned) sharedBounds(
-                                rememberSharedContentState(CalendarSharedKey),
-                                animatedVisibilityScope = this@AnimatedVisibility,
-                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                            )
-                            else onGloballyPositioned { positioned = true }
-                        },
+                Dot(
+                    modifier = if (positioned) Modifier.sharedBounds(
+                        rememberSharedContentState(CalendarSharedKey),
+                        animatedVisibilityScope = this@AnimatedVisibility,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    )
+                    else Modifier.onGloballyPositioned { positioned = true },
+                    shape = ContinuousRoundedRectangle(radius),
                 )
             }
             for ((index, event) in events.withIndex()) {
@@ -367,6 +410,24 @@ fun Events(events: List<Event>) {
             }
         }
     }
+}
+
+@Composable
+private fun Dot(
+    modifier: Modifier = Modifier,
+    requiredSize: Dp = 4.dp,
+    color: Color = MaterialTheme.colorScheme.primary,
+    shape: Shape = ContinuousRoundedRectangle(2.dp),
+) {
+    // TODO: semantic description
+    Spacer(
+        Modifier
+            .size(requiredSize)
+            .matchParentShortestSide()
+            .clip(shape)
+            .background(color)
+            .then(modifier),
+    )
 }
 
 @Composable
@@ -480,6 +541,24 @@ class CalendarState(
         null,
     )
 
+    val transitionState = SeekableTransitionState<CalendarDisplayMode>(Month)
+    val currentMode get() = transitionState.currentState
+
+    suspend fun snapToMode(mode: CalendarDisplayMode) {
+        transitionState.snapTo(mode)
+    }
+
+    suspend fun seekToMode(
+        @FloatRange(from = 0.0, to = 1.0) fraction: Float,
+        targetMode: CalendarDisplayMode = transitionState.targetState,
+    ) {
+        transitionState.seekTo(fraction, targetMode)
+    }
+
+    suspend fun animateToMode(mode: CalendarDisplayMode) {
+        transitionState.animateTo(mode)
+    }
+
     private var _timeZone by mutableStateOf(initialTimeZone)
     var timeZone: TimeZone
         get() = _timeZone
@@ -518,6 +597,10 @@ class CalendarState(
             )
         }
     }
+}
+
+enum class CalendarDisplayMode {
+    Month, Week
 }
 
 @Composable
