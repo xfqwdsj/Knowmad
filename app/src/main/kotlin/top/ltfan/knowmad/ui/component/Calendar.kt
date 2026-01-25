@@ -209,6 +209,8 @@ fun Day(
     val tymeTermDay = remember(tymeSolarDay) { tymeSolarDay.getTermDay() }
     val tymeLunarDay = remember(tymeSolarDay) { tymeSolarDay.getLunarDay() }
     val tymeLunarMonth = remember(tymeLunarDay) { tymeLunarDay.getLunarMonth() }
+    val tymeSolarFestival = remember(tymeSolarDay) { tymeSolarDay.getFestival() }
+    val tymeLunarFestival = remember(tymeLunarDay) { tymeLunarDay.getFestival() }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -243,9 +245,14 @@ fun Day(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    if (tymeTermDay.getDayIndex() == 0) tymeTermDay.getName()
-                    else if (tymeLunarDay.day != 1) tymeLunarDay.getName()
-                    else tymeLunarMonth.getName(),
+                    when {
+                        // TODO: handle festival overlaps
+                        tymeSolarFestival != null -> tymeSolarFestival.getName()
+                        tymeLunarFestival != null -> tymeLunarFestival.getName()
+                        tymeTermDay.getDayIndex() == 0 -> tymeTermDay.getName()
+                        tymeLunarDay.day != 1 -> tymeLunarDay.getName()
+                        else -> tymeLunarMonth.getName()
+                    },
                     color = if (!outOfMonth) MaterialTheme.colorScheme.onSurface
                     else LocalContentColor.current,
                     style = MaterialTheme.typography.bodySmall,
