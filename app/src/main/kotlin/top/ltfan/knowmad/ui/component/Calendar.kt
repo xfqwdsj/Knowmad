@@ -72,8 +72,12 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
@@ -124,6 +128,7 @@ fun Calendar(
         newTimeZone: TimeZone,
     ) -> Unit = { _, it -> calendarState.timeZone = it },
     locale: Locale = LocalConfiguration.current.locales[0],
+    headerTextStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
         flowOf(emptyList())
     },
@@ -164,6 +169,7 @@ fun Calendar(
                     modifier = Modifier.padding(vertical = 4.dp),
                     daysOfWeek = calendarState.daysOfWeek,
                     locale = locale,
+                    textStyle = headerTextStyle,
                 )
             },
         )
@@ -397,6 +403,7 @@ fun MonthHeader(
     modifier: Modifier = Modifier,
     daysOfWeek: List<DayOfWeek> = emptyList(),
     locale: Locale = LocalConfiguration.current.locales[0],
+    textStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
 ) {
     Row(modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
@@ -405,9 +412,32 @@ fun MonthHeader(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                style = MaterialTheme.typography.bodyMediumEmphasized,
+                style = textStyle,
             )
         }
+    }
+}
+
+@Composable
+fun rememberMonthHeaderTextMeasuredHeight(
+    daysOfWeek: List<DayOfWeek> = rememberDaysOfWeek(),
+    locale: Locale = LocalConfiguration.current.locales[0],
+    textStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
+): Dp {
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+
+    return remember(density, textMeasurer, daysOfWeek, locale, textStyle) {
+        with(density) {
+            daysOfWeek.asSequence()
+                .map { it.toJavaDayOfWeek().getDisplayName(NARROW, locale) }
+                .maxOfOrNull {
+                    textMeasurer.measure(
+                        text = it,
+                        style = textStyle,
+                    ).size.height.toDp()
+                }
+        } ?: 0.dp
     }
 }
 
