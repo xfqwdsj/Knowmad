@@ -57,6 +57,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -450,7 +451,32 @@ class CalendarState(
 
     var selectedDate by mutableStateOf(initialDate)
 
-    val currentMonth get() = monthCalendarState.firstVisibleMonth.yearMonth
+    private var lastFirstVisibleMonth by mutableStateOf(monthCalendarState.firstVisibleMonth.yearMonth)
+    private var lastLastVisibleMonth by mutableStateOf(monthCalendarState.lastVisibleMonth.yearMonth)
+    val currentMonth by derivedStateOf {
+        val firstVisibleMonth = monthCalendarState.firstVisibleMonth.yearMonth
+        val lastVisibleMonth = monthCalendarState.lastVisibleMonth.yearMonth
+        when {
+            firstVisibleMonth == lastVisibleMonth -> {
+                lastFirstVisibleMonth = firstVisibleMonth
+                lastLastVisibleMonth = lastVisibleMonth
+                firstVisibleMonth
+            }
+
+            firstVisibleMonth == lastFirstVisibleMonth -> firstVisibleMonth
+            lastVisibleMonth == lastLastVisibleMonth -> lastVisibleMonth
+            firstVisibleMonth > lastFirstVisibleMonth -> firstVisibleMonth
+            lastVisibleMonth < lastLastVisibleMonth -> lastVisibleMonth
+            lastFirstVisibleMonth == lastLastVisibleMonth -> lastFirstVisibleMonth
+            else -> error(
+                "Unexpected state: " +
+                        "firstVisibleMonth=$firstVisibleMonth, " +
+                        "lastVisibleMonth=$lastVisibleMonth, " +
+                        "lastFirstVisibleMonth=$lastFirstVisibleMonth, " +
+                        "lastLastVisibleMonth=$lastLastVisibleMonth",
+            )
+        }
+    }
 }
 
 @Composable
