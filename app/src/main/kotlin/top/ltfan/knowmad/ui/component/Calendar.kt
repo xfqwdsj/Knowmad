@@ -40,7 +40,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -70,11 +69,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
@@ -105,6 +106,7 @@ import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.contractColorFor
+import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
@@ -224,8 +226,13 @@ fun Day(
                     maxHeight = 64.dp,
                 )
                 .padding(2.dp)
-                .fillMaxWidth()
-                .aspectRatio(1f),
+                .layout { measurable, constraints ->
+                    val size = minOf(constraints.maxWidth, constraints.maxHeight)
+                    val placeable = measurable.measure(Constraints.fixed(size, size))
+                    layout(size, size) {
+                        placeable.placeRelative(0, 0)
+                    }
+                },
             shape = MaterialTheme.shapes.small,
             color = if (!selected && !outOfMonth) MaterialTheme.colorScheme.surfaceContainer
             else if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -233,7 +240,37 @@ fun Day(
             border = border,
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.layout { measurable, constraints ->
+                    val placeable = measurable.measure(
+                        Constraints(
+                            minWidth = 0,
+                            maxWidth = Constraints.Infinity,
+                            minHeight = 0,
+                            maxHeight = Constraints.Infinity,
+                        ),
+                    )
+
+                    val maxWidth = constraints.maxWidth
+                    val maxHeight = constraints.maxHeight
+
+                    val scale = minOf(
+                        1f,
+                        minOf(
+                            maxWidth.toFloat() / placeable.width,
+                            maxHeight.toFloat() / placeable.height,
+                        ),
+                    )
+
+                    val width = (placeable.width * scale).roundToInt()
+                    val height = (placeable.height * scale).roundToInt()
+
+                    layout(width, height) {
+                        placeable.placeRelativeWithLayer(0, 0) {
+                            this.scaleX = scale
+                            this.scaleY = scale
+                        }
+                    }
+                },
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
