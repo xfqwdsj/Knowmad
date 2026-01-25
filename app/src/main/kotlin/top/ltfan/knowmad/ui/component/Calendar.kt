@@ -106,6 +106,7 @@ import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.contractColorFor
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -123,6 +124,7 @@ fun Calendar(
         lastTimeZone: TimeZone,
         newTimeZone: TimeZone,
     ) -> Unit = { _, it -> calendarState.timeZone = it },
+    locale: Locale = LocalConfiguration.current.locales[0],
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
         flowOf(emptyList())
     },
@@ -162,6 +164,7 @@ fun Calendar(
                 MonthHeader(
                     modifier = Modifier.padding(vertical = 4.dp),
                     daysOfWeek = calendarState.daysOfWeek,
+                    locale = locale,
                 )
             },
         )
@@ -429,13 +432,12 @@ fun Event(
 fun MonthHeader(
     modifier: Modifier = Modifier,
     daysOfWeek: List<DayOfWeek> = emptyList(),
+    locale: Locale = LocalConfiguration.current.locales[0],
 ) {
-    val configuration = LocalConfiguration.current
-
     Row(modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
-                dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, configuration.locales[0]),
+                dayOfWeek.toJavaDayOfWeek().getDisplayName(NARROW, locale),
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,

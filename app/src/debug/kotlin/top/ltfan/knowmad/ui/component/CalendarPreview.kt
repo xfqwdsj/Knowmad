@@ -40,6 +40,7 @@ import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import java.util.Locale
 import kotlin.random.Random
 import kotlin.time.Instant
 
@@ -72,6 +73,7 @@ fun CalendarPreview() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(height),
+                    locale = Locale.getDefault(),
                 ) { _, _ ->
                     flowOf(
                         listOf(
