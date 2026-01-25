@@ -22,6 +22,7 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,7 +66,9 @@ import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarHost
+import top.ltfan.knowmad.ui.component.rememberMonthHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -78,6 +81,8 @@ class MainPage : Page() {
     override fun Content() {
         val viewModel = LocalAppViewModel.current
 
+        val density = LocalDensity.current
+        val layoutDirection = LocalLayoutDirection.current
         val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
 
@@ -120,9 +125,6 @@ class MainPage : Page() {
                                 }
                             },
                     ) {
-                        val density = LocalDensity.current
-                        val layoutDirection = LocalLayoutDirection.current
-
                         val sheetWidth = constraints.maxWidth
 
                         val gap = (screenWidth - sheetWidth) / 2
@@ -203,13 +205,35 @@ class MainPage : Page() {
                     contentWindowInsets = AppWindowInsets,
                 ) {
                     val contentPadding = it + contentPadding
+                    Column(Modifier.fillMaxSize()) {
+                        BoxWithConstraints(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    contentPadding.copy(
+                                        layoutDirection,
+                                        bottom = 0.dp,
+                                    ),
+                                ),
+                        ) {
+                            val width = maxWidth
 
-                    Calendar(
-                        modifier = Modifier.padding(contentPadding),
-                        calendarState = viewModel.calendarState,
-                        onSystemDateChanged = viewModel::onSystemDateChanged,
-                        getEvents = viewModel::getEvents,
-                    )
+                            val headerVerticalPadding = 4.dp
+                            val headerTextHeight = rememberMonthHeaderTextMeasuredHeight()
+                            val headerHeight = headerTextHeight + headerVerticalPadding * 2
+
+                            val eventDotSize = 4.dp
+                            val weekHeight = (width / 7f) + eventDotSize
+
+                            // TODO: switch mode by gesture
+                            Calendar(
+                                headerModifier = Modifier.padding(vertical = headerVerticalPadding),
+                                calendarState = viewModel.calendarState,
+                                onSystemDateChanged = viewModel::onSystemDateChanged,
+                                getEvents = viewModel::getEvents,
+                            )
+                        }
+                    }
                 }
             }
         }
