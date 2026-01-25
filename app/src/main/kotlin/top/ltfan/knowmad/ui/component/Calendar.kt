@@ -389,8 +389,9 @@ fun rememberCalendarState(
     initialDate: LocalDate = rememberSystemDate(timeZone = initialTimeZone),
     daysOfWeek: List<DayOfWeek> = rememberDaysOfWeek(),
 ): CalendarState {
-    return remember(initialDate, daysOfWeek) {
+    return remember(initialTimeZone, initialDate, daysOfWeek) {
         CalendarState(
+            initialTimeZone = initialTimeZone,
             initialDate = initialDate,
             daysOfWeek = daysOfWeek,
         )
