@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
@@ -56,8 +57,6 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         transformIn = { data },
         transformOut = { copy(data = it) },
     )
-
-    val calendarState = CalendarState()
 
     fun getEvents(startTime: Instant, endTime: Instant) =
         scheduleDao.getEventsFlowInRange(startTime, endTime)
@@ -146,6 +145,17 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                 }
             }
         }
+    }
+
+    val calendarState = CalendarState()
+
+    fun onSystemDateChanged(lastDay: LocalDate, newDay: LocalDate) {
+        if (lastDay == calendarState.selectedDate) {
+            calendarState.selectedDate = newDay
+            return
+        }
+
+        // TODO: UI feedback for that
     }
 }
 

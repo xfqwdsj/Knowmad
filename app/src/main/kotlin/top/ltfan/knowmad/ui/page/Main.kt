@@ -207,6 +207,7 @@ class MainPage : Page() {
                     Calendar(
                         modifier = Modifier.padding(contentPadding),
                         calendarState = viewModel.calendarState,
+                        onSystemDateChanged = viewModel::onSystemDateChanged,
                         getEvents = viewModel::getEvents,
                     )
                 }

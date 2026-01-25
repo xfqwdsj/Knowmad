@@ -99,6 +99,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.number
 import kotlinx.datetime.toJavaDayOfWeek
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
@@ -111,7 +112,14 @@ import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
 fun Calendar(
     modifier: Modifier = Modifier,
     calendarState: CalendarState = rememberCalendarState(),
-    onSystemDateChanged: (today: LocalDate) -> Unit = {},
+    onSystemDateChanged: (
+        lastDay: LocalDate,
+        newDay: LocalDate,
+    ) -> Unit = { _, it -> calendarState.selectedDate = it },
+    onSystemTimeZoneChanged: (
+        lastTimeZone: TimeZone,
+        newTimeZone: TimeZone,
+    ) -> Unit = { _, it -> calendarState.timeZone = it },
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
         flowOf(emptyList())
     },
@@ -172,8 +180,17 @@ fun Calendar(
     var lastDay by remember { mutableStateOf(today) }
     LaunchedEffect(today) {
         if (lastDay != today) {
+            onSystemDateChanged(lastDay, today)
             lastDay = today
-            onSystemDateChanged(today)
+        }
+    }
+
+    val currentTimeZone = rememberSystemTimeZone()
+    var lastTimeZone by remember { mutableStateOf(currentTimeZone) }
+    LaunchedEffect(currentTimeZone) {
+        if (lastTimeZone != currentTimeZone) {
+            onSystemTimeZoneChanged(lastTimeZone, currentTimeZone)
+            lastTimeZone = currentTimeZone
         }
     }
 }
@@ -385,8 +402,8 @@ fun MonthHeader(
 
 @Composable
 fun rememberCalendarState(
-    initialTimeZone: TimeZone = rememberSystemTimeZone(),
-    initialDate: LocalDate = rememberSystemDate(timeZone = initialTimeZone),
+    initialTimeZone: TimeZone = remember { TimeZone.currentSystemDefault() },
+    initialDate: LocalDate = remember { LocalDate.now(timeZone = initialTimeZone) },
     daysOfWeek: List<DayOfWeek> = rememberDaysOfWeek(),
 ): CalendarState {
     return remember(initialTimeZone, initialDate, daysOfWeek) {
@@ -421,7 +438,15 @@ class CalendarState(
         null,
     )
 
-    var timeZone by mutableStateOf(initialTimeZone)
+    private var _timeZone by mutableStateOf(initialTimeZone)
+    var timeZone: TimeZone
+        get() = _timeZone
+        set(value) {
+            if (_timeZone != value) {
+                selectedDate = selectedDate.atStartOfDayIn(_timeZone).toLocalDateTime(value).date
+                _timeZone = value
+            }
+        }
 
     var selectedDate by mutableStateOf(initialDate)
 
