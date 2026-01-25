@@ -118,6 +118,7 @@ import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
 @Composable
 fun Calendar(
     modifier: Modifier = Modifier,
+    headerModifier: Modifier = Modifier.padding(vertical = 4.dp),
     calendarState: CalendarState = rememberCalendarState(),
     onSystemDateChanged: (
         lastDay: LocalDate,
@@ -166,7 +167,7 @@ fun Calendar(
             },
             monthHeader = {
                 MonthHeader(
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = headerModifier,
                     daysOfWeek = calendarState.daysOfWeek,
                     locale = locale,
                     textStyle = headerTextStyle,
