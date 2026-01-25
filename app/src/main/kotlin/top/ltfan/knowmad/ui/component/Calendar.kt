@@ -69,13 +69,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
@@ -105,9 +103,10 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
+import top.ltfan.knowmad.ui.util.autoScale
 import top.ltfan.knowmad.ui.util.contractColorFor
+import top.ltfan.knowmad.ui.util.matchParentShortestSide
 import java.util.Locale
-import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
@@ -229,13 +228,7 @@ fun Day(
                     maxHeight = 64.dp,
                 )
                 .padding(2.dp)
-                .layout { measurable, constraints ->
-                    val size = minOf(constraints.maxWidth, constraints.maxHeight)
-                    val placeable = measurable.measure(Constraints.fixed(size, size))
-                    layout(size, size) {
-                        placeable.placeRelative(0, 0)
-                    }
-                },
+                .matchParentShortestSide(),
             shape = MaterialTheme.shapes.small,
             color = if (!selected && !outOfMonth) MaterialTheme.colorScheme.surfaceContainer
             else if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -243,37 +236,7 @@ fun Day(
             border = border,
         ) {
             Column(
-                modifier = Modifier.layout { measurable, constraints ->
-                    val placeable = measurable.measure(
-                        Constraints(
-                            minWidth = 0,
-                            maxWidth = Constraints.Infinity,
-                            minHeight = 0,
-                            maxHeight = Constraints.Infinity,
-                        ),
-                    )
-
-                    val maxWidth = constraints.maxWidth
-                    val maxHeight = constraints.maxHeight
-
-                    val scale = minOf(
-                        1f,
-                        minOf(
-                            maxWidth.toFloat() / placeable.width,
-                            maxHeight.toFloat() / placeable.height,
-                        ),
-                    )
-
-                    val width = (placeable.width * scale).roundToInt()
-                    val height = (placeable.height * scale).roundToInt()
-
-                    layout(width, height) {
-                        placeable.placeRelativeWithLayer(0, 0) {
-                            this.scaleX = scale
-                            this.scaleY = scale
-                        }
-                    }
-                },
+                modifier = Modifier.autoScale(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -328,6 +291,7 @@ fun Events(events: List<Event>) {
                 Spacer(
                     Modifier
                         .size(4.dp)
+                        .matchParentShortestSide()
                         .clip(ContinuousRoundedRectangle(radius))
                         .background(MaterialTheme.colorScheme.primary)
                         .run {
