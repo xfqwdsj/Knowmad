@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import kotlin.math.roundToInt
 
 fun Modifier.matchParentShortestSide() = layout { measurable, constraints ->
@@ -32,24 +33,24 @@ fun Modifier.matchParentShortestSide() = layout { measurable, constraints ->
     }
 }
 
-fun Modifier.autoScale() = layout { measurable, constraints ->
+fun Modifier.autoScale(
+    maxWidth: Dp = Dp.Infinity,
+    maxHeight: Dp = Dp.Infinity,
+) = layout { measurable, constraints ->
     val placeable = measurable.measure(
         Constraints(
             minWidth = 0,
-            maxWidth = Constraints.Infinity,
+            maxWidth = maxWidth.roundToPx(),
             minHeight = 0,
-            maxHeight = Constraints.Infinity,
+            maxHeight = maxHeight.roundToPx(),
         ),
     )
-
-    val maxWidth = constraints.maxWidth
-    val maxHeight = constraints.maxHeight
 
     val scale = minOf(
         1f,
         minOf(
-            maxWidth.toFloat() / placeable.width,
-            maxHeight.toFloat() / placeable.height,
+            constraints.maxWidth.toFloat() / placeable.width,
+            constraints.maxHeight.toFloat() / placeable.height,
         ),
     )
 

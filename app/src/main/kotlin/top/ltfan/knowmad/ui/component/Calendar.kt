@@ -36,6 +36,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -49,6 +51,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -100,6 +103,7 @@ import com.kizitonwose.calendar.core.plusDays
 import com.kizitonwose.calendar.core.plusMonths
 import com.kyant.capsule.ContinuousRoundedRectangle
 import com.tyme.solar.SolarDay
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -119,6 +123,7 @@ import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.matchParentShortestSide
 import java.util.Locale
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
 
@@ -294,7 +299,7 @@ fun Day(
             border = border,
         ) {
             Column(
-                modifier = Modifier.autoScale(),
+                modifier = Modifier.autoScale(maxWidth = 48.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -303,17 +308,20 @@ fun Day(
                     color = if (!outOfMonth) MaterialTheme.colorScheme.onSurface
                     else LocalContentColor.current,
                     fontWeight = if (!selected) FontWeight.Bold else FontWeight.ExtraBold,
+                    maxLines = 1,
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                Text(
-                    when {
-                        // TODO: handle festival overlaps
-                        tymeSolarFestival != null -> tymeSolarFestival.getName()
-                        tymeLunarFestival != null -> tymeLunarFestival.getName()
-                        tymeTermDay.getDayIndex() == 0 -> tymeTermDay.getName()
-                        tymeLunarDay.day != 1 -> tymeLunarDay.getName()
-                        else -> tymeLunarMonth.getName()
-                    },
+                DaySecondaryText(
+                    texts = listOfNotNull(
+                        tymeSolarFestival?.getName(),
+                        tymeLunarFestival?.getName(),
+                        tymeTermDay.getName().takeIf { tymeTermDay.getDayIndex() == 0 },
+                        tymeLunarDay.getName().takeIf { tymeLunarDay.day != 1 },
+                        tymeLunarMonth.getName().takeIf { tymeLunarDay.day == 1 },
+                    ),
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .basicMarquee(iterations = Int.MAX_VALUE),
                     color = if (!outOfMonth) MaterialTheme.colorScheme.onSurface
                     else LocalContentColor.current,
                     style = MaterialTheme.typography.bodySmall,
@@ -329,6 +337,46 @@ fun Day(
             ) {
                 Dot()
             }
+        }
+    }
+}
+
+@Composable
+private fun DaySecondaryText(
+    texts: List<String>,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    maxLines: Int = 1,
+    style: TextStyle = MaterialTheme.typography.bodySmall,
+) {
+    var currentText by remember { mutableStateOf(texts.firstOrNull()) }
+
+    AnimatedContent(
+        targetState = currentText,
+        modifier = Modifier.fillMaxWidth(),
+        transitionSpec = {
+            (fadeIn() + slideInVertically { it / 2 }) togetherWith
+                    (fadeOut() + slideOutVertically { -it / 2 }) using null
+        },
+        contentAlignment = Alignment.Center,
+    ) { text ->
+        if (text == null) return@AnimatedContent
+        Text(
+            text = text,
+            modifier = modifier,
+            color = color,
+            maxLines = maxLines,
+            style = style,
+        )
+    }
+
+    LaunchedEffect(texts) {
+        var index = 0
+        while (index in texts.indices) {
+            currentText = texts[index]
+            index++
+            if (index >= texts.size) index = 0
+            delay(5.seconds)
         }
     }
 }
