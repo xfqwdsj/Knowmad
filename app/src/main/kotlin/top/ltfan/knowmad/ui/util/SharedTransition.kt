@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.util
 
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
 @Composable
@@ -27,6 +28,15 @@ fun <R> localSharedTransitionScope(content: @Composable SharedTransitionScope.()
     with(LocalSharedTransitionScope.current) {
         content()
     }
+
+@Composable
+fun SharedTransitionScope.ProvideLocalSharedTransitionScope(
+    content: @Composable SharedTransitionScope.() -> Unit,
+) {
+    CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+        content()
+    }
+}
 
 val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope> {
     error("No SharedTransitionScopes provided")

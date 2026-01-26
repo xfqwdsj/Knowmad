@@ -118,8 +118,10 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
+import top.ltfan.knowmad.ui.util.ProvideLocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.autoScale
 import top.ltfan.knowmad.ui.util.contractColorFor
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.matchParentShortestSide
 import java.util.Locale
 import kotlin.time.Clock
@@ -150,84 +152,96 @@ fun Calendar(
 
     val transition = rememberTransition(calendarState.transitionState)
 
-    transition.AnimatedContent(
-        modifier = modifier,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-    ) { mode ->
-        when (mode) {
-            Month -> HorizontalCalendar(
-                modifier = Modifier.fillMaxSize(),
-                state = calendarState.monthCalendarState,
-                contentHeightMode = Fill,
-                dayContent = { day ->
-                    val selected = day.date == calendarState.selectedDate
+    SharedTransitionLayout {
+        ProvideLocalSharedTransitionScope {
+            transition.AnimatedContent(
+                modifier = modifier,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+            ) { mode ->
+                when (mode) {
+                    Month -> HorizontalCalendar(
+                        modifier = Modifier.fillMaxSize(),
+                        state = calendarState.monthCalendarState,
+                        contentHeightMode = Fill,
+                        dayContent = { day ->
+                            val selected = day.date == calendarState.selectedDate
 
-                    val events = remember(day) {
-                        if (day.position != MonthDate) return@remember null
-                        snapshotFlow { calendarState.timeZone }.flatMapLatest {
-                            val startOfDay = day.date.atStartOfDayIn(it)
-                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                            getEvents(startOfDay, endOfDay)
-                        }
-                    }?.collectAsState(initial = emptyList())
+                            val events = remember(day) {
+                                if (day.position != MonthDate) return@remember null
+                                snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                                    val startOfDay = day.date.atStartOfDayIn(it)
+                                    val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                                    getEvents(startOfDay, endOfDay)
+                                }
+                            }?.collectAsState(initial = emptyList())
 
-                    Day(
-                        date = day.date,
-                        selected = selected && day.position == MonthDate,
-                        onClick = { calendarState.selectedDate = day.date },
-                        events = events?.value,
-                        outOfMonth = day.position != MonthDate,
-                        border = if (day.date == today) BorderStroke(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) else null,
+                            Day(
+                                date = day.date,
+                                selected = selected && day.position == MonthDate,
+                                onClick = { calendarState.selectedDate = day.date },
+                                modifier = Modifier.sharedElement(
+                                    rememberSharedContentState(CalendarSharedKey.Day(day.date)),
+                                    animatedVisibilityScope = this@AnimatedContent,
+                                ),
+                                events = events?.value,
+                                outOfMonth = day.position != MonthDate,
+                                border = if (day.date == today) BorderStroke(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                ) else null,
+                            )
+                        },
+                        monthHeader = {
+                            WeekHeader(
+                                modifier = headerModifier,
+                                daysOfWeek = calendarState.daysOfWeek,
+                                locale = locale,
+                                textStyle = headerTextStyle,
+                            )
+                        },
                     )
-                },
-                monthHeader = {
-                    WeekHeader(
-                        modifier = headerModifier,
-                        daysOfWeek = calendarState.daysOfWeek,
-                        locale = locale,
-                        textStyle = headerTextStyle,
-                    )
-                },
-            )
 
-            Week -> WeekCalendar(
-                modifier = Modifier.fillMaxSize(),
-                state = calendarState.weekCalendarState,
-                dayContent = { day ->
-                    val selected = day.date == calendarState.selectedDate
+                    Week -> WeekCalendar(
+                        modifier = Modifier.fillMaxSize(),
+                        state = calendarState.weekCalendarState,
+                        dayContent = { day ->
+                            val selected = day.date == calendarState.selectedDate
 
-                    val events by remember(day) {
-                        snapshotFlow { calendarState.timeZone }.flatMapLatest {
-                            val startOfDay = day.date.atStartOfDayIn(it)
-                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                            getEvents(startOfDay, endOfDay)
-                        }
-                    }.collectAsState(initial = emptyList())
+                            val events by remember(day) {
+                                snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                                    val startOfDay = day.date.atStartOfDayIn(it)
+                                    val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                                    getEvents(startOfDay, endOfDay)
+                                }
+                            }.collectAsState(initial = emptyList())
 
-                    Day(
-                        date = day.date,
-                        selected = selected,
-                        onClick = { calendarState.selectedDate = day.date },
-                        hasEvents = events.isNotEmpty(),
-                        outOfMonth = false,
-                        border = if (day.date == today) BorderStroke(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) else null,
+                            Day(
+                                date = day.date,
+                                selected = selected,
+                                onClick = { calendarState.selectedDate = day.date },
+                                modifier = Modifier.sharedElement(
+                                    rememberSharedContentState(CalendarSharedKey.Day(day.date)),
+                                    animatedVisibilityScope = this@AnimatedContent,
+                                ),
+                                hasEvents = events.isNotEmpty(),
+                                outOfMonth = false,
+                                border = if (day.date == today) BorderStroke(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                ) else null,
+                            )
+                        },
+                        weekHeader = {
+                            WeekHeader(
+                                modifier = headerModifier,
+                                daysOfWeek = calendarState.daysOfWeek,
+                                locale = locale,
+                                textStyle = headerTextStyle,
+                            )
+                        },
                     )
-                },
-                weekHeader = {
-                    WeekHeader(
-                        modifier = headerModifier,
-                        daysOfWeek = calendarState.daysOfWeek,
-                        locale = locale,
-                        textStyle = headerTextStyle,
-                    )
-                },
-            )
+                }
+            }
         }
     }
 
@@ -267,6 +281,7 @@ fun Day(
     date: LocalDate,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     events: List<Event>? = null,
     hasEvents: Boolean? = null,
     outOfMonth: Boolean = false,
@@ -280,7 +295,7 @@ fun Day(
     val tymeLunarFestival = remember(tymeLunarDay) { tymeLunarDay.getFestival() }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(
@@ -383,7 +398,7 @@ private fun DaySecondaryText(
 
 @Composable
 fun Events(events: List<Event>) {
-    SharedTransitionLayout {
+    localSharedTransitionScope {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -406,7 +421,7 @@ fun Events(events: List<Event>) {
                 }
                 Dot(
                     modifier = if (positioned) Modifier.sharedBounds(
-                        rememberSharedContentState(CalendarSharedKey),
+                        rememberSharedContentState(CalendarSharedKey.Dot),
                         animatedVisibilityScope = this@AnimatedVisibility,
                         resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                     )
@@ -450,7 +465,7 @@ fun Events(events: List<Event>) {
                                 modifier = when (index) {
                                     0 if positioned -> Modifier
                                         .sharedBounds(
-                                            rememberSharedContentState(CalendarSharedKey),
+                                            rememberSharedContentState(CalendarSharedKey.Dot),
                                             animatedVisibilityScope = this@AnimatedVisibility,
                                             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                                         )
@@ -779,6 +794,12 @@ fun rememberFirstDayOfWeek(): DayOfWeek {
 }
 
 @Immutable
-data object CalendarSharedKey
+private sealed interface CalendarSharedKey {
+    @Immutable
+    data object Dot
+
+    @Immutable
+    data class Day(val date: LocalDate)
+}
 
 const val AdjacentMonths = 50
