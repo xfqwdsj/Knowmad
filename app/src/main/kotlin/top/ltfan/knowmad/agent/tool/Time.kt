@@ -20,16 +20,17 @@ package top.ltfan.knowmad.agent.tool
 
 import ai.koog.agents.core.tools.SimpleTool
 import android.content.res.Resources
+import com.tyme.solar.SolarDay
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
-import kotlinx.datetime.format.DayOfWeekNames
-import kotlinx.datetime.format.alternativeParsing
-import kotlinx.datetime.format.char
-import kotlinx.datetime.format.optional
+import kotlinx.datetime.number
+import kotlinx.datetime.offsetAt
+import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -44,23 +45,42 @@ class TimeTool(resources: Resources) : SimpleTool<TimeTool.Args>(
     data object Args
 }
 
-fun Instant.formatAgentTime(): String = toLocalDateTime(TimeZone.currentSystemDefault())
-    .format(
-        LocalDateTime.Format {
-            year(); char('-'); monthNumber(); char('-'); day()
-            alternativeParsing({ char('t') }) { char('T') }
-            hour()
-            char(':')
-            minute()
-            alternativeParsing({}) {
-                char(':')
-                second()
-                optional {
-                    char('.')
-                    secondFraction(1, 9)
-                }
-            }
-            char(' ')
-            dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-        },
-    )
+fun Instant.formatAgentTime(): String = buildString {
+    val timeZone = TimeZone.currentSystemDefault()
+    val date = toLocalDateTime(timeZone)
+    val tymeSolarDay = SolarDay.fromYmd(date.year, date.month.number, date.day)
+    val tymeTermDay = tymeSolarDay.getTermDay()
+    val tymeLunarDay = tymeSolarDay.getLunarDay()
+    val tymeLunarMonth = tymeLunarDay.getLunarMonth()
+    val tymeLunarYear = tymeLunarMonth.getLunarYear()
+    val tymeSixtyCycle = tymeLunarYear.getSixtyCycle()
+    val tymeEarthBranch = tymeSixtyCycle.getEarthBranch()
+    val tymeZodiac = tymeEarthBranch.getZodiac()
+    val tymeSolarFestival = tymeSolarDay.getFestival()
+    val tymeLunarFestival = tymeLunarDay.getFestival()
+
+    append(date.format(LocalDateTime.Formats.ISO))
+    append(timeZone.offsetAt(this@formatAgentTime))
+    append(" ")
+    append(date.dayOfWeek.toJavaDayOfWeek().getDisplayName(FULL, Locale.getDefault()))
+    append(" ")
+    append(tymeTermDay.getName())
+    append("第")
+    append(tymeTermDay.getDayIndex() + 1)
+    append("天 ")
+    append(tymeLunarYear.getName())
+    append(" ")
+    append(tymeZodiac.getName())
+    append("年 ")
+    append(tymeLunarMonth.getName())
+    append(" ")
+    append(tymeLunarDay.getName())
+    if (tymeSolarFestival != null) {
+        append(" ")
+        append(tymeSolarFestival.getName())
+    }
+    if (tymeLunarFestival != null) {
+        append(" ")
+        append(tymeLunarFestival.getName())
+    }
+}
