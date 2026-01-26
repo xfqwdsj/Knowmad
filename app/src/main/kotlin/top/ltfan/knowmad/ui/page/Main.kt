@@ -66,7 +66,7 @@ import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarHost
-import top.ltfan.knowmad.ui.component.rememberMonthHeaderTextMeasuredHeight
+import top.ltfan.knowmad.ui.component.rememberWeekHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -219,7 +219,7 @@ class MainPage : Page() {
                             val width = maxWidth
 
                             val headerVerticalPadding = 4.dp
-                            val headerTextHeight = rememberMonthHeaderTextMeasuredHeight()
+                            val headerTextHeight = rememberWeekHeaderTextMeasuredHeight()
                             val headerHeight = headerTextHeight + headerVerticalPadding * 2
 
                             val eventDotSize = 4.dp

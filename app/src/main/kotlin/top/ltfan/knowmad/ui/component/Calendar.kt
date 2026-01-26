@@ -62,7 +62,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -177,7 +179,7 @@ fun Calendar(
                     )
                 },
                 monthHeader = {
-                    MonthHeader(
+                    WeekHeader(
                         modifier = headerModifier,
                         daysOfWeek = calendarState.daysOfWeek,
                         locale = locale,
@@ -210,6 +212,14 @@ fun Calendar(
                             width = 2.dp,
                             color = MaterialTheme.colorScheme.primary,
                         ) else null,
+                    )
+                },
+                weekHeader = {
+                    WeekHeader(
+                        modifier = headerModifier,
+                        daysOfWeek = calendarState.daysOfWeek,
+                        locale = locale,
+                        textStyle = headerTextStyle,
                     )
                 },
             )
@@ -311,7 +321,7 @@ fun Day(
             }
         }
 
-        events?.ifEmpty { null }?.let { Events(it) } ?: hasEvents?.let { hasEvents ->
+        events?.let { Events(it) } ?: hasEvents?.let { hasEvents ->
             AnimatedVisibility(
                 visible = hasEvents,
                 enter = expandIn(),
@@ -325,7 +335,6 @@ fun Day(
 
 @Composable
 fun Events(events: List<Event>) {
-    // TODO: enter animation
     SharedTransitionLayout {
         Column(
             modifier = Modifier
@@ -334,6 +343,9 @@ fun Events(events: List<Event>) {
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            var canUpdateEvents by remember { mutableStateOf(true) }
+            val eventsSnapshot = remember { mutableStateListOf<Event>() }
+            val displayedEvents = remember { mutableStateSetOf<Event>() }
             var showDot by remember { mutableStateOf<Boolean?>(null) }
             AnimatedVisibility(
                 visible = showDot == true,
@@ -354,7 +366,13 @@ fun Events(events: List<Event>) {
                     shape = ContinuousRoundedRectangle(radius),
                 )
             }
-            for ((index, event) in events.withIndex()) {
+
+            if (canUpdateEvents) {
+                eventsSnapshot.clear()
+                eventsSnapshot.addAll(events)
+            }
+
+            for ((index, event) in eventsSnapshot.withIndex()) {
                 SubcomposeLayout(Modifier.zIndex((-index).toFloat())) { constraints ->
                     val width = constraints.maxWidth
 
@@ -371,7 +389,7 @@ fun Events(events: List<Event>) {
 
                     val placeable = subcompose("event") {
                         AnimatedVisibility(
-                            visible = !isMinimized,
+                            visible = displayedEvents.contains(event) && !isMinimized,
                             enter = fadeIn() + expandVertically(clip = false),
                             exit = fadeOut() + shrinkVertically(clip = false),
                         ) {
@@ -397,6 +415,11 @@ fun Events(events: List<Event>) {
                                 },
                                 shape = ContinuousRoundedRectangle(radius),
                             )
+                            DisposableEffect(Unit) {
+                                onDispose {
+                                    eventsSnapshot.remove(event)
+                                }
+                            }
                         }
                     }.firstOrNull()?.measure(constraints)
 
@@ -407,6 +430,14 @@ fun Events(events: List<Event>) {
                         placeable?.placeRelative(0, 0)
                     }
                 }
+            }
+
+            canUpdateEvents = true
+
+            LaunchedEffect(events) {
+                canUpdateEvents = false
+                displayedEvents.clear()
+                displayedEvents.addAll(events)
             }
         }
     }
@@ -461,7 +492,7 @@ fun Event(
 }
 
 @Composable
-fun MonthHeader(
+fun WeekHeader(
     modifier: Modifier = Modifier,
     daysOfWeek: List<DayOfWeek> = emptyList(),
     locale: Locale = LocalConfiguration.current.locales[0],
@@ -481,7 +512,7 @@ fun MonthHeader(
 }
 
 @Composable
-fun rememberMonthHeaderTextMeasuredHeight(
+fun rememberWeekHeaderTextMeasuredHeight(
     daysOfWeek: List<DayOfWeek> = rememberDaysOfWeek(),
     locale: Locale = LocalConfiguration.current.locales[0],
     textStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
