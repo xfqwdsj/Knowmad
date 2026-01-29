@@ -116,7 +116,14 @@ data class CourseFtsEntity(
     indices = [
         Index("semesterId"),
         Index("courseId"),
-        Index("semesterId", "startTime", "endTime", "createdAt"),
+        Index(
+            "startTime", "endTime", "createdAt",
+            orders = [ASC, DESC, ASC],
+        ),
+        Index(
+            "semesterId", "startTime", "endTime", "createdAt",
+            orders = [ASC, ASC, DESC, ASC],
+        ),
     ],
     foreignKeys = [
         ForeignKey(
