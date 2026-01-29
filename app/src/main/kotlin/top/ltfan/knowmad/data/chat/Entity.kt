@@ -59,6 +59,11 @@ data class ConversationEntity(
         Index("conversationId", "createdAt"),
         // Supports sibling counts/ordering with stable tie-break by id.
         Index("parentId", "createdAt", "id"),
+        // Supports reverse fetching of message threads for display: newest first.
+        Index(
+            "conversationId", "id", "parentId", "depth",
+            orders = [ASC, ASC, ASC, DESC],
+        ),
     ],
     foreignKeys = [
         ForeignKey(
@@ -94,6 +99,7 @@ data class MessageEntity(
         Index("parentId"),
         Index("selectedChildId"),
         Index("parentId", "selectedChildId"),
+        Index("conversationId", "selectedChildId", "parentId"),
         Index("conversationId", "parentId", unique = true),
     ],
     foreignKeys = [

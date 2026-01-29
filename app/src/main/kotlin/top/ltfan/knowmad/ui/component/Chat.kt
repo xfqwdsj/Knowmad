@@ -357,6 +357,7 @@ fun ChatMessageList(
     lazyListState: LazyListState = rememberLazyListState(),
     assistantMessageStates: MutableMap<Any, AssistantMessageState> = remember { mutableStateMapOf() },
     topToBottom: Boolean = false,
+    reverseIndexing: Boolean = false,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -369,8 +370,8 @@ fun ChatMessageList(
         items(
             count = getMessageCount(),
             key = getMessageKey,
-        ) {// TODO: refactor dao query
-            val index = getMessageCount() - 1 - it
+        ) {
+            val index = if (!reverseIndexing) it else getMessageCount() - 1 - it
             val key = getMessageKey(index)
             when (val data = getMessageAt(index) ?: return@items) {
                 is AssistantStreamingMessage -> {

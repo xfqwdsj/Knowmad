@@ -183,39 +183,51 @@ interface ChatDao : FtsDao {
     @Transaction
     @Query(
         """
-        WITH RECURSIVE SelectedPath AS (
-            SELECT * FROM MessageEntity
-            WHERE conversationId = :conversationId AND parentId IS NULL
+    WITH RECURSIVE SelectedPathReverse AS (
+        SELECT m.*
+        FROM MessageEntity m
+        WHERE m.conversationId = :conversationId
+          AND m.id NOT IN (
+              SELECT bs.parentId
+              FROM MessageBranchSelectionEntity bs
+              WHERE bs.conversationId = :conversationId
+          )
+          AND m.id IN (
+              SELECT bs.selectedChildId
+              FROM MessageBranchSelectionEntity bs
+              WHERE bs.conversationId = :conversationId
+          )
 
-            UNION ALL
+        UNION ALL
 
-            SELECT child.* FROM MessageEntity AS child
-            JOIN SelectedPath AS parent ON child.parentId = parent.id 
-                AND child.depth = parent.depth + 1
-                AND child.conversationId = parent.conversationId
-            JOIN MessageBranchSelectionEntity AS bs ON bs.parentId = parent.id AND bs.selectedChildId = child.id
-        )
+        SELECT parent.*
+        FROM MessageEntity parent
+        JOIN SelectedPathReverse child
+          ON parent.id = child.parentId
+         AND parent.conversationId = child.conversationId
+         AND parent.depth = child.depth - 1
+    )
 
-        SELECT 
-            sp.*,
-            (
-                SELECT COUNT(*) + 1 
-                FROM MessageEntity AS s 
-                WHERE (s.parentId IS sp.parentId)
-                  AND s.createdAt < sp.createdAt
-            ) AS branchIndex,
+    SELECT 
+        sp.*,
+        (
+            SELECT COUNT(*) + 1
+            FROM MessageEntity s
+            WHERE s.parentId IS sp.parentId
+              AND s.createdAt < sp.createdAt
+        ) AS branchIndex,
 
-            (
-                SELECT COUNT(*) 
-                FROM MessageEntity AS s 
-                WHERE (s.parentId IS sp.parentId)
-            ) AS branchCount
+        (
+            SELECT COUNT(*)
+            FROM MessageEntity s
+            WHERE s.parentId IS sp.parentId
+        ) AS branchCount
 
-        FROM SelectedPath AS sp
-        ORDER BY sp.depth ASC
+    FROM SelectedPathReverse sp
+    ORDER BY sp.depth DESC
     """,
     )
-    fun getAllMessagesByConversation(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
+    fun getMessagesPagingByConversationReversed(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
 
     @Transaction
     @Query(

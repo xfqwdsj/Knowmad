@@ -157,7 +157,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 } ?: flowOf(0),
                 messagesState = id?.let {
                     PagingLazyListState {
-                        chatDao.getAllMessagesByConversation(it)
+                        chatDao.getMessagesPagingByConversationReversed(it)
                     }
                 },
             )
