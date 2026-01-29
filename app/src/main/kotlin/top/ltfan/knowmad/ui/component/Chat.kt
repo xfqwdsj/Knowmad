@@ -400,14 +400,15 @@ fun ChatMessageList(
                     val messageEntity = data.message
                     when (messageEntity.role) {
                         Assistant -> {
-                            val state = assistantMessageStates[key].let { state ->
-                                if (state is AssistantMessageState.Completed) return@let state
+                            val state = assistantMessageStates[key].let state@{ state ->
+                                if (state is AssistantMessageState.Completed) return@state state
                                 coroutineScope.launch {
                                     assistantMessageStates[key] = AssistantMessageState.fromEntity(
                                         entity = messageEntity,
                                         existingState = state,
                                     )
                                 }
+                                state?.let { state -> return@state state }
                                 return@items // TODO: animation or placeholder
                             }
                             AssistantMessage(
