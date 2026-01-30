@@ -52,6 +52,6 @@ enum class ICalendarPriority(val value: UByte) {
     val property = Priority(value.toInt())
 }
 
-fun Priority.toICalendarPriority(): ICalendarPriority {
-    return ICalendarPriority.fromNumber(value)
+fun Priority?.toICalendarPriority(): ICalendarPriority {
+    return ICalendarPriority.fromNumber(this?.value ?: 0)
 }

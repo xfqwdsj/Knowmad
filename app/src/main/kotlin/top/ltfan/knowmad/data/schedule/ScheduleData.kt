@@ -220,18 +220,19 @@ sealed interface Event {
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
             val course = courseProperty?.course
 
+            // TODO: support recurring events
             val id = Uuid.parseOrNull(vEvent.uid.value) ?: return null
             val name = vEvent.summary?.value
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
-            val color = vEvent.color?.let { ICalendarColor.fromValue(it.value) }
-                ?: ICalendarColor.fromId(course?.id ?: semester.id)
+            val color = vEvent.color.toICalendarColor(course?.id, defaultId = semester.id)
             val startTime = vEvent.dateStart?.value?.toInstant()?.toKotlinInstant()
                 ?: return null
             val endTime = vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()
                 ?: return null
             val reminders = vEvent.alarms.toReminders()
             val notes = vEvent.description?.value
+            val priority = vEvent.priority.toICalendarPriority()
             val createdAt = vEvent.created?.value?.toInstant()?.toKotlinInstant()
                 ?: Clock.System.now()
             val updatedAt = vEvent.lastModified?.value?.toInstant()?.toKotlinInstant()
@@ -250,6 +251,7 @@ sealed interface Event {
                     endTime = endTime,
                     reminders = reminders,
                     notes = notes,
+                    priority = priority,
                     createdAt = createdAt,
                     updatedAt = updatedAt,
                 )
@@ -267,6 +269,7 @@ sealed interface Event {
                     endTime = endTime,
                     reminders = reminders,
                     notes = notes,
+                    priority = priority,
                     createdAt = createdAt,
                     updatedAt = updatedAt,
                 )

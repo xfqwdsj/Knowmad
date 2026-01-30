@@ -192,6 +192,10 @@ enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: 
     val property = Color(value)
 }
 
-fun Color.toICalendarColor(): ICalendarColor? {
-    return ICalendarColor.fromValue(value ?: return null)
+fun Color?.toICalendarColor(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
+    this?.value?.let { ICalendarColor.fromValue(it) }?.let { return it }
+    for (id in ids) {
+        id?.let { return ICalendarColor.fromId(it) }
+    }
+    return ICalendarColor.fromId(defaultId)
 }
