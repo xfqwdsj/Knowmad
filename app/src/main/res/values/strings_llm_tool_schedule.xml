@@ -18,7 +18,7 @@
 
 <resources>
     <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>
-    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">Start date for the query (yyyy-MM-dd), leave both fields empty to query all semesters</string>
+    <string name="llm_tool_schedule_query_semesters_arg_start_date_description">Start date for the query (yyyy-MM-dd), set to today if not specified; leave both two fields blank when user explicitly requests to query all semesters</string>
     <string name="llm_tool_schedule_query_semesters_arg_end_date_description">End date for the query (yyyy-MM-dd), leave blank to query up to end of startDate</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_not_found">No semesters found</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_start_date">Invalid startDate format, expected yyyy-MM-dd</string>
