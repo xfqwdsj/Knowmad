@@ -28,9 +28,9 @@ import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
-import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -86,12 +86,12 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
-    fun fromDurationList(data: List<Duration>): ByteArray {
+    fun fromReminders(data: Reminders): ByteArray {
         return Cbor.encodeToByteArray(data)
     }
 
     @TypeConverter
-    fun toDurationList(data: ByteArray): List<Duration> {
+    fun toReminders(data: ByteArray): Reminders {
         return Cbor.decodeFromByteArray(data)
     }
 

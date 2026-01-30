@@ -30,6 +30,8 @@ import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.InstructorProperty
+import top.ltfan.knowmad.data.schedule.Reminder
+import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.SemesterProperty
 import top.ltfan.knowmad.data.schedule.customICalReader
@@ -74,7 +76,7 @@ class ICalendarTest {
         color = ICalendarColor.Cyan,
         startTime = Instant.parse("2024-09-02T10:00:00Z"),
         endTime = Instant.parse("2024-09-02T11:00:00Z"),
-        reminders = listOf(15.minutes),
+        reminders = Reminders.of(Reminder(15.minutes, displayText = "Lecture 1")),
         notes = "Introduction to the course",
         createdAt = Instant.parse("2024-06-01T00:00:00Z"),
         updatedAt = Instant.parse("2024-06-01T00:00:00Z"),
@@ -88,7 +90,7 @@ class ICalendarTest {
         color = ICalendarColor.Cyan,
         startTime = Instant.parse("2024-09-04T10:00:00Z"),
         endTime = Instant.parse("2024-09-04T11:00:00Z"),
-        reminders = listOf(15.minutes),
+        reminders = Reminders.of(Reminder(15.minutes, displayText = "Lecture 2")),
         createdAt = Instant.parse("2024-06-01T00:00:00Z"),
         updatedAt = Instant.parse("2024-06-01T00:00:00Z"),
     )
@@ -101,7 +103,7 @@ class ICalendarTest {
         color = ICalendarColor.Orange,
         startTime = Instant.parse("2024-10-15T14:00:00Z"),
         endTime = Instant.parse("2024-10-15T16:00:00Z"),
-        reminders = listOf(30.minutes),
+        reminders = Reminders.of(Reminder(30.minutes, displayText = "Midterm Exam")),
         notes = "Closed book exam.",
         createdAt = Instant.parse("2024-09-01T00:00:00Z"),
         updatedAt = Instant.parse("2024-09-01T00:00:00Z"),
@@ -126,6 +128,11 @@ class ICalendarTest {
         }
 
         val validation = iCal.validate(ICalVersion.V2_0)
+        if (!validation.isEmpty) {
+            validation.forEach {
+                println("ICal Error: $it")
+            }
+        }
         assertTrue { validation.isEmpty }
 
         val result = ByteArrayOutputStream().use { stream ->
@@ -142,13 +149,18 @@ class ICalendarTest {
         }
 
         val parsedValidation = parsedICal.validate(ICalVersion.V2_0)
+        if (!validation.isEmpty) {
+            validation.forEach {
+                println("ICal Error: $it")
+            }
+        }
         assertTrue { parsedValidation.isEmpty }
 
         assertEquals(iCal, parsedICal)
 
         val parsedEvent = parsedICal.events.map { Event.parse(it) }
 
-        assertEquals(data, parsedEvent)
+        assertContentEquals(data, parsedEvent)
     }
 
     @Test
@@ -237,7 +249,7 @@ class ICalendarTest {
                 color = ICalendarColor.fromId(event.id),
                 startTime = event.startTime,
                 endTime = event.endTime,
-                reminders = emptyList(),
+                reminders = Empty,
                 notes = event.notes,
                 createdAt = event.createdAt,
                 updatedAt = event.updatedAt,
@@ -250,7 +262,7 @@ class ICalendarTest {
                 color = ICalendarColor.fromId(event.id),
                 startTime = event.startTime,
                 endTime = event.endTime,
-                reminders = emptyList(),
+                reminders = Empty,
                 createdAt = event.createdAt,
                 updatedAt = event.updatedAt,
                 notes = event.notes,

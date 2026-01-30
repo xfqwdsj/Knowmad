@@ -189,7 +189,7 @@ enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: 
 
     }
 
-    val property inline get() = Color(value)
+    val property = Color(value)
 }
 
 fun Color.toICalendarColor(): ICalendarColor? {

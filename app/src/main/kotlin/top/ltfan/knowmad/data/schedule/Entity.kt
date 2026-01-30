@@ -27,14 +27,10 @@ import androidx.room.FtsOptions
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
-import biweekly.component.VAlarm
-import biweekly.parameter.Related
-import biweekly.property.Trigger
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -151,21 +147,13 @@ data class EventEntity(
     val color: ICalendarColor,
     val startTime: Instant,
     val endTime: Instant,
-    val reminders: List<Duration> = emptyList(),
+    val reminders: Reminders = Empty,
     val notes: String? = null,
+    val priority: ICalendarPriority = None,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
 ) {
-    val vAlarms
-        get() = reminders.map { reminder ->
-            VAlarm.display(
-                Trigger(
-                    biweekly.util.Duration.fromMillis(-reminder.inWholeMilliseconds),
-                    Related.START,
-                ),
-                name,
-            )
-        }
+    val vAlarms inline get() = reminders.list.map { it.toVAlarm(defaultDisplayText = name) }
 }
 
 @Serializable
@@ -192,7 +180,7 @@ data class EventFtsEntity(
     @PrimaryKey
     @ColumnInfo(name = "rowid")
     val rowId: Long,
-    val name: String?,
+    val name: String?, // TODO: fix search when some fields are null
     val instructor: String?,
     val location: String?,
     val notes: String?,

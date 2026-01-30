@@ -36,8 +36,10 @@ import top.ltfan.knowmad.data.schedule.CourseWithSemester
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.ICalendarColor
+import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
+import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -738,8 +740,9 @@ object ScheduleTools {
             }
             val color = args.color?.let { ICalendarColor.fromValue(it) }
                 ?: ICalendarColor.fromId(courseId ?: semesterId)
-            val reminders =
-                args.reminders?.mapNotNull { Duration.parseOrNull(it) } ?: emptyList()
+            val reminders = args.reminders?.mapNotNull { durationString ->
+                Duration.parseOrNull(durationString)?.let { Reminder(-it) }
+            }?.toReminders() ?: Empty
             val event = EventEntity(
                 id = id,
                 semesterId = semesterId,
@@ -874,8 +877,9 @@ object ScheduleTools {
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val color = args.color?.let { ICalendarColor.fromValue(it) }
                 ?: existingEvent.color
-            val reminders =
-                args.reminders?.mapNotNull { Duration.parseOrNull(it) } ?: existingEvent.reminders
+            val reminders = args.reminders?.mapNotNull { durationString ->
+                Duration.parseOrNull(durationString)?.let { Reminder(-it) }
+            }?.toReminders() ?: existingEvent.reminders
             val notes = args.notes ?: existingEvent.notes
             val newEvent = existingEvent.copy(
                 name = name,

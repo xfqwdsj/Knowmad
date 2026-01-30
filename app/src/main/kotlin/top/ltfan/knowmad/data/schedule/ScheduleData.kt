@@ -20,15 +20,12 @@ package top.ltfan.knowmad.data.schedule
 
 import biweekly.component.VAlarm
 import biweekly.component.VEvent
-import biweekly.parameter.Related
-import biweekly.property.Trigger
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import kotlin.time.Clock
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -43,8 +40,9 @@ sealed interface Event {
     val color: ICalendarColor
     val startTime: Instant
     val endTime: Instant
-    val reminders: List<Duration>
+    val reminders: Reminders
     val notes: String?
+    val priority: ICalendarPriority
     val createdAt: Instant
     val updatedAt: Instant
 
@@ -59,6 +57,7 @@ sealed interface Event {
         dateStartAndEnd()
         alarms()
         description()
+        priority()
         metaTimes()
     }
 
@@ -72,8 +71,9 @@ sealed interface Event {
         override val color: ICalendarColor,
         override val startTime: Instant,
         override val endTime: Instant,
-        override val reminders: List<Duration> = emptyList(),
+        override val reminders: Reminders = Empty,
         override val notes: String? = null,
+        override val priority: ICalendarPriority = None,
         override val createdAt: Instant = Clock.System.now(),
         override val updatedAt: Instant = createdAt,
     ) : Event {
@@ -89,6 +89,7 @@ sealed interface Event {
             endTime = endTime,
             reminders = reminders,
             notes = notes,
+            priority = priority,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
@@ -102,6 +103,7 @@ sealed interface Event {
             dateStartAndEnd()
             alarms()
             description()
+            priority()
             metaTimes()
         }
     }
@@ -118,8 +120,9 @@ sealed interface Event {
         override val color: ICalendarColor,
         override val startTime: Instant,
         override val endTime: Instant,
-        override val reminders: List<Duration> = emptyList(),
+        override val reminders: Reminders = Empty,
         override val notes: String? = null,
+        override val priority: ICalendarPriority = None,
         override val createdAt: Instant = Clock.System.now(),
         override val updatedAt: Instant = createdAt,
     ) : Event {
@@ -135,6 +138,7 @@ sealed interface Event {
             endTime = endTime,
             reminders = reminders,
             notes = notes,
+            priority = priority,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
@@ -150,6 +154,7 @@ sealed interface Event {
             dateStartAndEnd()
             alarms()
             description()
+            priority()
             metaTimes()
         }
 
@@ -188,16 +193,7 @@ sealed interface Event {
         setDateEnd(Date.from(endTime.toJavaInstant()))
     }
 
-    val vAlarms
-        get() = reminders.map { reminder ->
-            VAlarm.display(
-                Trigger(
-                    biweekly.util.Duration.fromMillis(-reminder.inWholeMilliseconds),
-                    Related.START,
-                ),
-                name,
-            )
-        }
+    val vAlarms get() = reminders.list.map { it.toVAlarm(defaultDisplayText = name) }
 
     fun VEvent.alarms() {
         alarms += vAlarms
@@ -205,6 +201,10 @@ sealed interface Event {
 
     fun VEvent.description() {
         setDescription(notes)
+    }
+
+    fun VEvent.priority() {
+        priority = this@Event.priority.property
     }
 
     fun VEvent.metaTimes() {
@@ -230,23 +230,7 @@ sealed interface Event {
                 ?: return null
             val endTime = vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()
                 ?: return null
-            val reminders = vEvent.alarms?.mapNotNull { alarm ->
-                alarm.trigger?.let { trigger ->
-                    val duration = trigger.duration
-                    val date = trigger.date
-                    if (duration != null) {
-                        when (trigger.related) {
-                            Related.START -> (-duration.toMillis()).milliseconds
-                            Related.END -> startTime - endTime - duration.toMillis().milliseconds
-                            else -> null
-                        }
-                    } else if (date != null) {
-                        date.toInstant().toKotlinInstant() - startTime
-                    } else {
-                        null
-                    }
-                }
-            } ?: emptyList()
+            val reminders = vEvent.alarms.toReminders()
             val notes = vEvent.description?.value
             val createdAt = vEvent.created?.value?.toInstant()?.toKotlinInstant()
                 ?: Clock.System.now()
@@ -305,6 +289,7 @@ fun EventWithSemesterAndCourse.toEvent(): Event {
             endTime = event.endTime,
             reminders = event.reminders,
             notes = event.notes,
+            priority = event.priority,
             createdAt = event.createdAt,
             updatedAt = event.updatedAt,
         )
@@ -320,8 +305,65 @@ fun EventWithSemesterAndCourse.toEvent(): Event {
             endTime = event.endTime,
             reminders = event.reminders,
             notes = event.notes,
+            priority = event.priority,
             createdAt = event.createdAt,
             updatedAt = event.updatedAt,
         )
     }
+}
+
+@JvmInline
+@Serializable
+value class Reminders(
+    val list: List<Reminder> = emptyList(),
+) {
+    constructor(collection: Collection<Reminder>) : this(collection.toList())
+
+    fun toVAlarms() = list.map { it.toVAlarm() }
+
+    companion object {
+        val Empty = Reminders(emptyList())
+
+        fun of(vararg reminders: Reminder) = Reminders(reminders.toList())
+    }
+}
+
+@JvmName("vAlarmCollectionToReminders")
+fun Collection<VAlarm>?.toReminders(): Reminders {
+    val reminders = this?.mapNotNull { it.toReminder() } ?: emptyList()
+    return Reminders(reminders)
+}
+
+@Serializable
+data class Reminder(
+    val trigger: ICalendarTrigger,
+    val displayText: String? = null,
+) {
+    constructor(
+        offset: Duration,
+        related: ICalendarTrigger.Relative.Related = Start,
+        displayText: String? = null,
+    ) : this(
+        trigger = ICalendarTrigger.Relative(offset, related),
+        displayText = displayText,
+    )
+
+    fun toVAlarm(defaultDisplayText: String? = null): VAlarm = VAlarm.display(
+        trigger.toProperty(),
+        displayText ?: defaultDisplayText,
+    )
+}
+
+@JvmName("reminderCollectionToReminders")
+fun Collection<Reminder>.toReminders(): Reminders {
+    return Reminders(this)
+}
+
+fun VAlarm.toReminder(): Reminder? {
+    val trigger = trigger?.toICalendarTrigger() ?: return null
+    val displayText = description?.value ?: return null
+    return Reminder(
+        trigger = trigger,
+        displayText = displayText,
+    )
 }
