@@ -36,6 +36,7 @@ sealed interface ICalendarTrigger {
         val related: Related = Related.Start,
     ) : ICalendarTrigger {
         @Serializable
+        @SerialName("Related")
         enum class Related {
             Start, End;
 
