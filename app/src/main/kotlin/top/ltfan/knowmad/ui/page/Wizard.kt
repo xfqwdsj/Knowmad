@@ -448,7 +448,7 @@ class WizardProviderPage : WizardSubPage() {
                                 )
                                 val height = placeable.height
                                 layout(width, height) {
-                                    placeable.place(0, 0)
+                                    placeable.placeRelative(0, 0)
                                 }
                             },
                         checked = selectedProvider == provider,

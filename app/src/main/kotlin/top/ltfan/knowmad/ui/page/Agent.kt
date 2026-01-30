@@ -366,16 +366,16 @@ class AgentMainPage : AgentSubPage() {
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         listPlaceables.fastForEach {
-                            it.place(0, 0)
+                            it.placeRelative(0, 0)
                         }
                         scrimPlaceables.fastForEach {
-                            it.place(
+                            it.placeRelative(
                                 0,
                                 constraints.maxHeight - it.height,
                             )
                         }
                         inputPlaceables.fastForEach {
-                            it.place(
+                            it.placeRelative(
                                 (constraints.maxWidth - it.width) / 2,
                                 constraints.maxHeight - it.height,
                             )
