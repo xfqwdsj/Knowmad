@@ -19,9 +19,11 @@
 package top.ltfan.knowmad.data.schedule
 
 import biweekly.property.Priority
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+@SerialName("ICalendarPriority")
 enum class ICalendarPriority(val value: UByte) {
     None(0u),
     P1(1u),

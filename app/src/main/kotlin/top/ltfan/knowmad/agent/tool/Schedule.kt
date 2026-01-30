@@ -36,6 +36,7 @@ import top.ltfan.knowmad.data.schedule.CourseWithSemester
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
+import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.ICalendarTrigger
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
@@ -847,6 +848,7 @@ object ScheduleTools {
                         endTime = end,
                         reminders = reminders,
                         notes = data.notes,
+                        priority = data.priority,
                     )
                 }
                 val insertResults = withContext(Dispatchers.IO) {
@@ -896,6 +898,7 @@ object ScheduleTools {
                 endTime = end,
                 reminders = reminders,
                 notes = args.notes,
+                priority = args.priority,
             )
             val inserted = withContext(Dispatchers.IO) {
                 runCatching { dao.insertEvent(event) }
@@ -904,8 +907,7 @@ object ScheduleTools {
             return if (inserted >= 0L) Result.Success(
                 event = event,
                 errors = errors.takeIf { it.isNotEmpty() },
-            )
-            else Result.Failure(
+            ) else Result.Failure(
                 resources.getString(
                     R.string.llm_tool_schedule_create_event_result_failure_reason_insert_failed,
                 ),
@@ -1047,6 +1049,7 @@ object ScheduleTools {
             val color: String?,
             val reminders: List<ReminderData>?,
             val notes: String?,
+            val priority: ICalendarPriority = None,
             val list: List<Data>?,
         ) {
             @Serializable
@@ -1062,6 +1065,7 @@ object ScheduleTools {
                 val color: String?,
                 val reminders: List<ReminderData>?,
                 val notes: String?,
+                val priority: ICalendarPriority = None,
             )
 
             @Serializable
@@ -1166,6 +1170,11 @@ object ScheduleTools {
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_notes_description),
                     type = ToolParameterType.String,
                 ),
+                ToolParameterDescriptor(
+                    name = "priority",
+                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_priority_description),
+                    type = ToolParameterType.Enum(ICalendarPriority.entries),
+                ),
             )
         }
     }
@@ -1227,6 +1236,11 @@ object ScheduleTools {
                     description = resources.getString(R.string.llm_tool_schedule_update_event_arg_notes_description),
                     type = ToolParameterType.String,
                 ),
+                ToolParameterDescriptor(
+                    name = "priority",
+                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_priority_description),
+                    type = ToolParameterType.Enum(ICalendarPriority.entries),
+                ),
             ),
         ),
     ) {
@@ -1256,6 +1270,7 @@ object ScheduleTools {
                 Duration.parseOrNull(durationString)?.let { Reminder(-it) }
             }?.toReminders() ?: existingEvent.reminders
             val notes = args.notes ?: existingEvent.notes
+            val priority = args.priority ?: existingEvent.priority
             val newEvent = existingEvent.copy(
                 name = name,
                 instructor = instructor,
@@ -1265,6 +1280,7 @@ object ScheduleTools {
                 color = color,
                 reminders = reminders,
                 notes = notes,
+                priority = priority,
             )
             if (newEvent == existingEvent) {
                 return Result.Success(existingEvent)
@@ -1289,6 +1305,7 @@ object ScheduleTools {
             val color: String? = null,
             val reminders: List<String>? = null,
             val notes: String? = null,
+            val priority: ICalendarPriority? = null,
         )
 
         @Serializable

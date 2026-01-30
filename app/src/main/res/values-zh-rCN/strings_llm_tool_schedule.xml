@@ -99,6 +99,7 @@
     <string name="llm_tool_schedule_create_event_arg_reminders_property_display_text_description">提醒显示的文本内容</string>
     <string name="llm_tool_schedule_create_event_arg_list_description">事件列表（用于批量创建，其他参数将被忽略）</string>
     <string name="llm_tool_schedule_create_event_arg_notes_description">事件备注</string>
+    <string name="llm_tool_schedule_create_event_arg_priority_description">事件优先级（用户要求时指定，默认值为None，1为最高，9为最低）</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">提醒的time格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_offset">提醒的offset格式无效，期望ISO-8601 Duration</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
@@ -130,6 +131,7 @@
     <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar颜色名称</string>
     <string name="llm_tool_schedule_update_event_arg_reminders_description">相对于事件开始时间的提醒偏移时长，正值为提前（ISO-8601 Duration）</string>
     <string name="llm_tool_schedule_update_event_arg_notes_description">事件备注</string>
+    <string name="llm_tool_schedule_update_event_arg_priority_description">事件优先级（用户要求时指定，默认值为None，1为最高，9为最低）</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">eventId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>

@@ -99,6 +99,7 @@
     <string name="llm_tool_schedule_create_event_arg_reminders_property_display_text_description">Display text of the reminder</string>
     <string name="llm_tool_schedule_create_event_arg_list_description">List of events (for batch creation, and other fields will be ignored)</string>
     <string name="llm_tool_schedule_create_event_arg_notes_description">Notes for the event</string>
+    <string name="llm_tool_schedule_create_event_arg_priority_description">Event priority (specify only when requested by user, default is None, 1 is highest, 9 is lowest)</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">Invalid reminder time format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_offset">Invalid reminder offset format, expected ISO-8601 Duration</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
@@ -130,6 +131,7 @@
     <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar color name</string>
     <string name="llm_tool_schedule_update_event_arg_reminders_description">Reminder offsets relative to event start time, positive for before (ISO-8601 Duration)</string>
     <string name="llm_tool_schedule_update_event_arg_notes_description">Notes for the event</string>
+    <string name="llm_tool_schedule_update_event_arg_priority_description">Event priority (specify only when requested by user, default is None, 1 is highest, 9 is lowest)</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">Invalid eventId format, expected UUID</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
