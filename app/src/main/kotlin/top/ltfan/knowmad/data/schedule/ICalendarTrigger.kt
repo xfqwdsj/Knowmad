@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.data.schedule
 
 import biweekly.property.Trigger
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.Date
 import kotlin.time.Duration
@@ -29,6 +30,7 @@ import kotlin.time.toKotlinInstant
 @Serializable
 sealed interface ICalendarTrigger {
     @Serializable
+    @SerialName("Relative")
     data class Relative(
         val offset: Duration,
         val related: Related = Related.Start,
@@ -48,6 +50,7 @@ sealed interface ICalendarTrigger {
     }
 
     @Serializable
+    @SerialName("Absolute")
     data class Absolute(val time: Instant) : ICalendarTrigger {
         override fun toProperty() = Trigger(Date.from(time.toJavaInstant()))
     }
