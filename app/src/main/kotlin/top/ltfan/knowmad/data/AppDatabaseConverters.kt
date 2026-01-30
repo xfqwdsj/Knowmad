@@ -28,6 +28,7 @@ import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
@@ -93,6 +94,16 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toReminders(data: ByteArray): Reminders {
         return Cbor.decodeFromByteArray(data)
+    }
+
+    @TypeConverter
+    fun fromICalendarPriority(data: ICalendarPriority): Int {
+        return data.comparableValue.toInt()
+    }
+
+    @TypeConverter
+    fun toICalendarPriority(data: Int): ICalendarPriority {
+        return ICalendarPriority.fromValue(data.toUByte())
     }
 
     @TypeConverter

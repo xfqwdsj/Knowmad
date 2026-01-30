@@ -55,6 +55,7 @@ enum class ICalendarPriority(val value: UByte) {
         }
     }
 
+    val comparableValue = value.takeIf { it in 1u..9u } ?: 10u
     val property = Priority(value.toInt())
 }
 

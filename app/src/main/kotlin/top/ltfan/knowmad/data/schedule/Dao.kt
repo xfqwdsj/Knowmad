@@ -173,6 +173,7 @@ interface ScheduleDao : FtsDao {
             WHERE semesterId = :semesterId
             ORDER BY
                 startTime ASC,
+                priority ASC,
                 endTime DESC,
                 createdAt ASC
     """,
@@ -191,6 +192,7 @@ interface ScheduleDao : FtsDao {
             WHERE startTime <= :endTime AND endTime >= :startTime
             ORDER BY
                 startTime ASC,
+                priority ASC,
                 endTime DESC,
                 createdAt ASC
     """,
@@ -212,6 +214,7 @@ interface ScheduleDao : FtsDao {
             WHERE startTime <= :endTime AND endTime >= :startTime
             ORDER BY
                 startTime ASC,
+                priority ASC,
                 endTime DESC,
                 createdAt ASC
     """,

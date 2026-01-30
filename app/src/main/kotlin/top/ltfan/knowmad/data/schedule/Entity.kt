@@ -129,11 +129,11 @@ data class CourseFtsEntity(
         Index("semesterId"),
         Index("courseId"),
         Index(
-            "startTime", "endTime", "createdAt",
+            "startTime", "priority", "endTime", "createdAt",
             orders = [ASC, DESC, ASC],
         ),
         Index(
-            "semesterId", "startTime", "endTime", "createdAt",
+            "semesterId", "startTime", "priority", "endTime", "createdAt",
             orders = [ASC, ASC, DESC, ASC],
         ),
     ],
