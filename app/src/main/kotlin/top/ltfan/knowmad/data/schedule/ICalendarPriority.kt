@@ -44,14 +44,7 @@ enum class ICalendarPriority(val value: UByte) {
         }
 
         fun fromNumber(value: Number): ICalendarPriority {
-            val uByteValue = when (value) {
-                is Byte -> value.toUByte()
-                is Short -> value.toUByte()
-                is Int -> value.toUByte()
-                is Long -> value.toUByte()
-                else -> value.toByte().toUByte()
-            }
-            return fromValue(uByteValue)
+            return fromValue(value.toByte().toUByte())
         }
     }
 
