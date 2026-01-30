@@ -1256,12 +1256,12 @@ object ScheduleTools {
             val instructor = args.instructor ?: existingEvent.instructor
             val location = args.location ?: existingEvent.location
             val instant1 = args.startTime?.let {
-                runCatching { Instant.parse(it) }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_start_time)) }
+                Instant.parseOrNull(it)
+                    ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_start_time))
             } ?: existingEvent.startTime
             val instant2 = args.endTime?.let {
-                runCatching { Instant.parse(it) }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_end_time)) }
+                Instant.parseOrNull(it)
+                    ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_end_time))
             } ?: existingEvent.endTime
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val color = args.color?.let { ICalendarColor.fromValue(it) }
