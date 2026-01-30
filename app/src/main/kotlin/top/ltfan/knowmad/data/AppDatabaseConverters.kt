@@ -46,13 +46,13 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
-    fun fromLocalDate(data: LocalDate): String {
-        return data.toString()
+    fun fromLocalDate(data: LocalDate): Long {
+        return data.toEpochDays()
     }
 
     @TypeConverter
-    fun toLocalDate(data: String): LocalDate {
-        return LocalDate.parse(data)
+    fun toLocalDate(data: Long): LocalDate {
+        return LocalDate.fromEpochDays(data)
     }
 
     @TypeConverter
