@@ -319,6 +319,8 @@ value class Reminders(
 ) {
     constructor(collection: Collection<Reminder>) : this(collection.toList())
 
+    fun notEmptyOrNull(): Reminders? = if (list.isNotEmpty()) this else null
+
     fun toVAlarms() = list.map { it.toVAlarm() }
 
     companion object {

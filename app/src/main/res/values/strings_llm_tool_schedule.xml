@@ -129,7 +129,11 @@
     <string name="llm_tool_schedule_update_event_arg_instructor_description">Instructor name</string>
     <string name="llm_tool_schedule_update_event_arg_location_description">Location</string>
     <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar color name</string>
-    <string name="llm_tool_schedule_update_event_arg_reminders_description">Reminder offsets relative to event start time, positive for before (ISO-8601 Duration)</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_description">Reminders of event (the original reminders will be replaced)</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_time_description">Absolute reminder time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_offset_description">Reminder offset relative to event start time, negative for before (ISO-8601 Duration)</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_related_description">Time point the reminder is related to (set only when changing from default Start to End for relative reminders)</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_display_text_description">Display text of the reminder</string>
     <string name="llm_tool_schedule_update_event_arg_notes_description">Notes for the event</string>
     <string name="llm_tool_schedule_update_event_arg_priority_description">Event priority (specify only when requested by user, default is None, 1 is highest, 9 is lowest)</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">Invalid eventId format, expected UUID</string>

@@ -129,7 +129,11 @@
     <string name="llm_tool_schedule_update_event_arg_instructor_description">讲师姓名</string>
     <string name="llm_tool_schedule_update_event_arg_location_description">地点</string>
     <string name="llm_tool_schedule_update_event_arg_color_description">ICalendar颜色名称</string>
-    <string name="llm_tool_schedule_update_event_arg_reminders_description">相对于事件开始时间的提醒偏移时长，正值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_description">事件提醒（完整替换现有提醒）</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_time_description">绝对提醒时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_offset_description">相对于事件开始时间的提醒偏移时长，负值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_related_description">提醒关联的时间点（设置相对提醒且需要更改默认值Start时才可指定为End，否则无需指定）</string>
+    <string name="llm_tool_schedule_update_event_arg_reminders_property_display_text_description">提醒显示的文本内容</string>
     <string name="llm_tool_schedule_update_event_arg_notes_description">事件备注</string>
     <string name="llm_tool_schedule_update_event_arg_priority_description">事件优先级（用户要求时指定，默认值为None，1为最高，9为最低）</string>
     <string name="llm_tool_schedule_update_event_result_failure_reason_invalid_event_id">eventId格式无效，期望UUID</string>

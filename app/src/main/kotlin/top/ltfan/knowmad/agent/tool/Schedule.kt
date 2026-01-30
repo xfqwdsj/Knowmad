@@ -38,7 +38,9 @@ import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.ICalendarTrigger
+import top.ltfan.knowmad.data.schedule.ICalendarTrigger.Relative.Related.Start
 import top.ltfan.knowmad.data.schedule.Reminder
+import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.toReminders
@@ -1229,7 +1231,32 @@ object ScheduleTools {
                 ToolParameterDescriptor(
                     name = "reminders",
                     description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_description),
-                    type = ToolParameterType.List(ToolParameterType.String),
+                    type = ToolParameterType.List(
+                        itemsType = ToolParameterType.Object(
+                            properties = listOf(
+                                ToolParameterDescriptor(
+                                    name = "time",
+                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_time_description),
+                                    type = ToolParameterType.String,
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "offset",
+                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_offset_description),
+                                    type = ToolParameterType.String,
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "related",
+                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_related_description),
+                                    type = ToolParameterType.Enum(ICalendarTrigger.Relative.Related.entries),
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "displayText",
+                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_display_text_description),
+                                    type = ToolParameterType.String,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 ToolParameterDescriptor(
                     name = "notes",
@@ -1245,6 +1272,7 @@ object ScheduleTools {
         ),
     ) {
         override suspend fun execute(args: Args): Result {
+            val errors = mutableListOf<String>()
             val eventId = Uuid.parseOrNull(args.eventId)
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_event_id))
             val existingEvent = withContext(Dispatchers.IO) {
@@ -1266,9 +1294,7 @@ object ScheduleTools {
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val color = args.color?.let { ICalendarColor.fromValue(it) }
                 ?: existingEvent.color
-            val reminders = args.reminders?.mapNotNull { durationString ->
-                Duration.parseOrNull(durationString)?.let { Reminder(-it) }
-            }?.toReminders() ?: existingEvent.reminders
+            val reminders = parseReminders(args.reminders, errors) ?: existingEvent.reminders
             val notes = args.notes ?: existingEvent.notes
             val priority = args.priority ?: existingEvent.priority
             val newEvent = existingEvent.copy(
@@ -1289,9 +1315,39 @@ object ScheduleTools {
                 runCatching { dao.updateEvent(newEvent) }
             }.onFailure { logger.error(it) { "Failed to update event" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
-            return if (updated > 0) Result.Success(newEvent)
-            else Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_update_failed))
+            return if (updated > 0) Result.Success(
+                event = newEvent,
+                errors = errors.takeIf { it.isNotEmpty() },
+            ) else Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_update_failed))
         }
+
+        private fun parseReminders(
+            reminders: List<Args.ReminderData>?,
+            errors: MutableList<String>,
+        ) = reminders?.mapNotNull {
+            it.time?.let { timeStr ->
+                val time = Instant.parseOrNull(timeStr) ?: run {
+                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
+                    return@let
+                }
+                return@mapNotNull Reminder(
+                    trigger = ICalendarTrigger.Absolute(time),
+                    displayText = it.displayText,
+                )
+            }
+            it.offset?.let { offsetStr ->
+                val duration = Duration.parseOrNull(offsetStr) ?: run {
+                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
+                    return@let
+                }
+                val related = it.related ?: Start
+                return@mapNotNull Reminder(
+                    trigger = ICalendarTrigger.Relative(duration, related),
+                    displayText = it.displayText,
+                )
+            }
+            return@mapNotNull null
+        }?.toReminders()?.notEmptyOrNull()
 
         @Serializable
         @SerialName("Args")
@@ -1303,16 +1359,28 @@ object ScheduleTools {
             val startTime: String? = null,
             val endTime: String? = null,
             val color: String? = null,
-            val reminders: List<String>? = null,
+            val reminders: List<ReminderData>? = null,
             val notes: String? = null,
             val priority: ICalendarPriority? = null,
-        )
+        ) {
+            @Serializable
+            @SerialName("Reminder")
+            data class ReminderData(
+                val time: String?,
+                val offset: String?,
+                val related: ICalendarTrigger.Relative.Related?,
+                val displayText: String?,
+            )
+        }
 
         @Serializable
         sealed interface Result {
             @Serializable
             @SerialName("Success")
-            data class Success(val event: EventEntity) : Result
+            data class Success(
+                val event: EventEntity,
+                val errors: List<String>? = null,
+            ) : Result
 
             @Serializable
             @SerialName("Failure")
