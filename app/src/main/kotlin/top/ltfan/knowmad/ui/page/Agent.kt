@@ -51,7 +51,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -351,16 +350,22 @@ class AgentMainPage : AgentSubPage() {
                             assistantMessageStates = viewModel.assistantMessageStates,
                         )
 
-                        val currentCount = viewModel.messagesListState.layoutInfo.totalItemsCount
-                        var lastCount by remember { mutableIntStateOf(currentCount) }
-                        LaunchedEffect(currentCount) {
-                            if (
-                                viewModel.messagesListState.firstVisibleItemIndex <= currentCount - lastCount &&
-                                viewModel.messagesListState.firstVisibleItemScrollOffset == 0
-                            ) {
+                        var isAtBottom by remember { mutableStateOf(true) }
+
+                        val isScrolling = viewModel.messagesListState.isScrollInProgress
+                        LaunchedEffect(isScrolling) {
+                            if (!isScrolling) {
+                                isAtBottom =
+                                    viewModel.messagesListState.firstVisibleItemIndex == 0 &&
+                                            viewModel.messagesListState.firstVisibleItemScrollOffset == 0
+                            }
+                        }
+
+                        val currentFirstMessageKey = messages.itemSnapshotList.firstOrNull()?.key
+                        LaunchedEffect(currentFirstMessageKey) {
+                            if (isAtBottom) {
                                 viewModel.messagesListState.animateScrollToItem(0)
                             }
-                            lastCount = currentCount
                         }
                     }.map { it.measure(constraints) }
 
