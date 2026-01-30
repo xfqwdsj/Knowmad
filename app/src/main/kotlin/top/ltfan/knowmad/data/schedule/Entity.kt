@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.content.res.Resources
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -29,7 +30,9 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.R
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -48,7 +51,20 @@ data class SemesterEntity(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val timeZone: TimeZone,
-)
+) {
+    companion object {
+        val DefaultSemesterId = Uuid.parse("019c0c33-1400-7225-a55f-906660045bdc")
+
+        fun createDefault(resources: Resources) = SemesterEntity(
+            id = DefaultSemesterId,
+            name = resources.getString(R.string.schedule_semester_label_default),
+            startDate = Instant.DISTANT_PAST.toLocalDateTime(UTC).date,
+            endDate = Instant.DISTANT_FUTURE.toLocalDateTime(UTC).date,
+            timeZone = UTC,
+        )
+
+    }
+}
 
 @Fts4(
     tokenizer = FtsOptions.TOKENIZER_ICU,

@@ -117,4 +117,5 @@
     <string name="crypto_key_initialization_error_retry_label">Retry Encryption</string>
     <string name="crypto_use_plaintext_label">Use Plaintext Storage</string>
     <string name="crypto_use_plaintext_warning">You are using plaintext storage for sensitive data. This may pose security risks. It is recommended to enable encryption</string>
+    <string name="schedule_semester_label_default">Default Semester</string>
 </resources>

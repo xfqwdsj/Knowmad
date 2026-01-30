@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,17 @@
 package top.ltfan.knowmad.application
 
 import android.app.Application
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import top.ltfan.knowmad.data.database.AppDatabase
 
 class KnowmadApplication : Application() {
-    val appDatabase by lazy { AppDatabase.buildDatabase() }
+    val appDatabase by lazy {
+        AppDatabase.buildDatabase().also {
+            CoroutineScope(Dispatchers.IO).launch {
+                it.scheduleDao().checkOrCreateDefaultSemester(resources)
+            }
+        }
+    }
 }

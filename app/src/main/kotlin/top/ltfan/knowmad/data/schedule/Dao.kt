@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.content.res.Resources
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -36,6 +37,15 @@ import kotlin.uuid.Uuid
 interface ScheduleDao : FtsDao {
     @Insert
     suspend fun insertSemester(semester: SemesterEntity): Long
+
+    @Transaction
+    suspend fun checkOrCreateDefaultSemester(resources: Resources) {
+        val existing = getSemesterById(SemesterEntity.DefaultSemesterId)
+        if (existing == null) {
+            val defaultSemester = SemesterEntity.createDefault(resources)
+            insertSemester(defaultSemester)
+        }
+    }
 
     @Insert
     suspend fun insertCourse(course: CourseEntity): Long
