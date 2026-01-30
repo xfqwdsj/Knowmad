@@ -77,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
@@ -375,6 +376,7 @@ fun ChatMessageList(
             val key = getMessageKey(index)
             when (val data = getMessageAt(index) ?: return@items) {
                 is AssistantStreamingMessage -> {
+                    var previousHeight by remember { mutableStateOf<Int?>(null) }
                     AssistantMessage(
                         state = assistantMessageStates.compute(key) { _, state ->
                             state as? AssistantMessageState.Streaming ?: data.state
@@ -392,7 +394,23 @@ fun ChatMessageList(
                         onAnyToolVisibilityChange = { visible ->
                             onAnyToolVisibilityChange(visible)
                         },
-                        modifier = Modifier.fillParentMaxWidth(),
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .onSizeChanged { newSize ->
+                                val height = newSize.height
+                                if (lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset != 0) {
+                                    val delta = previousHeight?.let { previousHeight ->
+                                        height - previousHeight
+                                    } ?: 0
+                                    coroutineScope.launch {
+                                        lazyListState.scrollToItem(
+                                            index = lazyListState.firstVisibleItemIndex,
+                                            scrollOffset = lazyListState.firstVisibleItemScrollOffset + delta,
+                                        )
+                                    }
+                                }
+                                previousHeight = height
+                            },
                     )
                 }
 
@@ -438,9 +456,8 @@ fun ChatMessageList(
                                 content = messageEntity.parts.asSequence()
                                     .filterIsInstance<UiMessage.Koog>()
                                     .map { uiMessage -> uiMessage.message }
-                                    .filterIsInstance<Message.User>()
-                                    .singleOrNull()
-                                    ?.content ?: error("User message must contain one User part."),
+                                    .filterIsInstance<Message.User>().singleOrNull()?.content
+                                    ?: error("User message must contain one User part."),
                                 current = data.branchIndex,
                                 total = data.branchCount,
                                 onPrevious = { onPrevious(data) },
@@ -497,9 +514,9 @@ fun AssistantMessage(
                     is Koog -> when (val message = uiMessage.message) {
                         is Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
-                            startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull
-                                ?.let { Instant.parseOrNull(it) }
-                                ?: message.metaInfo.timestamp.toStdlibInstant(),
+                            startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
+                                Instant.parseOrNull(it)
+                            } ?: message.metaInfo.timestamp.toStdlibInstant(),
                             endedAt = message.metaInfo.timestamp.toStdlibInstant(),
                             initialVisibility = initialReasoningVisibility,
                             onVisibilityChange = onAnyReasoningVisibilityChange,
@@ -949,8 +966,7 @@ sealed interface AssistantMessageState {
                                 (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
                                     it.metaInfo ?: it.createMetaInfo()
                                 } ?: logger.debug {
-                                    "Trying to complete previous part at index ${index - 1}, " +
-                                            "but found the part is not Streaming or does not exist."
+                                    "Trying to complete previous part at index ${index - 1}, " + "but found the part is not Streaming or does not exist."
                                 }
 
                                 val newContent = AssistantMessageContent.Streaming(
@@ -964,8 +980,7 @@ sealed interface AssistantMessageState {
                                 newContent
                             } as? AssistantMessageContent.Streaming ?: run {
                                 logger.error {
-                                    "Received AddString for part index ${event.partIndex}, " +
-                                            "but the part is not Streaming."
+                                    "Received AddString for part index ${event.partIndex}, " + "but the part is not Streaming."
                                 }
                                 return@collect
                             }
@@ -976,15 +991,14 @@ sealed interface AssistantMessageState {
                         }
 
                         is SetMetaInfo -> {
-                            val content = contents
-                                .lastOrNull { it is AssistantMessageContent.Streaming }
-                                    as? AssistantMessageContent.Streaming
-                                ?: run {
-                                    logger.error {
-                                        "Received SetMetaInfo, but no Streaming content found."
+                            val content =
+                                contents.lastOrNull { it is AssistantMessageContent.Streaming } as? AssistantMessageContent.Streaming
+                                    ?: run {
+                                        logger.error {
+                                            "Received SetMetaInfo, but no Streaming content found."
+                                        }
+                                        return@collect
                                     }
-                                    return@collect
-                                }
                             val metadata = buildJsonObject {
                                 event.metaInfo.metadata?.forEach { put(it.key, it.value) }
                                 put("startedAt", JsonPrimitive(content.startedAt.toString()))
@@ -1001,14 +1015,12 @@ sealed interface AssistantMessageState {
                                 (contents.getOrNull(index - 1) as? AssistantMessageContent.Streaming)?.let {
                                     it.metaInfo ?: it.createMetaInfo()
                                 } ?: logger.debug {
-                                    "Trying to complete previous part at index ${index - 1}, " +
-                                            "but found the part is not Streaming or does not exist."
+                                    "Trying to complete previous part at index ${index - 1}, " + "but found the part is not Streaming or does not exist."
                                 }
                             }
 
                             if (index == contents.size - 1) logger.warn {
-                                "Received SetMessage for part index $index, " +
-                                        "but the part is already existing. Overwriting it."
+                                "Received SetMessage for part index $index, " + "but the part is already existing. Overwriting it."
                             }
 
                             contents.add(
@@ -1113,15 +1125,7 @@ sealed interface AssistantMessageState {
         }
 
         override fun toString(): String {
-            return "AssistantMessageState.Streaming(" +
-                    "id=$id, " +
-                    "conversationId=$conversationId, " +
-                    "parentId=$parentId, " +
-                    "depth=$depth, " +
-                    "model=$model, " +
-                    "completed=$completed, " +
-                    "createdAt=$createdAt" +
-                    ")"
+            return "AssistantMessageState.Streaming(" + "id=$id, " + "conversationId=$conversationId, " + "parentId=$parentId, " + "depth=$depth, " + "model=$model, " + "completed=$completed, " + "createdAt=$createdAt" + ")"
         }
     }
 
@@ -1174,8 +1178,7 @@ sealed interface AssistantMessageState {
                 contents = entity.parts.mapNotNull { part ->
                     when (part) {
                         is Koog -> when (val message = part.message) {
-                            is Assistant, is Reasoning, is Tool -> existingCompletedContents
-                                ?.find { it.content == message.content }
+                            is Assistant, is Reasoning, is Tool -> existingCompletedContents?.find { it.content == message.content }
                                 ?.also {
                                     logger.debug {
                                         "Reusing existing Completed content for message: ${
@@ -1183,10 +1186,9 @@ sealed interface AssistantMessageState {
                                         }"
                                     }
                                     existingCompletedContents.remove(it)
-                                }
-                                ?: AssistantMessageContent.Completed(
-                                    message = message,
-                                )
+                                } ?: AssistantMessageContent.Completed(
+                                message = message,
+                            )
 
                             else -> null
                         }

@@ -48,8 +48,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -348,6 +350,18 @@ class AgentMainPage : AgentSubPage() {
                             lazyListState = viewModel.messagesListState,
                             assistantMessageStates = viewModel.assistantMessageStates,
                         )
+
+                        val currentCount = viewModel.messagesListState.layoutInfo.totalItemsCount
+                        var lastCount by remember { mutableIntStateOf(currentCount) }
+                        LaunchedEffect(currentCount) {
+                            if (
+                                viewModel.messagesListState.firstVisibleItemIndex <= currentCount - lastCount &&
+                                viewModel.messagesListState.firstVisibleItemScrollOffset == 0
+                            ) {
+                                viewModel.messagesListState.animateScrollToItem(0)
+                            }
+                            lastCount = currentCount
+                        }
                     }.map { it.measure(constraints) }
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
