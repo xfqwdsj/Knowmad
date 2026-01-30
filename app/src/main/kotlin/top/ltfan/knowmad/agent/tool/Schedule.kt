@@ -33,9 +33,10 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.CourseWithSemester
-import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
+import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
+import top.ltfan.knowmad.data.schedule.ICalendarTrigger
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
@@ -53,11 +54,11 @@ fun ToolRegistry.Builder.scheduleTools(
     tool(ScheduleTools.CreateSemesterTool(resources, dao))
     tool(ScheduleTools.UpdateSemesterTool(resources, dao))
     tool(ScheduleTools.SearchCoursesTool(resources, dao))
-    tool(ScheduleTools.CreateCourseTool(resources, dao))
+    tool(ScheduleTools.CreateCoursesTool(resources, dao))
     tool(ScheduleTools.UpdateCourseTool(resources, dao))
     tool(ScheduleTools.QueryEventsTool(resources, dao))
     tool(ScheduleTools.SearchEventsTool(resources, dao))
-    tool(ScheduleTools.CreateEventTool(resources, dao))
+    tool(ScheduleTools.CreateEventsTool(resources, dao))
     tool(ScheduleTools.UpdateEventTool(resources, dao))
 }
 
@@ -394,7 +395,18 @@ object ScheduleTools {
         sealed interface Result {
             @Serializable
             @SerialName("Success")
-            data class Success(val courses: List<CourseWithSemester>) : Result
+            data class Success(
+                val semesters: List<SemesterEntity>,
+                val courses: List<CourseEntity>,
+            ) : Result {
+                constructor(courses: List<CourseWithSemester>) : this(
+                    semesters = courses.asSequence()
+                        .map { it.semester }
+                        .distinctBy { it.id }
+                        .toList(),
+                    courses = courses.map { it.course },
+                )
+            }
 
             @Serializable
             @SerialName("Failure")
@@ -402,16 +414,143 @@ object ScheduleTools {
         }
     }
 
-    class CreateCourseTool(
+    class CreateCoursesTool(
         private val resources: Resources,
         private val dao: ScheduleDao,
-    ) : Tool<CreateCourseTool.Args, CreateCourseTool.Result>(
+    ) : Tool<CreateCoursesTool.Args, CreateCoursesTool.Result>(
         argsSerializer = Args.serializer(),
         resultSerializer = Result.serializer(),
         descriptor = ToolDescriptor(
-            name = "create_course",
+            name = "create_courses",
             description = resources.getString(R.string.llm_tool_schedule_create_course_description),
-            requiredParameters = listOf(
+            optionalParameters = parameters(resources) + ToolParameterDescriptor(
+                name = "list",
+                description = resources.getString(R.string.llm_tool_schedule_create_course_arg_list_description),
+                type = ToolParameterType.List(
+                    itemsType = ToolParameterType.Object(
+                        properties = parameters(resources),
+                        requiredProperties = listOf(
+                            "semesterId", "name", "instructor", "location",
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ) {
+        override suspend fun execute(args: Args): Result {
+            val errors = mutableListOf<String>()
+            args.list?.let { coursesData ->
+                val list = coursesData.mapNotNull { data ->
+                    val semesterId = parseSemesterId(data.semesterId, errors) {
+                        return@mapNotNull null
+                    }
+                    CourseEntity(
+                        semesterId = semesterId,
+                        name = data.name,
+                        instructor = data.instructor,
+                        location = data.location,
+                    )
+                }
+                val insertResults = withContext(Dispatchers.IO) {
+                    runCatching { dao.insertAllCourses(list) }
+                }.onFailure { logger.error(it) { "Failed to insert courses" } }
+                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
+                if (insertResults.any { it < 0L }) {
+                    return Result.Failure(
+                        resources.getString(
+                            R.string.llm_tool_schedule_create_course_result_failure_reason_insert_failed,
+                        ),
+                    )
+                }
+                return Result.Success(
+                    courses = list,
+                    errors = errors.takeIf { it.isNotEmpty() },
+                )
+            }
+            val semesterId = parseSemesterId(args.semesterId, errors) {
+                return Result.Failure(it)
+            }
+            val name = args.name
+                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_fields_required))
+            val instructor = args.instructor
+                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_fields_required))
+            val location = args.location
+                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_fields_required))
+            val course = CourseEntity(
+                semesterId = semesterId,
+                name = name,
+                instructor = instructor,
+                location = location,
+            )
+            val inserted = withContext(Dispatchers.IO) {
+                runCatching { dao.insertCourse(course) }
+            }.onFailure { logger.error(it) { "Failed to insert course" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
+            return if (inserted >= 0L) Result.Success(
+                course = course,
+                errors = errors.takeIf { it.isNotEmpty() },
+            ) else Result.Failure(
+                resources.getString(
+                    R.string.llm_tool_schedule_create_course_result_failure_reason_insert_failed,
+                ),
+            )
+        }
+
+        private inline fun parseSemesterId(
+            semesterIdStr: String?,
+            errors: MutableList<String>,
+            onError: (String) -> Nothing,
+        ): Uuid {
+            if (semesterIdStr == null) {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_fields_required)
+                errors.add(error)
+                onError(error)
+            }
+            return Uuid.parseOrNull(semesterIdStr) ?: run {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id)
+                errors.add(error)
+                onError(error)
+            }
+        }
+
+        @Serializable
+        @SerialName("Args")
+        data class Args(
+            val semesterId: String?,
+            val name: String?,
+            val instructor: String?,
+            val location: String?,
+            val list: List<Data>?,
+        ) {
+            @Serializable
+            @SerialName("Data")
+            data class Data(
+                val semesterId: String,
+                val name: String,
+                val instructor: String,
+                val location: String,
+            )
+        }
+
+        @Serializable
+        sealed interface Result {
+            @Serializable
+            @SerialName("Success")
+            data class Success(
+                val course: CourseEntity? = null,
+                val courses: List<CourseEntity>? = null,
+                val errors: List<String>? = null,
+            ) : Result
+
+            @Serializable
+            @SerialName("Failure")
+            data class Failure(val reason: String) : Result
+        }
+
+        companion object {
+            private fun parameters(resources: Resources) = listOf(
                 ToolParameterDescriptor(
                     name = "semesterId",
                     description = resources.getString(R.string.llm_tool_schedule_create_course_arg_semester_id_description),
@@ -432,48 +571,7 @@ object ScheduleTools {
                     description = resources.getString(R.string.llm_tool_schedule_create_course_arg_location_description),
                     type = ToolParameterType.String,
                 ),
-            ),
-        ),
-    ) {
-        override suspend fun execute(args: Args): Result {
-            val semesterId = Uuid.parseOrNull(args.semesterId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id))
-            val course = CourseEntity(
-                semesterId = semesterId,
-                name = args.name,
-                instructor = args.instructor,
-                location = args.location,
             )
-            val inserted = withContext(Dispatchers.IO) {
-                runCatching { dao.insertCourse(course) }
-            }.onFailure { logger.error(it) { "Failed to insert course" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
-            return if (inserted >= 0L) Result.Success(course)
-            else Result.Failure(
-                resources.getString(
-                    R.string.llm_tool_schedule_create_course_result_failure_reason_insert_failed,
-                ),
-            )
-        }
-
-        @Serializable
-        @SerialName("Args")
-        data class Args(
-            val semesterId: String,
-            val name: String,
-            val instructor: String,
-            val location: String,
-        )
-
-        @Serializable
-        sealed interface Result {
-            @Serializable
-            @SerialName("Success")
-            data class Success(val course: CourseEntity) : Result
-
-            @Serializable
-            @SerialName("Failure")
-            data class Failure(val reason: String) : Result
         }
     }
 
@@ -590,7 +688,7 @@ object ScheduleTools {
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_end_time)) }
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.getEventsInRange(start, end) }
+                runCatching { dao.getOriginalEventsInRange(start, end) }
             }.onFailure { logger.error(it) { "Failed to query events in range" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
@@ -604,7 +702,24 @@ object ScheduleTools {
         sealed interface Result {
             @Serializable
             @SerialName("Success")
-            data class Success(val events: List<Event>) : Result
+            data class Success(
+                val semesters: List<SemesterEntity>,
+                val courses: List<CourseEntity>?,
+                val events: List<EventEntity>,
+            ) : Result {
+                constructor(events: List<EventWithSemesterAndCourse>) : this(
+                    semesters = events.asSequence()
+                        .map { it.semester }
+                        .distinctBy { it.id }
+                        .toList(),
+                    courses = events.asSequence()
+                        .mapNotNull { it.course }
+                        .distinctBy { it.id }
+                        .toList()
+                        .takeIf { it.isNotEmpty() },
+                    events = events.map { it.event },
+                )
+            }
 
             @Serializable
             @SerialName("Failure")
@@ -633,7 +748,7 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_empty_query)) }
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.searchEvents(args.query) }
+                runCatching { dao.searchOriginalEvents(args.query) }
             }.onFailure { logger.error(it) { "Failed to search events" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
@@ -647,7 +762,24 @@ object ScheduleTools {
         sealed interface Result {
             @Serializable
             @SerialName("Success")
-            data class Success(val events: List<Event>) : Result
+            data class Success(
+                val semesters: List<SemesterEntity>,
+                val courses: List<CourseEntity>?,
+                val events: List<EventEntity>,
+            ) : Result {
+                constructor(events: List<EventWithSemesterAndCourse>) : this(
+                    semesters = events.asSequence()
+                        .map { it.semester }
+                        .distinctBy { it.id }
+                        .toList(),
+                    courses = events.asSequence()
+                        .mapNotNull { it.course }
+                        .distinctBy { it.id }
+                        .toList()
+                        .takeIf { it.isNotEmpty() },
+                    events = events.map { it.event },
+                )
+            }
 
             @Serializable
             @SerialName("Failure")
@@ -655,16 +787,310 @@ object ScheduleTools {
         }
     }
 
-    class CreateEventTool(
+    class CreateEventsTool(
         private val resources: Resources,
         private val dao: ScheduleDao,
-    ) : Tool<CreateEventTool.Args, CreateEventTool.Result>(
+    ) : Tool<CreateEventsTool.Args, CreateEventsTool.Result>(
         argsSerializer = Args.serializer(),
         resultSerializer = Result.serializer(),
         descriptor = ToolDescriptor(
-            name = "create_event",
+            name = "create_events",
             description = resources.getString(R.string.llm_tool_schedule_create_event_description),
-            requiredParameters = listOf(
+            optionalParameters = parameters(resources) + ToolParameterDescriptor(
+                name = "list",
+                description = resources.getString(R.string.llm_tool_schedule_create_event_arg_list_description),
+                type = ToolParameterType.List(
+                    itemsType = ToolParameterType.Object(
+                        properties = parameters(resources),
+                        requiredProperties = listOf(
+                            "semesterId",
+                            "startTime",
+                            "endTime",
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ) {
+        override suspend fun execute(args: Args): Result {
+            val errors = mutableListOf<String>()
+            args.list?.let { eventsData ->
+                val list = eventsData.mapNotNull { data ->
+                    val semesterId = parseSemesterId(data.semesterId, errors) {
+                        return@mapNotNull null
+                    }
+                    val instant1 = parseInstant1(data.startTime, errors) {
+                        return@mapNotNull null
+                    }
+                    val instant2 = parseInstant2(data.endTime, errors) {
+                        return@mapNotNull null
+                    }
+                    val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
+                    val courseId = parseCourseId(
+                        data.courseId,
+                        data.name,
+                        data.location,
+                        errors,
+                    ) {
+                        return@mapNotNull null
+                    }
+                    val color = parseColor(data.color, courseId, semesterId)
+                    val reminders = parseReminders(data.reminders, errors)
+                    EventEntity(
+                        semesterId = semesterId,
+                        courseId = courseId,
+                        name = data.name,
+                        instructor = data.instructor,
+                        location = data.location,
+                        color = color,
+                        startTime = start,
+                        endTime = end,
+                        reminders = reminders,
+                        notes = data.notes,
+                    )
+                }
+                val insertResults = withContext(Dispatchers.IO) {
+                    runCatching { dao.insertAllEvents(list) }
+                }.onFailure { logger.error(it) { "Failed to insert events" } }
+                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
+                if (insertResults.any { it < 0L }) {
+                    return Result.Failure(
+                        resources.getString(
+                            R.string.llm_tool_schedule_create_event_result_failure_reason_insert_failed,
+                        ),
+                    )
+                }
+                return Result.Success(
+                    events = list,
+                    errors = errors.takeIf { it.isNotEmpty() },
+                )
+            }
+            val semesterId = parseSemesterId(args.semesterId, errors) {
+                return Result.Failure(it)
+            }
+            val instant1 = parseInstant1(args.startTime, errors) {
+                return Result.Failure(it)
+            }
+            val instant2 = parseInstant2(args.endTime, errors) {
+                return Result.Failure(it)
+            }
+            val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
+            val courseId = parseCourseId(
+                args.courseId,
+                args.name,
+                args.location,
+                errors,
+            ) {
+                return Result.Failure(it)
+            }
+            val color = parseColor(args.color, courseId, semesterId)
+            val reminders = parseReminders(args.reminders, errors)
+            val event = EventEntity(
+                semesterId = semesterId,
+                courseId = courseId,
+                name = args.name,
+                instructor = args.instructor,
+                location = args.location,
+                color = color,
+                startTime = start,
+                endTime = end,
+                reminders = reminders,
+                notes = args.notes,
+            )
+            val inserted = withContext(Dispatchers.IO) {
+                runCatching { dao.insertEvent(event) }
+            }.onFailure { logger.error(it) { "Failed to insert event" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
+            return if (inserted >= 0L) Result.Success(
+                event = event,
+                errors = errors.takeIf { it.isNotEmpty() },
+            )
+            else Result.Failure(
+                resources.getString(
+                    R.string.llm_tool_schedule_create_event_result_failure_reason_insert_failed,
+                ),
+            )
+        }
+
+        private inline fun parseSemesterId(
+            semesterIdStr: String?,
+            errors: MutableList<String>,
+            onError: (String) -> Nothing,
+        ): Uuid {
+            if (semesterIdStr == null) {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                errors.add(error)
+                onError(error)
+            }
+            return Uuid.parseOrNull(semesterIdStr) ?: run {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id)
+                errors.add(error)
+                onError(error)
+            }
+        }
+
+        private inline fun parseInstant1(
+            timeStr: String?,
+            errors: MutableList<String>,
+            onError: (String) -> Nothing,
+        ): Instant {
+            if (timeStr == null) {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                errors.add(error)
+                onError(error)
+            }
+            val time = Instant.parseOrNull(timeStr) ?: run {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_start_time)
+                errors.add(error)
+                onError(error)
+            }
+            return time
+        }
+
+        private inline fun parseInstant2(
+            timeStr: String?,
+            errors: MutableList<String>,
+            onError: (String) -> Nothing,
+        ): Instant {
+            if (timeStr == null) {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                errors.add(error)
+                onError(error)
+            }
+            val time = Instant.parseOrNull(timeStr) ?: run {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_end_time)
+                errors.add(error)
+                onError(error)
+            }
+            return time
+        }
+
+        private inline fun parseCourseId(
+            courseIdStr: String?,
+            name: String?,
+            location: String?,
+            errors: MutableList<String>,
+            onError: (String) -> Nothing,
+        ): Uuid? {
+            if (courseIdStr == null) {
+                if (name.isNullOrBlank() || location.isNullOrBlank()) {
+                    val error =
+                        resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_name_location_required)
+                    errors.add(error)
+                    onError(error)
+                }
+                return null
+            }
+            val courseId = Uuid.parseOrNull(courseIdStr) ?: run {
+                val error =
+                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_course_id)
+                errors.add(error)
+                onError(error)
+            }
+            return courseId
+        }
+
+        private fun parseColor(
+            colorStr: String?,
+            courseId: Uuid?,
+            semesterId: Uuid,
+        ): ICalendarColor {
+            return colorStr?.let {
+                ICalendarColor.fromValue(it)
+            } ?: ICalendarColor.fromId(courseId ?: semesterId)
+        }
+
+        private fun parseReminders(
+            reminders: List<Args.ReminderData>?,
+            errors: MutableList<String>,
+        ) = reminders?.mapNotNull {
+            it.time?.let { timeStr ->
+                val time = Instant.parseOrNull(timeStr) ?: run {
+                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
+                    return@let
+                }
+                return@mapNotNull Reminder(
+                    trigger = ICalendarTrigger.Absolute(time),
+                    displayText = it.displayText,
+                )
+            }
+            it.offset?.let { offsetStr ->
+                val duration = Duration.parseOrNull(offsetStr) ?: run {
+                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
+                    return@let
+                }
+                val related = it.related ?: Start
+                return@mapNotNull Reminder(
+                    trigger = ICalendarTrigger.Relative(duration, related),
+                    displayText = it.displayText,
+                )
+            }
+            return@mapNotNull null
+        }?.toReminders() ?: Empty
+
+        @Serializable
+        @SerialName("Args")
+        data class Args(
+            val semesterId: String?,
+            val startTime: String?,
+            val endTime: String?,
+            val courseId: String?,
+            val name: String?,
+            val instructor: String?,
+            val location: String?,
+            val color: String?,
+            val reminders: List<ReminderData>?,
+            val notes: String?,
+            val list: List<Data>?,
+        ) {
+            @Serializable
+            @SerialName("Data")
+            data class Data(
+                val semesterId: String,
+                val startTime: String,
+                val endTime: String,
+                val courseId: String?,
+                val name: String?,
+                val instructor: String?,
+                val location: String?,
+                val color: String?,
+                val reminders: List<ReminderData>?,
+                val notes: String?,
+            )
+
+            @Serializable
+            @SerialName("Reminder")
+            data class ReminderData(
+                val time: String?,
+                val offset: String?,
+                val related: ICalendarTrigger.Relative.Related?,
+                val displayText: String?,
+            )
+        }
+
+        @Serializable
+        sealed interface Result {
+            @Serializable
+            @SerialName("Success")
+            data class Success(
+                val event: EventEntity? = null,
+                val events: List<EventEntity>? = null,
+                val errors: List<String>? = null,
+            ) : Result
+
+            @Serializable
+            @SerialName("Failure")
+            data class Failure(val reason: String) : Result
+        }
+
+        companion object {
+            private fun parameters(resources: Resources) = listOf(
                 ToolParameterDescriptor(
                     name = "semesterId",
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_semester_id_description),
@@ -680,8 +1106,6 @@ object ScheduleTools {
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_end_time_description),
                     type = ToolParameterType.String,
                 ),
-            ),
-            optionalParameters = listOf(
                 ToolParameterDescriptor(
                     name = "courseId",
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_course_id_description),
@@ -710,88 +1134,39 @@ object ScheduleTools {
                 ToolParameterDescriptor(
                     name = "reminders",
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_reminders_description),
-                    type = ToolParameterType.List(ToolParameterType.String),
+                    type = ToolParameterType.List(
+                        itemsType = ToolParameterType.Object(
+                            properties = listOf(
+                                ToolParameterDescriptor(
+                                    name = "time",
+                                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_reminders_property_time_description),
+                                    type = ToolParameterType.String,
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "offset",
+                                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_reminders_property_offset_description),
+                                    type = ToolParameterType.String,
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "related",
+                                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_reminders_property_related_description),
+                                    type = ToolParameterType.Enum(ICalendarTrigger.Relative.Related.entries),
+                                ),
+                                ToolParameterDescriptor(
+                                    name = "displayText",
+                                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_reminders_property_display_text_description),
+                                    type = ToolParameterType.String,
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
                 ToolParameterDescriptor(
                     name = "notes",
                     description = resources.getString(R.string.llm_tool_schedule_create_event_arg_notes_description),
                     type = ToolParameterType.String,
                 ),
-            ),
-        ),
-    ) {
-        override suspend fun execute(args: Args): Result {
-            val id = Uuid.generateV7()
-            val semesterId = Uuid.parseOrNull(args.semesterId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id))
-            val instant1 = runCatching { Instant.parse(args.startTime) }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_start_time)) }
-            val instant2 = runCatching { Instant.parse(args.endTime) }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_end_time)) }
-            val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
-            val courseId = args.courseId?.let {
-                Uuid.parseOrNull(it)
-                    ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_course_id))
-            }
-            if (courseId == null) {
-                if (args.name.isNullOrBlank() || args.location.isNullOrBlank()) {
-                    return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_name_location_required))
-                }
-            }
-            val color = args.color?.let { ICalendarColor.fromValue(it) }
-                ?: ICalendarColor.fromId(courseId ?: semesterId)
-            val reminders = args.reminders?.mapNotNull { durationString ->
-                Duration.parseOrNull(durationString)?.let { Reminder(-it) }
-            }?.toReminders() ?: Empty
-            val event = EventEntity(
-                id = id,
-                semesterId = semesterId,
-                courseId = courseId,
-                name = args.name,
-                instructor = args.instructor,
-                location = args.location,
-                color = color,
-                startTime = start,
-                endTime = end,
-                reminders = reminders,
-                notes = args.notes,
             )
-            val inserted = withContext(Dispatchers.IO) {
-                runCatching { dao.insertEvent(event) }
-            }.onFailure { logger.error(it) { "Failed to insert event" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
-            return if (inserted >= 0L) Result.Success(event)
-            else Result.Failure(
-                resources.getString(
-                    R.string.llm_tool_schedule_create_event_result_failure_reason_insert_failed,
-                ),
-            )
-        }
-
-        @Serializable
-        @SerialName("Args")
-        data class Args(
-            val semesterId: String,
-            val startTime: String,
-            val endTime: String,
-            val courseId: String? = null,
-            val name: String? = null,
-            val instructor: String? = null,
-            val location: String? = null,
-            val color: String? = null,
-            val reminders: List<String>? = null,
-            val notes: String? = null,
-        )
-
-        @Serializable
-        sealed interface Result {
-            @Serializable
-            @SerialName("Success")
-            data class Success(val event: EventEntity) : Result
-
-            @Serializable
-            @SerialName("Failure")
-            data class Failure(val reason: String) : Result
         }
     }
 

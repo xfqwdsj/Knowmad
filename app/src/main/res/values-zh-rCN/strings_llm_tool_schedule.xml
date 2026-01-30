@@ -65,7 +65,9 @@
     <string name="llm_tool_schedule_create_course_arg_name_description">课程名称</string>
     <string name="llm_tool_schedule_create_course_arg_instructor_description">讲师姓名</string>
     <string name="llm_tool_schedule_create_course_arg_location_description">课程地点</string>
+    <string name="llm_tool_schedule_create_course_arg_list_description">课程列表（用于批量创建，其他参数将被忽略）</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_fields_required">课程名称、讲师姓名和地点均为必填项</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">创建课程时发生内部错误</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">创建课程失败</string>
 
@@ -90,12 +92,20 @@
     <string name="llm_tool_schedule_create_event_arg_instructor_description">讲师姓名</string>
     <string name="llm_tool_schedule_create_event_arg_location_description">地点（普通事件必填）</string>
     <string name="llm_tool_schedule_create_event_arg_color_description">ICalendar颜色名称（可选）</string>
-    <string name="llm_tool_schedule_create_event_arg_reminders_description">相对于事件开始时间的提醒偏移时长，正值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_description">事件提醒</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_property_time_description">绝对提醒时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_property_offset_description">相对于事件开始时间的提醒偏移时长，负值为提前（ISO-8601 Duration）</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_property_related_description">提醒关联的时间点（设置相对提醒且需要更改默认值Start时才可指定为End，否则无需指定）</string>
+    <string name="llm_tool_schedule_create_event_arg_reminders_property_display_text_description">提醒显示的文本内容</string>
+    <string name="llm_tool_schedule_create_event_arg_list_description">事件列表（用于批量创建，其他参数将被忽略）</string>
     <string name="llm_tool_schedule_create_event_arg_notes_description">事件备注</string>
+    <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">提醒的time格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_offset">提醒的offset格式无效，期望ISO-8601 Duration</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_course_id">courseId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_fields_required">学期ID、开始时间和结束时间均为必填项</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_name_location_required">普通事件必须提供名称和地点</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_internal_error">创建事件时发生内部错误</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_insert_failed">创建事件失败</string>

@@ -51,7 +51,13 @@ interface ScheduleDao : FtsDao {
     suspend fun insertCourse(course: CourseEntity): Long
 
     @Insert
+    suspend fun insertAllCourses(courses: List<CourseEntity>): List<Long>
+
+    @Insert
     suspend fun insertEvent(event: EventEntity): Long
+
+    @Insert
+    suspend fun insertAllEvents(events: List<EventEntity>): List<Long>
 
     @Delete
     suspend fun deleteSemester(semester: SemesterEntity): Int
@@ -232,8 +238,13 @@ interface ScheduleDao : FtsDao {
     suspend fun searchEventsInternal(query: String): List<EventWithSemesterAndCourse>
 
     @Transaction
-    suspend fun searchEvents(query: String): List<Event> {
+    suspend fun searchOriginalEvents(query: String): List<EventWithSemesterAndCourse> {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
-        return searchEventsInternal(sanitized).map { it.toEvent() }
+        return searchEventsInternal(sanitized)
+    }
+
+    @Transaction
+    suspend fun searchEvents(query: String): List<Event> {
+        return searchOriginalEvents(query).map { it.toEvent() }
     }
 }
