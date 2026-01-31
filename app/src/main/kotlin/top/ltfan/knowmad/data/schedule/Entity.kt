@@ -196,7 +196,7 @@ data class EventFtsEntity(
     @PrimaryKey
     @ColumnInfo(name = "rowid")
     val rowId: Long,
-    val name: String?, // TODO: fix search when some fields are null
+    val name: String?,
     val instructor: String?,
     val location: String?,
     val notes: String?,

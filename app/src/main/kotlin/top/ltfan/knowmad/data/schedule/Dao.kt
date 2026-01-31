@@ -75,12 +75,12 @@ interface ScheduleDao : FtsDao {
     suspend fun updateCourse(course: CourseEntity): Int
 
     @Update
-    suspend fun updateEventWithOutInstant(event: EventEntity): Int
+    suspend fun updateEventWithoutInstant(event: EventEntity): Int
 
     @Transaction
     suspend fun updateEvent(event: EventEntity): Int {
         val updatedEvent = event.copy(updatedAt = Clock.System.now())
-        return updateEventWithOutInstant(updatedEvent)
+        return updateEventWithoutInstant(updatedEvent)
     }
 
     @Query("SELECT * FROM SemesterEntity WHERE id = :id")
@@ -170,25 +170,6 @@ interface ScheduleDao : FtsDao {
     @Query(
         """
             SELECT * FROM EventEntity
-            WHERE semesterId = :semesterId
-            ORDER BY
-                startTime ASC,
-                priority ASC,
-                endTime DESC,
-                createdAt ASC
-    """,
-    )
-    suspend fun getAllOriginalEventsBySemester(semesterId: Uuid): List<EventWithSemesterAndCourse>
-
-    @Transaction
-    suspend fun getAllEventsBySemester(semesterId: Uuid): List<Event> {
-        return getAllOriginalEventsBySemester(semesterId).map { it.toEvent() }
-    }
-
-    @Transaction
-    @Query(
-        """
-            SELECT * FROM EventEntity
             WHERE startTime <= :endTime AND endTime >= :startTime
             ORDER BY
                 startTime ASC,
@@ -233,6 +214,63 @@ interface ScheduleDao : FtsDao {
     @Transaction
     @Query(
         """
+            SELECT * FROM EventEntity
+            WHERE semesterId = :semesterId
+            ORDER BY
+                startTime ASC,
+                priority ASC,
+                endTime DESC,
+                createdAt ASC
+    """,
+    )
+    suspend fun getAllOriginalEventsBySemester(semesterId: Uuid): List<EventWithSemesterAndCourse>
+
+    @Transaction
+    suspend fun getAllEventsBySemester(semesterId: Uuid): List<Event> {
+        return getAllOriginalEventsBySemester(semesterId).map { it.toEvent() }
+    }
+
+    @Transaction
+    @Query(
+        """
+            SELECT * FROM EventEntity
+            WHERE courseId = :courseId
+            ORDER BY
+                startTime ASC,
+                priority ASC,
+                endTime DESC,
+                createdAt ASC
+    """,
+    )
+    suspend fun getAllOriginalEventsByCourse(courseId: Uuid): List<EventWithSemesterAndCourse>
+
+    @Transaction
+    suspend fun getAllEventsByCourse(courseId: Uuid): List<Event> {
+        return getAllOriginalEventsByCourse(courseId).map { it.toEvent() }
+    }
+
+    @Transaction
+    @Query(
+        """
+            SELECT * FROM EventEntity
+            WHERE courseId IN (:courseIds)
+            ORDER BY
+                startTime ASC,
+                priority ASC,
+                endTime DESC,
+                createdAt ASC
+    """,
+    )
+    suspend fun getAllOriginalEventsByCourses(courseIds: List<Uuid>): List<EventWithSemesterAndCourse>
+
+    @Transaction
+    suspend fun getAllEventsByCourses(courseIds: List<Uuid>): List<Event> {
+        return getAllOriginalEventsByCourses(courseIds).map { it.toEvent() }
+    }
+
+    @Transaction
+    @Query(
+        """
             SELECT EventEntity.* FROM EventEntity
             JOIN EventFtsEntity ON EventEntity.rowid = EventFtsEntity.rowid
             WHERE EventFtsEntity MATCH :query
@@ -249,5 +287,22 @@ interface ScheduleDao : FtsDao {
     @Transaction
     suspend fun searchEvents(query: String): List<Event> {
         return searchOriginalEvents(query).map { it.toEvent() }
+    }
+
+    @Transaction
+    suspend fun searchOriginalEventsJoinedCourses(query: String): List<EventWithSemesterAndCourse> {
+        val events = searchOriginalEvents(query)
+        val courseIds = searchCourses(query).map { it.course.id }
+        val eventsByCourse = getAllOriginalEventsByCourses(courseIds)
+        val allEvents = (events + eventsByCourse).asSequence()
+            .distinctBy { it.event.id }
+            .sortedWith(
+                compareBy<EventWithSemesterAndCourse> { it.event.startTime }
+                    .thenBy { it.event.priority }
+                    .thenByDescending { it.event.endTime }
+                    .thenBy { it.event.createdAt },
+            )
+            .toList()
+        return allEvents
     }
 }

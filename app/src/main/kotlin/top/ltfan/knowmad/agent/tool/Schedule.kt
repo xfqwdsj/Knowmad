@@ -751,7 +751,7 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_empty_query)) }
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.searchOriginalEvents(args.query) }
+                runCatching { dao.searchOriginalEventsJoinedCourses(args.query) }
             }.onFailure { logger.error(it) { "Failed to search events" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
