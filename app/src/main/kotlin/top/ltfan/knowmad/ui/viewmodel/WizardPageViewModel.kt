@@ -39,11 +39,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
-import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
@@ -260,8 +257,7 @@ class WizardPageViewModel(
             try {
                 val instant = Clock.System.now()
                 firstJoinedTime = instant
-                val datetime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                    .format(LocalDateTime.Formats.ISO)
+                val datetime = instant.formatAgentTime()
                 val head = resources.getString(R.string.llm_prompt_head)
                 val intro = resources.getString(R.string.llm_prompt_intro_long)
                 val body = resources.getString(R.string.llm_prompt_setup_wizard_finish, datetime)
