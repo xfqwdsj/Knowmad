@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.mikepenz.markdown.compose.LocalMarkdownAnimations
+import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.MarkdownSuccess
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
@@ -140,6 +144,28 @@ fun MarkdownView(
         modifier = modifier,
         success = success,
     )
+}
+
+@Composable
+fun MarkdownSuccessContentWithTrailingText(
+    state: State.Success,
+    components: MarkdownComponents,
+    modifier: Modifier,
+    trailing: String?,
+) {
+    val animations = LocalMarkdownAnimations.current
+
+    Column(modifier) {
+        state.node.children.forEach { node ->
+            MarkdownElement(node, components, state.content)
+        }
+        trailing?.let { trailing ->
+            Text(
+                trailing,
+                modifier = animations.animateTextSize(Modifier),
+            )
+        }
+    }
 }
 
 sealed interface SavedMarkdownState {

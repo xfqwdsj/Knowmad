@@ -38,6 +38,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.Serializable
@@ -190,9 +191,15 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         val model: LLModel?,
         coroutineScope: CoroutineScope,
         val startedAt: Instant = Clock.System.now(),
-    ) : AssistantMessageContent(coroutineScope, flow) {
+    ) : AssistantMessageContent(
+        coroutineScope = coroutineScope,
+        contentFlow = flow.map { it.substringBeforeLast('\n') },
+    ) {
         var metaInfo by mutableStateOf<ResponseMetaInfo?>(null)
         override val content get() = flow.value
+        val trailing = flow.map {
+            it.substringAfterLast('\n', "").ifEmpty { null }
+        }
 
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
             val metaInfo = metaInfo ?: createMetaInfo(defaultEndedAt)
