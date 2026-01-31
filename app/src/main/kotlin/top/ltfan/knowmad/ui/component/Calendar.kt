@@ -302,7 +302,7 @@ fun Day(
     val tymeLunarFestival = remember(tymeLunarDay) { tymeLunarDay.getFestival() }
 
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(
