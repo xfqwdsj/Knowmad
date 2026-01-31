@@ -69,6 +69,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -103,6 +104,7 @@ import com.kizitonwose.calendar.core.plusDays
 import com.kizitonwose.calendar.core.plusMonths
 import com.kyant.capsule.ContinuousRoundedRectangle
 import com.tyme.solar.SolarDay
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -148,6 +150,8 @@ fun Calendar(
         flowOf(emptyList())
     },
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     val today = rememberSystemDate(timeZone = calendarState.timeZone)
 
     val transition = rememberTransition(calendarState.transitionState)
@@ -178,7 +182,15 @@ fun Calendar(
                             Day(
                                 date = day.date,
                                 selected = selected && day.position == MonthDate,
-                                onClick = { calendarState.selectedDate = day.date },
+                                onClick = {
+                                    if (calendarState.selectedDate != day.date) {
+                                        calendarState.selectedDate = day.date
+                                    } else {
+                                        coroutineScope.launch {
+                                            calendarState.animateScrollToDate(day.date)
+                                        }
+                                    }
+                                },
                                 modifier = Modifier.sharedElement(
                                     rememberSharedContentState(CalendarSharedKey.Day(day.date)),
                                     animatedVisibilityScope = this@AnimatedContent,
@@ -246,16 +258,7 @@ fun Calendar(
     }
 
     LaunchedEffect(calendarState.selectedDate) {
-        launch {
-            calendarState.monthCalendarState.animateScrollToMonth(
-                calendarState.selectedDate.yearMonth,
-            )
-        }
-        launch {
-            calendarState.weekCalendarState.animateScrollToWeek(
-                calendarState.selectedDate,
-            )
-        }
+        calendarState.animateScrollToDate()
     }
 
     var lastDay by remember { mutableStateOf(today) }
@@ -664,6 +667,17 @@ class CalendarState(
         }
 
     var selectedDate by mutableStateOf(initialDate)
+
+    suspend fun animateScrollToDate(date: LocalDate = selectedDate) {
+        coroutineScope {
+            launch {
+                monthCalendarState.animateScrollToMonth(date.yearMonth)
+            }
+            launch {
+                weekCalendarState.animateScrollToWeek(date)
+            }
+        }
+    }
 
     private var lastFirstVisibleMonth by mutableStateOf(monthCalendarState.firstVisibleMonth.yearMonth)
     private var lastLastVisibleMonth by mutableStateOf(monthCalendarState.lastVisibleMonth.yearMonth)
