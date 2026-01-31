@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.mikepenz.markdown.compose.MarkdownSuccess
+import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.MarkdownState
@@ -50,10 +52,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 
+typealias MarkdownSuccessContent = @Composable (
+    state: State.Success,
+    components: MarkdownComponents,
+    modifier: Modifier,
+) -> Unit
+
+val DefaultMarkdownSuccessContent: MarkdownSuccessContent = { state, components, modifier ->
+    MarkdownSuccess(state = state, components = components, modifier = modifier)
+}
+
 @Composable
 fun MarkdownView(
     state: State,
     modifier: Modifier = Modifier,
+    success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     Markdown(
         state,
@@ -61,6 +74,7 @@ fun MarkdownView(
         components = markdownComponents { type, model ->
 
         },
+        success = success,
     )
 }
 
@@ -68,11 +82,13 @@ fun MarkdownView(
 fun MarkdownView(
     markdown: String,
     modifier: Modifier = Modifier,
+    success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val markdownState = rememberMarkdownState(markdown, retainState = true)
     MarkdownView(
         markdownState,
         modifier = modifier,
+        success = success,
     )
 }
 
@@ -80,6 +96,7 @@ fun MarkdownView(
 fun MarkdownView(
     stateFlow: StateFlow<State>,
     modifier: Modifier = Modifier,
+    success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val blockParsing = LocalMarkdownViewBlockParsing.current
     val initialState = remember(blockParsing) {
@@ -95,6 +112,7 @@ fun MarkdownView(
     MarkdownView(
         state,
         modifier = modifier,
+        success = success,
     )
 }
 
@@ -102,10 +120,12 @@ fun MarkdownView(
 fun MarkdownView(
     markdownState: MarkdownState,
     modifier: Modifier = Modifier,
+    success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
         markdownState.state,
         modifier = modifier,
+        success = success,
     )
 }
 
@@ -113,10 +133,12 @@ fun MarkdownView(
 fun MarkdownView(
     savedMarkdownState: SavedMarkdownState,
     modifier: Modifier = Modifier,
+    success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
         savedMarkdownState.state,
         modifier = modifier,
+        success = success,
     )
 }
 
