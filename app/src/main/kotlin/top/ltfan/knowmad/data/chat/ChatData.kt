@@ -211,12 +211,12 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
             val metaInfo = metaInfo ?: createMetaInfo(defaultEndedAt)
             return when (type) {
-                AssistantStreamingMessageType.Content -> Message.Assistant(
+                Content -> Message.Assistant(
                     content = flow.value,
                     metaInfo = metaInfo,
                 )
 
-                AssistantStreamingMessageType.Reasoning -> Message.Reasoning(
+                Reasoning -> Message.Reasoning(
                     content = flow.value,
                     metaInfo = metaInfo,
                 )
