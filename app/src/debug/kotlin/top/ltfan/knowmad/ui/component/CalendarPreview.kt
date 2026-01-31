@@ -79,10 +79,10 @@ fun CalendarPreview() {
                         onClick = {
                             coroutineScope.launch {
                                 state.animateToMode(
-                                    if (state.currentMode == Month) Week else Month
+                                    if (state.currentMode == Month) Week else Month,
                                 )
                             }
-                        }
+                        },
                     ) {
                         Text("Toggle Mode")
                     }
@@ -95,7 +95,7 @@ fun CalendarPreview() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(height),
-                    calendarState = state,
+                    state = state,
                     locale = Locale.getDefault(),
                 ) { _, _ ->
                     flowOf(

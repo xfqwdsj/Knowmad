@@ -228,7 +228,7 @@ class MainPage : Page() {
                             // TODO: switch mode by gesture
                             Calendar(
                                 headerModifier = Modifier.padding(vertical = headerVerticalPadding),
-                                calendarState = viewModel.calendarState,
+                                state = viewModel.calendarState,
                                 onSystemDateChanged = viewModel::onSystemDateChanged,
                                 getEvents = viewModel::getEvents,
                             )

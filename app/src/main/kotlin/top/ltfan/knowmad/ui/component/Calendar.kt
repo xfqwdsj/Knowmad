@@ -135,15 +135,15 @@ import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
 fun Calendar(
     modifier: Modifier = Modifier,
     headerModifier: Modifier = Modifier.padding(vertical = 4.dp),
-    calendarState: CalendarState = rememberCalendarState(),
+    state: CalendarState = rememberCalendarState(),
     onSystemDateChanged: (
         lastDay: LocalDate,
         newDay: LocalDate,
-    ) -> Unit = { _, it -> calendarState.selectedDate = it },
+    ) -> Unit = { _, it -> state.selectedDate = it },
     onSystemTimeZoneChanged: (
         lastTimeZone: TimeZone,
         newTimeZone: TimeZone,
-    ) -> Unit = { _, it -> calendarState.timeZone = it },
+    ) -> Unit = { _, it -> state.timeZone = it },
     locale: Locale = LocalConfiguration.current.locales[0],
     headerTextStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
@@ -152,9 +152,9 @@ fun Calendar(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val today = rememberSystemDate(timeZone = calendarState.timeZone)
+    val today = rememberSystemDate(timeZone = state.timeZone)
 
-    val transition = rememberTransition(calendarState.transitionState)
+    val transition = rememberTransition(state.transitionState)
 
     SharedTransitionLayout {
         ProvideLocalSharedTransitionScope {
@@ -165,14 +165,14 @@ fun Calendar(
                 when (mode) {
                     Month -> HorizontalCalendar(
                         modifier = Modifier.fillMaxSize(),
-                        state = calendarState.monthCalendarState,
+                        state = state.monthCalendarState,
                         contentHeightMode = Fill,
                         dayContent = { day ->
-                            val selected = day.date == calendarState.selectedDate
+                            val selected = day.date == state.selectedDate
 
                             val events = remember(day) {
                                 if (day.position != MonthDate) return@remember null
-                                snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                                snapshotFlow { state.timeZone }.flatMapLatest {
                                     val startOfDay = day.date.atStartOfDayIn(it)
                                     val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
                                     getEvents(startOfDay, endOfDay)
@@ -183,11 +183,11 @@ fun Calendar(
                                 date = day.date,
                                 selected = selected && day.position == MonthDate,
                                 onClick = {
-                                    if (calendarState.selectedDate != day.date) {
-                                        calendarState.selectedDate = day.date
+                                    if (state.selectedDate != day.date) {
+                                        state.selectedDate = day.date
                                     } else {
                                         coroutineScope.launch {
-                                            calendarState.animateScrollToDate(day.date)
+                                            state.animateScrollToDate(day.date)
                                         }
                                     }
                                 },
@@ -206,7 +206,7 @@ fun Calendar(
                         monthHeader = {
                             WeekHeader(
                                 modifier = headerModifier,
-                                daysOfWeek = calendarState.daysOfWeek,
+                                daysOfWeek = state.daysOfWeek,
                                 locale = locale,
                                 textStyle = headerTextStyle,
                             )
@@ -215,12 +215,12 @@ fun Calendar(
 
                     Week -> WeekCalendar(
                         modifier = Modifier.fillMaxSize(),
-                        state = calendarState.weekCalendarState,
+                        state = state.weekCalendarState,
                         dayContent = { day ->
-                            val selected = day.date == calendarState.selectedDate
+                            val selected = day.date == state.selectedDate
 
                             val events by remember(day) {
-                                snapshotFlow { calendarState.timeZone }.flatMapLatest {
+                                snapshotFlow { state.timeZone }.flatMapLatest {
                                     val startOfDay = day.date.atStartOfDayIn(it)
                                     val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
                                     getEvents(startOfDay, endOfDay)
@@ -230,7 +230,7 @@ fun Calendar(
                             Day(
                                 date = day.date,
                                 selected = selected,
-                                onClick = { calendarState.selectedDate = day.date },
+                                onClick = { state.selectedDate = day.date },
                                 modifier = Modifier.sharedElement(
                                     rememberSharedContentState(CalendarSharedKey.Day(day.date)),
                                     animatedVisibilityScope = this@AnimatedContent,
@@ -246,7 +246,7 @@ fun Calendar(
                         weekHeader = {
                             WeekHeader(
                                 modifier = headerModifier,
-                                daysOfWeek = calendarState.daysOfWeek,
+                                daysOfWeek = state.daysOfWeek,
                                 locale = locale,
                                 textStyle = headerTextStyle,
                             )
@@ -258,18 +258,18 @@ fun Calendar(
     }
 
     var isFirstTimeScroll by remember { mutableStateOf(true) }
-    LaunchedEffect(calendarState.selectedDate) {
+    LaunchedEffect(state.selectedDate) {
         if (isFirstTimeScroll) {
             isFirstTimeScroll = false
             return@LaunchedEffect
         }
-        calendarState.animateScrollToDate()
+        state.animateScrollToDate()
     }
 
     LaunchedEffect(today) {
-        if (calendarState.today != today) {
-            onSystemDateChanged(calendarState.today, today)
-            calendarState.today = today
+        if (state.today != today) {
+            onSystemDateChanged(state.today, today)
+            state.today = today
         }
     }
 
