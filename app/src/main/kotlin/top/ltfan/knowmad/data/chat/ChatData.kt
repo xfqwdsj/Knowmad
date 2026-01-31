@@ -146,16 +146,23 @@ sealed interface MessageWithBranchInfo {
 @Serializable
 sealed interface UiMessage {
     val content: String
+    val display: Boolean
 
     @Serializable
     @Immutable
-    class Koog(val message: Message) : UiMessage {
+    class Koog(
+        val message: Message,
+        override val display: Boolean = true,
+    ) : UiMessage {
         override val content get() = message.content
     }
 
     @Serializable
     @Immutable
-    data class Error(override val content: String) : UiMessage
+    data class Error(
+        override val content: String,
+        override val display: Boolean = true,
+    ) : UiMessage
 
 }
 
@@ -302,4 +309,4 @@ enum class AssistantStreamingMessageType {
     Reasoning, Content
 }
 
-fun Message.toUiMessage(): UiMessage = UiMessage.Koog(this)
+fun Message.toUiMessage(display: Boolean = true): UiMessage = UiMessage.Koog(this, display)

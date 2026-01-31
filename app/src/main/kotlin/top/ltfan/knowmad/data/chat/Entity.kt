@@ -88,7 +88,9 @@ data class MessageEntity(
     val depth: Int = 0,
     val parts: List<UiMessage>,
     val role: MessageEntityRole,
-    val searchableContent: String = parts.joinToString("\n") { it.content },
+    val searchableContent: String = parts.asSequence()
+        .filter { it.display }
+        .joinToString("\n") { it.content },
     val generatedBy: LLModel?,
     val completed: Boolean = true,
     val createdAt: Instant = Clock.System.now(),

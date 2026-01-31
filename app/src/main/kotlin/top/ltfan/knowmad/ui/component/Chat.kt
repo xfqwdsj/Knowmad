@@ -456,8 +456,10 @@ fun ChatMessageList(
                             UserMessage(
                                 content = messageEntity.parts.asSequence()
                                     .filterIsInstance<UiMessage.Koog>()
+                                    .filter { uiMessage -> uiMessage.display }
                                     .map { uiMessage -> uiMessage.message }
-                                    .filterIsInstance<Message.User>().singleOrNull()?.content
+                                    .filterIsInstance<Message.User>()
+                                    .singleOrNull()?.content
                                     ?: error("User message must contain one User part."),
                                 current = data.branchIndex,
                                 total = data.branchCount,
@@ -514,38 +516,42 @@ fun AssistantMessage(
                     }
                 }
 
-                is Completed -> when (val uiMessage = content.uiMessage) {
-                    is Koog -> when (val message = uiMessage.message) {
-                        is Reasoning -> ReasoningMessage(
-                            savedMarkdownState = content.markdownState,
-                            startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
-                                Instant.parseOrNull(it)
-                            } ?: message.metaInfo.timestamp.toStdlibInstant(),
-                            endedAt = message.metaInfo.timestamp.toStdlibInstant(),
-                            initialVisibility = initialReasoningVisibility,
-                            onVisibilityChange = onAnyReasoningVisibilityChange,
+                is Completed -> {
+                    val uiMessage = content.uiMessage
+                    if (!uiMessage.display) continue
+                    when (uiMessage) {
+                        is Koog -> when (val message = uiMessage.message) {
+                            is Reasoning -> ReasoningMessage(
+                                savedMarkdownState = content.markdownState,
+                                startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
+                                    Instant.parseOrNull(it)
+                                } ?: message.metaInfo.timestamp.toStdlibInstant(),
+                                endedAt = message.metaInfo.timestamp.toStdlibInstant(),
+                                initialVisibility = initialReasoningVisibility,
+                                onVisibilityChange = onAnyReasoningVisibilityChange,
+                                modifier = Modifier.padding(8.dp),
+                            )
+
+                            is Assistant -> AssistantMessageContent(
+                                savedMarkdownState = content.markdownState,
+                                modifier = Modifier.padding(8.dp),
+                            )
+
+                            is Tool -> ToolMessage(
+                                message = message,
+                                modifier = Modifier.padding(8.dp),
+                                initialVisibility = initialToolVisibility,
+                                onVisibilityChange = onAnyToolVisibilityChange,
+                            )
+
+                            else -> {}
+                        }
+
+                        is UiMessage.Error -> ErrorMessage(
+                            uiMessage.content,
                             modifier = Modifier.padding(8.dp),
                         )
-
-                        is Assistant -> AssistantMessageContent(
-                            savedMarkdownState = content.markdownState,
-                            modifier = Modifier.padding(8.dp),
-                        )
-
-                        is Tool -> ToolMessage(
-                            message = message,
-                            modifier = Modifier.padding(8.dp),
-                            initialVisibility = initialToolVisibility,
-                            onVisibilityChange = onAnyToolVisibilityChange,
-                        )
-
-                        else -> {}
                     }
-
-                    is UiMessage.Error -> ErrorMessage(
-                        uiMessage.content,
-                        modifier = Modifier.padding(8.dp),
-                    )
                 }
             }
         }

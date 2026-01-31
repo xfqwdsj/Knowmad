@@ -395,6 +395,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
                 )
             } else null
+            val environmentMessage = Message.User(
+                content = application.getString(
+                    R.string.llm_prompt_environment,
+                    Clock.System.now().formatAgentTime(),
+                    conversation.name,
+                ),
+                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+            )
             withContext(Dispatchers.IO) {
                 system?.let {
                     chatDao.insertMessage(
@@ -411,6 +419,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     message = MessageEntity(
                         conversationId = conversationId,
                         parts = listOf(
+                            environmentMessage.toUiMessage(display = false),
                             Message.User(
                                 parts = parts,
                                 metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
@@ -493,13 +502,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             },
                             buildPrompt = {
                                 system?.let { message(it) } ?: messages(messages)
-                                user(
-                                    application.getString(
-                                        R.string.llm_prompt_environment,
-                                        Clock.System.now().formatAgentTime(),
-                                        conversation.name,
-                                    ),
-                                )
+                                message(environmentMessage)
                             },
                         )
                         false
