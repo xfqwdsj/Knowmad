@@ -978,29 +978,8 @@ sealed interface AssistantMessageState {
         private val completedStateFlow = MutableStateFlow<Completed?>(null)
 
         init {
-            val uncompletedTokens = mutableMapOf<Int, String>()
             coroutineScope.launch {
                 eventFlow.collect { event ->
-                    val uncompletedTokensIterator = uncompletedTokens.iterator()
-                    while (uncompletedTokensIterator.hasNext()) {
-                        val (index, token) = uncompletedTokensIterator.next()
-                        val content = contents.getOrNull(index) ?: run {
-                            logger.error {
-                                "Received uncompleted token for part index $index, but no such part exists."
-                            }
-                            continue
-                        }
-                        if (content !is AssistantMessageContent.Streaming) {
-                            logger.error {
-                                "Received uncompleted token for part index $index, but the part is not Streaming."
-                            }
-                            continue
-                        }
-                        val flow = content.flow as? MutableStateFlow<String> ?: continue
-                        flow.value += token
-                        uncompletedTokensIterator.remove()
-                    }
-
                     when (event) {
                         is AddString -> {
                             val content = contents.getOrElse(event.partIndex) { index ->
@@ -1029,16 +1008,7 @@ sealed interface AssistantMessageState {
                             }
 
                             val flow = content.flow as? MutableStateFlow<String> ?: return@collect
-                            flow.value += event.content.let { originalContent ->
-                                var content = originalContent
-                                DeferredTokens.forEach { token ->
-                                    if (content.endsWith(token)) {
-                                        content = content.removeSuffix(token)
-                                        uncompletedTokens[event.partIndex] = token
-                                    }
-                                }
-                                content
-                            }
+                            flow.value += event.content
                             onUpdate()
                         }
 
@@ -1092,22 +1062,6 @@ sealed interface AssistantMessageState {
                 it?.let { throwable ->
                     if (throwable is CancellationException) return@let
                     logger.error(throwable) { "Streaming event collection encountered an error." }
-                }
-                uncompletedTokens.forEach { (index, token) ->
-                    val content = contents.getOrNull(index) ?: run {
-                        logger.error {
-                            "Received uncompleted token for part index $index, but no such part exists."
-                        }
-                        return@forEach
-                    }
-                    if (content !is AssistantMessageContent.Streaming) {
-                        logger.error {
-                            "Received uncompleted token for part index $index, but the part is not Streaming."
-                        }
-                        return@forEach
-                    }
-                    val flow = content.flow as? MutableStateFlow<String> ?: return@forEach
-                    flow.value += token
                 }
                 logger.debug { "Streaming event collection completed." }
                 coroutineScope.launch {
@@ -1236,10 +1190,6 @@ sealed interface AssistantMessageState {
 
     companion object {
         private val logger = Logger("AssistantMessageState")
-
-        val DeferredTokens = setOf(
-            "\n-",
-        )
 
         suspend fun fromEntity(
             entity: MessageEntity,
