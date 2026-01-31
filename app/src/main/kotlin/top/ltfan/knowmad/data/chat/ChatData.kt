@@ -22,8 +22,6 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
-import ai.koog.prompt.message.Message.Assistant
-import ai.koog.prompt.message.Message.Reasoning
 import ai.koog.prompt.message.ResponseMetaInfo
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -46,7 +44,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
-import top.ltfan.knowmad.data.chat.UiMessage.Koog
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
