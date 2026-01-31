@@ -193,12 +193,12 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         val startedAt: Instant = Clock.System.now(),
     ) : AssistantMessageContent(
         coroutineScope = coroutineScope,
-        contentFlow = flow.map { it.substringBeforeLast('\n') },
+        contentFlow = flow.map { it.substringBeforeLast('\n', "") },
     ) {
         var metaInfo by mutableStateOf<ResponseMetaInfo?>(null)
         override val content get() = flow.value
         val trailing = flow.map {
-            it.substringAfterLast('\n', "").ifEmpty { null }
+            it.substringAfterLast('\n').ifEmpty { null }
         }
 
         fun toMessage(defaultEndedAt: Instant = Clock.System.now()): Message.Response {
