@@ -257,15 +257,19 @@ fun Calendar(
         }
     }
 
+    var isFirstTimeScroll by remember { mutableStateOf(true) }
     LaunchedEffect(calendarState.selectedDate) {
+        if (isFirstTimeScroll) {
+            isFirstTimeScroll = false
+            return@LaunchedEffect
+        }
         calendarState.animateScrollToDate()
     }
 
-    var lastDay by remember { mutableStateOf(today) }
     LaunchedEffect(today) {
-        if (lastDay != today) {
-            onSystemDateChanged(lastDay, today)
-            lastDay = today
+        if (calendarState.today != today) {
+            onSystemDateChanged(calendarState.today, today)
+            calendarState.today = today
         }
     }
 
@@ -666,6 +670,7 @@ class CalendarState(
             }
         }
 
+    var today by mutableStateOf(LocalDate.now(timeZone = timeZone))
     var selectedDate by mutableStateOf(initialDate)
 
     suspend fun animateScrollToDate(date: LocalDate = selectedDate) {
