@@ -101,7 +101,7 @@ data class SemesterProperty(val semester: SemesterEntity) : UuidProperty() {
         ): SemesterProperty? {
             return SemesterProperty(
                 SemesterEntity(
-                    id = value ?: return null,
+                    id = value ?: Uuid.generateV7(),
                     name = parameters?.label ?: return null,
                     startDate = LocalDate.parse(
                         parameters.get(PARAM_START_DATE).singleOrNull() ?: return null,
@@ -149,7 +149,7 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
         ): CourseProperty? {
             return CourseProperty(
                 CourseEntity(
-                    id = value ?: return null,
+                    id = value ?: Uuid.generateV7(),
                     semesterId = Uuid.parseOrNull(
                         parameters?.get(PARAM_SEMESTER_ID)?.singleOrNull() ?: return null,
                     ) ?: return null,
