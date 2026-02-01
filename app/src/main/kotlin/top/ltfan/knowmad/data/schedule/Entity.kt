@@ -54,7 +54,8 @@ data class SemesterEntity(
     val timeZone: TimeZone,
 ) {
     companion object {
-        val DefaultSemesterId = Uuid.parse("019c0c33-1400-7225-a55f-906660045bdc")
+        const val DEFAULT_SEMESTER_ID = "019c0c33-1400-7225-a55f-906660045bdc"
+        val DefaultSemesterId = Uuid.parse(DEFAULT_SEMESTER_ID)
 
         fun createDefault(resources: Resources) = SemesterEntity(
             id = DefaultSemesterId,

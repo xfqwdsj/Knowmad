@@ -241,20 +241,32 @@ sealed interface Event {
             recurrenceEndBound: Instant? = null,
             errors: MutableList<String> = mutableListOf(),
         ): List<Event> {
-            val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: run {
-                errors.add("Cannot parse semester in event: ${vEvent.uid?.value}")
-                return emptyList()
-            }
-            val semester = semesterProperty.semester
-            val courseProperty = vEvent.getProperty(CourseProperty::class.java)
-            val course = courseProperty?.course
-
             val id = vEvent.uid?.value?.let {
                 Uuid.parseOrNull(it) ?: run {
                     errors.add("Cannot parse UUID from UID in event: $it")
                     return emptyList()
                 }
             } ?: Uuid.generateV7()
+
+            val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: run {
+                errors.add("Cannot parse semester in event: $id")
+                return emptyList()
+            }
+            val semester = semesterProperty.semester
+            val courseProperty = vEvent.getProperty(CourseProperty::class.java)
+            val course = courseProperty?.course?.let {
+                if (it.semesterId != semester.id) {
+                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $id")
+                    return emptyList()
+                }
+                if (it.semesterId == SemesterEntity.DefaultSemesterId) {
+                    return@let it.copy(
+                        semesterId = semester.id,
+                    )
+                }
+                it
+            }
+
             val name = vEvent.summary?.value
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value

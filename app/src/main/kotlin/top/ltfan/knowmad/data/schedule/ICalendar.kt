@@ -150,13 +150,15 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
             parameters: ICalParameters?,
             context: ParseContext?,
         ): CourseProperty? {
+            val semesterIdString = parameters?.get(PARAM_SEMESTER_ID)?.singleOrNull()
+                ?: SemesterEntity.DEFAULT_SEMESTER_ID
+            val semesterId = Uuid.parseOrNull(semesterIdString)
+                ?: SemesterEntity.DefaultSemesterId
             return CourseProperty(
                 CourseEntity(
                     id = value ?: Uuid.generateV7(),
-                    semesterId = Uuid.parseOrNull(
-                        parameters?.get(PARAM_SEMESTER_ID)?.singleOrNull() ?: return null,
-                    ) ?: return null,
-                    name = parameters.label ?: return null,
+                    semesterId = semesterId,
+                    name = parameters?.label ?: return null,
                     instructor = parameters.get(PARAM_INSTRUCTOR).singleOrNull() ?: return null,
                     location = parameters.get(PARAM_LOCATION).singleOrNull() ?: return null,
                 ),
