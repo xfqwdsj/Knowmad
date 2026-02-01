@@ -20,7 +20,9 @@ package top.ltfan.knowmad.data.schedule
 
 import biweekly.ICalVersion
 import biweekly.io.ParseContext
-import biweekly.io.scribe.property.RecurrenceRuleScribe
+import biweekly.io.TimezoneAssignment
+import biweekly.io.TimezoneInfo
+import biweekly.io.WriteContext
 import biweekly.util.ByDay
 import biweekly.util.Frequency
 import biweekly.util.ICalDate
@@ -28,6 +30,7 @@ import biweekly.util.Recurrence
 import kotlinx.datetime.DayOfWeek
 import kotlinx.serialization.Serializable
 import java.util.Date
+import java.util.TimeZone
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -102,13 +105,25 @@ data class ICalendarRecurrenceRule(
             val parseContext = ParseContext().apply {
                 this.version = version
             }
-            val recurrence = runCatching {
-                RecurrenceRuleScribe()
+            return runCatching {
+                KnowmadRecurrenceProperty
                     .parseText(value, null, null, parseContext)
-                    ?.value ?: return null
-            }.getOrNull() ?: return null
-            return fromICalValue(recurrence)
+                    ?.recurrenceRule ?: return null
+            }.getOrNull()
         }
+    }
+
+    fun format(
+        version: ICalVersion = ICalendarVersion,
+        timezoneInfo: TimezoneInfo = TimezoneInfo().apply {
+            val timeZone = TimeZone.getDefault()
+            defaultTimezone = TimezoneAssignment(
+                timeZone, timeZone.id,
+            )
+        },
+    ): String {
+        val writeContext = WriteContext(version, timezoneInfo, null)
+        return KnowmadRecurrenceProperty.writeText(toProperty(), writeContext)
     }
 }
 
