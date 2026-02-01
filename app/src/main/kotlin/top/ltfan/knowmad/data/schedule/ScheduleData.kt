@@ -273,10 +273,9 @@ sealed interface Event {
             val reminders = vEvent.alarms.toReminders()
             val notes = vEvent.description?.value
             val priority = vEvent.priority.toICalendarPriority()
-            val createdAt = vEvent.created?.value?.toInstant()?.toKotlinInstant()
-                ?: Clock.System.now()
-            val updatedAt = vEvent.lastModified?.value?.toInstant()?.toKotlinInstant()
-                ?: Clock.System.now()
+            val now = Clock.System.now()
+            val createdAt = vEvent.created?.value?.toInstant()?.toKotlinInstant() ?: now
+            val updatedAt = vEvent.lastModified?.value?.toInstant()?.toKotlinInstant() ?: now
 
             val exceptions = vEvent.exceptionDates?.asSequence()
                 ?.flatMap { exDate ->
