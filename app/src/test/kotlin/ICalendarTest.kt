@@ -40,6 +40,7 @@ import top.ltfan.knowmad.data.schedule.constructICalendar
 import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.customICalWriter
 import top.ltfan.knowmad.data.schedule.exportICalendar
+import top.ltfan.knowmad.data.schedule.parse
 import top.ltfan.knowmad.data.schedule.toEvent
 import top.ltfan.knowmad.data.schedule.toICalendar
 import java.io.ByteArrayInputStream
@@ -171,7 +172,9 @@ class ICalendarTest {
 
         assertEquals(iCal, parsedICal)
 
-        val parsedEvent = parsedICal.events.map { Event.parse(it).firstOrNull() }
+        val parsedEvent = parsedICal.events.map {
+            it.parse(parsedICal.timezoneInfo).firstOrNull()
+        }
 
         assertContentEquals(
             data.map {
@@ -256,7 +259,9 @@ class ICalendarTest {
             )
         }
 
-        val restoredEvents = iCal.events.map { Event.parse(it).firstOrNull() }
+        val restoredEvents = iCal.events.map {
+            it.parse(iCal.timezoneInfo).firstOrNull()
+        }
 
         val event = CombinedEvent(
             testEvent1, testSemester, testCourse,
@@ -372,7 +377,7 @@ class ICalendarTest {
         assertTrue { parsedValidation.isEmpty }
 
         val parsedEvent = parsedICal.events.asSequence()
-            .flatMap { Event.parse(it) }
+            .flatMap { it.parse(parsedICal.timezoneInfo) }
             .filterIsInstance<Event.Course>()
             .map {
                 it.copy(

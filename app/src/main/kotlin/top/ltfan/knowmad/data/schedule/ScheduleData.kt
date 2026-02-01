@@ -473,6 +473,24 @@ fun CombinedEvent.toEvent(
     }
 }
 
+fun VEvent.parse(
+    timeZoneInfo: TimezoneInfo? = null,
+    defaultTimeZone: TimeZone = TimeZone.currentSystemDefault(),
+    onNewRecurrenceRule: (
+        rule: RecurrenceRuleEntity,
+        course: CourseEntity?,
+    ) -> CourseEntity? = { _, _ -> null },
+    recurrenceEndBound: Instant? = null,
+    errors: MutableList<String> = mutableListOf(),
+) = Event.parse(
+    vEvent = this,
+    timeZoneInfo = timeZoneInfo,
+    defaultTimeZone = defaultTimeZone,
+    onNewRecurrenceRule = onNewRecurrenceRule,
+    recurrenceEndBound = recurrenceEndBound,
+    errors = errors,
+)
+
 @JvmInline
 @Serializable
 value class Reminders(

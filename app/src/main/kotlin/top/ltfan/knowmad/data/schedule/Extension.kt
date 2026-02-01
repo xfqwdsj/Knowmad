@@ -63,6 +63,20 @@ fun ICalendar.addExportedEvents(events: List<Event>) {
     }
 }
 
+fun ICalendar.parse(
+    onNewRecurrenceRule: (
+        rule: RecurrenceRuleEntity,
+        course: CourseEntity?,
+    ) -> CourseEntity? = { _, _ -> null },
+    errors: MutableList<String> = mutableListOf(),
+) = events.flatMap { vEvent ->
+    vEvent.parse(
+        timeZoneInfo = timezoneInfo,
+        onNewRecurrenceRule = onNewRecurrenceRule,
+        errors = errors,
+    )
+}
+
 fun Duration.toProperty(): biweekly.util.Duration {
     return biweekly.util.Duration.fromMillis(this.inWholeMilliseconds)
 }
