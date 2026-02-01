@@ -238,23 +238,36 @@ sealed interface Event {
                 rule: RecurrenceRuleEntity,
                 course: CourseEntity?,
             ) -> CourseEntity? = { _, _ -> null },
+            recurrenceEndBound: Instant? = null,
+            errors: MutableList<String> = mutableListOf(),
         ): List<Event> {
-            val semesterProperty =
-                vEvent.getProperty(SemesterProperty::class.java) ?: return emptyList()
+            val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: run {
+                errors.add("Cannot parse semester in event: ${vEvent.uid.value}")
+                return emptyList()
+            }
             val semester = semesterProperty.semester
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
             val course = courseProperty?.course
 
-            val id = Uuid.parseOrNull(vEvent.uid.value) ?: return emptyList()
+            val id = Uuid.parseOrNull(vEvent.uid.value) ?: run {
+                errors.add("Cannot parse UID as UUID in event: ${vEvent.uid.value}")
+                return emptyList()
+            }
             val name = vEvent.summary?.value
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
             val color = vEvent.color.toICalendarColor(course?.id, defaultId = semester.id)
-            val startDate = vEvent.dateStart?.value ?: return emptyList()
+            val startDate = vEvent.dateStart?.value ?: run {
+                errors.add("Start date not found in event: ${vEvent.uid.value}")
+                return emptyList()
+            }
             val startTime = startDate.toInstant().toKotlinInstant()
             val duration = vEvent.duration?.value?.toDuration()
                 ?: vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()?.let { it - startTime }
-                ?: return emptyList()
+                ?: run {
+                    errors.add("Cannot determine duration in event: ${vEvent.uid.value}")
+                    return emptyList()
+                }
             val reminders = vEvent.alarms.toReminders()
             val notes = vEvent.description?.value
             val priority = vEvent.priority.toICalendarPriority()
@@ -273,7 +286,10 @@ sealed interface Event {
                     ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
                 val entity = RecurrenceRuleEntity(
                     id = id,
-                    rule = rule.value.toICalendarRecurrenceRule() ?: return emptyList(),
+                    rule = rule.value.toICalendarRecurrenceRule(errors) ?: run {
+                        errors.add("Cannot parse recurrence rule in event: ${vEvent.uid.value}")
+                        return emptyList()
+                    },
                     startTime = startDate.toInstant().toKotlinInstant(),
                     duration = duration,
                     exceptions = exceptions,
@@ -282,16 +298,26 @@ sealed interface Event {
 
                 val isInfinite = entity.rule.count == null && entity.rule.until == null
                 if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
+                    errors.add("Infinite recurrence rule found in default semester in event: ${vEvent.uid.value}")
                     return emptyList()
                 }
-                val semesterEndDate =
-                    Date.from(semester.endDate.atStartOfDayIn(semester.timeZone).toJavaInstant())
+                val semesterEndTime = semester.endDate.atStartOfDayIn(semester.timeZone)
+                val semesterEndDate = Date.from(semesterEndTime.toJavaInstant())
                 val iterator = vEvent.getDateIterator(timeZone)
                 val events = mutableListOf<Event>()
                 while (iterator.hasNext()) {
                     val occurrenceStartDate = iterator.next()
 
+                    recurrenceEndBound?.let { instant ->
+                        val date = Date.from(instant.toJavaInstant())
+                        if (occurrenceStartDate.after(date)) {
+                            errors.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: ${vEvent.uid.value}")
+                            break
+                        }
+                    }
+
                     if (occurrenceStartDate.after(semesterEndDate)) {
+                        errors.add("Occurrence exceeds semester end date $semesterEndTime in event: ${vEvent.uid.value}")
                         break
                     }
 
@@ -317,7 +343,10 @@ sealed interface Event {
                             ),
                         )
                     } else {
-                        if (name == null || location == null) continue
+                        if (name == null || location == null) {
+                            errors.add("Name or location is required for normal event: ${vEvent.uid.value} at $occurrenceStartTime")
+                            continue
+                        }
                         events.add(
                             Normal(
                                 semester = semester,
@@ -339,7 +368,10 @@ sealed interface Event {
                 return events
             }
 
-            if (startTime in exceptions) return emptyList()
+            if (startTime in exceptions) {
+                errors.add("Event is an exception: ${vEvent.uid.value} at $startTime")
+                return emptyList()
+            }
 
             val endTime = startTime + duration
             return if (course != null) {
@@ -362,7 +394,10 @@ sealed interface Event {
                     ),
                 )
             } else {
-                if (name == null || location == null) return emptyList()
+                if (name == null || location == null) {
+                    errors.add("Name or location is required for normal event: ${vEvent.uid.value}")
+                    return emptyList()
+                }
                 listOf(
                     Normal(
                         id = id,

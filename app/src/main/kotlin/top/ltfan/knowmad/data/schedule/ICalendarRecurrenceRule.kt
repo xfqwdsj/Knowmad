@@ -72,9 +72,15 @@ data class ICalendarRecurrenceRule(
     }.build()
 
     companion object {
-        fun fromICalValue(value: Recurrence): ICalendarRecurrenceRule? {
+        fun fromICalValue(
+            value: Recurrence,
+            errors: MutableList<String> = mutableListOf(),
+        ): ICalendarRecurrenceRule? {
             return ICalendarRecurrenceRule(
-                frequency = value.frequency?.toICalendarRecurrenceRuleFrequency() ?: return null,
+                frequency = value.frequency?.toICalendarRecurrenceRuleFrequency() ?: run {
+                    errors.add("Frequency is null")
+                    return null
+                },
                 interval = value.interval,
                 count = value.count,
                 until = value.until?.toInstant()?.toKotlinInstant(),
@@ -108,7 +114,17 @@ data class ICalendarRecurrenceRule(
     }
 }
 
-fun Recurrence.toICalendarRecurrenceRule() = ICalendarRecurrenceRule.fromICalValue(this)
+fun Recurrence?.toICalendarRecurrenceRule(
+    errors: MutableList<String> = mutableListOf(),
+): ICalendarRecurrenceRule? {
+    return ICalendarRecurrenceRule.fromICalValue(
+        value = this ?: run {
+            errors.add("Recurrence is null")
+            return null
+        },
+        errors = errors,
+    )
+}
 
 data class KnowmadRecurrenceProperty(
     val recurrenceRule: ICalendarRecurrenceRule,
