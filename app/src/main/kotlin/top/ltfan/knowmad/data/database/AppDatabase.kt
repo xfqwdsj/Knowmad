@@ -23,6 +23,7 @@ import androidx.room.Database
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import top.ltfan.knowmad.data.AppDatabaseConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
 import top.ltfan.knowmad.data.chat.ChatDao
@@ -40,6 +41,7 @@ import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.CourseFtsEntity
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.EventFtsEntity
+import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
@@ -50,6 +52,7 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         LLMConfigEntity::class,
         SemesterEntity::class,
         SemesterFtsEntity::class,
+        RecurrenceRuleEntity::class,
         CourseEntity::class,
         CourseFtsEntity::class,
         EventEntity::class,
@@ -73,11 +76,58 @@ abstract class AppDatabase : RoomDatabase() {
     companion object : DatabaseCompanion<AppDatabase> {
         override val databaseName = "db"
 
+        private val RecurrenceRuleCleanup = object : Callback() {
+            val ReferencedEntities = listOf(
+                "CourseEntity",
+                "EventEntity",
+            )
+
+            val Triggers = listOf(
+                "DELETE",
+                "UPDATE OF recurrenceRuleId",
+            )
+
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                for (currentEntity in ReferencedEntities) {
+                    for (trigger in Triggers) {
+                        db.execSQL(
+                            buildString {
+                                val suffix = trigger.replace(" ", "_")
+                                val name = "trg_${currentEntity}_recurrence_rule_cleanup_$suffix"
+                                appendLine("CREATE TRIGGER IF NOT EXISTS `$name`")
+                                appendLine("AFTER $trigger ON `$currentEntity`")
+                                append("WHEN OLD.recurrenceRuleId IS NOT NULL")
+                                if (trigger.startsWith("UPDATE")) {
+                                    append(" AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)")
+                                }
+                                appendLine()
+
+                                appendLine("BEGIN")
+                                appendLine("DELETE FROM RecurrenceRuleEntity")
+                                appendLine("WHERE id = OLD.recurrenceRuleId")
+                                for (entity in ReferencedEntities) {
+                                    appendLine("AND NOT EXISTS (")
+                                    appendLine("SELECT 1 FROM `$entity`")
+                                    appendLine("WHERE recurrenceRuleId = OLD.recurrenceRuleId")
+                                    appendLine(")")
+                                }
+                                appendLine(";")
+                                appendLine("END;")
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
         context(application: Application)
-        override fun buildDatabase() = databaseBuilder(
-            application,
-            AppDatabase::class.java,
-            databaseName,
-        ).build()
+        override fun buildDatabase() =
+            databaseBuilder(
+                application,
+                AppDatabase::class.java,
+                databaseName,
+            )
+                .addCallback(RecurrenceRuleCleanup)
+                .build()
     }
 }

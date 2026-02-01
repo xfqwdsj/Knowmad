@@ -22,7 +22,9 @@ import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import androidx.room.TypeConverter
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import okio.Path
@@ -32,6 +34,8 @@ import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -57,6 +61,26 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
+    fun fromLocalDateTime(data: LocalDateTime): String {
+        return data.format(LocalDateTime.Formats.ISO)
+    }
+
+    @TypeConverter
+    fun toLocalDateTime(data: String): LocalDateTime {
+        return LocalDateTime.parse(data, LocalDateTime.Formats.ISO)
+    }
+
+    @TypeConverter
+    fun fromLocalDateTimeList(data: List<LocalDateTime>): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toLocalDateTimeList(data: ByteArray): List<LocalDateTime> {
+        return Cbor.decodeFromByteArray(data)
+    }
+
+    @TypeConverter
     fun fromTimeZone(data: TimeZone): String {
         return data.id
     }
@@ -74,6 +98,16 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toInstant(data: Long): Instant {
         return Instant.fromEpochMilliseconds(data)
+    }
+
+    @TypeConverter
+    fun fromDuration(data: Duration): Long {
+        return data.inWholeMilliseconds
+    }
+
+    @TypeConverter
+    fun toDuration(data: Long): Duration {
+        return data.milliseconds
     }
 
     @TypeConverter

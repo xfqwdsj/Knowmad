@@ -278,7 +278,7 @@ sealed interface Event {
     }
 }
 
-fun EventWithSemesterAndCourse.toEvent(): Event {
+fun CombinedEvent.toEvent(): Event {
     return if (course != null) {
         Event.Course(
             id = event.id,

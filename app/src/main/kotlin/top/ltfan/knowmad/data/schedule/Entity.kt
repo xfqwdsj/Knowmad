@@ -29,11 +29,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -79,28 +81,50 @@ data class SemesterFtsEntity(
 )
 
 @Serializable
+@Entity
+data class RecurrenceRuleEntity(
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
+    val rule: String,
+    val timeZone: TimeZone,
+    val startTime: LocalDateTime,
+    val duration: Duration,
+    val exceptions: List<LocalDateTime> = emptyList(),
+)
+
+@Serializable
 @Entity(
-    indices = [Index("semesterId")],
+    indices = [
+        Index("semesterId"),
+        Index("recurrenceRuleId"),
+    ],
     foreignKeys = [
         ForeignKey(
             entity = SemesterEntity::class,
             parentColumns = ["id"],
             childColumns = ["semesterId"],
             onDelete = ForeignKey.CASCADE,
-        )
+        ),
+        ForeignKey(
+            entity = RecurrenceRuleEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recurrenceRuleId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
 )
 data class CourseEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
     val semesterId: Uuid,
+    val recurrenceRuleId: Uuid? = null,
     val name: String,
     val instructor: String,
     val location: String,
 )
 
 @Serializable
-data class CourseWithSemester(
+data class CombinedCourse(
     @Embedded val course: CourseEntity,
     @Relation(
         parentColumn = "semesterId",
@@ -128,6 +152,7 @@ data class CourseFtsEntity(
     indices = [
         Index("semesterId"),
         Index("courseId"),
+        Index("recurrenceRuleId"),
         Index(
             "startTime", "priority", "endTime", "createdAt",
             orders = [ASC, DESC, ASC],
@@ -150,6 +175,12 @@ data class CourseFtsEntity(
             childColumns = ["courseId"],
             onDelete = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = RecurrenceRuleEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recurrenceRuleId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
 )
 data class EventEntity(
@@ -157,6 +188,7 @@ data class EventEntity(
     val id: Uuid = Uuid.generateV7(),
     val semesterId: Uuid,
     val courseId: Uuid?,
+    val recurrenceRuleId: Uuid? = null,
     val name: String?,
     val instructor: String?,
     val location: String?,
@@ -173,7 +205,7 @@ data class EventEntity(
 }
 
 @Serializable
-data class EventWithSemesterAndCourse(
+data class CombinedEvent(
     @Embedded val event: EventEntity,
     @Relation(
         parentColumn = "semesterId",

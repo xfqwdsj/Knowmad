@@ -116,7 +116,7 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
-    suspend fun getCourseById(id: Uuid): CourseWithSemester?
+    suspend fun getCourseById(id: Uuid): CombinedCourse?
 
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
     suspend fun getCourseEntityById(id: Uuid): CourseEntity?
@@ -129,10 +129,10 @@ interface ScheduleDao : FtsDao {
             ORDER BY name ASC
     """,
     )
-    suspend fun getAllCoursesInSemester(semesterId: Uuid): List<CourseWithSemester>
+    suspend fun getAllCoursesInSemester(semesterId: Uuid): List<CombinedCourse>
 
     @Transaction
-    suspend fun getAllCourses(): List<CourseWithSemester> {
+    suspend fun getAllCourses(): List<CombinedCourse> {
         return getAllSemesters().flatMap { semester ->
             getAllCoursesInSemester(semester.id)
         }
@@ -146,17 +146,17 @@ interface ScheduleDao : FtsDao {
             WHERE CourseFtsEntity MATCH :query
     """,
     )
-    suspend fun searchCoursesInternal(query: String): List<CourseWithSemester>
+    suspend fun searchCoursesInternal(query: String): List<CombinedCourse>
 
     @Transaction
-    suspend fun searchCourses(query: String): List<CourseWithSemester> {
+    suspend fun searchCourses(query: String): List<CombinedCourse> {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
         return searchCoursesInternal(sanitized)
     }
 
     @Transaction
     @Query("SELECT * FROM EventEntity WHERE id = :id")
-    suspend fun getEventByIdInternal(id: Uuid): EventWithSemesterAndCourse?
+    suspend fun getEventByIdInternal(id: Uuid): CombinedEvent?
 
     @Transaction
     suspend fun getEventById(id: Uuid): Event? {
@@ -181,7 +181,7 @@ interface ScheduleDao : FtsDao {
     suspend fun getOriginalEventsInRange(
         startTime: Instant,
         endTime: Instant,
-    ): List<EventWithSemesterAndCourse>
+    ): List<CombinedEvent>
 
     @Transaction
     suspend fun getEventsInRange(startTime: Instant, endTime: Instant): List<Event> {
@@ -203,7 +203,7 @@ interface ScheduleDao : FtsDao {
     fun getOriginalEventsFlowInRange(
         startTime: Instant,
         endTime: Instant,
-    ): Flow<List<EventWithSemesterAndCourse>>
+    ): Flow<List<CombinedEvent>>
 
     fun getEventsFlowInRange(startTime: Instant, endTime: Instant): Flow<List<Event>> {
         return getOriginalEventsFlowInRange(startTime, endTime).map { list ->
@@ -223,7 +223,7 @@ interface ScheduleDao : FtsDao {
                 createdAt ASC
     """,
     )
-    suspend fun getAllOriginalEventsBySemester(semesterId: Uuid): List<EventWithSemesterAndCourse>
+    suspend fun getAllOriginalEventsBySemester(semesterId: Uuid): List<CombinedEvent>
 
     @Transaction
     suspend fun getAllEventsBySemester(semesterId: Uuid): List<Event> {
@@ -242,7 +242,7 @@ interface ScheduleDao : FtsDao {
                 createdAt ASC
     """,
     )
-    suspend fun getAllOriginalEventsByCourse(courseId: Uuid): List<EventWithSemesterAndCourse>
+    suspend fun getAllOriginalEventsByCourse(courseId: Uuid): List<CombinedEvent>
 
     @Transaction
     suspend fun getAllEventsByCourse(courseId: Uuid): List<Event> {
@@ -261,7 +261,7 @@ interface ScheduleDao : FtsDao {
                 createdAt ASC
     """,
     )
-    suspend fun getAllOriginalEventsByCourses(courseIds: List<Uuid>): List<EventWithSemesterAndCourse>
+    suspend fun getAllOriginalEventsByCourses(courseIds: List<Uuid>): List<CombinedEvent>
 
     @Transaction
     suspend fun getAllEventsByCourses(courseIds: List<Uuid>): List<Event> {
@@ -276,10 +276,10 @@ interface ScheduleDao : FtsDao {
             WHERE EventFtsEntity MATCH :query
     """,
     )
-    suspend fun searchEventsInternal(query: String): List<EventWithSemesterAndCourse>
+    suspend fun searchEventsInternal(query: String): List<CombinedEvent>
 
     @Transaction
-    suspend fun searchOriginalEvents(query: String): List<EventWithSemesterAndCourse> {
+    suspend fun searchOriginalEvents(query: String): List<CombinedEvent> {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
         return searchEventsInternal(sanitized)
     }
@@ -290,14 +290,14 @@ interface ScheduleDao : FtsDao {
     }
 
     @Transaction
-    suspend fun searchOriginalEventsJoinedCourses(query: String): List<EventWithSemesterAndCourse> {
+    suspend fun searchOriginalEventsJoinedCourses(query: String): List<CombinedEvent> {
         val events = searchOriginalEvents(query)
         val courseIds = searchCourses(query).map { it.course.id }
         val eventsByCourse = getAllOriginalEventsByCourses(courseIds)
         val allEvents = (events + eventsByCourse).asSequence()
             .distinctBy { it.event.id }
             .sortedWith(
-                compareBy<EventWithSemesterAndCourse> { it.event.startTime }
+                compareBy<CombinedEvent> { it.event.startTime }
                     .thenBy { it.event.priority }
                     .thenByDescending { it.event.endTime }
                     .thenBy { it.event.createdAt },

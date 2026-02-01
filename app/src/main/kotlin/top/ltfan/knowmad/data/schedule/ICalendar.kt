@@ -43,7 +43,7 @@ fun customICalReader(stream: InputStream) = ICalReader(stream).apply {
     registerScribe(InstructorProperty)
 }
 
-fun customICalWriter(stream: OutputStream) = ICalWriter(stream, ICalVersion.V2_0).apply {
+fun customICalWriter(stream: OutputStream) = ICalWriter(stream, V2_0).apply {
     registerScribe(SemesterProperty)
     registerScribe(CourseProperty)
     registerScribe(InstructorProperty)
@@ -56,7 +56,7 @@ abstract class UuidProperty : ICalProperty() {
 abstract class UuidPropertyScribe<T : UuidProperty>(
     clazz: KClass<T>,
     propertyName: String,
-) : ICalPropertyScribe<T>(clazz.java, propertyName, ICalDataType.TEXT) {
+) : ICalPropertyScribe<T>(clazz.java, propertyName, TEXT) {
     protected override fun _writeText(property: T?, context: WriteContext?) =
         property?.uuid?.toString()
 

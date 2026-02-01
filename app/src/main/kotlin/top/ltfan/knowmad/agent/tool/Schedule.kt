@@ -31,10 +31,10 @@ import kotlinx.datetime.TimeZone
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.schedule.CombinedCourse
+import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
-import top.ltfan.knowmad.data.schedule.CourseWithSemester
 import top.ltfan.knowmad.data.schedule.EventEntity
-import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.ICalendarTrigger
@@ -402,7 +402,7 @@ object ScheduleTools {
                 val semesters: List<SemesterEntity>,
                 val courses: List<CourseEntity>,
             ) : Result {
-                constructor(courses: List<CourseWithSemester>) : this(
+                constructor(courses: List<CombinedCourse>) : this(
                     semesters = courses.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
@@ -710,7 +710,7 @@ object ScheduleTools {
                 val courses: List<CourseEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
-                constructor(events: List<EventWithSemesterAndCourse>) : this(
+                constructor(events: List<CombinedEvent>) : this(
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
@@ -770,7 +770,7 @@ object ScheduleTools {
                 val courses: List<CourseEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
-                constructor(events: List<EventWithSemesterAndCourse>) : this(
+                constructor(events: List<CombinedEvent>) : this(
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }

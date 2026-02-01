@@ -23,11 +23,11 @@ import biweekly.ICalendar
 import biweekly.component.VEvent
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.CourseProperty
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
-import top.ltfan.knowmad.data.schedule.EventWithSemesterAndCourse
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.InstructorProperty
 import top.ltfan.knowmad.data.schedule.Reminder
@@ -112,7 +112,7 @@ class ICalendarTest {
     @Test
     fun `test iCalendar generation and parsing`() {
         val data = listOf(
-            EventWithSemesterAndCourse(
+            CombinedEvent(
                 testEvent1, testSemester, testCourse,
             ).toEvent(),
             testEvent2,
@@ -235,7 +235,7 @@ class ICalendarTest {
 
         val restoredEvents = iCal.events.map { Event.parse(it) }
 
-        val event = EventWithSemesterAndCourse(
+        val event = CombinedEvent(
             testEvent1, testSemester, testCourse,
         ).toEvent()
 
