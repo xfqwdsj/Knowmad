@@ -20,9 +20,7 @@ package top.ltfan.knowmad.data.schedule
 
 import biweekly.ICalVersion
 import biweekly.io.ParseContext
-import biweekly.io.scribe.property.RecurrencePropertyScribe
 import biweekly.io.scribe.property.RecurrenceRuleScribe
-import biweekly.property.RecurrenceProperty
 import biweekly.util.ByDay
 import biweekly.util.Frequency
 import biweekly.util.ICalDate
@@ -124,22 +122,6 @@ fun Recurrence?.toICalendarRecurrenceRule(
         },
         errors = errors,
     )
-}
-
-data class KnowmadRecurrenceProperty(
-    val recurrenceRule: ICalendarRecurrenceRule,
-) : RecurrenceProperty(recurrenceRule.toICalValue()) {
-    companion object : RecurrencePropertyScribe<KnowmadRecurrenceProperty>(
-        KnowmadRecurrenceProperty::class.java,
-        KnowmadRecurrenceProperty.PROPERTY_NAME,
-    ) {
-        const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE"
-
-        override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty? {
-            val rule = value?.toICalendarRecurrenceRule() ?: return null
-            return KnowmadRecurrenceProperty(rule)
-        }
-    }
 }
 
 @Serializable

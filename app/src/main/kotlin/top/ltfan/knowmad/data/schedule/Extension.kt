@@ -18,9 +18,50 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import biweekly.ICalendar
+import biweekly.io.TimezoneAssignment
+import biweekly.io.TimezoneInfo
 import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.toJavaZoneId
+import java.util.TimeZone
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+
+fun SemesterEntity.constructICalendar(): ICalendar = ICalendar().apply {
+    version = ICalendarVersion
+    setUid(id.toString())
+    addName(name)
+    timezoneInfo = TimezoneInfo().apply {
+        defaultTimezone = TimezoneAssignment(
+            TimeZone.getTimeZone(timeZone.toJavaZoneId()),
+            timeZone.id,
+        )
+    }
+}
+
+fun SemesterEntity.toICalendar(
+    events: List<Event>? = null,
+): ICalendar = constructICalendar().apply {
+    events?.let { addEvents(it) }
+}
+
+fun SemesterEntity.exportICalendar(
+    events: List<Event>,
+): ICalendar = constructICalendar().apply {
+    addExportedEvents(events)
+}
+
+fun ICalendar.addEvents(events: List<Event>) {
+    events.forEach { event ->
+        addEvent(event.toVEvent())
+    }
+}
+
+fun ICalendar.addExportedEvents(events: List<Event>) {
+    events.forEach { exportedEvent ->
+        addEvent(exportedEvent.exportVEvent())
+    }
+}
 
 fun Duration.toProperty(): biweekly.util.Duration {
     return biweekly.util.Duration.fromMillis(this.inWholeMilliseconds)

@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.test
 
-import biweekly.ICalendar
 import biweekly.component.VEvent
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -37,9 +36,12 @@ import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.SemesterProperty
+import top.ltfan.knowmad.data.schedule.constructICalendar
 import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.customICalWriter
+import top.ltfan.knowmad.data.schedule.exportICalendar
 import top.ltfan.knowmad.data.schedule.toEvent
+import top.ltfan.knowmad.data.schedule.toICalendar
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Date
@@ -134,13 +136,7 @@ class ICalendarTest {
             testEvent3,
         )
 
-        val iCal = ICalendar().apply {
-            version = ICalendarVersion
-            addName(testSemester.name)
-            data.forEach { event ->
-                addEvent(event.toVEvent())
-            }
-        }
+        val iCal = testSemester.toICalendar(data)
 
         val validation = iCal.validate(ICalendarVersion)
         if (!validation.isEmpty) {
@@ -194,9 +190,7 @@ class ICalendarTest {
 
     @Test
     fun `test iCalendar restoring`() {
-        val iCal = ICalendar().apply {
-            version = ICalendarVersion
-            addName(testSemester.name)
+        val iCal = testSemester.constructICalendar().apply {
             addEvent(
                 // Missing required semester property
                 VEvent().apply {
@@ -310,13 +304,7 @@ class ICalendarTest {
             testEvent3,
         )
 
-        val iCal = ICalendar().apply {
-            version = ICalendarVersion
-            addName(testSemester.name)
-            data.forEach { event ->
-                addEvent(event.exportVEvent())
-            }
-        }
+        val iCal = testSemester.exportICalendar(data)
 
         val validation = iCal.validate(ICalendarVersion)
         if (!validation.isEmpty) {

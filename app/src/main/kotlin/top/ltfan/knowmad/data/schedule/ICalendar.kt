@@ -23,12 +23,15 @@ import biweekly.ICalVersion
 import biweekly.io.ParseContext
 import biweekly.io.WriteContext
 import biweekly.io.scribe.property.ICalPropertyScribe
+import biweekly.io.scribe.property.RecurrencePropertyScribe
 import biweekly.io.scribe.property.TextPropertyScribe
 import biweekly.io.text.ICalReader
 import biweekly.io.text.ICalWriter
 import biweekly.parameter.ICalParameters
 import biweekly.property.ICalProperty
+import biweekly.property.RecurrenceProperty
 import biweekly.property.TextProperty
+import biweekly.util.Recurrence
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
@@ -167,6 +170,22 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
             label = course.name
             put(PARAM_INSTRUCTOR, course.instructor)
             put(PARAM_LOCATION, course.location)
+        }
+    }
+}
+
+data class KnowmadRecurrenceProperty(
+    val recurrenceRule: ICalendarRecurrenceRule,
+) : RecurrenceProperty(recurrenceRule.toICalValue()) {
+    companion object : RecurrencePropertyScribe<KnowmadRecurrenceProperty>(
+        KnowmadRecurrenceProperty::class.java,
+        KnowmadRecurrenceProperty.PROPERTY_NAME,
+    ) {
+        const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE"
+
+        override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty? {
+            val rule = value?.toICalendarRecurrenceRule() ?: return null
+            return KnowmadRecurrenceProperty(rule)
         }
     }
 }
