@@ -60,7 +60,7 @@ interface ScheduleDao : FtsDao {
     @Insert
     suspend fun insertEvent(event: EventEntity): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAllEvents(events: List<EventEntity>): List<Long>
 
     @Delete

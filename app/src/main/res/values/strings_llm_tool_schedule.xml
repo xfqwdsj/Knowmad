@@ -103,6 +103,7 @@
     <string name="llm_tool_schedule_create_event_arg_priority_description">Event priority (specify only when requested by user, default is None, 1 is highest, 9 is lowest)</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">Invalid reminder time format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_offset">Invalid reminder offset format, expected ISO-8601 Duration</string>
+    <string name="llm_tool_schedule_create_event_result_error_insertion_failed">Failed to create event %s</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_course_id">Invalid courseId format, expected UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
@@ -110,7 +111,7 @@
     <string name="llm_tool_schedule_create_event_result_failure_reason_fields_required">Semester ID, start time, and end time are required</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_name_location_required">Name and location are required for normal events</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_internal_error">Internal error while creating event</string>
-    <string name="llm_tool_schedule_create_event_result_failure_reason_insert_failed">Failed to create event</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_insertion_failed">Failed to create event</string>
 
     <string name="llm_tool_schedule_update_course_description">Update information of an existing course</string>
     <string name="llm_tool_schedule_update_course_arg_course_id_description">Course ID (UUID)</string>

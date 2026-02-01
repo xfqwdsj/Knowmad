@@ -103,6 +103,7 @@
     <string name="llm_tool_schedule_create_event_arg_priority_description">事件优先级（用户要求时指定，默认值为None，1为最高，9为最低）</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">提醒的time格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_offset">提醒的offset格式无效，期望ISO-8601 Duration</string>
+    <string name="llm_tool_schedule_create_event_result_error_insertion_failed">创建事件%s失败</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_course_id">courseId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
@@ -110,7 +111,7 @@
     <string name="llm_tool_schedule_create_event_result_failure_reason_fields_required">学期ID、开始时间和结束时间均为必填项</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_name_location_required">普通事件必须提供名称和地点</string>
     <string name="llm_tool_schedule_create_event_result_failure_reason_internal_error">创建事件时发生内部错误</string>
-    <string name="llm_tool_schedule_create_event_result_failure_reason_insert_failed">创建事件失败</string>
+    <string name="llm_tool_schedule_create_event_result_failure_reason_insertion_failed">创建事件失败</string>
 
     <string name="llm_tool_schedule_update_course_description">更新现有课程的信息</string>
     <string name="llm_tool_schedule_update_course_arg_course_id_description">课程ID（UUID）</string>
