@@ -48,6 +48,9 @@ interface ScheduleDao : FtsDao {
     }
 
     @Insert
+    suspend fun insertRecurrenceRule(rule: RecurrenceRuleEntity): Long
+
+    @Insert
     suspend fun insertCourse(course: CourseEntity): Long
 
     @Insert
@@ -63,6 +66,9 @@ interface ScheduleDao : FtsDao {
     suspend fun deleteSemester(semester: SemesterEntity): Int
 
     @Delete
+    suspend fun deleteRecurrenceRule(rule: RecurrenceRuleEntity): Int
+
+    @Delete
     suspend fun deleteCourse(course: CourseEntity): Int
 
     @Delete
@@ -70,6 +76,9 @@ interface ScheduleDao : FtsDao {
 
     @Update
     suspend fun updateSemester(semester: SemesterEntity): Int
+
+    @Update
+    suspend fun updateRecurrenceRule(rule: RecurrenceRuleEntity): Int
 
     @Update
     suspend fun updateCourse(course: CourseEntity): Int
@@ -113,6 +122,9 @@ interface ScheduleDao : FtsDao {
         val sanitized = query.sanitizeForFts().ifBlank { return emptyList() }
         return searchSemestersInternal(sanitized)
     }
+
+    @Query("SELECT * FROM RecurrenceRuleEntity WHERE id = :id")
+    suspend fun getRecurrenceRuleById(id: Uuid): RecurrenceRuleEntity?
 
     @Transaction
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
