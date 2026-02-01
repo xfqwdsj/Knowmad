@@ -96,11 +96,10 @@ abstract class AppDatabase : RoomDatabase() {
                                 val name = "trg_${currentEntity}_recurrence_rule_cleanup_$suffix"
                                 appendLine("CREATE TRIGGER IF NOT EXISTS `$name`")
                                 appendLine("AFTER $trigger ON `$currentEntity`")
-                                append("WHEN OLD.recurrenceRuleId IS NOT NULL")
+                                appendLine("WHEN OLD.recurrenceRuleId IS NOT NULL")
                                 if (trigger.startsWith("UPDATE")) {
-                                    append(" AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)")
+                                    appendLine("AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)")
                                 }
-                                appendLine()
 
                                 appendLine("BEGIN")
                                 appendLine("DELETE FROM RecurrenceRuleEntity")
