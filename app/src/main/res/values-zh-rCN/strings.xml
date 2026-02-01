@@ -117,4 +117,5 @@
     <string name="crypto_use_plaintext_label">使用明文存储</string>
     <string name="crypto_use_plaintext_warning">您正在对敏感数据使用明文存储，这可能会带来安全风险。建议启用加密</string>
     <string name="schedule_semester_label_default">默认学期</string>
+    <string name="schedule_event_dot_label">存在事件</string>
 </resources>

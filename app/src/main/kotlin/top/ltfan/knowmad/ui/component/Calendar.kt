@@ -83,6 +83,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -118,6 +121,7 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
+import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.ProvideLocalSharedTransitionScope
@@ -520,14 +524,17 @@ private fun Dot(
     color: Color = MaterialTheme.colorScheme.primary,
     shape: Shape = ContinuousRoundedRectangle(2.dp),
 ) {
-    // TODO: semantic description
+    val description = stringResource(R.string.schedule_event_dot_label)
     Spacer(
         Modifier
             .size(requiredSize)
             .matchParentShortestSide()
             .clip(shape)
             .background(color)
-            .then(modifier),
+            .then(modifier)
+            .semantics {
+                contentDescription = description
+            },
     )
 }
 
