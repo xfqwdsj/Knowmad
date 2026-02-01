@@ -458,15 +458,23 @@ object ScheduleTools {
                     runCatching { dao.insertAllCourses(list) }
                 }.onFailure { logger.error(it) { "Failed to insert courses" } }
                     .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
-                if (insertResults.any { it < 0L }) {
-                    return Result.Failure(
-                        resources.getString(
-                            R.string.llm_tool_schedule_create_course_result_failure_reason_insert_failed,
-                        ),
-                    )
-                }
+                val insertedList = (list.asSequence() zip insertResults.asSequence())
+                    .filter {
+                        (it.second >= 0L).also { success ->
+                            if (!success) {
+                                errors.add(
+                                    resources.getString(
+                                        R.string.llm_tool_schedule_create_course_result_error_insertion_failed,
+                                        it.first.name,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    .map { it.first }
+                    .toList()
                 return Result.Success(
-                    courses = list,
+                    courses = insertedList,
                     errors = errors.takeIf { it.isNotEmpty() },
                 )
             }
@@ -494,7 +502,7 @@ object ScheduleTools {
                 errors = errors.takeIf { it.isNotEmpty() },
             ) else Result.Failure(
                 resources.getString(
-                    R.string.llm_tool_schedule_create_course_result_failure_reason_insert_failed,
+                    R.string.llm_tool_schedule_create_course_result_failure_reason_insertion_failed,
                 ),
             )
         }

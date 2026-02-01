@@ -22,6 +22,7 @@ import android.content.res.Resources
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -53,7 +54,7 @@ interface ScheduleDao : FtsDao {
     @Insert
     suspend fun insertCourse(course: CourseEntity): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAllCourses(courses: List<CourseEntity>): List<Long>
 
     @Insert

@@ -66,10 +66,11 @@
     <string name="llm_tool_schedule_create_course_arg_instructor_description">Instructor name</string>
     <string name="llm_tool_schedule_create_course_arg_location_description">Course location</string>
     <string name="llm_tool_schedule_create_course_arg_list_description">List of courses (for batch creation, and other fields will be ignored)</string>
+    <string name="llm_tool_schedule_create_course_result_error_insertion_failed">Failed to create course %s</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_fields_required">Course name, instructor, and location are required</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">Internal error while creating course</string>
-    <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">Failed to create course</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_insertion_failed">Failed to create course</string>
 
     <string name="llm_tool_schedule_query_events_description">Query events in a semester within a time range</string>
     <string name="llm_tool_schedule_query_events_arg_start_time_description">Start time (ISO-8601 with Offset)</string>

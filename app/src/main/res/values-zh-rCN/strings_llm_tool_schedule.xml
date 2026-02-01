@@ -66,10 +66,11 @@
     <string name="llm_tool_schedule_create_course_arg_instructor_description">讲师姓名</string>
     <string name="llm_tool_schedule_create_course_arg_location_description">课程地点</string>
     <string name="llm_tool_schedule_create_course_arg_list_description">课程列表（用于批量创建，其他参数将被忽略）</string>
+    <string name="llm_tool_schedule_create_course_result_error_insertion_failed">创建课程%s失败</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_fields_required">课程名称、讲师姓名和地点均为必填项</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">创建课程时发生内部错误</string>
-    <string name="llm_tool_schedule_create_course_result_failure_reason_insert_failed">创建课程失败</string>
+    <string name="llm_tool_schedule_create_course_result_failure_reason_insertion_failed">创建课程失败</string>
 
     <string name="llm_tool_schedule_query_events_description">查询学期内指定时间范围的事件</string>
     <string name="llm_tool_schedule_query_events_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
