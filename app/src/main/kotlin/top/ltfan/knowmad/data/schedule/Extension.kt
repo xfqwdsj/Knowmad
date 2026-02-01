@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import kotlinx.datetime.DayOfWeek
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -27,4 +28,24 @@ fun Duration.toProperty(): biweekly.util.Duration {
 
 fun biweekly.util.Duration.toDuration(): Duration {
     return toMillis().milliseconds
+}
+
+fun biweekly.util.DayOfWeek.toKotlinDayOfWeek(): DayOfWeek = when (this) {
+    MONDAY -> MONDAY
+    TUESDAY -> TUESDAY
+    WEDNESDAY -> WEDNESDAY
+    THURSDAY -> THURSDAY
+    FRIDAY -> FRIDAY
+    SATURDAY -> SATURDAY
+    SUNDAY -> SUNDAY
+}
+
+fun DayOfWeek.toICalDayOfWeek(): biweekly.util.DayOfWeek = when (this) {
+    MONDAY -> MONDAY
+    TUESDAY -> TUESDAY
+    WEDNESDAY -> WEDNESDAY
+    THURSDAY -> THURSDAY
+    FRIDAY -> FRIDAY
+    SATURDAY -> SATURDAY
+    SUNDAY -> SUNDAY
 }

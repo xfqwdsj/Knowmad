@@ -29,7 +29,6 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
@@ -85,11 +84,10 @@ data class SemesterFtsEntity(
 data class RecurrenceRuleEntity(
     @PrimaryKey
     val id: Uuid = Uuid.generateV7(),
-    val rule: String,
-    val timeZone: TimeZone,
-    val startTime: LocalDateTime,
+    val rule: ICalendarRecurrenceRule,
+    val startTime: Instant,
     val duration: Duration,
-    val exceptions: List<LocalDateTime> = emptyList(),
+    val exceptions: Set<Instant> = emptySet(),
 )
 
 @Serializable

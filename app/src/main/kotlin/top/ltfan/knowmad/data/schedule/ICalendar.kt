@@ -37,16 +37,20 @@ import java.io.OutputStream
 import kotlin.reflect.KClass
 import kotlin.uuid.Uuid
 
+val ICalendarVersion = ICalVersion.V2_0
+
 fun customICalReader(stream: InputStream) = ICalReader(stream).apply {
     registerScribe(SemesterProperty)
     registerScribe(CourseProperty)
     registerScribe(InstructorProperty)
+    registerScribe(KnowmadRecurrenceProperty)
 }
 
-fun customICalWriter(stream: OutputStream) = ICalWriter(stream, V2_0).apply {
+fun customICalWriter(stream: OutputStream) = ICalWriter(stream, ICalendarVersion).apply {
     registerScribe(SemesterProperty)
     registerScribe(CourseProperty)
     registerScribe(InstructorProperty)
+    registerScribe(KnowmadRecurrenceProperty)
 }
 
 abstract class UuidProperty : ICalProperty() {
@@ -81,8 +85,10 @@ data class SemesterProperty(val semester: SemesterEntity) : UuidProperty() {
     override val uuid = semester.id
 
     companion object : UuidPropertyScribe<SemesterProperty>(
-        SemesterProperty::class, "X-SEMESTER-ID",
+        SemesterProperty::class, SemesterProperty.PROPERTY_NAME,
     ) {
+        const val PROPERTY_NAME = "X-KNOWMAD-SEMESTER"
+
         const val PARAM_START_DATE = "X-START-DATE"
         const val PARAM_END_DATE = "X-END-DATE"
         const val PARAM_TIME_ZONE = "X-TIME-ZONE"
@@ -127,11 +133,13 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
     override val uuid = course.id
 
     companion object : UuidPropertyScribe<CourseProperty>(
-        CourseProperty::class, "X-COURSE-ID",
+        CourseProperty::class, CourseProperty.PROPERTY_NAME,
     ) {
+        const val PROPERTY_NAME = "X-KNOWMAD-COURSE"
+
         const val PARAM_SEMESTER_ID = "X-SEMESTER-ID"
-        const val PARAM_INSTRUCTOR = "X-COURSE-INSTRUCTOR"
-        const val PARAM_LOCATION = "X-COURSE-LOCATION"
+        const val PARAM_INSTRUCTOR = "X-INSTRUCTOR"
+        const val PARAM_LOCATION = "X-LOCATION"
 
         override fun newInstance(
             value: Uuid?,
@@ -165,8 +173,10 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
 
 data class InstructorProperty(val value: String?) : TextProperty(value) {
     companion object : TextPropertyScribe<InstructorProperty>(
-        InstructorProperty::class.java, "X-INSTRUCTOR",
+        InstructorProperty::class.java, InstructorProperty.PROPERTY_NAME,
     ) {
+        const val PROPERTY_NAME = "X-INSTRUCTOR"
+
         override fun newInstance(value: String?, version: ICalVersion?) = InstructorProperty(value)
     }
 }

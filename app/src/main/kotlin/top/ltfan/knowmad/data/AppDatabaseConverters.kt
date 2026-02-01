@@ -31,6 +31,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
+import top.ltfan.knowmad.data.schedule.ICalendarRecurrenceRule
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
@@ -71,16 +72,6 @@ object AppDatabaseConverters {
     }
 
     @TypeConverter
-    fun fromLocalDateTimeList(data: List<LocalDateTime>): ByteArray {
-        return Cbor.encodeToByteArray(data)
-    }
-
-    @TypeConverter
-    fun toLocalDateTimeList(data: ByteArray): List<LocalDateTime> {
-        return Cbor.decodeFromByteArray(data)
-    }
-
-    @TypeConverter
     fun fromTimeZone(data: TimeZone): String {
         return data.id
     }
@@ -98,6 +89,16 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toInstant(data: Long): Instant {
         return Instant.fromEpochMilliseconds(data)
+    }
+
+    @TypeConverter
+    fun fromInstantSet(data: Set<Instant>): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toInstantSet(data: ByteArray): Set<Instant> {
+        return Cbor.decodeFromByteArray(data)
     }
 
     @TypeConverter
@@ -127,6 +128,16 @@ object AppDatabaseConverters {
 
     @TypeConverter
     fun toReminders(data: ByteArray): Reminders {
+        return Cbor.decodeFromByteArray(data)
+    }
+
+    @TypeConverter
+    fun fromICalendarRecurrenceRule(data: ICalendarRecurrenceRule): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toICalendarRecurrenceRule(data: ByteArray): ICalendarRecurrenceRule {
         return Cbor.decodeFromByteArray(data)
     }
 

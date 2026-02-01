@@ -20,6 +20,10 @@ package top.ltfan.knowmad.data.schedule
 
 import biweekly.component.VAlarm
 import biweekly.component.VEvent
+import biweekly.io.TimezoneInfo
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toJavaZoneId
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.temporal.ChronoUnit
@@ -35,6 +39,7 @@ import kotlin.uuid.Uuid
 sealed interface Event {
     val id: Uuid
     val semester: SemesterEntity
+    val recurrenceRule: RecurrenceRuleEntity?
     val name: String
     val location: String
     val color: ICalendarColor
@@ -50,7 +55,6 @@ sealed interface Event {
     fun toVEvent(): VEvent
     fun exportVEvent() = VEvent().apply {
         uid()
-        semester()
         summary()
         location()
         color()
@@ -66,6 +70,7 @@ sealed interface Event {
     data class Normal(
         override val id: Uuid = Uuid.generateV7(),
         override val semester: SemesterEntity,
+        override val recurrenceRule: RecurrenceRuleEntity? = null,
         override val name: String,
         override val location: String,
         override val color: ICalendarColor,
@@ -81,6 +86,7 @@ sealed interface Event {
             id = id,
             semesterId = semester.id,
             courseId = null,
+            recurrenceRuleId = recurrenceRule?.id,
             name = name,
             instructor = null,
             location = location,
@@ -97,6 +103,7 @@ sealed interface Event {
         override fun toVEvent() = VEvent().apply {
             uid()
             semester()
+            customRecurrenceRule()
             summary()
             location()
             color()
@@ -114,6 +121,7 @@ sealed interface Event {
         override val id: Uuid = Uuid.generateV7(),
         override val semester: SemesterEntity,
         val course: CourseEntity,
+        override val recurrenceRule: RecurrenceRuleEntity? = null,
         override val name: String = course.name,
         val instructor: String = course.instructor,
         override val location: String = course.location,
@@ -130,6 +138,7 @@ sealed interface Event {
             id = id,
             semesterId = semester.id,
             courseId = course.id,
+            recurrenceRuleId = null, // Expected to be stored in CourseEntity
             name = name,
             instructor = instructor,
             location = location,
@@ -147,6 +156,7 @@ sealed interface Event {
             uid()
             semester()
             course()
+            customRecurrenceRule()
             summary()
             instructor()
             location()
@@ -174,6 +184,12 @@ sealed interface Event {
     fun VEvent.semester() {
         addProperty(SemesterProperty(semester))
         addCategories(semester.name)
+    }
+
+    fun VEvent.customRecurrenceRule() {
+        this@Event.recurrenceRule?.let { entity ->
+            setProperty(entity.rule.toProperty())
+        }
     }
 
     fun VEvent.summary() {
@@ -214,22 +230,31 @@ sealed interface Event {
     }
 
     companion object {
-        fun parse(vEvent: VEvent): Event? {
-            val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: return null
+        fun parse(
+            vEvent: VEvent,
+            timeZoneInfo: TimezoneInfo? = null,
+            defaultTimeZone: TimeZone = TimeZone.currentSystemDefault(),
+            onNewRecurrenceRule: (
+                rule: RecurrenceRuleEntity,
+                course: CourseEntity?,
+            ) -> CourseEntity? = { _, _ -> null },
+        ): List<Event> {
+            val semesterProperty =
+                vEvent.getProperty(SemesterProperty::class.java) ?: return emptyList()
             val semester = semesterProperty.semester
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
             val course = courseProperty?.course
 
-            // TODO: support recurring events
-            val id = Uuid.parseOrNull(vEvent.uid.value) ?: return null
+            val id = Uuid.parseOrNull(vEvent.uid.value) ?: return emptyList()
             val name = vEvent.summary?.value
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
             val color = vEvent.color.toICalendarColor(course?.id, defaultId = semester.id)
-            val startTime = vEvent.dateStart?.value?.toInstant()?.toKotlinInstant()
-                ?: return null
-            val endTime = vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()
-                ?: return null
+            val startDate = vEvent.dateStart?.value ?: return emptyList()
+            val startTime = startDate.toInstant().toKotlinInstant()
+            val duration = vEvent.duration?.value?.toDuration()
+                ?: vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()?.let { it - startTime }
+                ?: return emptyList()
             val reminders = vEvent.alarms.toReminders()
             val notes = vEvent.description?.value
             val priority = vEvent.priority.toICalendarPriority()
@@ -238,52 +263,136 @@ sealed interface Event {
             val updatedAt = vEvent.lastModified?.value?.toInstant()?.toKotlinInstant()
                 ?: Clock.System.now()
 
-            return if (course != null) {
-                Course(
+            val exceptions = vEvent.exceptionDates?.asSequence()
+                ?.flatMap { exDate ->
+                    exDate.values.mapNotNull { it.toInstant().toKotlinInstant() }
+                }?.toSet() ?: emptySet()
+
+            vEvent.recurrenceRule?.let { rule ->
+                val timeZone = timeZoneInfo?.getTimezone(rule)?.timeZone
+                    ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
+                val entity = RecurrenceRuleEntity(
                     id = id,
-                    semester = semester,
-                    course = course,
-                    name = name ?: course.name,
-                    instructor = instructor ?: course.instructor,
-                    location = location ?: course.location,
-                    color = color,
-                    startTime = startTime,
-                    endTime = endTime,
-                    reminders = reminders,
-                    notes = notes,
-                    priority = priority,
-                    createdAt = createdAt,
-                    updatedAt = updatedAt,
+                    rule = rule.value.toICalendarRecurrenceRule() ?: return emptyList(),
+                    startTime = startDate.toInstant().toKotlinInstant(),
+                    duration = duration,
+                    exceptions = exceptions,
+                )
+                val newCourse = onNewRecurrenceRule(entity, course) ?: course
+
+                val isInfinite = entity.rule.count == null && entity.rule.until == null
+                if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
+                    return emptyList()
+                }
+                val semesterEndDate =
+                    Date.from(semester.endDate.atStartOfDayIn(semester.timeZone).toJavaInstant())
+                val iterator = vEvent.getDateIterator(timeZone)
+                val events = mutableListOf<Event>()
+                while (iterator.hasNext()) {
+                    val occurrenceStartDate = iterator.next()
+
+                    if (occurrenceStartDate.after(semesterEndDate)) {
+                        break
+                    }
+
+                    val occurrenceStartTime = occurrenceStartDate.toInstant().toKotlinInstant()
+                    val occurrenceEndTime = occurrenceStartTime + duration
+                    if (newCourse != null) {
+                        events.add(
+                            Course(
+                                semester = semester,
+                                course = newCourse,
+                                recurrenceRule = entity,
+                                name = name ?: newCourse.name,
+                                instructor = instructor ?: newCourse.instructor,
+                                location = location ?: newCourse.location,
+                                color = color,
+                                startTime = occurrenceStartTime,
+                                endTime = occurrenceEndTime,
+                                reminders = reminders,
+                                notes = notes,
+                                priority = priority,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                            ),
+                        )
+                    } else {
+                        if (name == null || location == null) continue
+                        events.add(
+                            Normal(
+                                semester = semester,
+                                recurrenceRule = entity,
+                                name = name,
+                                location = location,
+                                color = color,
+                                startTime = occurrenceStartTime,
+                                endTime = occurrenceEndTime,
+                                reminders = reminders,
+                                notes = notes,
+                                priority = priority,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                            ),
+                        )
+                    }
+                }
+                return events
+            }
+
+            if (startTime in exceptions) return emptyList()
+
+            val endTime = startTime + duration
+            return if (course != null) {
+                listOf(
+                    Course(
+                        id = id,
+                        semester = semester,
+                        course = course,
+                        name = name ?: course.name,
+                        instructor = instructor ?: course.instructor,
+                        location = location ?: course.location,
+                        color = color,
+                        startTime = startTime,
+                        endTime = endTime,
+                        reminders = reminders,
+                        notes = notes,
+                        priority = priority,
+                        createdAt = createdAt,
+                        updatedAt = updatedAt,
+                    ),
                 )
             } else {
-                if (name == null || location == null) {
-                    return null
-                }
-                Normal(
-                    id = id,
-                    semester = semester,
-                    name = name,
-                    location = location,
-                    color = color,
-                    startTime = startTime,
-                    endTime = endTime,
-                    reminders = reminders,
-                    notes = notes,
-                    priority = priority,
-                    createdAt = createdAt,
-                    updatedAt = updatedAt,
+                if (name == null || location == null) return emptyList()
+                listOf(
+                    Normal(
+                        id = id,
+                        semester = semester,
+                        name = name,
+                        location = location,
+                        color = color,
+                        startTime = startTime,
+                        endTime = endTime,
+                        reminders = reminders,
+                        notes = notes,
+                        priority = priority,
+                        createdAt = createdAt,
+                        updatedAt = updatedAt,
+                    ),
                 )
             }
         }
     }
 }
 
-fun CombinedEvent.toEvent(): Event {
+fun CombinedEvent.toEvent(
+    recurrenceRule: RecurrenceRuleEntity? = null,
+): Event {
     return if (course != null) {
         Event.Course(
             id = event.id,
             semester = semester,
             course = course,
+            recurrenceRule = recurrenceRule,
             name = event.name ?: course.name,
             instructor = event.instructor ?: course.instructor,
             location = event.location ?: course.location,
@@ -300,6 +409,7 @@ fun CombinedEvent.toEvent(): Event {
         Event.Normal(
             id = event.id,
             semester = semester,
+            recurrenceRule = recurrenceRule,
             name = event.name ?: error("Event name is null for normal event with id ${event.id}"),
             location = event.location
                 ?: error("Event location is null for normal event with id ${event.id}"),

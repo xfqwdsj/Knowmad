@@ -127,6 +127,18 @@ interface ScheduleDao : FtsDao {
     suspend fun getRecurrenceRuleById(id: Uuid): RecurrenceRuleEntity?
 
     @Transaction
+    suspend fun getRecurrenceRuleByCourse(course: CourseEntity): RecurrenceRuleEntity? {
+        val ruleId = course.recurrenceRuleId ?: return null
+        return getRecurrenceRuleById(ruleId)
+    }
+
+    @Transaction
+    suspend fun getRecurrenceRuleByCombinedEvent(combinedEvent: CombinedEvent): RecurrenceRuleEntity? {
+        val ruleId = combinedEvent.course?.recurrenceRuleId ?: combinedEvent.event.recurrenceRuleId
+        return getRecurrenceRuleById(ruleId ?: return null)
+    }
+
+    @Transaction
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
     suspend fun getCourseById(id: Uuid): CombinedCourse?
 
@@ -172,7 +184,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun getEventById(id: Uuid): Event? {
-        return getEventByIdInternal(id)?.toEvent()
+        return getEventByIdInternal(id)?.let {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Query("SELECT * FROM EventEntity WHERE id = :id")
@@ -197,7 +211,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun getEventsInRange(startTime: Instant, endTime: Instant): List<Event> {
-        return getOriginalEventsInRange(startTime, endTime).map { it.toEvent() }
+        return getOriginalEventsInRange(startTime, endTime).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Transaction
@@ -219,7 +235,7 @@ interface ScheduleDao : FtsDao {
 
     fun getEventsFlowInRange(startTime: Instant, endTime: Instant): Flow<List<Event>> {
         return getOriginalEventsFlowInRange(startTime, endTime).map { list ->
-            list.map { it.toEvent() }
+            list.map { it.toEvent(getRecurrenceRuleByCombinedEvent(it)) }
         }
     }
 
@@ -239,7 +255,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun getAllEventsBySemester(semesterId: Uuid): List<Event> {
-        return getAllOriginalEventsBySemester(semesterId).map { it.toEvent() }
+        return getAllOriginalEventsBySemester(semesterId).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Transaction
@@ -258,7 +276,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun getAllEventsByCourse(courseId: Uuid): List<Event> {
-        return getAllOriginalEventsByCourse(courseId).map { it.toEvent() }
+        return getAllOriginalEventsByCourse(courseId).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Transaction
@@ -277,7 +297,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun getAllEventsByCourses(courseIds: List<Uuid>): List<Event> {
-        return getAllOriginalEventsByCourses(courseIds).map { it.toEvent() }
+        return getAllOriginalEventsByCourses(courseIds).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Transaction
@@ -298,7 +320,9 @@ interface ScheduleDao : FtsDao {
 
     @Transaction
     suspend fun searchEvents(query: String): List<Event> {
-        return searchOriginalEvents(query).map { it.toEvent() }
+        return searchOriginalEvents(query).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
     }
 
     @Transaction
