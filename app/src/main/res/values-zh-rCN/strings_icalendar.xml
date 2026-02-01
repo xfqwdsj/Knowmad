@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="icalendar_rule"><![CDATA[
+        知行专用扩展iCalendar交换格式，使用RFC 5545规定的iCalendar 2.0标准
+
+        ## 总则
+
+        - 每个`VEVENT`无需`UID`
+        - 必须包含学期属性`%1$s`
+        - 若事件属于课程，必须包含课程属性`%2$s`
+        - 对于重复规则：
+
+          - 为`VEVENT`编写`RRULE`以创建重复事件
+          - 建议包含结束标志，如`COUNT`或`UNTIL`，且学期结束时间后的事件将不会被添加
+
+        - 必须设置`DTSTART`和结束标志（`DURATION`和`DTEND`二选一）
+        - 仅支持`DISPLAY`的`VALARM`
+
+        ## 时区与时间
+
+        - 优先使用`TZID`指定时区
+        - 若不指定时区，使用`Z`后缀指定UTC时间
+
+        ## 必须/推荐的VEVENT属性
+
+        - 必须：`DTSTART`、`%1$s`
+        - 至少二选一：`DURATION`、`DTEND`
+        - 普通事件必须：`SUMMARY`（事件名称）、`LOCATION`，在课程事件中若不指定，会解析为课程中的信息
+        - 课程事件必须：`%5$s`
+        - 可选：`%8$s`、`RRULE`、`EXDATE`、`LOCATION`、`COLOR`、`VALARM`、`DESCRIPTION`、`PRIORITY`
+
+        ## 自定义属性
+
+        ### %1$s
+
+        - 值：UUID，建议留空
+        - 必须参数：
+          - `LABEL`：学期名称
+          - `%2$s`：学期开始日期（`YYYY-MM-DD`）
+          - `%3$s`：学期结束日期（`YYYY-MM-DD`，不含）
+          - `%4$s`：学期时区ID
+
+        示例（ID已留空）
+
+        ```
+        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:
+        ```
+
+        ### %5$s
+
+        - 值：UUID，建议留空
+        - 必须参数：
+          - `LABEL`：课程名称
+          - `%6$s`：课程默认讲师姓名
+          - `%7$s`：课程默认地点
+
+        示例（ID已留空）
+
+        ```
+        %5$s;LABEL=My Course;%6$s=The Instructor;%7$s=The Room:
+        ```
+
+        ### %8$s
+
+        - 值：文本，讲师姓名
+    ]]></string>
+</resources>

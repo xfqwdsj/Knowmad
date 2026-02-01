@@ -85,7 +85,7 @@ class ICalendarTest {
         startTime = Instant.parse("2024-09-02T10:00:00Z"),
         endTime = Instant.parse("2024-09-02T11:00:00Z"),
         reminders = Reminders.of(Reminder(15.minutes, displayText = "Lecture 1")),
-        notes = "Introduction to the course",
+        notes = "Introduction to the 课程",
         createdAt = Instant.parse("2024-06-01T00:00:00Z"),
         updatedAt = Instant.parse("2024-06-01T00:00:00Z"),
     )
@@ -348,7 +348,7 @@ class ICalendarTest {
             DTSTART:20240902T100000Z
             DTEND:20240902T110000Z
             RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=50
-            DESCRIPTION:Introduction to the course
+            DESCRIPTION:Introduction to the 课程
             PRIORITY:1
             DTSTAMP:20260201T081112Z
             CREATED:20240601T000000Z

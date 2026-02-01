@@ -51,6 +51,9 @@ interface ScheduleDao : FtsDao {
     @Insert
     suspend fun insertRecurrenceRule(rule: RecurrenceRuleEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllRecurrenceRules(rules: List<RecurrenceRuleEntity>): List<Long>
+
     @Insert
     suspend fun insertCourse(course: CourseEntity): Long
 

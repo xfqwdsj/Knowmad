@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="icalendar_rule"><![CDATA[
+        Knowmad-Specific Extended iCalendar Exchange Format, based on the iCalendar 2.0 standard defined in RFC 5545
+
+        ## General Rules
+
+        - Each `VEVENT` does not require a `UID`
+        - Must include the semester attribute `%1$s`
+        - If the event belongs to a course, must include the course attribute `%2$s`
+        - For recurrence rules:
+
+          - Write an `RRULE` for the `VEVENT` to create recurring events
+          - It is recommended to include an ending condition such as `COUNT` or `UNTIL`, and events occurring after the semester end time will not be added
+
+        - Must set `DTSTART` and one ending indicator (`DURATION` or `DTEND`, choose one)
+        - Only supports `VALARM` with `DISPLAY`
+
+        ## Time Zone and Time
+
+        - Prefer using `TZID` to specify time zone
+        - If no time zone is specified, use the `Z` suffix to indicate UTC time
+
+        ## Required/Recommended VEVENT Properties
+
+        - Required: `DTSTART`, `%1$s`
+        - At least one of: `DURATION`, `DTEND`
+        - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, if not specified, these will be parsed from course information.
+        - For course events, required: `%5$s`
+        - Optional: `%8$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `VALARM`, `DESCRIPTION`, `PRIORITY`
+
+        ## Custom Attributes
+
+        ### %1$s
+
+        - Value: UUID, it is recommended to leave blank
+        - Required parameters:
+          - `LABEL`: Semester name
+          - `%2$s`: Semester start date (`YYYY-MM-DD`)
+          - `%3$s`: Semester end date (`YYYY-MM-DD`, exclusive)
+          - `%4$s`: Semester time zone ID
+
+        Example (ID left blank):
+
+        ```
+        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:
+        ```
+
+        ### %5$s
+
+        - Value: UUID, it is recommended to leave blank
+        - Required parameters:
+          - `LABEL`: Course name
+          - `%6$s`: Default instructor name for the course
+          - `%7$s`: Default location for the course
+
+        Example (ID left blank):
+
+        ```
+        %5$s;LABEL=My Course;%6$s=The Instructor;%7$s=The Room:
+        ```
+
+        ### %8$s
+
+        - Value: Text, instructor\'s name
+    ]]></string>
+</resources>

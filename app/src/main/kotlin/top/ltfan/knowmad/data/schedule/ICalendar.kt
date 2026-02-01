@@ -56,6 +56,17 @@ fun customICalWriter(stream: OutputStream) = ICalWriter(stream, ICalendarVersion
     registerScribe(KnowmadRecurrenceProperty)
 }
 
+val ICalendarRuleArguments = arrayOf(
+    SemesterProperty.PROPERTY_NAME,
+    SemesterProperty.PARAM_START_DATE,
+    SemesterProperty.PARAM_END_DATE,
+    SemesterProperty.PARAM_TIME_ZONE,
+    CourseProperty.PROPERTY_NAME,
+    CourseProperty.PARAM_INSTRUCTOR,
+    CourseProperty.PARAM_LOCATION,
+    InstructorProperty.PROPERTY_NAME,
+)
+
 abstract class UuidProperty : ICalProperty() {
     abstract val uuid: Uuid?
 }
@@ -84,8 +95,8 @@ abstract class UuidPropertyScribe<T : UuidProperty>(
     fun parse(value: String?): Uuid? = value?.let { Uuid.parseOrNull(it) }
 }
 
-data class SemesterProperty(val semester: SemesterEntity) : UuidProperty() {
-    override val uuid = semester.id
+data class SemesterProperty(val semester: SemesterEntity?) : UuidProperty() {
+    override val uuid = semester?.id
 
     companion object : UuidPropertyScribe<SemesterProperty>(
         SemesterProperty::class, SemesterProperty.PROPERTY_NAME,
@@ -101,21 +112,27 @@ data class SemesterProperty(val semester: SemesterEntity) : UuidProperty() {
             dataType: ICalDataType?,
             parameters: ICalParameters?,
             context: ParseContext?,
-        ): SemesterProperty? {
+        ): SemesterProperty {
             return SemesterProperty(
                 SemesterEntity(
                     id = value ?: Uuid.generateV7(),
-                    name = parameters?.label ?: return null,
+                    name = parameters?.label ?: return SemesterProperty(null),
                     startDate = LocalDate.parse(
-                        parameters.get(PARAM_START_DATE).singleOrNull() ?: return null,
+                        parameters.get(PARAM_START_DATE).singleOrNull() ?: return SemesterProperty(
+                            null,
+                        ),
                         LocalDate.Formats.ISO,
                     ),
                     endDate = LocalDate.parse(
-                        parameters.get(PARAM_END_DATE).singleOrNull() ?: return null,
+                        parameters.get(PARAM_END_DATE).singleOrNull() ?: return SemesterProperty(
+                            null,
+                        ),
                         LocalDate.Formats.ISO,
                     ),
                     timeZone = TimeZone.of(
-                        parameters.get(PARAM_TIME_ZONE).singleOrNull() ?: return null,
+                        parameters.get(PARAM_TIME_ZONE).singleOrNull() ?: return SemesterProperty(
+                            null,
+                        ),
                     ),
                 ),
             )
@@ -124,16 +141,16 @@ data class SemesterProperty(val semester: SemesterEntity) : UuidProperty() {
 
     init {
         parameters.apply {
-            label = semester.name
-            put(PARAM_START_DATE, semester.startDate.format(LocalDate.Formats.ISO))
-            put(PARAM_END_DATE, semester.endDate.format(LocalDate.Formats.ISO))
-            put(PARAM_TIME_ZONE, semester.timeZone.id)
+            label = semester?.name
+            put(PARAM_START_DATE, semester?.startDate?.format(LocalDate.Formats.ISO))
+            put(PARAM_END_DATE, semester?.endDate?.format(LocalDate.Formats.ISO))
+            put(PARAM_TIME_ZONE, semester?.timeZone?.id)
         }
     }
 }
 
-data class CourseProperty(val course: CourseEntity) : UuidProperty() {
-    override val uuid = course.id
+data class CourseProperty(val course: CourseEntity?) : UuidProperty() {
+    override val uuid = course?.id
 
     companion object : UuidPropertyScribe<CourseProperty>(
         CourseProperty::class, CourseProperty.PROPERTY_NAME,
@@ -149,7 +166,7 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
             dataType: ICalDataType?,
             parameters: ICalParameters?,
             context: ParseContext?,
-        ): CourseProperty? {
+        ): CourseProperty {
             val semesterIdString = parameters?.get(PARAM_SEMESTER_ID)?.singleOrNull()
                 ?: SemesterEntity.DEFAULT_SEMESTER_ID
             val semesterId = Uuid.parseOrNull(semesterIdString)
@@ -158,9 +175,11 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
                 CourseEntity(
                     id = value ?: Uuid.generateV7(),
                     semesterId = semesterId,
-                    name = parameters?.label ?: return null,
-                    instructor = parameters.get(PARAM_INSTRUCTOR).singleOrNull() ?: return null,
-                    location = parameters.get(PARAM_LOCATION).singleOrNull() ?: return null,
+                    name = parameters?.label ?: return CourseProperty(null),
+                    instructor = parameters.get(PARAM_INSTRUCTOR).singleOrNull()
+                        ?: return CourseProperty(null),
+                    location = parameters.get(PARAM_LOCATION).singleOrNull()
+                        ?: return CourseProperty(null),
                 ),
             )
         }
@@ -168,25 +187,25 @@ data class CourseProperty(val course: CourseEntity) : UuidProperty() {
 
     init {
         parameters.apply {
-            put(PARAM_SEMESTER_ID, course.semesterId.toString())
-            label = course.name
-            put(PARAM_INSTRUCTOR, course.instructor)
-            put(PARAM_LOCATION, course.location)
+            put(PARAM_SEMESTER_ID, course?.semesterId?.toString())
+            label = course?.name
+            put(PARAM_INSTRUCTOR, course?.instructor)
+            put(PARAM_LOCATION, course?.location)
         }
     }
 }
 
 data class KnowmadRecurrenceProperty(
-    val recurrenceRule: ICalendarRecurrenceRule,
-) : RecurrenceProperty(recurrenceRule.toICalValue()) {
+    val recurrenceRule: ICalendarRecurrenceRule?,
+) : RecurrenceProperty(recurrenceRule?.toICalValue()) {
     companion object : RecurrencePropertyScribe<KnowmadRecurrenceProperty>(
         KnowmadRecurrenceProperty::class.java,
         KnowmadRecurrenceProperty.PROPERTY_NAME,
     ) {
         const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE"
 
-        override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty? {
-            val rule = value?.toICalendarRecurrenceRule() ?: return null
+        override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty {
+            val rule = value?.toICalendarRecurrenceRule()
             return KnowmadRecurrenceProperty(rule)
         }
     }

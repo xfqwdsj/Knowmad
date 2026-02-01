@@ -23,6 +23,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import android.annotation.SuppressLint
 import android.content.res.Resources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,17 +35,23 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.CombinedCourse
 import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
+import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
+import top.ltfan.knowmad.data.schedule.ICalendarRuleArguments
 import top.ltfan.knowmad.data.schedule.ICalendarTrigger
 import top.ltfan.knowmad.data.schedule.ICalendarTrigger.Relative.Related.Start
+import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
+import top.ltfan.knowmad.data.schedule.customICalReader
+import top.ltfan.knowmad.data.schedule.parse
 import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Logger
+import java.io.ByteArrayInputStream
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -52,6 +59,7 @@ import kotlin.uuid.Uuid
 fun ToolRegistry.Builder.scheduleTools(
     resources: Resources, dao: ScheduleDao,
 ) {
+    tool(ScheduleTools.ImportFromICalendarTool(resources, dao))
     tool(ScheduleTools.QuerySemestersTool(resources, dao))
     tool(ScheduleTools.SearchSemestersTool(resources, dao))
     tool(ScheduleTools.CreateSemesterTool(resources, dao))
@@ -67,6 +75,232 @@ fun ToolRegistry.Builder.scheduleTools(
 
 object ScheduleTools {
     private val logger = Logger("ScheduleTools")
+
+    class ImportFromICalendarTool(
+        private val resources: Resources,
+        private val dao: ScheduleDao,
+    ) : Tool<ImportFromICalendarTool.Args, ImportFromICalendarTool.Result>(
+        argsSerializer = Args.serializer(),
+        resultSerializer = Result.serializer(),
+        descriptor = ToolDescriptor(
+            name = "import_from_icalendar",
+            description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_description),
+            optionalParameters = listOf(
+                ToolParameterDescriptor(
+                    name = "acknowledgement",
+                    description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description),
+                    type = ToolParameterType.String,
+                ),
+                ToolParameterDescriptor(
+                    name = "icsContent",
+                    description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_arg_ics_content_description),
+                    type = ToolParameterType.String,
+                ),
+            ),
+        ),
+    ) {
+        override suspend fun execute(args: Args): Result {
+            if (args.acknowledgement != ACKNOWLEDGEMENT) {
+                return Result.acknowledgement(resources)
+            }
+            if (args.icsContent.isNullOrBlank()) {
+                return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content))
+            }
+
+            val pendingRecurrenceRules = mutableListOf<RecurrenceRuleEntity>()
+            val errors = mutableListOf<String>()
+
+            val iCal = ByteArrayInputStream(args.icsContent.encodeToByteArray()).use { stream ->
+                customICalReader(stream).use { reader ->
+                    reader.readNext()
+                }
+            }
+
+            var events = iCal.parse(
+                onNewRecurrenceRule = { rule, course ->
+                    pendingRecurrenceRules += rule
+                    course?.copy(
+                        recurrenceRuleId = rule.id,
+                    )
+                },
+                errors = errors,
+            )
+
+            if (events.isEmpty()) {
+                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
+            }
+
+            val semester = events.first().semester
+
+            val semesterInsertionResult = withContext(Dispatchers.IO) {
+                runCatching { dao.insertSemester(semester) }
+            }.onFailure { logger.error(it) { "Failed to insert semester" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
+
+            if (semesterInsertionResult < 0L) {
+                return Result.Failure(
+                    resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_semester_insertion_failed),
+                )
+            }
+
+            val recurrenceRulesInsertionResults = withContext(Dispatchers.IO) {
+                runCatching { dao.insertAllRecurrenceRules(pendingRecurrenceRules) }
+            }.onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
+
+            val failedRecurrenceRuleIds =
+                (pendingRecurrenceRules.asSequence() zip recurrenceRulesInsertionResults.asSequence())
+                    .filter { it.second < 0L }
+                    .map { it.first }
+                    .onEach {
+                        errors.add(
+                            resources.getString(
+                                R.string.llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed,
+                                it.rule.format(),
+                            ),
+                        )
+                    }
+                    .map { it.id }
+                    .toHashSet()
+
+            events = events.filterNot { event ->
+                val ruleId = event.recurrenceRule?.id ?: return@filterNot false
+                ruleId in failedRecurrenceRuleIds
+            }
+
+            if (events.isEmpty()) {
+                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
+            }
+
+            val courses = events.asSequence()
+                .filterIsInstance<Event.Course>()
+                .distinctBy { it.course.id }
+                .map { it.course }
+                .toList()
+
+            val coursesInsertionResults = withContext(Dispatchers.IO) {
+                runCatching { dao.insertAllCourses(courses) }
+            }.onFailure { logger.error(it) { "Failed to insert courses" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
+
+            val failedCourseIds =
+                (courses.asSequence() zip coursesInsertionResults.asSequence())
+                    .filter { it.second < 0L }
+                    .map { it.first }
+                    .onEach {
+                        errors.add(
+                            resources.getString(
+                                R.string.llm_tool_schedule_import_from_icalendar_result_error_course_insertion_failed,
+                                it.name,
+                            ),
+                        )
+                    }
+                    .map { it.id }
+                    .toHashSet()
+
+            events = events.filterNot { event ->
+                event is Event.Course && event.course.id in failedCourseIds
+            }
+
+            if (events.isEmpty()) {
+                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
+            }
+
+            val eventsInsertionResults = withContext(Dispatchers.IO) {
+                runCatching { dao.insertAllEvents(events.map { it.toEntity() }) }
+            }.onFailure { logger.error(it) { "Failed to insert events" } }
+                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
+
+            events = (events.asSequence() zip eventsInsertionResults.asSequence())
+                .filter {
+                    (it.second >= 0L).also { success ->
+                        if (!success) {
+                            errors.add(
+                                resources.getString(
+                                    R.string.llm_tool_schedule_import_from_icalendar_result_error_event_insertion_failed,
+                                    it.first.name,
+                                ),
+                            )
+                        }
+
+                    }
+                }
+                .map { it.first }
+                .toList()
+
+            if (events.isEmpty()) {
+                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
+            }
+
+            return Result.Success(
+                events = events,
+                errors = errors.takeIf { it.isNotEmpty() },
+            )
+        }
+
+        @Serializable
+        @SerialName("Args")
+        data class Args(
+            val acknowledgement: String?,
+            val icsContent: String?,
+        )
+
+        @Serializable
+        @SerialName("Result")
+        sealed interface Result {
+            @Serializable
+            @SerialName("Success")
+            data class Success(
+                val semesters: List<SemesterEntity>? = null,
+                val courses: List<CourseEntity>? = null,
+                val events: List<EventEntity>? = null,
+                val errors: List<String>? = null,
+                val rule: String? = null,
+                val acknowledgement: String? = null,
+            ) : Result {
+                constructor(
+                    events: List<Event>,
+                    errors: List<String>? = null,
+                ) : this(
+                    semesters = events.asSequence()
+                        .distinctBy { it.semester.id }
+                        .map { it.semester }
+                        .toList(),
+                    courses = events.asSequence()
+                        .filterIsInstance<Event.Course>()
+                        .distinctBy { it.course.id }
+                        .map { it.course }
+                        .toList(),
+                    events = events.map { it.toEntity() },
+                    errors = errors,
+                )
+            }
+
+            @Serializable
+            @SerialName("Failure")
+            data class Failure(
+                val reason: String? = null,
+                val errors: List<String>? = null,
+            ) : Result
+
+            companion object {
+                @SuppressLint("StringFormatMatches")
+                fun acknowledgement(resources: Resources): Success {
+                    return Success(
+                        rule = resources.getString(
+                            R.string.icalendar_rule,
+                            *ICalendarRuleArguments,
+                        ).trimIndent(),
+                        acknowledgement = ACKNOWLEDGEMENT,
+                    )
+                }
+            }
+        }
+
+        companion object {
+            const val ACKNOWLEDGEMENT = "icalendar-acknowledgement"
+        }
+    }
 
     class QuerySemestersTool(
         private val resources: Resources,

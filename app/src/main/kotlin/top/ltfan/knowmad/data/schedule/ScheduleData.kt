@@ -247,16 +247,28 @@ sealed interface Event {
                     return emptyList()
                 }
             } ?: Uuid.generateV7()
+            val name = vEvent.summary?.value
+
+            val identifier = name ?: id.toString()
 
             val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: run {
-                errors.add("Cannot parse semester in event: $id")
+                errors.add("Cannot parse semester in event: $identifier")
                 return emptyList()
             }
-            val semester = semesterProperty.semester
+            val semester = semesterProperty.semester ?: run {
+                errors.add("Some fields are missing or invalid in semester property in event: $identifier")
+                return emptyList()
+            }
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
-            val course = courseProperty?.course?.let {
+            val course = courseProperty?.course.let {
+                if (it == null) {
+                    if (courseProperty != null) {
+                        errors.add("Some fields are missing or invalid in course property in event: $identifier")
+                    }
+                    return@let null
+                }
                 if (it.semesterId != semester.id) {
-                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $id")
+                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $identifier")
                     return emptyList()
                 }
                 if (it.semesterId == SemesterEntity.DefaultSemesterId) {
@@ -267,19 +279,18 @@ sealed interface Event {
                 it
             }
 
-            val name = vEvent.summary?.value
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
             val color = vEvent.color.toICalendarColor(course?.id, defaultId = semester.id)
             val startDate = vEvent.dateStart?.value ?: run {
-                errors.add("Start date not found in event: $id")
+                errors.add("Start date not found in event: $identifier")
                 return emptyList()
             }
             val startTime = startDate.toInstant().toKotlinInstant()
             val duration = vEvent.duration?.value?.toDuration()
                 ?: vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()?.let { it - startTime }
                 ?: run {
-                    errors.add("Cannot determine duration in event: $id")
+                    errors.add("Cannot determine duration in event: $identifier")
                     return emptyList()
                 }
             val reminders = vEvent.alarms.toReminders()
@@ -300,7 +311,7 @@ sealed interface Event {
                 val entity = RecurrenceRuleEntity(
                     id = id,
                     rule = rule.value.toICalendarRecurrenceRule(errors) ?: run {
-                        errors.add("Cannot parse recurrence rule in event: $id")
+                        errors.add("Cannot parse recurrence rule in event: $identifier")
                         return emptyList()
                     },
                     startTime = startDate.toInstant().toKotlinInstant(),
@@ -311,7 +322,7 @@ sealed interface Event {
 
                 val isInfinite = entity.rule.count == null && entity.rule.until == null
                 if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
-                    errors.add("Infinite recurrence rule found in default semester in event: $id")
+                    errors.add("Infinite recurrence rule found in default semester in event: $identifier")
                     return emptyList()
                 }
                 val semesterEndTime = semester.endDate.atStartOfDayIn(semester.timeZone)
@@ -324,13 +335,13 @@ sealed interface Event {
                     recurrenceEndBound?.let { instant ->
                         val date = Date.from(instant.toJavaInstant())
                         if (occurrenceStartDate.after(date)) {
-                            errors.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $id")
+                            errors.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $identifier")
                             break
                         }
                     }
 
                     if (occurrenceStartDate.after(semesterEndDate)) {
-                        errors.add("Occurrence exceeds semester end date $semesterEndTime in event: $id")
+                        errors.add("Occurrence exceeds semester end date $semesterEndTime in event: $identifier")
                         break
                     }
 
@@ -357,7 +368,7 @@ sealed interface Event {
                         )
                     } else {
                         if (name == null || location == null) {
-                            errors.add("Name or location is required for normal event: $id at $occurrenceStartTime")
+                            errors.add("Name or location is required for normal event: $identifier at $occurrenceStartTime")
                             continue
                         }
                         events.add(
@@ -382,7 +393,7 @@ sealed interface Event {
             }
 
             if (startTime in exceptions) {
-                errors.add("Event is an exception: $id at $startTime")
+                errors.add("Event is an exception: $identifier at $startTime")
                 return emptyList()
             }
 
@@ -408,7 +419,7 @@ sealed interface Event {
                 )
             } else {
                 if (name == null || location == null) {
-                    errors.add("Name or location is required for normal event: $id")
+                    errors.add("Name or location is required for normal event: $identifier")
                     return emptyList()
                 }
                 listOf(
