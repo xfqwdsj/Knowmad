@@ -42,7 +42,11 @@
         - At least one of: `DURATION`, `DTEND`
         - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, they may be left empty to inherit the corresponding course\'s information unless special arrangements are made; manually specified values will override defaults
         - For course events, required: `%5$s`
-        - Optional: `%9$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `VALARM`, `DESCRIPTION`, `PRIORITY`
+        - Optional: `%9$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `DESCRIPTION`, `PRIORITY`
+
+        ## Supported VEVENT Components
+
+        - `VALARM`: Use this component to set reminders. Only the `DISPLAY` type is supported. Both relative and absolute times are supported, and `DESCRIPTION` can be used to set the reminder text.
 
         ## Custom Attributes
 

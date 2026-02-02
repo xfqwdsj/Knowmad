@@ -42,7 +42,11 @@
         - 至少二选一：`DURATION`、`DTEND`
         - 普通事件必须：`SUMMARY`（事件名称）、`LOCATION`，在课程事件中，若无特殊安排，可留空以采用相应课程的信息，手动指定将覆盖
         - 课程事件必须：`%5$s`
-        - 可选：`%9$s`、`RRULE`、`EXDATE`、`LOCATION`、`COLOR`、`VALARM`、`DESCRIPTION`、`PRIORITY`
+        - 可选：`%9$s`、`RRULE`、`EXDATE`、`LOCATION`、`COLOR`、`DESCRIPTION`、`PRIORITY`
+
+        ## 支持的VEVENT组件
+
+        - `VALARM`：使用该组件设置提醒，仅支持`DISPLAY`类型。支持相对和绝对时间，支持使用`DESCRIPTION`设置提醒文本
 
         ## 自定义属性
 
