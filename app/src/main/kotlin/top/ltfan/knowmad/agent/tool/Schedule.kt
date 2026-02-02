@@ -332,7 +332,7 @@ object ScheduleTools {
             data class Success(
                 val semesters: List<SemesterEntity>? = null,
                 val courses: List<CourseEntity>? = null,
-                val events: List<EventEntity>? = null,
+                val eventCount: Int? = null,
                 val errors: List<String>? = null,
                 val rule: String? = null,
                 val acknowledgement: String? = null,
@@ -350,7 +350,7 @@ object ScheduleTools {
                         .distinctBy { it.course.id }
                         .map { it.course }
                         .toList(),
-                    events = events.map { it.toEntity() },
+                    eventCount = events.size,
                     errors = errors,
                 )
             }

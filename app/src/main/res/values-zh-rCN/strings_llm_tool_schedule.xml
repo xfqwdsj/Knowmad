@@ -17,9 +17,9 @@
   -->
 
 <resources>
-    <string name="llm_tool_schedule_import_from_icalendar_description">从iCalendar数据导入学期、课程和事件，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式</string>
+    <string name="llm_tool_schedule_import_from_icalendar_description">从iCalendar数据导入学期、课程和事件，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式。用户一般不会提供iCalendar内容，若使用场景合适，请自行编写</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请留空两个字段以获取iCalendar规则和acknowledgement口令</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，必须与acknowledgement一起提供</string>
+    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，请自行编写，必须与acknowledgement一起提供</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed">向数据库插入学期%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed">向数据库插入规则%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch">课程%s的学期与数据库中已存在的学期不匹配</string>
@@ -44,7 +44,7 @@
     <string name="llm_tool_schedule_create_semester_description">创建一个新学期</string>
     <string name="llm_tool_schedule_create_semester_arg_name_description">学期名称</string>
     <string name="llm_tool_schedule_create_semester_arg_start_date_description">学期开始日期（yyyy-MM-dd）</string>
-    <string name="llm_tool_schedule_create_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_create_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd，不含，请设为结束后的第1天）</string>
     <string name="llm_tool_schedule_create_semester_arg_time_zone_description">时区ID（如UTC）。除非用户明确要求，否则请勿指定，以便使用系统设置</string>
     <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
     <string name="llm_tool_schedule_create_semester_result_failure_reason_invalid_end_date">endDate格式无效，期望yyyy-MM-dd</string>
@@ -56,7 +56,7 @@
     <string name="llm_tool_schedule_update_semester_arg_semester_id_description">学期ID（UUID）</string>
     <string name="llm_tool_schedule_update_semester_arg_name_description">学期名称</string>
     <string name="llm_tool_schedule_update_semester_arg_start_date_description">学期开始日期（yyyy-MM-dd）</string>
-    <string name="llm_tool_schedule_update_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_schedule_update_semester_arg_end_date_description">学期结束日期（yyyy-MM-dd，不含，请设为结束后的第1天）</string>
     <string name="llm_tool_schedule_update_semester_arg_time_zone_description">时区ID（如UTC）。除非用户明确要求，否则请勿指定，以便使用系统设置</string>
     <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_update_semester_result_failure_reason_invalid_start_date">startDate格式无效，期望yyyy-MM-dd</string>
@@ -71,7 +71,7 @@
     <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">查询内容不能为空</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">搜索课程时发生内部错误</string>
 
-    <string name="llm_tool_schedule_create_course_description">在学期下创建课程</string>
+    <string name="llm_tool_schedule_create_course_description">在学期下创建课程（创建包含重复事件的课程请使用iCalendar方式）</string>
     <string name="llm_tool_schedule_create_course_arg_semester_id_description">学期ID（UUID）</string>
     <string name="llm_tool_schedule_create_course_arg_name_description">课程名称</string>
     <string name="llm_tool_schedule_create_course_arg_instructor_description">讲师姓名</string>
@@ -95,7 +95,7 @@
     <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">查询内容不能为空</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">搜索事件时发生内部错误</string>
 
-    <string name="llm_tool_schedule_create_event_description">在学期中创建事件（普通事件或课程事件）</string>
+    <string name="llm_tool_schedule_create_event_description">在学期中创建事件（普通事件或课程事件，创建重复事件请使用iCalendar方式）</string>
     <string name="llm_tool_schedule_create_event_arg_semester_id_description">学期ID（UUID）</string>
     <string name="llm_tool_schedule_create_event_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
     <string name="llm_tool_schedule_create_event_arg_end_time_description">结束时间（ISO-8601 with Offset）</string>
