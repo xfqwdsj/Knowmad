@@ -57,9 +57,10 @@ data class SemesterEntity(
         const val DEFAULT_SEMESTER_ID = "019c0c33-1400-7225-a55f-906660045bdc"
         val DefaultSemesterId = Uuid.parse(DEFAULT_SEMESTER_ID)
 
-        fun createDefault(resources: Resources) = SemesterEntity(
+        fun createDefault(resources: Resources?) = SemesterEntity(
             id = DefaultSemesterId,
-            name = resources.getString(R.string.schedule_semester_label_default),
+            name = resources?.getString(R.string.schedule_semester_label_default)
+                ?: "Default Semester",
             startDate = Instant.DISTANT_PAST.toLocalDateTime(UTC).date,
             endDate = Instant.DISTANT_FUTURE.toLocalDateTime(UTC).date,
             timeZone = UTC,
