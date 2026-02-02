@@ -35,3 +35,6 @@
 
 # First found in io.ktor.util.debug.IntellijIdeaDebugDetector
 -dontwarn java.lang.management.**
+
+# Biweekly uses Class.getResourceAsStream, and we need to keep the name of this class
+-keepnames class biweekly.Biweekly
