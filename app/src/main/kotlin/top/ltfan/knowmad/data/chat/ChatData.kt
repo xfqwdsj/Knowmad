@@ -271,12 +271,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             ): Completed {
                 return Completed(
                     streaming.toMessage(defaultEndedAt).toUiMessage(),
-                    streaming.markdownState.let {
-                        when (it) {
-                            is Dynamic -> it.fixed()
-                            is Fixed -> it
-                        }
-                    },
+                    SavedMarkdownState.Fixed(streaming.flow.value),
                 )
             }
 
