@@ -255,11 +255,13 @@ sealed interface Event {
                 errors.add("Cannot parse semester in event: $identifier")
                 return emptyList()
             }
+            semesterProperty.errors?.let { errors.addAll(it) }
             val semester = semesterProperty.semester ?: run {
                 errors.add("Some fields are missing or invalid in semester property in event: $identifier")
                 return emptyList()
             }
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
+            courseProperty.errors?.let { errors.addAll(it) }
             val course = courseProperty?.course.let {
                 if (it == null) {
                     if (courseProperty != null) {
