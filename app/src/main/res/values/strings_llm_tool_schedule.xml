@@ -18,8 +18,8 @@
 
 <resources>
     <string name="llm_tool_schedule_import_from_icalendar_description">Import semesters, courses, and events from iCalendar data, supporting recurring events; preferred method when scheduling semesters with many recurring events or creating course schedules. Users typically do not provide iCalendar content; if the use case is appropriate, please compose it yourself.</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">Passphrase, leave both two fields blank to get iCalendar rules and acknowledgement passphrase before inputting iCalendar</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar content, please compose it yourself, must be provided together with acknowledgement</string>
+    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">Passphrase, call this tool with no arguments to get iCalendar rules and acknowledgement passphrase before inputting iCalendar</string>
+    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar content, must be provided together with correct iCalendar acknowledgment, or the request will be rejected</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed">Error occurred while inserting semester %s into database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed">Error occurred while inserting rule %s into database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
@@ -76,7 +76,8 @@
     <string name="llm_tool_schedule_create_course_arg_name_description">Course name</string>
     <string name="llm_tool_schedule_create_course_arg_instructor_description">Instructor name</string>
     <string name="llm_tool_schedule_create_course_arg_location_description">Course location</string>
-    <string name="llm_tool_schedule_create_course_arg_list_description">List of courses (for batch creation, and other fields will be ignored)</string>
+    <string name="llm_tool_schedule_create_course_arg_icalendar_acknowledgement_description">Passphrase, get iCalendar rules and acknowledgement passphrase before inputting course list for batch creation</string>
+    <string name="llm_tool_schedule_create_course_arg_list_description">List of courses (for batch creation, must be provided together with correct iCalendar acknowledgment, or the request will be rejected)</string>
     <string name="llm_tool_schedule_create_course_result_error_insertion_failed">Failed to create course %s</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">Invalid semesterId format, expected UUID</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_fields_required">Course name, instructor, and location are required</string>
@@ -109,7 +110,8 @@
     <string name="llm_tool_schedule_create_event_arg_reminders_property_offset_description">Reminder offset relative to event start time, negative for before (ISO-8601 Duration)</string>
     <string name="llm_tool_schedule_create_event_arg_reminders_property_related_description">Time point the reminder is related to (set only when changing from default Start to End for relative reminders)</string>
     <string name="llm_tool_schedule_create_event_arg_reminders_property_display_text_description">Display text of the reminder</string>
-    <string name="llm_tool_schedule_create_event_arg_list_description">List of events (for batch creation, and other fields will be ignored)</string>
+    <string name="llm_tool_schedule_create_event_arg_icalendar_acknowledgement_description">Passphrase, get iCalendar rules and acknowledgement passphrase before inputting event list for batch creation</string>
+    <string name="llm_tool_schedule_create_event_arg_list_description">List of events (for batch creation, must be provided together with correct iCalendar acknowledgment, or the request will be rejected)</string>
     <string name="llm_tool_schedule_create_event_arg_notes_description">Notes for the event</string>
     <string name="llm_tool_schedule_create_event_arg_priority_description">Event priority (specify only when requested by user, default is None, 1 is highest, 9 is lowest)</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">Invalid reminder time format, expected ISO-8601 with Offset</string>

@@ -23,7 +23,6 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
-import android.annotation.SuppressLint
 import android.content.res.Resources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -101,7 +100,7 @@ object ScheduleTools {
     ) {
         override suspend fun execute(args: Args): Result {
             if (args.acknowledgement != ACKNOWLEDGEMENT) {
-                return Result.acknowledgement(resources)
+                return Result.RuleWithAcknowledgement(resources)
             }
             if (args.icsContent.isNullOrBlank()) {
                 return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content))
@@ -334,8 +333,6 @@ object ScheduleTools {
                 val courses: List<CourseEntity>? = null,
                 val eventCount: Int? = null,
                 val errors: List<String>? = null,
-                val rule: String? = null,
-                val acknowledgement: String? = null,
             ) : Result {
                 constructor(
                     events: List<Event>,
@@ -360,19 +357,23 @@ object ScheduleTools {
             data class Failure(
                 val reason: String? = null,
                 val errors: List<String>? = null,
+                val rule: String? = null,
+                val acknowledgement: String? = null,
             ) : Result
 
-            companion object {
-                @SuppressLint("StringFormatMatches")
-                fun acknowledgement(resources: Resources): Success {
-                    return Success(
-                        rule = resources.getString(
-                            R.string.icalendar_rule,
-                            *ICalendarRuleArguments,
-                        ).trimIndent(),
-                        acknowledgement = ACKNOWLEDGEMENT,
-                    )
-                }
+            @Serializable
+            @SerialName("RuleWithAcknowledgement")
+            data class RuleWithAcknowledgement(
+                val rule: String,
+                val acknowledgement: String,
+            ) : Result {
+                constructor(resources: Resources) : this(
+                    rule = resources.getString(
+                        R.string.icalendar_rule,
+                        *ICalendarRuleArguments,
+                    ).trimIndent(),
+                    acknowledgement = ACKNOWLEDGEMENT,
+                )
             }
         }
 
@@ -739,14 +740,21 @@ object ScheduleTools {
         descriptor = ToolDescriptor(
             name = "create_courses",
             description = resources.getString(R.string.llm_tool_schedule_create_course_description),
-            optionalParameters = parameters(resources) + ToolParameterDescriptor(
-                name = "list",
-                description = resources.getString(R.string.llm_tool_schedule_create_course_arg_list_description),
-                type = ToolParameterType.List(
-                    itemsType = ToolParameterType.Object(
-                        properties = parameters(resources),
-                        requiredProperties = listOf(
-                            "semesterId", "name", "instructor", "location",
+            optionalParameters = parameters(resources) + listOf(
+                ToolParameterDescriptor(
+                    name = "iCalendarAcknowledgement",
+                    description = resources.getString(R.string.llm_tool_schedule_create_course_arg_icalendar_acknowledgement_description),
+                    type = ToolParameterType.String,
+                ),
+                ToolParameterDescriptor(
+                    name = "list",
+                    description = resources.getString(R.string.llm_tool_schedule_create_course_arg_list_description),
+                    type = ToolParameterType.List(
+                        itemsType = ToolParameterType.Object(
+                            properties = parameters(resources),
+                            requiredProperties = listOf(
+                                "semesterId", "name", "instructor", "location",
+                            ),
                         ),
                     ),
                 ),
@@ -846,6 +854,7 @@ object ScheduleTools {
             val name: String?,
             val instructor: String?,
             val location: String?,
+            val iCalendarAcknowledgement: String?,
             val list: List<Data>?,
         ) {
             @Serializable
@@ -1120,16 +1129,23 @@ object ScheduleTools {
         descriptor = ToolDescriptor(
             name = "create_events",
             description = resources.getString(R.string.llm_tool_schedule_create_event_description),
-            optionalParameters = parameters(resources) + ToolParameterDescriptor(
-                name = "list",
-                description = resources.getString(R.string.llm_tool_schedule_create_event_arg_list_description),
-                type = ToolParameterType.List(
-                    itemsType = ToolParameterType.Object(
-                        properties = parameters(resources),
-                        requiredProperties = listOf(
-                            "semesterId",
-                            "startTime",
-                            "endTime",
+            optionalParameters = parameters(resources) + listOf(
+                ToolParameterDescriptor(
+                    name = "iCalendarAcknowledgement",
+                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_icalendar_acknowledgement_description),
+                    type = ToolParameterType.String,
+                ),
+                ToolParameterDescriptor(
+                    name = "list",
+                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_list_description),
+                    type = ToolParameterType.List(
+                        itemsType = ToolParameterType.Object(
+                            properties = parameters(resources),
+                            requiredProperties = listOf(
+                                "semesterId",
+                                "startTime",
+                                "endTime",
+                            ),
                         ),
                     ),
                 ),
@@ -1381,6 +1397,7 @@ object ScheduleTools {
             val reminders: List<ReminderData>?,
             val notes: String?,
             val priority: ICalendarPriority = None,
+            val iCalendarAcknowledgement: String?,
             val list: List<Data>?,
         ) {
             @Serializable

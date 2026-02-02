@@ -18,8 +18,8 @@
 
 <resources>
     <string name="llm_tool_schedule_import_from_icalendar_description">从iCalendar数据导入学期、课程和事件，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式。用户一般不会提供iCalendar内容，若使用场景合适，请自行编写</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请留空两个字段以获取iCalendar规则和acknowledgement口令</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，请自行编写，必须与acknowledgement一起提供</string>
+    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请用空参数调用工具以获取iCalendar规则和acknowledgement口令</string>
+    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，请自行编写，必须与acknowledgement一起提供，否则请求将被拒绝</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed">向数据库插入学期%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed">向数据库插入规则%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch">课程%s的学期与数据库中已存在的学期不匹配</string>
@@ -76,7 +76,8 @@
     <string name="llm_tool_schedule_create_course_arg_name_description">课程名称</string>
     <string name="llm_tool_schedule_create_course_arg_instructor_description">讲师姓名</string>
     <string name="llm_tool_schedule_create_course_arg_location_description">课程地点</string>
-    <string name="llm_tool_schedule_create_course_arg_list_description">课程列表（用于批量创建，其他参数将被忽略）</string>
+    <string name="llm_tool_schedule_create_course_arg_icalendar_acknowledgement_description">口令，批量创建前请获取iCalendar规则和它的acknowledgement口令</string>
+    <string name="llm_tool_schedule_create_course_arg_list_description">课程列表（用于批量创建，必须与正确的iCalendar acknowledgment一起提供，否则请求将被拒绝）</string>
     <string name="llm_tool_schedule_create_course_result_error_insertion_failed">创建课程%s失败</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_invalid_semester_id">semesterId格式无效，期望UUID</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_fields_required">课程名称、讲师姓名和地点均为必填项</string>
@@ -109,7 +110,8 @@
     <string name="llm_tool_schedule_create_event_arg_reminders_property_offset_description">相对于事件开始时间的提醒偏移时长，负值为提前（ISO-8601 Duration）</string>
     <string name="llm_tool_schedule_create_event_arg_reminders_property_related_description">提醒关联的时间点（设置相对提醒且需要更改默认值Start时才可指定为End，否则无需指定）</string>
     <string name="llm_tool_schedule_create_event_arg_reminders_property_display_text_description">提醒显示的文本内容</string>
-    <string name="llm_tool_schedule_create_event_arg_list_description">事件列表（用于批量创建，其他参数将被忽略）</string>
+    <string name="llm_tool_schedule_create_event_arg_icalendar_acknowledgement_description">口令，批量创建前请获取iCalendar规则和它的acknowledgement口令</string>
+    <string name="llm_tool_schedule_create_event_arg_list_description">事件列表（用于批量创建，必须与正确的iCalendar acknowledgment一起提供，否则请求将被拒绝）</string>
     <string name="llm_tool_schedule_create_event_arg_notes_description">事件备注</string>
     <string name="llm_tool_schedule_create_event_arg_priority_description">事件优先级（用户要求时指定，默认值为None，1为最高，9为最低）</string>
     <string name="llm_tool_schedule_create_event_result_error_invalid_reminder_time">提醒的time格式无效，期望ISO-8601 with Offset</string>
