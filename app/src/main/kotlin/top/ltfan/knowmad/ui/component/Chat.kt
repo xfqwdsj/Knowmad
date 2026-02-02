@@ -1214,16 +1214,12 @@ sealed interface AssistantMessageState {
                                         }"
                                     }
                                     existingCompletedContents.remove(it)
-                                } ?: AssistantMessageContent.Completed(
-                                message = message,
-                            )
+                                } ?: AssistantMessageContent.Completed(message = message)
 
                             else -> null
                         }
 
-                        else -> AssistantMessageContent.Completed(
-                            uiMessage = part,
-                        )
+                        else -> AssistantMessageContent.Completed(uiMessage = part)
                     }
                 },
                 model = entity.generatedBy ?: UnknownLLModel,

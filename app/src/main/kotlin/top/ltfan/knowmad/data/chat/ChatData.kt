@@ -239,7 +239,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
     }
 
     @Immutable
-    class Completed private constructor(
+    class Completed(
         override val uiMessage: UiMessage,
         markdownState: SavedMarkdownState,
     ) : AssistantMessageContent(markdownState) {
@@ -274,26 +274,28 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
                     SavedMarkdownState.Fixed(streaming.flow.value),
                 )
             }
-
-            suspend operator fun invoke(uiMessage: UiMessage) = Completed(
-                uiMessage = uiMessage,
-                markdownState = SavedMarkdownState.Fixed(uiMessage.filteredContent),
-            )
-
-            suspend operator fun invoke(message: Message) = Completed(
-                uiMessage = message.toUiMessage(),
-            )
-
-            private val UiMessage.filteredContent
-                inline get() = when (this) {
-                    is Koog -> when (message) {
-                        is Reasoning, is Assistant -> message.content
-                        else -> ""
-                    }
-
-                    else -> content
-                }
         }
+    }
+
+    companion object {
+        suspend fun Completed(uiMessage: UiMessage) = Completed(
+            uiMessage = uiMessage,
+            markdownState = SavedMarkdownState.Fixed(uiMessage.filteredContent),
+        )
+
+        suspend fun Completed(message: Message) = Completed(
+            uiMessage = message.toUiMessage(),
+        )
+
+        private val UiMessage.filteredContent
+            inline get() = when (this) {
+                is Koog -> when (message) {
+                    is Reasoning, is Assistant -> message.content
+                    else -> ""
+                }
+
+                else -> content
+            }
     }
 
     abstract val uiMessage: UiMessage
