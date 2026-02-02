@@ -231,7 +231,15 @@ data class CourseProperty(
                 return empty(errors)
             }
 
-            val identifier = value?.toString() ?: "<no-id>"
+            var idIsNew = false
+            val id = value ?: Uuid.generateV7().also {
+                idIsNew = true
+            }
+            val identifier = if (!idIsNew) {
+                id.toString()
+            } else {
+                "<newly-generated-id> $id"
+            }
             val name = parameters.label ?: run {
                 errors.add("Name of course $identifier is missing")
                 ""
@@ -255,7 +263,7 @@ data class CourseProperty(
 
             return CourseProperty(
                 CourseEntity(
-                    id = value ?: Uuid.generateV7(),
+                    id = id,
                     semesterId = semesterId,
                     name = name,
                     instructor = instructor,
