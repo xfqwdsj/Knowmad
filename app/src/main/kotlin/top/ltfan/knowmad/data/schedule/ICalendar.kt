@@ -95,7 +95,10 @@ abstract class UuidPropertyScribe<T : UuidProperty>(
     fun parse(value: String?): Uuid? = value?.let { Uuid.parseOrNull(it) }
 }
 
-data class SemesterProperty(val semester: SemesterEntity?) : UuidProperty() {
+data class SemesterProperty(
+    val semester: SemesterEntity?,
+    override val errors: List<String>? = null,
+) : UuidProperty(), ParsingStatusProperty {
     override val uuid = semester?.id
 
     companion object : UuidPropertyScribe<SemesterProperty>(
@@ -107,34 +110,83 @@ data class SemesterProperty(val semester: SemesterEntity?) : UuidProperty() {
         const val PARAM_END_DATE = "X-END-DATE"
         const val PARAM_TIME_ZONE = "X-TIME-ZONE"
 
+        fun empty(errors: List<String>? = null) = SemesterProperty(null, errors)
+
         override fun newInstance(
             value: Uuid?,
             dataType: ICalDataType?,
             parameters: ICalParameters?,
             context: ParseContext?,
         ): SemesterProperty {
+            val errors = mutableListOf<String>()
+            if (parameters == null) {
+                errors.add("Semester parameters are missing")
+                return empty(errors)
+            }
+            val id = value ?: run {
+                errors.add("Semester ID is missing")
+                return empty(errors)
+            }
+
+            val defaultSemester = SemesterEntity.createDefault(null)
+
+            val name = parameters.label ?: run {
+                errors.add("Name of semester $id is missing")
+                defaultSemester.name
+            }
+
+            val startDateString = parameters.get(PARAM_START_DATE).singleOrNull() ?: run {
+                errors.add("Start date of semester $id is missing")
+                null
+            }
+            val endDateString = parameters.get(PARAM_END_DATE).singleOrNull() ?: run {
+                errors.add("End date of semester $id is missing")
+                null
+            }
+            val timeZoneId = parameters.get(PARAM_TIME_ZONE).singleOrNull() ?: run {
+                errors.add("Time zone of semester $id is missing")
+                null
+            }
+            val startDate = startDateString?.let {
+                runCatching {
+                    LocalDate.parse(
+                        startDateString,
+                        LocalDate.Formats.ISO,
+                    )
+                }.getOrElse {
+                    errors.add("Start date of semester $id is invalid: $startDateString")
+                    return empty(errors)
+                }
+            } ?: defaultSemester.startDate
+            val endDate = endDateString?.let {
+                runCatching {
+                    LocalDate.parse(
+                        endDateString,
+                        LocalDate.Formats.ISO,
+                    )
+                }.getOrElse {
+                    errors.add("End date of semester $id is invalid: $endDateString")
+                    return empty(errors)
+                }
+            } ?: defaultSemester.endDate
+            val timeZone = timeZoneId?.let {
+                runCatching {
+                    TimeZone.of(timeZoneId)
+                }.getOrElse {
+                    errors.add("Time zone of semester $id is invalid: $timeZoneId")
+                    return empty(errors)
+                }
+            } ?: defaultSemester.timeZone
+
             return SemesterProperty(
                 SemesterEntity(
-                    id = value ?: Uuid.generateV7(),
-                    name = parameters?.label ?: return SemesterProperty(null),
-                    startDate = LocalDate.parse(
-                        parameters.get(PARAM_START_DATE).singleOrNull() ?: return SemesterProperty(
-                            null,
-                        ),
-                        LocalDate.Formats.ISO,
-                    ),
-                    endDate = LocalDate.parse(
-                        parameters.get(PARAM_END_DATE).singleOrNull() ?: return SemesterProperty(
-                            null,
-                        ),
-                        LocalDate.Formats.ISO,
-                    ),
-                    timeZone = TimeZone.of(
-                        parameters.get(PARAM_TIME_ZONE).singleOrNull() ?: return SemesterProperty(
-                            null,
-                        ),
-                    ),
+                    id = id,
+                    name = name,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZone = timeZone,
                 ),
+                errors = errors.takeIf { it.isNotEmpty() },
             )
         }
     }
@@ -149,7 +201,10 @@ data class SemesterProperty(val semester: SemesterEntity?) : UuidProperty() {
     }
 }
 
-data class CourseProperty(val course: CourseEntity?) : UuidProperty() {
+data class CourseProperty(
+    val course: CourseEntity?,
+    override val errors: List<String>? = null,
+) : UuidProperty(), ParsingStatusProperty {
     override val uuid = course?.id
 
     companion object : UuidPropertyScribe<CourseProperty>(
@@ -161,26 +216,51 @@ data class CourseProperty(val course: CourseEntity?) : UuidProperty() {
         const val PARAM_INSTRUCTOR = "X-INSTRUCTOR"
         const val PARAM_LOCATION = "X-LOCATION"
 
+        fun empty(errors: List<String>? = null) = CourseProperty(null, errors)
+
         override fun newInstance(
             value: Uuid?,
             dataType: ICalDataType?,
             parameters: ICalParameters?,
             context: ParseContext?,
         ): CourseProperty {
-            val semesterIdString = parameters?.get(PARAM_SEMESTER_ID)?.singleOrNull()
-                ?: SemesterEntity.DEFAULT_SEMESTER_ID
-            val semesterId = Uuid.parseOrNull(semesterIdString)
-                ?: SemesterEntity.DefaultSemesterId
+            val errors = mutableListOf<String>()
+            if (parameters == null) {
+                errors.add("Course parameters are missing")
+                return empty(errors)
+            }
+
+            val identifier = value?.toString() ?: "<no-id>"
+            val name = parameters.label ?: run {
+                errors.add("Name of course $identifier is missing")
+                ""
+            }
+
+            val semesterIdString = parameters.get(PARAM_SEMESTER_ID)?.singleOrNull()
+            val semesterId = semesterIdString?.let {
+                Uuid.parseOrNull(semesterIdString) ?: run {
+                    errors.add("Semester ID of course $identifier is invalid")
+                    return empty(errors)
+                }
+            } ?: SemesterEntity.DefaultSemesterId
+            val instructor = parameters.get(PARAM_INSTRUCTOR)?.singleOrNull() ?: run {
+                errors.add("Instructor of course $identifier is missing")
+                ""
+            }
+            val location = parameters.get(PARAM_LOCATION)?.singleOrNull() ?: run {
+                errors.add("Location of course $identifier is missing")
+                ""
+            }
+
             return CourseProperty(
                 CourseEntity(
                     id = value ?: Uuid.generateV7(),
                     semesterId = semesterId,
-                    name = parameters?.label ?: return CourseProperty(null),
-                    instructor = parameters.get(PARAM_INSTRUCTOR).singleOrNull()
-                        ?: return CourseProperty(null),
-                    location = parameters.get(PARAM_LOCATION).singleOrNull()
-                        ?: return CourseProperty(null),
+                    name = name,
+                    instructor = instructor,
+                    location = location,
                 ),
+                errors = errors.takeIf { it.isNotEmpty() },
             )
         }
     }
@@ -219,4 +299,8 @@ data class InstructorProperty(val value: String?) : TextProperty(value) {
 
         override fun newInstance(value: String?, version: ICalVersion?) = InstructorProperty(value)
     }
+}
+
+interface ParsingStatusProperty {
+    val errors: List<String>?
 }
