@@ -20,11 +20,12 @@
     <string name="llm_tool_schedule_import_from_icalendar_description">从iCalendar数据导入学期、课程和事件，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请留空两个字段以获取iCalendar规则和acknowledgement口令</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，必须与acknowledgement一起提供</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed">向数据库插入学期%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed">向数据库插入规则%s时发生错误</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch">课程%s的学期与数据库中已存在的学期不匹配</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_course_insertion_failed">向数据库插入课程%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_event_insertion_failed">向数据库插入事件%s时发生错误</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar内容不能为空</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_semester_insertion_failed">插入学期失败</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">导入iCalendar时发生内部错误</string>
 
     <string name="llm_tool_schedule_query_semesters_description">查询与给定日期范围存在交集的学期或所有已存在的学期</string>

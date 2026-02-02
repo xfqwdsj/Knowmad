@@ -24,12 +24,10 @@
 
         - 每个`VEVENT`无需`UID`
         - 必须包含学期属性`%1$s`
-        - 若事件属于课程，必须包含课程属性`%2$s`
+        - 若事件属于课程，必须包含课程属性`%5$s`
         - 对于重复规则：
-
           - 为`VEVENT`编写`RRULE`以创建重复事件
           - 建议包含结束标志，如`COUNT`或`UNTIL`，且学期结束时间后的事件将不会被添加
-
         - 必须设置`DTSTART`和结束标志（`DURATION`和`DTEND`二选一）
         - 仅支持`DISPLAY`的`VALARM`
 
@@ -42,42 +40,43 @@
 
         - 必须：`DTSTART`、`%1$s`
         - 至少二选一：`DURATION`、`DTEND`
-        - 普通事件必须：`SUMMARY`（事件名称）、`LOCATION`，在课程事件中若不指定，会解析为课程中的信息
+        - 普通事件必须：`SUMMARY`（事件名称）、`LOCATION`，在课程事件中，若无特殊安排，可留空以采用相应课程的信息，手动指定将覆盖
         - 课程事件必须：`%5$s`
-        - 可选：`%8$s`、`RRULE`、`EXDATE`、`LOCATION`、`COLOR`、`VALARM`、`DESCRIPTION`、`PRIORITY`
+        - 可选：`%9$s`、`RRULE`、`EXDATE`、`LOCATION`、`COLOR`、`VALARM`、`DESCRIPTION`、`PRIORITY`
 
         ## 自定义属性
 
         ### %1$s
 
-        - 值：UUID，建议留空
-        - 必须参数：
+        - 值：学期ID，不可为空，如用户请求创建学期，请先调用创建学期工具获取学期ID
+        - 参数，若学期ID指向已有学期，可留空：
           - `LABEL`：学期名称
           - `%2$s`：学期开始日期（`YYYY-MM-DD`）
-          - `%3$s`：学期结束日期（`YYYY-MM-DD`，不含）
+          - `%3$s`：学期结束日期（`YYYY-MM-DD`，不含，请设为结束后的第1天）
           - `%4$s`：学期时区ID
 
-        示例（ID已留空）
+        示例（示例UUID为无起止日期的默认学期）
 
         ```
-        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:
+        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:019c0c33-1400-7225-a55f-906660045bdc
         ```
 
         ### %5$s
 
-        - 值：UUID，建议留空
-        - 必须参数：
+        - 值：课程ID，留空表示新建课程
+        - 参数，若课程ID指向已有课程，可留空：
+          - `%6$s`：学期ID，若进行课程安排，请使用正确的ID，留空以使用默认学期
           - `LABEL`：课程名称
-          - `%6$s`：课程默认讲师姓名
-          - `%7$s`：课程默认地点
+          - `%7$s`：课程讲师姓名
+          - `%8$s`：课程地点
 
         示例（ID已留空）
 
         ```
-        %5$s;LABEL=My Course;%6$s=The Instructor;%7$s=The Room:
+        %5$s;LABEL=My Course;%7$s=The Instructor;%8$s=The Room:
         ```
 
-        ### %8$s
+        ### %9$s
 
         - 值：文本，讲师姓名
     ]]></string>

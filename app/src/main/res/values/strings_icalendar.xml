@@ -24,12 +24,10 @@
 
         - Each `VEVENT` does not require a `UID`
         - Must include the semester attribute `%1$s`
-        - If the event belongs to a course, must include the course attribute `%2$s`
+        - If the event belongs to a course, must include the course attribute `%5$s`
         - For recurrence rules:
-
           - Write an `RRULE` for the `VEVENT` to create recurring events
           - It is recommended to include an ending condition such as `COUNT` or `UNTIL`, and events occurring after the semester end time will not be added
-
         - Must set `DTSTART` and one ending indicator (`DURATION` or `DTEND`, choose one)
         - Only supports `VALARM` with `DISPLAY`
 
@@ -42,42 +40,43 @@
 
         - Required: `DTSTART`, `%1$s`
         - At least one of: `DURATION`, `DTEND`
-        - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, if not specified, these will be parsed from course information.
+        - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, they may be left empty to inherit the corresponding course\'s information unless special arrangements are made; manually specified values will override defaults
         - For course events, required: `%5$s`
-        - Optional: `%8$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `VALARM`, `DESCRIPTION`, `PRIORITY`
+        - Optional: `%9$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `VALARM`, `DESCRIPTION`, `PRIORITY`
 
         ## Custom Attributes
 
         ### %1$s
 
-        - Value: UUID, it is recommended to leave blank
-        - Required parameters:
+        - Value: Semester ID, cannot be empty. If the user requests creating a semester, call the semester creation tool first to obtain the semester ID
+        - Parameters — can be left empty if the semester ID points to an existing semester:
           - `LABEL`: Semester name
           - `%2$s`: Semester start date (`YYYY-MM-DD`)
-          - `%3$s`: Semester end date (`YYYY-MM-DD`, exclusive)
+          - `%3$s`: Semester end date (`YYYY-MM-DD`, exclusive; should be set to the day after the actual end)
           - `%4$s`: Semester time zone ID
 
-        Example (ID left blank):
+        Example (the sample UUID represents a default semester with no start/end dates):
 
         ```
-        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:
+        %1$s;LABEL=My Semester;%2$s=2000-01-01;%3$s=2020-01-01;%4$s=Asia/Shanghai:019c0c33-1400-7225-a55f-906660045bdc
         ```
 
         ### %5$s
 
-        - Value: UUID, it is recommended to leave blank
-        - Required parameters:
+        - Value: Course ID; leaving it empty indicates creating a new course
+        - Parameters — can be left empty if the course ID points to an existing course:
+          - `%6$s`: Semester ID; when scheduling a course, use the correct ID, or leave empty to use the default semester
           - `LABEL`: Course name
-          - `%6$s`: Default instructor name for the course
-          - `%7$s`: Default location for the course
+          - `%7$s`: Course instructor’s name
+          - `%8$s`: Course location
 
-        Example (ID left blank):
+        Example (ID left empty):
 
         ```
-        %5$s;LABEL=My Course;%6$s=The Instructor;%7$s=The Room:
+        %5$s;LABEL=My Course;%7$s=The Instructor;%8$s=The Room:
         ```
 
-        ### %8$s
+        ### %9$s
 
         - Value: Text, instructor\'s name
     ]]></string>

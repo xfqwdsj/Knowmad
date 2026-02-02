@@ -20,11 +20,12 @@
     <string name="llm_tool_schedule_import_from_icalendar_description">Import semesters, courses, and events from iCalendar data, supporting recurring events; preferred method for scheduling semesters with many recurring events or creating course schedules</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">Passphrase, leave both two fields blank to get iCalendar rules and acknowledgement passphrase before inputting iCalendar</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar content, must be provided together with acknowledgement</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed">Error occurred while inserting semester %s into database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed">Error occurred while inserting rule %s into database</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_course_insertion_failed">Error occurred while inserting course %s into database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_error_event_insertion_failed">Error occurred while inserting event %s into database</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar content cannot be empty</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_semester_insertion_failed">Failed to insert semester</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">Internal error while importing iCalendar</string>
 
     <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>

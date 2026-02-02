@@ -39,6 +39,9 @@ interface ScheduleDao : FtsDao {
     @Insert
     suspend fun insertSemester(semester: SemesterEntity): Long
 
+    @Insert
+    suspend fun insertAllSemesters(semesters: List<SemesterEntity>): List<Long>
+
     @Transaction
     suspend fun checkOrCreateDefaultSemester(resources: Resources) {
         val existing = getSemesterById(SemesterEntity.DefaultSemesterId)
@@ -96,11 +99,14 @@ interface ScheduleDao : FtsDao {
         return updateEventWithoutInstant(updatedEvent)
     }
 
+    @Query("SELECT * FROM SemesterEntity ORDER BY startDate ASC")
+    suspend fun getAllSemesters(): List<SemesterEntity>
+
     @Query("SELECT * FROM SemesterEntity WHERE id = :id")
     suspend fun getSemesterById(id: Uuid): SemesterEntity?
 
-    @Query("SELECT * FROM SemesterEntity ORDER BY startDate ASC")
-    suspend fun getAllSemesters(): List<SemesterEntity>
+    @Query("SELECT * FROM SemesterEntity WHERE id in (:ids) ORDER BY startDate ASC")
+    suspend fun getAllSemestersByIds(ids: List<Uuid>): List<SemesterEntity>
 
     @Query(
         """
@@ -145,6 +151,10 @@ interface ScheduleDao : FtsDao {
     @Transaction
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
     suspend fun getCourseById(id: Uuid): CombinedCourse?
+
+    @Transaction
+    @Query("SELECT * FROM CourseEntity WHERE id IN (:ids)")
+    suspend fun getAllCoursesByIds(ids: List<Uuid>): List<CombinedCourse>
 
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
     suspend fun getCourseEntityById(id: Uuid): CourseEntity?

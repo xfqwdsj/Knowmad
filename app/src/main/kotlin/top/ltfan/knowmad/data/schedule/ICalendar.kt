@@ -62,6 +62,7 @@ val ICalendarRuleArguments = arrayOf(
     SemesterProperty.PARAM_END_DATE,
     SemesterProperty.PARAM_TIME_ZONE,
     CourseProperty.PROPERTY_NAME,
+    CourseProperty.PARAM_SEMESTER_ID,
     CourseProperty.PARAM_INSTRUCTOR,
     CourseProperty.PARAM_LOCATION,
     InstructorProperty.PROPERTY_NAME,
@@ -242,7 +243,7 @@ data class CourseProperty(
                     errors.add("Semester ID of course $identifier is invalid")
                     return empty(errors)
                 }
-            } ?: SemesterEntity.DefaultSemesterId
+            } ?: SemesterEntity.UnspecifiedSemesterId
             val instructor = parameters.get(PARAM_INSTRUCTOR)?.singleOrNull() ?: run {
                 errors.add("Instructor of course $identifier is missing")
                 ""

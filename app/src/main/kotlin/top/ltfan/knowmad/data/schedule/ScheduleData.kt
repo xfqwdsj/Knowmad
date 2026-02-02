@@ -269,14 +269,14 @@ sealed interface Event {
                     }
                     return@let null
                 }
-                if (it.semesterId != semester.id) {
-                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $identifier")
-                    return emptyList()
-                }
-                if (it.semesterId == SemesterEntity.DefaultSemesterId) {
+                if (it.semesterId == SemesterEntity.UnspecifiedSemesterId) {
                     return@let it.copy(
                         semesterId = semester.id,
                     )
+                }
+                if (it.semesterId != semester.id) {
+                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $identifier")
+                    return emptyList()
                 }
                 it
             }

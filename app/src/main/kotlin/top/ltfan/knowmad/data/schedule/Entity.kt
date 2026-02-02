@@ -57,6 +57,9 @@ data class SemesterEntity(
         const val DEFAULT_SEMESTER_ID = "019c0c33-1400-7225-a55f-906660045bdc"
         val DefaultSemesterId = Uuid.parse(DEFAULT_SEMESTER_ID)
 
+        const val UNSPECIFIED_SEMESTER_ID = "019c0c33-1400-75bc-a0fa-852a8eb44edf"
+        val UnspecifiedSemesterId = Uuid.parse(UNSPECIFIED_SEMESTER_ID)
+
         fun createDefault(resources: Resources?) = SemesterEntity(
             id = DefaultSemesterId,
             name = resources?.getString(R.string.schedule_semester_label_default)
