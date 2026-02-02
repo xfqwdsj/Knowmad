@@ -59,22 +59,21 @@ sealed interface ICalendarTrigger {
     fun toProperty(): Trigger
 }
 
-fun Trigger.toICalendarTrigger(): ICalendarTrigger? {
+fun Trigger.toICalendarTrigger(errors: MutableList<String> = mutableListOf()): ICalendarTrigger? {
     duration?.let { duration ->
-        related?.let { related ->
-            return ICalendarTrigger.Relative(
-                offset = duration.toDuration(),
-                related = when (related) {
-                    END -> ICalendarTrigger.Relative.Related.End
-                    else -> ICalendarTrigger.Relative.Related.Start
-                },
-            )
-        }
+        return ICalendarTrigger.Relative(
+            offset = duration.toDuration(),
+            related = when (related) {
+                END -> End
+                else -> Start
+            },
+        )
     }
     date?.let { date ->
         return ICalendarTrigger.Absolute(
             time = date.toInstant().toKotlinInstant(),
         )
     }
+    errors += "Trigger property is neither duration-based nor date-based."
     return null
 }

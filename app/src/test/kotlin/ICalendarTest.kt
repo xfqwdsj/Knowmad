@@ -376,8 +376,9 @@ class ICalendarTest {
         }
         assertTrue { parsedValidation.isEmpty }
 
-        val parsedEvent = parsedICal.events.asSequence()
-            .flatMap { it.parse(parsedICal.timezoneInfo) }
+        val errors = mutableListOf<String>()
+
+        val parsedEvent = parsedICal.parse(errors = errors)
             .filterIsInstance<Event.Course>()
             .map {
                 it.copy(
@@ -387,6 +388,10 @@ class ICalendarTest {
                 )
             }
             .toList()
+
+        errors.forEach {
+            println("Parse Error: $it")
+        }
 
         parsedEvent.forEach {
             println(it)

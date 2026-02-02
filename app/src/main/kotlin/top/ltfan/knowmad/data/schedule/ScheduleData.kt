@@ -295,7 +295,7 @@ sealed interface Event {
                     errors.add("Cannot determine duration in event: $identifier")
                     return emptyList()
                 }
-            val reminders = vEvent.alarms.toReminders()
+            val reminders = vEvent.alarms.toReminders(name, errors)
             val notes = vEvent.description?.value
             val priority = vEvent.priority.toICalendarPriority()
             val now = Clock.System.now()
@@ -523,8 +523,11 @@ value class Reminders(
 }
 
 @JvmName("vAlarmCollectionToReminders")
-fun Collection<VAlarm>?.toReminders(): Reminders {
-    val reminders = this?.mapNotNull { it.toReminder() } ?: emptyList()
+fun Collection<VAlarm>?.toReminders(
+    defaultDisplayText: String? = null,
+    errors: MutableList<String> = mutableListOf(),
+): Reminders {
+    val reminders = this?.mapNotNull { it.toReminder(defaultDisplayText, errors) } ?: emptyList()
     return Reminders(reminders)
 }
 
@@ -553,9 +556,24 @@ fun Collection<Reminder>.toReminders(): Reminders {
     return Reminders(this)
 }
 
-fun VAlarm.toReminder(): Reminder? {
-    val trigger = trigger?.toICalendarTrigger() ?: return null
-    val displayText = description?.value ?: return null
+fun VAlarm.toReminder(
+    defaultDisplayText: String? = null,
+    errors: MutableList<String> = mutableListOf(),
+): Reminder? {
+    val triggerProperty = trigger ?: run {
+        errors += "VAlarm does not have a trigger"
+        return null
+    }
+    val trigger = triggerProperty.toICalendarTrigger(errors) ?: run {
+        errors += "Cannot parse VAlarm trigger: $triggerProperty"
+        return null
+    }
+    val displayText = description?.value
+        ?: defaultDisplayText
+        ?: run {
+            errors += "VAlarm does not have a description"
+            return null
+        }
     return Reminder(
         trigger = trigger,
         displayText = displayText,
