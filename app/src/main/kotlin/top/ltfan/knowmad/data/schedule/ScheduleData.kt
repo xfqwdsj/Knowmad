@@ -261,7 +261,7 @@ sealed interface Event {
                 return emptyList()
             }
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
-            courseProperty.errors?.let { errors.addAll(it) }
+            courseProperty?.errors?.let { errors.addAll(it) }
             val course = courseProperty?.course.let {
                 if (it == null) {
                     if (courseProperty != null) {
