@@ -62,7 +62,8 @@ fun MathJax(
     modifier: Modifier = Modifier,
     display: Boolean = false,
     colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-    exFontSize: TextUnit = 8.sp,
+    exFontSize: TextUnit = 6.sp,
+    onSize: ((width: Dp, height: Dp) -> Unit)? = null,
     failure: @Composable ((Throwable) -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -91,6 +92,8 @@ fun MathJax(
                         attributes["height"]?.removeSuffix("ex")?.toFloatOrNull()
                             ?.times(ex)?.roundToInt() ?: return@let null
                     width.toDp() to height.toDp()
+                }?.also { (width, height) ->
+                    onSize?.invoke(width, height)
                 } ?: (Dp.Unspecified to Dp.Unspecified)
             }
         }
