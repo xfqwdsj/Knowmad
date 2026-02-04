@@ -58,7 +58,8 @@ fun MathJaxPreview() {
                     segments.first() to segments.drop(1).joinToString("/")
                 }
                 logger.debug { "Resolved to name=$name, file=$file" }
-                val version = assets.open("mathjax/version").bufferedReader().readText()
+                val version = assets.open("mathjax/version").bufferedReader()
+                    .use { it.readText().trim() }
                 logger.debug { "Using MathJax version: $version" }
                 client.get("$baseUrl/$name@$version/$file").bodyAsText().also {
                     logger.debug { "Fetched ${it.take(30)}" }
