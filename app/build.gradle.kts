@@ -124,6 +124,80 @@ dependencies {
     testImplementation(libs.bundles.test)
 }
 
+abstract class DownloadMathJaxTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    init {
+        outputDir.convention(
+            project.layout.buildDirectory.dir("generated/mathjax/${name}"),
+        )
+
+        val api = "https://data.jsdelivr.com/v1/packages/npm/mathjax/resolved"
+        val apiUrl = URI(api).toURL()
+
+        val mainMetaString = try {
+            println("Reading MathJax metadata from $api...")
+            apiUrl.readText()
+        } catch (e: Throwable) {
+            println("Failed to read MathJax metadata: ${e.localizedMessage}")
+            e.printStackTrace()
+            ""
+        }
+
+        val meta = JsonSlurper().parseText(mainMetaString) as? Map<*, *>
+        val version = meta?.get("version") as? String ?: "latest"
+
+        inputs.property("version", version)
+    }
+
+    @TaskAction
+    fun download() {
+        val targetDir = outputDir.dir("mathjax").get()
+        val targetFile = targetDir.asFile
+
+        val version: String by inputs.properties
+
+        try {
+            if (!targetFile.exists()) targetFile.mkdirs()
+
+            targetDir.file("version").asFile.writeText(version)
+
+            println("Downloading MathJax...")
+
+            val filesToDownload = listOf(
+                listOf("mathjax", version, "startup.js"),
+                listOf("mathjax", version, "core.js"),
+                listOf("mathjax", version, "adaptors/liteDOM.js"),
+                listOf("mathjax", version, "input/tex.js"),
+                listOf("mathjax", version, "output/svg.js"),
+                listOf("@mathjax/mathjax-newcm-font", version, "svg.js"),
+            )
+
+            filesToDownload.forEach { pathParts ->
+                val packageName = pathParts[0]
+                val version = pathParts[1]
+                val fileName = pathParts[2]
+
+                val fileUrl = "https://cdn.jsdelivr.net/npm/$packageName@$version/$fileName"
+                println("Downloading $fileName from $fileUrl...")
+                URI(fileUrl).toURL().openStream().use { input ->
+                    val targetOutput = targetDir.file("$packageName/$fileName").asFile
+                    if (!targetOutput.parentFile.exists()) {
+                        targetOutput.parentFile.mkdirs()
+                    }
+                    targetOutput.outputStream().use { input.copyTo(it) }
+                }
+            }
+
+            println("MathJax downloaded successfully.")
+        } catch (e: Throwable) {
+            println("Failed to download MathJax: ${e.localizedMessage}")
+            throw e
+        }
+    }
+}
+
 abstract class DownloadKaTeXTask : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -220,7 +294,7 @@ abstract class DownloadKaTeXTask : DefaultTask() {
 
 androidComponents {
     onVariants { variant ->
-        val taskProvider = tasks.register<DownloadKaTeXTask>(
+        val kaTeXProvider = tasks.register<DownloadKaTeXTask>(
             "downloadKaTeX${
                 variant.name.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase(
@@ -231,8 +305,23 @@ androidComponents {
         )
 
         variant.sources.assets?.addGeneratedSourceDirectory(
-            taskProvider,
+            kaTeXProvider,
             DownloadKaTeXTask::outputDir,
+        )
+
+        val mathJaxProvider = tasks.register<DownloadMathJaxTask>(
+            "downloadMathJax${
+                variant.name.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(
+                        Locale.getDefault(),
+                    ) else it.toString()
+                }
+            }",
+        )
+
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            mathJaxProvider,
+            DownloadMathJaxTask::outputDir,
         )
     }
 }
