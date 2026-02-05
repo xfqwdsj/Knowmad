@@ -236,6 +236,8 @@ class MathJaxRenderer(
             }
             val result = quickJs.evaluate<MathJaxRenderResult>(
                 "await renderToSvg(${Json.encodeToString(tex)}, ${Json.encodeToString(options)})",
+            ).copy(
+                tex = tex,
             )
             cache[key] = result
             return result
@@ -260,6 +262,7 @@ class MathJaxRenderer(
 data class MathJaxRenderResult(
     val html: String,
     val attributes: List<Map<String, String>>,
+    val tex: String? = null,
 ) {
     companion object : JsObjectConverter<MathJaxRenderResult> {
         override val targetType = typeOf<MathJaxRenderResult>()
