@@ -149,8 +149,9 @@ class MathJaxRenderer(
             loadExternal(path)
         }
         files.forEach { file ->
-            val code = assets.open("mathjax/$file").bufferedReader().use { it.readText() }
-            quickJs.evaluate<Any?>(code, filename = file)
+            val code = assets.open("mathjax/$file").bufferedReader().use { it.readText() } +
+                    "\n;void 0;"
+            quickJs.evaluate<Unit>(code, filename = file)
         }
     }
 
