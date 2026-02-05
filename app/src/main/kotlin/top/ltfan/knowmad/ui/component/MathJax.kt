@@ -196,7 +196,7 @@ class MathJaxRenderer(
     }
 
     suspend fun initialize(
-        loadExternal: suspend MathJaxRenderer.(path: String) -> String,
+        loadExternal: MathJaxLoadExternal,
     ) {
         quickJs.asyncFunction("loadExternal") { path: String ->
             loadExternal(path)
@@ -250,11 +250,17 @@ class MathJaxRenderer(
     companion object {
         suspend operator fun invoke(
             assets: AssetManager,
-            loadExternal: suspend MathJaxRenderer.(path: String) -> String,
+            loadExternal: MathJaxLoadExternal,
         ) = MathJaxRenderer(assets).apply {
             initialize(loadExternal)
         }
     }
+}
+
+sealed interface MathJaxRendererState {
+    data object Initializing : MathJaxRendererState
+    data class Ready(val renderer: MathJaxRenderer) : MathJaxRendererState
+    data class Error(val throwable: Throwable) : MathJaxRendererState
 }
 
 @Serializable
@@ -304,18 +310,18 @@ fun MathJaxRenderResult.dpSizeOrNull(ex: Int, density: Density): DpSize? {
 }
 
 @Composable
-fun rememberMathJaxRenderer(
-    loadExternal: suspend MathJaxRenderer.(path: String) -> String,
-): MathJaxRenderer? {
+fun rememberMathJaxRendererState(
+    loadExternal: MathJaxLoadExternal,
+): MathJaxRendererState {
     val assets = LocalContext.current.assets
 
     val currentLoadExternal by rememberUpdatedState(loadExternal)
 
     val renderer = remember(assets) { MathJaxRenderer(assets) }
 
-    return produceState<MathJaxRenderer?>(initialValue = null, renderer) {
+    return produceState<MathJaxRendererState>(initialValue = Initializing, renderer) {
         renderer.initialize(currentLoadExternal)
-        value = renderer
+        value = MathJaxRendererState.Ready(renderer)
 
         awaitDispose {
             renderer.close()
