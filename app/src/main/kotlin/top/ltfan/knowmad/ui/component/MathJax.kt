@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
@@ -63,6 +64,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.encodeToJsonElement
 import top.ltfan.knowmad.ui.util.rememberEx
 import top.ltfan.knowmad.util.Json
@@ -85,7 +88,7 @@ fun MathJax(
     renderingScale: Float = MathJaxDefaultRenderingScale,
     filterQuality: FilterQuality = High,
     colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-    ex: Int = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize)),
+    fontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     failure: @Composable ((Throwable) -> Unit)? = null,
 ) {
     val renderResult = rememberMathJaxRenderResult(
@@ -93,6 +96,9 @@ fun MathJax(
         tex = tex,
         display = display,
     )
+
+    val ex =
+        rememberEx(TextStyle(fontSize = if (display) fontSize.display else fontSize.nonDisplay))
 
     renderResult?.onSuccess { result ->
         MathJax(
@@ -238,6 +244,7 @@ class MathJaxRenderer(
                 "await renderToSvg(${Json.encodeToString(tex)}, ${Json.encodeToString(options)})",
             ).copy(
                 tex = tex,
+                options = options,
             )
             cache[key] = result
             return result
@@ -269,6 +276,7 @@ data class MathJaxRenderResult(
     val html: String,
     val attributes: List<Map<String, String>>,
     val tex: String? = null,
+    val options: JsonObject? = null,
 ) {
     companion object : JsObjectConverter<MathJaxRenderResult> {
         override val targetType = typeOf<MathJaxRenderResult>()
@@ -308,6 +316,15 @@ fun MathJaxRenderResult.dpSizeOrNull(ex: Dp): DpSize? {
 fun MathJaxRenderResult.dpSizeOrNull(ex: Int, density: Density): DpSize? {
     return with(density) { dpSizeOrNull(ex.toDp()) }
 }
+
+val MathJaxRenderResult.display
+    inline get() = (options?.get("display") as? JsonPrimitive)?.boolean ?: false
+
+@Immutable
+data class MathJaxFontSize(
+    val nonDisplay: TextUnit = MathJaxDefaultFontSize,
+    val display: TextUnit = MathJaxDefaultFontSize * 1.2f,
+)
 
 @Composable
 fun rememberMathJaxRendererState(

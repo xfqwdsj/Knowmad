@@ -18,12 +18,17 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,26 +37,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.mikepenz.markdown.annotator.AnnotatorSettings
+import com.mikepenz.markdown.annotator.annotatorSettings
+import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
 import com.mikepenz.markdown.compose.LocalMarkdownAnimations
+import com.mikepenz.markdown.compose.LocalMarkdownInlineContent
+import com.mikepenz.markdown.compose.LocalMarkdownTypography
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.MarkdownSuccess
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.model.DefaultMarkdownInlineContent
 import com.mikepenz.markdown.model.MarkdownState
 import com.mikepenz.markdown.model.State
 import com.mikepenz.markdown.model.markdownAnnotator
-import com.mikepenz.markdown.model.markdownInlineContent
 import com.mikepenz.markdown.model.parseMarkdownFlow
 import com.mikepenz.markdown.model.rememberMarkdownState
 import com.mikepenz.markdown.utils.EntityConverter
@@ -93,11 +107,10 @@ fun MarkdownView(
     modifier: Modifier = Modifier,
     contentKey: Any? = null,
     mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val ex = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize))
-    val density = LocalDensity.current
 
     val mathResults = mathResults ?: remember(contentKey ?: state) { mutableStateMapOf() }
 
@@ -110,6 +123,8 @@ fun MarkdownView(
                     val expression =
                         getMathContent(content, child) ?: return@markdownAnnotator false
                     val id = "$MathContentIdPrefix-$type-${child.startOffset}"
+                    val display = type == GFMElementTypes.BLOCK_MATH
+
                     appendInlineContent(
                         id = id,
                         alternateText = expression,
@@ -127,7 +142,7 @@ fun MarkdownView(
                                         if (state !is Ready) error("MathJax renderer is not ready")
                                         state.renderer.renderToSvg(
                                             tex = expression,
-                                            display = type == GFMElementTypes.BLOCK_MATH,
+                                            display = display,
                                         )
                                     },
                                 )
@@ -140,81 +155,164 @@ fun MarkdownView(
                 else -> false
             }
         },
-        inlineContent = markdownInlineContent(
-            mathResults.mapValues { (_, renderResult) ->
-                val placeholder = remember(renderResult, ex, density) {
-                    renderResult?.getOrNull()?.let { result ->
-                        result.dpSizeOrNull(
-                            ex = ex,
-                            density = density,
-                        )?.let {
-                            calculatePlaceHolder(
-                                width = it.width,
-                                height = it.height,
-                                density = density,
-                            )
-                        }
-                    } ?: Placeholder(
-                        width = 0.sp,
-                        height = 0.sp,
-                        placeholderVerticalAlign = Center,
-                    )
-                }
-
-                InlineTextContent(placeholder) {
-                    MathJax(
-                        rendererResult = renderResult?.getOrNull(),
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+        components = markdownComponents(
+            paragraph = { (content, node, typography) ->
+                MarkdownParagraph(
+                    content = content,
+                    node = node,
+                    mathResults = mathResults,
+                    style = typography.paragraph,
+                    mathFontSize = mathFontSize,
+                )
             },
-        ),
-        components = markdownComponents { type, model ->
-            when (type) {
-                GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> {
-                    val expression = getMathContent(model.content, model.node)
-                        ?: return@markdownComponents
-                    val id = "$MathContentIdPrefix-$type-${model.node.startOffset}"
-                    if (mathResults is MutableMap) {
-                        val result = mathResults.getOrPut(id) { null }
+            custom = { type, model ->
+                when (type) {
+                    GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> {
+                        val expression = getMathContent(model.content, model.node)
+                            ?: return@markdownComponents
+                        val id = "$MathContentIdPrefix-$type-${model.node.startOffset}"
+                        val display = type == GFMElementTypes.BLOCK_MATH
+                        if (mathResults is MutableMap) {
+                            val result = mathResults.getOrPut(id) { null }
 
-                        MathJax(
-                            rendererResult = result?.getOrNull(),
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                            Box(
+                                modifier = Modifier
+                                    .run {
+                                        if (display) fillMaxWidth() else this
+                                    }
+                                    .horizontalScroll(rememberScrollState()),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                MathJax(rendererResult = result?.getOrNull())
+                            }
 
-                        LaunchedEffect(id, mathJaxRendererState, result, expression) {
-                            if (mathJaxRendererState != null && result?.getOrNull()?.tex != expression) {
-                                mathResults[id] = runCatching {
-                                    val state =
-                                        snapshotFlow { mathJaxRendererState }.first { it !is Initializing }
-                                    if (state is MathJaxRendererState.Error) throw state.throwable
-                                    if (state !is Ready) error("MathJax renderer is not ready")
-                                    state.renderer.renderToSvg(
+                            LaunchedEffect(id, mathJaxRendererState, result, expression) {
+                                if (mathJaxRendererState != null && result?.getOrNull()?.tex != expression) {
+                                    mathResults[id] = runCatching {
+                                        val state =
+                                            snapshotFlow { mathJaxRendererState }.first { it !is Initializing }
+                                        if (state is MathJaxRendererState.Error) throw state.throwable
+                                        if (state !is Ready) error("MathJax renderer is not ready")
+                                        state.renderer.renderToSvg(
+                                            tex = expression,
+                                            display = display,
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            mathResults[id]?.let { result ->
+                                Box(
+                                    modifier = Modifier
+                                        .run {
+                                            if (display) fillMaxWidth()
+                                            else this
+                                        }
+                                        .horizontalScroll(rememberScrollState()),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    MathJax(rendererResult = result.getOrNull())
+                                }
+                            } ?: (mathJaxRendererState as? Ready)?.renderer?.let {
+                                Box(
+                                    modifier = Modifier
+                                        .run {
+                                            if (display) fillMaxWidth() else this
+                                        }
+                                        .horizontalScroll(rememberScrollState()),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    MathJax(
+                                        renderer = it,
                                         tex = expression,
-                                        display = type == GFMElementTypes.BLOCK_MATH,
                                     )
                                 }
                             }
                         }
-                    } else {
-                        mathResults[id]?.let {result ->
+                    }
+                }
+            },
+        ),
+        success = success,
+    )
+}
+
+@Composable
+fun MarkdownParagraph(
+    content: String,
+    node: ASTNode,
+    mathResults: Map<String, Result<MathJaxRenderResult>?>,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalMarkdownTypography.current.paragraph,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
+    annotatorSettings: AnnotatorSettings = annotatorSettings(),
+) {
+    val density = LocalDensity.current
+    val inlineContent = LocalMarkdownInlineContent.current
+
+    val styledText = buildAnnotatedString {
+        pushStyle(style.toSpanStyle())
+        buildMarkdownAnnotatedString(
+            content = content,
+            node = node,
+            annotatorSettings = annotatorSettings,
+        )
+        pop()
+    }
+
+    BoxWithConstraints {
+        CompositionLocalProvider(
+            LocalMarkdownInlineContent provides DefaultMarkdownInlineContent(
+                inlineContent.inlineContent + mathResults.mapValues { (_, renderResult) ->
+                    val result = renderResult?.getOrNull()
+                    val display = result?.display == true
+
+                    val ex =
+                        rememberEx(TextStyle(fontSize = if (display) mathFontSize.display else mathFontSize.nonDisplay))
+
+                    val placeholder = remember(result, ex, density) {
+                        result?.let { result ->
+                            result.dpSizeOrNull(
+                                ex = ex,
+                                density = density,
+                            )?.let {
+                                calculatePlaceHolder(
+                                    width = if (display) maxWidth
+                                    else it.width.coerceAtMost(maxWidth),
+                                    height = it.height,
+                                    density = density,
+                                )
+                            }
+                        } ?: Placeholder(
+                            width = 0.sp,
+                            height = 0.sp,
+                            placeholderVerticalAlign = Center,
+                        )
+                    }
+
+                    InlineTextContent(placeholder) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             MathJax(
-                                rendererResult = result.getOrNull(),
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } ?: (mathJaxRendererState as? Ready)?.renderer?.let {
-                            MathJax(
-                                renderer = it,
-                                tex = expression,
+                                rendererResult = result,
+                                ex = ex,
                             )
                         }
                     }
-                }
-            }
-        },
-        success = success,
-    )
+                },
+            ),
+        ) {
+            MarkdownText(
+                styledText,
+                modifier = modifier,
+                style = style,
+            )
+        }
+    }
 }
 
 private fun getMathContent(fullText: String, node: ASTNode): String? {
@@ -256,6 +354,7 @@ fun MarkdownView(
     modifier: Modifier = Modifier,
     contentKey: Any? = null,
     mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val markdownState = rememberMarkdownState(markdown, retainState = true)
@@ -265,6 +364,7 @@ fun MarkdownView(
         modifier = modifier,
         contentKey = contentKey ?: markdownState,
         mathResults = mathResults,
+        mathFontSize = mathFontSize,
         success = success,
     )
 }
@@ -276,6 +376,7 @@ fun MarkdownView(
     modifier: Modifier = Modifier,
     contentKey: Any? = stateFlow,
     mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val blockParsing = LocalMarkdownViewBlockParsing.current
@@ -295,6 +396,7 @@ fun MarkdownView(
         modifier = modifier,
         contentKey = contentKey,
         mathResults = mathResults,
+        mathFontSize = mathFontSize,
         success = success,
     )
 }
@@ -306,6 +408,7 @@ fun MarkdownView(
     modifier: Modifier = Modifier,
     contentKey: Any? = markdownState,
     mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
@@ -314,6 +417,7 @@ fun MarkdownView(
         modifier = modifier,
         contentKey = contentKey,
         mathResults = mathResults,
+        mathFontSize = mathFontSize,
         success = success,
     )
 }
@@ -323,6 +427,7 @@ fun MarkdownView(
     savedMarkdownState: SavedMarkdownState,
     mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
+    mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
@@ -331,6 +436,7 @@ fun MarkdownView(
         modifier = modifier,
         contentKey = savedMarkdownState,
         mathResults = savedMarkdownState.mathResults,
+        mathFontSize = mathFontSize,
         success = success,
     )
 }
