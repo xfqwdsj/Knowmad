@@ -19,25 +19,32 @@
 package top.ltfan.knowmad.ui.component
 
 import android.content.res.AssetManager
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
+import coil3.size.Size
 import coil3.svg.SvgDecoder
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.binding.JsObject
@@ -45,13 +52,20 @@ import com.dokar.quickjs.binding.asyncFunction
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.converter.JsObjectConverter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import top.ltfan.knowmad.ui.util.rememberEx
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import kotlin.math.roundToInt
 import kotlin.reflect.typeOf
+
+val MathJaxDefaultFontSize = 6.5f.sp
+const val MathJaxDefaultRenderingScale = 1.6f
 
 @Composable
 fun MathJax(
@@ -59,56 +73,88 @@ fun MathJax(
     tex: String,
     modifier: Modifier = Modifier,
     display: Boolean = false,
+    renderingScale: Float = MathJaxDefaultRenderingScale,
+    filterQuality: FilterQuality = High,
     colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-    exFontSize: TextUnit = 6.sp,
-    onSize: ((width: Dp, height: Dp) -> Unit)? = null,
+    ex: Int = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize)),
     failure: @Composable ((Throwable) -> Unit)? = null,
 ) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val textMeasurer = rememberTextMeasurer()
-
-    val ex = remember(textMeasurer, exFontSize) {
-        textMeasurer.measure(
-            text = "x",
-            style = TextStyle(fontSize = exFontSize),
-        ).size.height
-    }
-
-    val renderResult by produceState<Result<MathJaxRenderResult>?>(initialValue = null, renderer) {
-        value = runCatching { renderer.renderToSvg(tex, display) }
-    }
+    val renderResult = rememberMathJaxRenderResult(
+        renderer = renderer,
+        tex = tex,
+        display = display,
+    )
 
     renderResult?.onSuccess { result ->
-        val (width, height) = with(density) {
-            remember(result, ex) {
-                result.attributes.singleOrNull()?.let { attributes ->
-                    val width =
-                        attributes["width"]?.removeSuffix("ex")?.toFloatOrNull()
-                            ?.times(ex)?.roundToInt() ?: return@let null
-                    val height =
-                        attributes["height"]?.removeSuffix("ex")?.toFloatOrNull()
-                            ?.times(ex)?.roundToInt() ?: return@let null
-                    width.toDp() to height.toDp()
-                }?.also { (width, height) ->
-                    onSize?.invoke(width, height)
-                } ?: (Dp.Unspecified to Dp.Unspecified)
-            }
-        }
-
-        AsyncImage(
-            model = remember(context, result) {
-                ImageRequest.Builder(context)
-                    .data(result.html.encodeToByteArray())
-                    .decoderFactory(SvgDecoder.Factory())
-                    .build()
-            },
+        MathJax(
+            rendererResult = result,
             contentDescription = tex,
-            modifier = modifier.size(width, height),
+            modifier = modifier,
+            renderingScale = renderingScale,
+            filterQuality = filterQuality,
             colorFilter = colorFilter,
+            ex = ex,
         )
     }?.onFailure {
         failure?.invoke(it)
+    }
+}
+
+@Composable
+fun MathJax(
+    rendererResult: MathJaxRenderResult?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    renderingScale: Float = MathJaxDefaultRenderingScale,
+    filterQuality: FilterQuality = High,
+    colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
+    ex: Int = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize)),
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
+    val size = remember(rendererResult, ex) { rendererResult?.pxSizeOrNull(ex) }
+    val dpSize = with(density) { size?.let { DpSize(it.width.toDp(), it.height.toDp()) } }
+        ?: DpSize.Unspecified
+
+    val imageRequest = remember(context, rendererResult, size) {
+        if (rendererResult == null || size == null) {
+            return@remember null
+        }
+        val width = size.width.times(renderingScale).roundToInt()
+        val height = size.height.times(renderingScale).roundToInt()
+        ImageRequest.Builder(context)
+            .data(rendererResult.html.encodeToByteArray())
+            .size(Size(width, height))
+            .decoderFactory(SvgDecoder.Factory())
+            .build()
+    }
+
+    val asyncPainter = rememberAsyncImagePainter(
+        model = imageRequest,
+        filterQuality = filterQuality,
+    )
+    val painter by remember {
+        snapshotFlow { asyncPainter }
+            .flatMapLatest { asyncPainter ->
+                asyncPainter.state.map {
+                    if (it is AsyncImagePainter.State.Success) {
+                        asyncPainter
+                    } else {
+                        null
+                    }
+                }
+            }
+            .filterNotNull()
+    }.collectAsState(null)
+
+    painter?.let {
+        Image(
+            it,
+            contentDescription = contentDescription,
+            modifier = modifier.size(dpSize),
+            colorFilter = colorFilter,
+        )
     }
 }
 
@@ -197,6 +243,34 @@ data class MathJaxRenderResult(
     }
 }
 
+fun MathJaxRenderResult.sizeOrNull(): Pair<String, String>? {
+    val attrs = attributes.singleOrNull() ?: return null
+    val width = attrs["width"] ?: return null
+    val height = attrs["height"] ?: return null
+    return width to height
+}
+
+fun MathJaxRenderResult.exSizeOrNull(): Pair<Float, Float>? {
+    val (width, height) = sizeOrNull() ?: return null
+    val widthEx = width.removeSuffix("ex").toFloatOrNull() ?: return null
+    val heightEx = height.removeSuffix("ex").toFloatOrNull() ?: return null
+    return widthEx to heightEx
+}
+
+fun MathJaxRenderResult.pxSizeOrNull(ex: Int): IntSize? {
+    val (widthEx, heightEx) = exSizeOrNull() ?: return null
+    return IntSize((ex * widthEx).roundToInt(), (ex * heightEx).roundToInt())
+}
+
+fun MathJaxRenderResult.dpSizeOrNull(ex: Dp): DpSize? {
+    val (widthEx, heightEx) = exSizeOrNull() ?: return null
+    return DpSize(ex * widthEx, ex * heightEx)
+}
+
+fun MathJaxRenderResult.dpSizeOrNull(ex: Int, density: Density): DpSize? {
+    return with(density) { dpSizeOrNull(ex.toDp()) }
+}
+
 @Composable
 fun rememberMathJaxRenderer(
     loadExternal: suspend MathJaxRenderer.(path: String) -> String,
@@ -214,5 +288,23 @@ fun rememberMathJaxRenderer(
         awaitDispose {
             renderer.close()
         }
+    }.value
+}
+
+@Composable
+fun rememberMathJaxRenderResult(
+    renderer: MathJaxRenderer?,
+    tex: String,
+    display: Boolean = false,
+): Result<MathJaxRenderResult>? {
+    val currentTex by rememberUpdatedState(tex)
+    val currentDisplay by rememberUpdatedState(display)
+
+    return produceState<Result<MathJaxRenderResult>?>(initialValue = null, renderer) {
+        if (renderer == null) {
+            value = null
+            return@produceState
+        }
+        value = runCatching { renderer.renderToSvg(currentTex, currentDisplay) }
     }.value
 }
