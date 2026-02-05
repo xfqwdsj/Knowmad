@@ -19,9 +19,7 @@
 package top.ltfan.knowmad.ui.component
 
 import android.content.res.AssetManager
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -106,9 +104,7 @@ fun MathJax(
                     .build()
             },
             contentDescription = tex,
-            modifier = modifier
-                .size(width, height)
-                .horizontalScroll(rememberScrollState()),
+            modifier = modifier.size(width, height),
             colorFilter = colorFilter,
         )
     }?.onFailure {
