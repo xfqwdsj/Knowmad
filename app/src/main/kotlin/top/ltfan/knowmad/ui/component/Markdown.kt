@@ -22,24 +22,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,6 +70,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
+import top.ltfan.knowmad.ui.util.rememberEx
 
 typealias MarkdownSuccessContent = @Composable (
     state: State.Success,
@@ -94,8 +92,6 @@ fun MarkdownView(
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val mathIds = remember(state) { mutableStateSetOf<String>() }
-
-    val placeholders = remember(state) { mutableStateMapOf<String, Placeholder>() }
 
     val mathJaxRenderer = rememberMathJaxRenderer { it } // TODO: remove this
 
@@ -133,28 +129,41 @@ fun MarkdownView(
         },
         inlineContent = markdownInlineContent(
             mathIds.associateWith { id ->
-                val placeholder = placeholders.getOrElse(id) {
-                    Placeholder(
-                        width = 0.sp,
-                        height = 0.sp,
-                        placeholderVerticalAlign = Center,
-                    )
-                }
-                InlineTextContent(placeholder) {
+                val (type, expression) = id.split("-math-", limit = 2)
+                val renderResult = rememberMathJaxRenderResult(
+                    renderer = mathJaxRenderer,
+                    tex = expression,
+                    display = type == "block",
+                )
+
+                // TODO: refactor
+                val placeHolder = renderResult?.getOrNull()?.let { result ->
+                    val ex = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize))
                     val density = LocalDensity.current
-                    MathJaxFromId(
-                        id = id,
-                        renderer = mathJaxRenderer
-                            ?: return@InlineTextContent,
-                        modifier = Modifier.fillMaxSize(),
-                        onSize = { width, height ->
-                            placeholders[id] = calculatePlaceHolder(
-                                old = placeholders[id],
-                                width = width,
-                                height = height,
+                    val dpSize = result.dpSizeOrNull(
+                        ex = ex,
+                        density = density,
+                    )
+                    remember(id, dpSize) {
+                        dpSize?.let {
+                            calculatePlaceHolder(
+                                width = it.width,
+                                height = dpSize.height,
                                 density = density,
                             )
-                        },
+                        }
+                    }
+                } ?: Placeholder(
+                    width = 0.sp,
+                    height = 0.sp,
+                    placeholderVerticalAlign = Center,
+                )
+
+                InlineTextContent(placeHolder) {
+                    MathJax(
+                        rendererResult = renderResult?.getOrNull(),
+                        contentDescription = expression,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             },
@@ -182,44 +191,6 @@ fun MarkdownView(
     )
 }
 
-@Composable
-private fun MathJaxFromId(
-    id: String,
-    renderer: MathJaxRenderer,
-    modifier: Modifier = Modifier,
-    colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-    exFontSize: TextUnit = 6.sp,
-    onSize: ((width: Dp, height: Dp) -> Unit)? = null,
-    failure: @Composable ((Throwable) -> Unit)? = null,
-) {
-    val (type, expression) = id.split("-math-", limit = 2)
-    when (type) {
-        "inline" -> MathJax(
-            renderer = renderer,
-            tex = expression,
-            modifier = modifier,
-            display = false,
-            colorFilter = colorFilter,
-            exFontSize = exFontSize,
-            onSize = onSize,
-            failure = failure,
-        )
-
-        "block" -> MathJax(
-            renderer = renderer,
-            tex = expression,
-            modifier = modifier,
-            display = true,
-            colorFilter = colorFilter,
-            exFontSize = exFontSize,
-            onSize = onSize,
-            failure = failure,
-        )
-
-        else -> error("Unknown math content type: $type")
-    }
-}
-
 private fun getMathContent(fullText: String, node: ASTNode): String? {
     return when (node.type) {
         GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> {
@@ -239,21 +210,14 @@ private fun getMathContent(fullText: String, node: ASTNode): String? {
 }
 
 private fun calculatePlaceHolder(
-    old: Placeholder?,
     width: Dp,
     height: Dp,
     density: Density,
 ): Placeholder {
     with(density) {
-        val oldWidth = old?.width ?: 0.sp
-        val oldHeight = old?.height ?: 0.sp
-        val proposedWidth = width.toSp()
-        val proposedHeight = height.toSp()
-        val width = if (proposedWidth.value > oldWidth.value) proposedWidth else oldWidth
-        val height = if (proposedHeight.value > oldHeight.value) proposedHeight else oldHeight
         return Placeholder(
-            width = width,
-            height = height,
+            width = width.toSp(),
+            height = height.toSp(),
             placeholderVerticalAlign = Center,
         )
     }
