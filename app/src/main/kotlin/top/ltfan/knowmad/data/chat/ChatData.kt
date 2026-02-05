@@ -26,6 +26,7 @@ import ai.koog.prompt.message.ResponseMetaInfo
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.ktor.http.URLBuilder
@@ -47,6 +48,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
 import top.ltfan.knowmad.ui.component.AssistantMessageState
+import top.ltfan.knowmad.ui.component.MathJaxRenderResult
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
@@ -230,9 +232,11 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
 
         suspend fun completed(
             defaultEndedAt: Instant = Clock.System.now(),
+            mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = markdownState.mathResults,
         ) = Completed.fromStreaming(
-            this,
-            defaultEndedAt,
+            streaming = this,
+            defaultEndedAt = defaultEndedAt,
+            mathResults = mathResults,
         )
 
         override val uiMessage get() = toMessage().toUiMessage()
@@ -268,23 +272,37 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             suspend fun fromStreaming(
                 streaming: Streaming,
                 defaultEndedAt: Instant = Clock.System.now(),
+                mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = streaming.markdownState.mathResults,
             ): Completed {
                 return Completed(
                     streaming.toMessage(defaultEndedAt).toUiMessage(),
-                    SavedMarkdownState.Fixed(streaming.flow.value),
+                    SavedMarkdownState.Fixed(
+                        markdownText = streaming.flow.value,
+                        mathResults = mathResults,
+                    ),
                 )
             }
         }
     }
 
     companion object {
-        suspend fun Completed(uiMessage: UiMessage) = Completed(
+        suspend fun Completed(
+            uiMessage: UiMessage,
+            mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+        ) = Completed(
             uiMessage = uiMessage,
-            markdownState = SavedMarkdownState.Fixed(uiMessage.filteredContent),
+            markdownState = SavedMarkdownState.Fixed(
+                markdownText = uiMessage.filteredContent,
+                mathResults = mathResults,
+            ),
         )
 
-        suspend fun Completed(message: Message) = Completed(
+        suspend fun Completed(
+            message: Message,
+            mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+        ) = Completed(
             uiMessage = message.toUiMessage(),
+            mathResults = mathResults,
         )
 
         private val UiMessage.filteredContent

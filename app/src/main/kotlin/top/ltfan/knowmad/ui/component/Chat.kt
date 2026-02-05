@@ -347,6 +347,7 @@ fun ChatMessageList(
     getMessageCount: () -> Int,
     getMessageKey: (index: Int) -> Any,
     getMessageAt: (index: Int) -> ChatListMessage?,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
     onPrevious: (message: ChatListMessage) -> Unit = {},
     onNext: (message: ChatListMessage) -> Unit = {},
@@ -382,6 +383,7 @@ fun ChatMessageList(
                         state = assistantMessageStates.compute(key) { _, state ->
                             state as? AssistantMessageState.Streaming ?: data.state
                         } ?: error("`null` returned when getting assistant message state."),
+                        mathJaxRendererState = mathJaxRendererState,
                         current = data.branchIndex,
                         total = data.branchCount,
                         onPrevious = { onPrevious(data) },
@@ -432,6 +434,7 @@ fun ChatMessageList(
                             }
                             AssistantMessage(
                                 state = state,
+                                mathJaxRendererState = mathJaxRendererState,
                                 current = data.branchIndex,
                                 total = data.branchCount,
                                 onPrevious = { onPrevious(data) },
@@ -479,6 +482,7 @@ fun ChatMessageList(
 @Composable
 fun AssistantMessage(
     state: AssistantMessageState,
+    mathJaxRendererState: MathJaxRendererState?,
     current: Int,
     total: Int,
     onPrevious: () -> Unit,
@@ -500,6 +504,7 @@ fun AssistantMessage(
                     when (content.type) {
                         Reasoning -> ReasoningMessage(
                             savedMarkdownState = content.markdownState,
+                            mathJaxRendererState = mathJaxRendererState,
                             startedAt = content.startedAt,
                             endedAt = content.metaInfo?.timestamp?.toStdlibInstant(),
                             initialVisibility = initialReasoningVisibility,
@@ -510,6 +515,7 @@ fun AssistantMessage(
 
                         Content -> AssistantMessageContent(
                             savedMarkdownState = content.markdownState,
+                            mathJaxRendererState = mathJaxRendererState,
                             modifier = Modifier.padding(8.dp),
                             trailing = trailing,
                         )
@@ -523,6 +529,7 @@ fun AssistantMessage(
                         is Koog -> when (val message = uiMessage.message) {
                             is Reasoning -> ReasoningMessage(
                                 savedMarkdownState = content.markdownState,
+                                mathJaxRendererState = mathJaxRendererState,
                                 startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
                                     Instant.parseOrNull(it)
                                 } ?: message.metaInfo.timestamp.toStdlibInstant(),
@@ -534,11 +541,13 @@ fun AssistantMessage(
 
                             is Assistant -> AssistantMessageContent(
                                 savedMarkdownState = content.markdownState,
+                                mathJaxRendererState = mathJaxRendererState,
                                 modifier = Modifier.padding(8.dp),
                             )
 
                             is Tool -> ToolMessage(
                                 message = message,
+                                mathJaxRendererState = mathJaxRendererState,
                                 modifier = Modifier.padding(8.dp),
                                 initialVisibility = initialToolVisibility,
                                 onVisibilityChange = onAnyToolVisibilityChange,
@@ -599,6 +608,7 @@ fun AssistantMessage(
 @Composable
 fun ReasoningMessage(
     savedMarkdownState: SavedMarkdownState,
+    mathJaxRendererState: MathJaxRendererState?,
     startedAt: Instant,
     endedAt: Instant?,
     initialVisibility: Boolean,
@@ -650,6 +660,7 @@ fun ReasoningMessage(
             ) {
                 MarkdownView(
                     savedMarkdownState,
+                    mathJaxRendererState = mathJaxRendererState,
                     modifier = Modifier.padding(
                         start = 16.dp,
                         end = 16.dp,
@@ -679,11 +690,13 @@ fun ReasoningMessage(
 @Composable
 fun AssistantMessageContent(
     savedMarkdownState: SavedMarkdownState,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
     trailing: String? = null,
 ) {
     MarkdownView(
         savedMarkdownState,
+        mathJaxRendererState = mathJaxRendererState,
         modifier = modifier,
         success = { state, components, modifier ->
             MarkdownSuccessContentWithTrailingText(
@@ -699,6 +712,7 @@ fun AssistantMessageContent(
 @Composable
 fun ToolMessage(
     message: Message.Tool,
+    mathJaxRendererState: MathJaxRendererState?,
     initialVisibility: Boolean,
     onVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -746,6 +760,7 @@ fun ToolMessage(
                             ```
                         """.trimIndent(),
                     ),
+                    mathJaxRendererState = mathJaxRendererState,
                     modifier = Modifier.padding(
                         start = 16.dp,
                         end = 16.dp,

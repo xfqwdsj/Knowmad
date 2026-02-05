@@ -27,9 +27,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateSetOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -66,6 +67,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import org.intellij.markdown.ast.ASTNode
@@ -82,45 +84,56 @@ val DefaultMarkdownSuccessContent: MarkdownSuccessContent = { state, components,
     MarkdownSuccess(state = state, components = components, modifier = modifier)
 }
 
-const val InlineMathContentIdPrefix = "inline-math-"
-const val BlockMathContentIdPrefix = "block-math-"
+const val MathContentIdPrefix = "math"
 
 @Composable
 fun MarkdownView(
     state: State,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
+    contentKey: Any? = null,
+    mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
-    val mathIds = remember(state) { mutableStateSetOf<String>() }
+    val coroutineScope = rememberCoroutineScope()
+    val ex = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize))
+    val density = LocalDensity.current
 
-    val mathJaxRenderer = rememberMathJaxRenderer { it } // TODO: remove this
+    val mathResults = mathResults ?: remember(contentKey ?: state) { mutableStateMapOf() }
 
     Markdown(
         state,
         modifier = modifier,
         annotator = markdownAnnotator { content, child ->
-            when (child.type) {
-                GFMElementTypes.INLINE_MATH -> {
+            when (val type = child.type) {
+                GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> {
                     val expression =
                         getMathContent(content, child) ?: return@markdownAnnotator false
-                    val id = InlineMathContentIdPrefix + expression
+                    val id = "$MathContentIdPrefix-$type-${child.startOffset}"
                     appendInlineContent(
                         id = id,
                         alternateText = expression,
                     )
-                    mathIds += id
-                    true
-                }
-
-                GFMElementTypes.BLOCK_MATH -> {
-                    val expression =
-                        getMathContent(content, child) ?: return@markdownAnnotator false
-                    val id = BlockMathContentIdPrefix + expression
-                    appendInlineContent(
-                        id = id,
-                        alternateText = expression,
-                    )
-                    mathIds += id
+                    val mutableResults = mathResults as? MutableMap
+                    mutableResults?.getOrPut(id) { null }?.getOrNull().let { result ->
+                        if (mathJaxRendererState != null && result?.tex != expression) {
+                            coroutineScope.launch {
+                                mutableResults?.set(
+                                    id,
+                                    runCatching {
+                                        val state =
+                                            snapshotFlow { mathJaxRendererState }.first { it !is Initializing }
+                                        if (state is MathJaxRendererState.Error) throw state.throwable
+                                        if (state !is Ready) error("MathJax renderer is not ready")
+                                        state.renderer.renderToSvg(
+                                            tex = expression,
+                                            display = type == GFMElementTypes.BLOCK_MATH,
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
                     true
                 }
 
@@ -128,41 +141,29 @@ fun MarkdownView(
             }
         },
         inlineContent = markdownInlineContent(
-            mathIds.associateWith { id ->
-                val (type, expression) = id.split("-math-", limit = 2)
-                val renderResult = rememberMathJaxRenderResult(
-                    renderer = mathJaxRenderer,
-                    tex = expression,
-                    display = type == "block",
-                )
-
-                // TODO: refactor
-                val placeHolder = renderResult?.getOrNull()?.let { result ->
-                    val ex = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize))
-                    val density = LocalDensity.current
-                    val dpSize = result.dpSizeOrNull(
-                        ex = ex,
-                        density = density,
-                    )
-                    remember(id, dpSize) {
-                        dpSize?.let {
+            mathResults.mapValues { (_, renderResult) ->
+                val placeholder = remember(renderResult, ex, density) {
+                    renderResult?.getOrNull()?.let { result ->
+                        result.dpSizeOrNull(
+                            ex = ex,
+                            density = density,
+                        )?.let {
                             calculatePlaceHolder(
                                 width = it.width,
-                                height = dpSize.height,
+                                height = it.height,
                                 density = density,
                             )
                         }
-                    }
-                } ?: Placeholder(
-                    width = 0.sp,
-                    height = 0.sp,
-                    placeholderVerticalAlign = Center,
-                )
+                    } ?: Placeholder(
+                        width = 0.sp,
+                        height = 0.sp,
+                        placeholderVerticalAlign = Center,
+                    )
+                }
 
-                InlineTextContent(placeHolder) {
+                InlineTextContent(placeholder) {
                     MathJax(
                         rendererResult = renderResult?.getOrNull(),
-                        contentDescription = expression,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -170,21 +171,46 @@ fun MarkdownView(
         ),
         components = markdownComponents { type, model ->
             when (type) {
-                GFMElementTypes.INLINE_MATH -> MathJax(
-                    renderer = mathJaxRenderer
-                        ?: return@markdownComponents,
-                    tex = getMathContent(model.content, model.node)
-                        ?: return@markdownComponents,
-                    display = false,
-                )
+                GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> {
+                    val expression = getMathContent(model.content, model.node)
+                        ?: return@markdownComponents
+                    val id = "$MathContentIdPrefix-$type-${model.node.startOffset}"
+                    if (mathResults is MutableMap) {
+                        val result = mathResults.getOrPut(id) { null }
 
-                GFMElementTypes.BLOCK_MATH -> MathJax(
-                    renderer = mathJaxRenderer
-                        ?: return@markdownComponents,
-                    tex = getMathContent(model.content, model.node)
-                        ?: return@markdownComponents,
-                    display = true,
-                )
+                        MathJax(
+                            rendererResult = result?.getOrNull(),
+                            modifier = Modifier.fillMaxSize(),
+                        )
+
+                        LaunchedEffect(id, mathJaxRendererState, result, expression) {
+                            if (mathJaxRendererState != null && result?.getOrNull()?.tex != expression) {
+                                mathResults[id] = runCatching {
+                                    val state =
+                                        snapshotFlow { mathJaxRendererState }.first { it !is Initializing }
+                                    if (state is MathJaxRendererState.Error) throw state.throwable
+                                    if (state !is Ready) error("MathJax renderer is not ready")
+                                    state.renderer.renderToSvg(
+                                        tex = expression,
+                                        display = type == GFMElementTypes.BLOCK_MATH,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        mathResults[id]?.let {result ->
+                            MathJax(
+                                rendererResult = result.getOrNull(),
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } ?: (mathJaxRendererState as? Ready)?.renderer?.let {
+                            MathJax(
+                                renderer = it,
+                                tex = expression,
+                            )
+                        }
+                    }
+                }
             }
         },
         success = success,
@@ -226,13 +252,19 @@ private fun calculatePlaceHolder(
 @Composable
 fun MarkdownView(
     markdown: String,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
+    contentKey: Any? = null,
+    mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val markdownState = rememberMarkdownState(markdown, retainState = true)
     MarkdownView(
         markdownState,
+        mathJaxRendererState = mathJaxRendererState,
         modifier = modifier,
+        contentKey = contentKey ?: markdownState,
+        mathResults = mathResults,
         success = success,
     )
 }
@@ -240,7 +272,10 @@ fun MarkdownView(
 @Composable
 fun MarkdownView(
     stateFlow: StateFlow<State>,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
+    contentKey: Any? = stateFlow,
+    mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     val blockParsing = LocalMarkdownViewBlockParsing.current
@@ -256,7 +291,10 @@ fun MarkdownView(
 
     MarkdownView(
         state,
+        mathJaxRendererState = mathJaxRendererState,
         modifier = modifier,
+        contentKey = contentKey,
+        mathResults = mathResults,
         success = success,
     )
 }
@@ -264,12 +302,18 @@ fun MarkdownView(
 @Composable
 fun MarkdownView(
     markdownState: MarkdownState,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
+    contentKey: Any? = markdownState,
+    mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
         markdownState.state,
+        mathJaxRendererState = mathJaxRendererState,
         modifier = modifier,
+        contentKey = contentKey,
+        mathResults = mathResults,
         success = success,
     )
 }
@@ -277,12 +321,16 @@ fun MarkdownView(
 @Composable
 fun MarkdownView(
     savedMarkdownState: SavedMarkdownState,
+    mathJaxRendererState: MathJaxRendererState?,
     modifier: Modifier = Modifier,
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
 ) {
     MarkdownView(
         savedMarkdownState.state,
+        mathJaxRendererState = mathJaxRendererState,
         modifier = modifier,
+        contentKey = savedMarkdownState,
+        mathResults = savedMarkdownState.mathResults,
         success = success,
     )
 }
@@ -311,11 +359,13 @@ fun MarkdownSuccessContentWithTrailingText(
 
 sealed interface SavedMarkdownState {
     val state: StateFlow<State>
+    val mathResults: MutableMap<String, Result<MathJaxRenderResult>?>
 
     @Immutable
     class Dynamic(
         coroutineScope: CoroutineScope,
         markdownFlow: Flow<String>,
+        override val mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
     ) : SavedMarkdownState {
         private val originalState =
             markdownFlow.flatMapLatest { parseMarkdownFlow(it) }.flowOn(Dispatchers.Default)
@@ -328,19 +378,28 @@ sealed interface SavedMarkdownState {
         override val state = originalState.filter { it !is State.Loading }
             .stateIn(coroutineScope + Dispatchers.Default, SharingStarted.Eagerly, State.Loading())
 
-        suspend fun fixed() = Fixed(originalState.first { it !is State.Loading })
+        suspend fun fixed() = Fixed(
+            state = originalState.first { it !is State.Loading },
+            mathResults = mathResults,
+        )
     }
 
     @Immutable
-    class Fixed(state: State) : SavedMarkdownState {
+    class Fixed(
+        state: State,
+        override val mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+    ) : SavedMarkdownState {
         override val state = MutableStateFlow(state).asStateFlow()
     }
 
     companion object {
-        suspend fun Fixed(markdownText: String): Fixed {
+        suspend fun Fixed(
+            markdownText: String,
+            mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+        ): Fixed {
             val state = parseMarkdownFlow(markdownText).flowOn(Dispatchers.Default)
                 .first { it !is State.Loading }
-            return Fixed(state)
+            return Fixed(state, mathResults)
         }
     }
 }
@@ -348,21 +407,29 @@ sealed interface SavedMarkdownState {
 fun SavedMarkdownState(
     coroutineScope: CoroutineScope,
     markdownFlow: Flow<String>,
+    mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
 ) = SavedMarkdownState.Dynamic(
     coroutineScope,
     markdownFlow,
+    mathResults,
 )
 
 @Composable
-fun rememberSavedMarkdownState(markdownFlow: Flow<String>): SavedMarkdownState {
+fun rememberSavedMarkdownState(
+    markdownFlow: Flow<String>,
+    mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = remember { mutableStateMapOf() },
+): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
-    return remember(coroutineScope, markdownFlow) {
-        SavedMarkdownState(coroutineScope, markdownFlow)
+    return remember(coroutineScope, markdownFlow, mathResults) {
+        SavedMarkdownState(coroutineScope, markdownFlow, mathResults)
     }
 }
 
 @Composable
-fun rememberSavedMarkdownState(markdownText: String): SavedMarkdownState {
+fun rememberSavedMarkdownState(
+    markdownText: String,
+    mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = remember { mutableStateMapOf() },
+): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
 
     val flow = remember { MutableStateFlow(markdownText) }
@@ -371,15 +438,19 @@ fun rememberSavedMarkdownState(markdownText: String): SavedMarkdownState {
         flow.value = markdownText
     }
 
-    return remember(coroutineScope, flow) {
-        SavedMarkdownState(coroutineScope, flow)
+    return remember(coroutineScope, flow, mathResults) {
+        SavedMarkdownState(coroutineScope, flow, mathResults)
     }
 }
 
 context(viewModel: ViewModel)
-fun SavedMarkdownState(markdownFlow: Flow<String>) = SavedMarkdownState(
+fun SavedMarkdownState(
+    markdownFlow: Flow<String>,
+    mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+) = SavedMarkdownState(
     viewModel.viewModelScope,
     markdownFlow,
+    mathResults,
 )
 
 val LocalMarkdownViewBlockParsing = staticCompositionLocalOf { false }
