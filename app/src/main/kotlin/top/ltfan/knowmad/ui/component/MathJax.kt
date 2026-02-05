@@ -138,6 +138,7 @@ class MathJaxRenderer(
         define("console") {
             function("log") { args ->
                 logger.debug { args.joinToString(" ") }
+                null
             }
         }
     }
