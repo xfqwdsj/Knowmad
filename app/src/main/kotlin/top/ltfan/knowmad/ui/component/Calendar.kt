@@ -195,10 +195,6 @@ fun Calendar(
                                         }
                                     }
                                 },
-                                modifier = Modifier.sharedElement(
-                                    rememberSharedContentState(CalendarSharedKey.Day(day.date)),
-                                    animatedVisibilityScope = this@AnimatedContent,
-                                ),
                                 events = events?.value,
                                 outOfMonth = day.position != MonthDate,
                                 border = if (day.date == today) BorderStroke(
@@ -235,12 +231,7 @@ fun Calendar(
                                 date = day.date,
                                 selected = selected,
                                 onClick = { state.selectedDate = day.date },
-                                modifier = Modifier.sharedElement(
-                                    rememberSharedContentState(CalendarSharedKey.Day(day.date)),
-                                    animatedVisibilityScope = this@AnimatedContent,
-                                ),
                                 hasEvents = events.isNotEmpty(),
-                                outOfMonth = false,
                                 border = if (day.date == today) BorderStroke(
                                     width = 2.dp,
                                     color = MaterialTheme.colorScheme.primary,
@@ -355,7 +346,7 @@ fun Day(
             }
         }
 
-        events?.let { Events(it) } ?: hasEvents?.let { hasEvents ->
+        events?.let { Events(events, date) } ?: hasEvents?.let { hasEvents ->
             AnimatedVisibility(
                 visible = hasEvents,
                 enter = expandIn(),
@@ -408,7 +399,10 @@ private fun DaySecondaryText(
 }
 
 @Composable
-fun Events(events: List<Event>) {
+fun Events(
+    events: List<Event>,
+    date: LocalDate,
+) {
     localSharedTransitionScope {
         Column(
             modifier = Modifier
@@ -432,7 +426,7 @@ fun Events(events: List<Event>) {
                 }
                 Dot(
                     modifier = if (positioned) Modifier.sharedBounds(
-                        rememberSharedContentState(CalendarSharedKey.Dot),
+                        rememberSharedContentState(CalendarSharedKey.Dot(date)),
                         animatedVisibilityScope = this@AnimatedVisibility,
                         resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                     )
@@ -476,7 +470,7 @@ fun Events(events: List<Event>) {
                                 modifier = when (index) {
                                     0 if positioned -> Modifier
                                         .sharedBounds(
-                                            rememberSharedContentState(CalendarSharedKey.Dot),
+                                            rememberSharedContentState(CalendarSharedKey.Dot(date)),
                                             animatedVisibilityScope = this@AnimatedVisibility,
                                             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                                         )
@@ -822,10 +816,7 @@ fun rememberFirstDayOfWeek(): DayOfWeek {
 @Immutable
 private sealed interface CalendarSharedKey {
     @Immutable
-    data object Dot
-
-    @Immutable
-    data class Day(val date: LocalDate)
+    data class Dot(val date: LocalDate) : CalendarSharedKey
 }
 
 const val AdjacentMonths = 50
