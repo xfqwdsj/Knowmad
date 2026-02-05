@@ -337,6 +337,7 @@ class AgentMainPage : AgentSubPage() {
                             getMessageCount = { messages.itemCount },
                             getMessageKey = messages.itemKey { it.key },
                             getMessageAt = { viewModel.getMessage(messages[it]) },
+                            mathJaxRendererState = appViewModel.mathJaxRendererState,
                             modifier = Modifier.fillMaxSize(),
                             onPrevious = viewModel::messageOnPrevious,
                             onNext = viewModel::messageOnNext,

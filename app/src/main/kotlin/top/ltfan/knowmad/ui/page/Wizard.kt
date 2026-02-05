@@ -762,6 +762,7 @@ class WizardFinishPage : WizardSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val appViewModel = LocalAppViewModel.current
         val viewModel = viewModel<WizardPageViewModel>()
 
         val coroutineScope = rememberCoroutineScope()
@@ -825,6 +826,7 @@ class WizardFinishPage : WizardSubPage() {
                         if (firstMessage.isNotBlank()) {
                             MarkdownView(
                                 viewModel.firstMessageState,
+                                mathJaxRendererState = appViewModel.mathJaxRendererState,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         } else {

@@ -261,6 +261,7 @@ fun ChatMessageListPreview() {
                     getMessageCount = { messages.size },
                     getMessageKey = { messages[it].key },
                     getMessageAt = { messages[it] },
+                    mathJaxRendererState = null,
                     onPrevious = {},
                     onNext = {},
                     onRegenerate = {},
@@ -285,6 +286,7 @@ fun StreamingAssistantMessagePreviewWithoutBackground() {
 
     AssistantMessage(
         state = states[current].state,
+        mathJaxRendererState = null,
         current = current + 1,
         total = states.size,
         onPrevious = { current = (current - 1).coerceAtLeast(0) },

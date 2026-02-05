@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,10 @@ import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
 import top.ltfan.knowmad.ui.component.CalendarState
+import top.ltfan.knowmad.ui.component.MathJaxRenderer
+import top.ltfan.knowmad.ui.component.MathJaxRendererState
+import top.ltfan.knowmad.ui.component.MathJaxRendererState.Initializing
+import top.ltfan.knowmad.ui.component.jsDelivrMathJaxLoadExternal
 import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
@@ -45,8 +50,23 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+    private val httpClient = HttpClient().also {
+        addCloseable(it)
+    }
+
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
+
+    var mathJaxRendererState by mutableStateOf<MathJaxRendererState>(Initializing)
+
+    init {
+        val renderer = MathJaxRenderer(application.assets)
+        addCloseable(renderer)
+        viewModelScope.launch {
+            renderer.initialize(jsDelivrMathJaxLoadExternal(httpClient))
+            mathJaxRendererState = MathJaxRendererState.Ready(renderer)
+        }
+    }
 
     val scheduleDao = application.appDatabase.scheduleDao()
 
