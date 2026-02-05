@@ -28,8 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.util.Logger
@@ -48,27 +46,13 @@ fun MathJaxPreview() {
 
     AppTheme {
         Surface {
-            val renderer = rememberMathJaxRenderer { path ->
-                logger.debug { "Fetching MathJax asset: $path" }
-                val baseUrl = "https://cdn.jsdelivr.net/npm"
-                val segments = path.split('/').ifEmpty { error("Invalid path: $path") }
-                val (name, file) = if (segments.first().startsWith("@")) {
-                    segments.take(2).joinToString("/") to segments.drop(2).joinToString("/")
-                } else {
-                    segments.first() to segments.drop(1).joinToString("/")
-                }
-                logger.debug { "Resolved to name=$name, file=$file" }
-                val version = assets.open("mathjax/version").bufferedReader()
-                    .use { it.readText().trim() }
-                logger.debug { "Using MathJax version: $version" }
-                client.get("$baseUrl/$name@$version/$file").bodyAsText().also {
-                    logger.debug { "Fetched ${it.take(30)}" }
-                }
-            }
+            val rendererState = rememberMathJaxRendererState(
+                loadExternal = remember(client) { jsDelivrMathJaxLoadExternal(client) },
+            )
 
-            if (renderer != null) {
+            if (rendererState is Ready) {
                 MathJax(
-                    renderer = renderer,
+                    renderer = rendererState.renderer,
                     tex = "\\int_{\\mathbb{R}^n} \\left( \\frac{1}{(2\\pi)^{n/2} |\\mathbf{\\Sigma}|^{1/2}} \n" +
                             "\\exp\\left[ -\\frac{1}{2} (\\mathbf{x} - \\mathbf{\\mu})^\\top \\mathbf{\\Sigma}^{-1} (\\mathbf{x} - \\mathbf{\\mu}) \\right] \\right) \n" +
                             "d\\mathbf{x} \n" +
