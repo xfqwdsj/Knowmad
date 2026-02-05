@@ -51,12 +51,16 @@ import com.dokar.quickjs.binding.JsObject
 import com.dokar.quickjs.binding.asyncFunction
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.converter.JsObjectConverter
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -68,6 +72,8 @@ import kotlin.reflect.typeOf
 
 val MathJaxDefaultFontSize = 6.5f.sp
 const val MathJaxDefaultRenderingScale = 1.6f
+
+typealias MathJaxLoadExternal = suspend MathJaxRenderer.(path: String) -> String
 
 @Composable
 fun MathJax(
@@ -330,4 +336,25 @@ fun rememberMathJaxRenderResult(
         }
         value = runCatching { renderer.renderToSvg(currentTex, currentDisplay) }
     }.value
+}
+
+fun jsDelivrMathJaxLoadExternal(
+    client: HttpClient = HttpClient(),
+    logger: Logger? = Logger("JsDelivrMathJaxLoadExternal"),
+): MathJaxLoadExternal = { path ->
+    logger?.debug { "Fetching MathJax asset: $path" }
+    val baseUrl = "https://cdn.jsdelivr.net/npm"
+    val segments = path.split('/').ifEmpty { error("Invalid path: $path") }
+    val (name, file) = if (segments.first().startsWith("@")) {
+        segments.take(2).joinToString("/") to segments.drop(2).joinToString("/")
+    } else {
+        segments.first() to segments.drop(1).joinToString("/")
+    }
+    logger?.debug { "Resolved to name=$name, file=$file" }
+    val version = assets.open("mathjax/version").bufferedReader()
+        .use { it.readText().trim() }
+    logger?.debug { "Using MathJax version: $version" }
+    withContext(Dispatchers.IO) { client.get("$baseUrl/$name@$version/$file") }
+        .bodyAsText()
+        .also { logger?.debug { "Fetched ${it.take(30)}" } }
 }
