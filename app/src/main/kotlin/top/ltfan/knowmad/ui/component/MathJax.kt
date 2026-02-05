@@ -75,6 +75,7 @@ fun MathJax(
     tex: String,
     modifier: Modifier = Modifier,
     display: Boolean = false,
+    contentDescription: String? = tex,
     renderingScale: Float = MathJaxDefaultRenderingScale,
     filterQuality: FilterQuality = High,
     colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
@@ -90,7 +91,7 @@ fun MathJax(
     renderResult?.onSuccess { result ->
         MathJax(
             rendererResult = result,
-            contentDescription = tex,
+            contentDescription = contentDescription,
             modifier = modifier,
             renderingScale = renderingScale,
             filterQuality = filterQuality,
@@ -105,8 +106,8 @@ fun MathJax(
 @Composable
 fun MathJax(
     rendererResult: MathJaxRenderResult?,
-    contentDescription: String?,
     modifier: Modifier = Modifier,
+    contentDescription: String? = rendererResult?.tex,
     renderingScale: Float = MathJaxDefaultRenderingScale,
     filterQuality: FilterQuality = High,
     colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
