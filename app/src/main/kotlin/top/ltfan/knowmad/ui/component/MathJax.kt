@@ -55,6 +55,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -161,6 +163,7 @@ fun MathJax(
 @Immutable
 class MathJaxRenderer(
     val assets: AssetManager,
+    val cacheCapacity: Int = 100,
 ) : AutoCloseable {
     private val files = listOf(
         "mathjax/startup.js",
@@ -198,6 +201,16 @@ class MathJaxRenderer(
         }
     }
 
+    private val mutex = Mutex()
+
+    private val cache = object : LinkedHashMap<Pair<String, JsonObject>, MathJaxRenderResult>(
+        cacheCapacity, 0.75f, true,
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<String, JsonObject>, MathJaxRenderResult>): Boolean {
+            return size > cacheCapacity
+        }
+    }
+
     suspend fun renderToSvg(tex: String, display: Boolean = false) = renderToSvg(
         tex = tex,
         options = JsonObject(
@@ -208,9 +221,18 @@ class MathJaxRenderer(
     )
 
     suspend fun renderToSvg(tex: String, options: JsonObject): MathJaxRenderResult =
-        quickJs.evaluate(
-            "await renderToSvg(${Json.encodeToString(tex)}, ${Json.encodeToString(options)})",
-        )
+        mutex.withLock {
+            val tex = tex.trim()
+            val key = tex to options
+            cache[key]?.let {
+                return it
+            }
+            val result = quickJs.evaluate<MathJaxRenderResult>(
+                "await renderToSvg(${Json.encodeToString(tex)}, ${Json.encodeToString(options)})",
+            )
+            cache[key] = result
+            return result
+        }
 
     override fun close() {
         quickJs.close()
