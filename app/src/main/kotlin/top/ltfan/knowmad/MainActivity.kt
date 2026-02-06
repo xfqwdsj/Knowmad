@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,13 +28,13 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.page.BackStackRoute
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
+import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
@@ -67,7 +67,7 @@ class MainActivity : KnowmadActivity() {
 
         setContent {
             AppTheme {
-                val dialogStrategy = remember { DialogSceneStrategy<Page>() }
+                val overlayContentStrategy = remember { OverlayContentSceneStrategy<Page>() }
 
                 SharedTransitionLayout {
                     CompositionLocalProvider(
@@ -90,7 +90,7 @@ class MainActivity : KnowmadActivity() {
                                     rememberSaveableStateHolderNavEntryDecorator(),
                                     rememberViewModelStoreNavEntryDecorator(),
                                 ),
-                                sceneStrategy = dialogStrategy,
+                                sceneStrategy = overlayContentStrategy,
                                 sharedTransitionScope = this,
                                 entryProvider = { it.navEntry() },
                             )
