@@ -21,7 +21,7 @@ package top.ltfan.knowmad.ui.component
 import android.content.res.AssetManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
@@ -87,7 +87,7 @@ fun MathJax(
     contentDescription: String? = tex,
     renderingScale: Float = MathJaxDefaultRenderingScale,
     filterQuality: FilterQuality = High,
-    colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
+    colorFilter: ColorFilter? = ColorFilter.tint(LocalContentColor.current),
     fontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     failure: @Composable ((Throwable) -> Unit)? = null,
 ) {
@@ -122,7 +122,7 @@ fun MathJax(
     contentDescription: String? = rendererResult?.tex,
     renderingScale: Float = MathJaxDefaultRenderingScale,
     filterQuality: FilterQuality = High,
-    colorFilter: ColorFilter? = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
+    colorFilter: ColorFilter? = ColorFilter.tint(LocalContentColor.current),
     ex: Int = rememberEx(TextStyle(fontSize = MathJaxDefaultFontSize)),
 ) {
     val context = LocalContext.current
