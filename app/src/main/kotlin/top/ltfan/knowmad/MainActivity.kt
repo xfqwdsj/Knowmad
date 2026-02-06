@@ -21,7 +21,6 @@ package top.ltfan.knowmad
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -36,7 +35,7 @@ import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
 import top.ltfan.knowmad.ui.theme.AppTheme
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
+import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
@@ -69,11 +68,10 @@ class MainActivity : KnowmadActivity() {
             AppTheme {
                 val overlayContentStrategy = remember { OverlayContentSceneStrategy<Page>() }
 
-                SharedTransitionLayout {
+                localSharedTransitionScope {
                     CompositionLocalProvider(
                         LocalAppViewModel provides viewModel,
                         LocalAgentViewModel provides agentViewModel,
-                        LocalSharedTransitionScope provides this,
                     ) {
                         if (viewModel.appReady) {
                             NavDisplay(

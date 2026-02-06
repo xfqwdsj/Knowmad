@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.theme
 
 import android.os.Build
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import top.ltfan.knowmad.ui.util.ProvideLocalSharedTransitionScope
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -133,11 +135,15 @@ fun AppTheme(
         else -> lightScheme
     }
 
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        shapes = AppShapes,
-        content = content,
-    )
+    SharedTransitionLayout {
+        ProvideLocalSharedTransitionScope {
+            MaterialExpressiveTheme(
+                colorScheme = colorScheme,
+                shapes = AppShapes,
+                content = content,
+            )
+        }
+    }
 }
 
 @Composable
