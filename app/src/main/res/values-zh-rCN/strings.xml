@@ -117,5 +117,13 @@
     <string name="crypto_use_plaintext_label">使用明文存储</string>
     <string name="crypto_use_plaintext_warning">您正在对敏感数据使用明文存储，这可能会带来安全风险。建议启用加密</string>
     <string name="schedule_semester_label_default">默认学期</string>
+    <string name="schedule_event_location_label">地点</string>
+    <string name="schedule_event_location_label_none">无地点</string>
+    <string name="schedule_event_notes_label">备注</string>
+    <string name="schedule_event_instructor_label">讲师</string>
+    <string name="schedule_event_course_label">课程</string>
+    <string name="schedule_event_semester_label">学期</string>
+    <string name="schedule_event_priority_label">优先级</string>
+    <string name="schedule_event_reminders_label">提醒</string>
     <string name="schedule_event_dot_label">存在事件</string>
 </resources>

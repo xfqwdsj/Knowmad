@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Knowmad - Knowledge nomad
   ~ Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
   ~
@@ -118,5 +118,13 @@
     <string name="crypto_use_plaintext_label">Use Plaintext Storage</string>
     <string name="crypto_use_plaintext_warning">You are using plaintext storage for sensitive data. This may pose security risks. It is recommended to enable encryption</string>
     <string name="schedule_semester_label_default">Default Semester</string>
+    <string name="schedule_event_location_label">Location</string>
+    <string name="schedule_event_location_label_none">No Location</string>
+    <string name="schedule_event_notes_label">Notes</string>
+    <string name="schedule_event_instructor_label">Instructor</string>
+    <string name="schedule_event_course_label">Course</string>
+    <string name="schedule_event_semester_label">Semester</string>
+    <string name="schedule_event_priority_label">Priority</string>
+    <string name="schedule_event_reminders_label">Reminders</string>
     <string name="schedule_event_dot_label">Has Events</string>
 </resources>
