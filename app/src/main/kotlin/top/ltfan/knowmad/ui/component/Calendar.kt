@@ -25,7 +25,6 @@ import android.content.IntentFilter
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.animateDp
@@ -124,7 +123,6 @@ import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
-import top.ltfan.knowmad.ui.util.ProvideLocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.autoScale
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -160,95 +158,91 @@ fun Calendar(
 
     val transition = rememberTransition(state.transitionState)
 
-    SharedTransitionLayout {
-        ProvideLocalSharedTransitionScope {
-            transition.AnimatedContent(
-                modifier = modifier,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-            ) { mode ->
-                when (mode) {
-                    Month -> HorizontalCalendar(
-                        modifier = Modifier.fillMaxSize(),
-                        state = state.monthCalendarState,
-                        contentHeightMode = Fill,
-                        dayContent = { day ->
-                            val selected = day.date == state.selectedDate
+    transition.AnimatedContent(
+        modifier = modifier,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+    ) { mode ->
+        when (mode) {
+            Month -> HorizontalCalendar(
+                modifier = Modifier.fillMaxSize(),
+                state = state.monthCalendarState,
+                contentHeightMode = Fill,
+                dayContent = { day ->
+                    val selected = day.date == state.selectedDate
 
-                            val events = remember(day) {
-                                if (day.position != MonthDate) return@remember null
-                                snapshotFlow { state.timeZone }.flatMapLatest {
-                                    val startOfDay = day.date.atStartOfDayIn(it)
-                                    val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                                    getEvents(startOfDay, endOfDay)
+                    val events = remember(day) {
+                        if (day.position != MonthDate) return@remember null
+                        snapshotFlow { state.timeZone }.flatMapLatest {
+                            val startOfDay = day.date.atStartOfDayIn(it)
+                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                            getEvents(startOfDay, endOfDay)
+                        }
+                    }?.collectAsState(initial = emptyList())
+
+                    Day(
+                        date = day.date,
+                        selected = selected && day.position == MonthDate,
+                        onClick = {
+                            if (state.selectedDate != day.date) {
+                                state.selectedDate = day.date
+                            } else {
+                                coroutineScope.launch {
+                                    state.animateScrollToDate(day.date)
                                 }
-                            }?.collectAsState(initial = emptyList())
-
-                            Day(
-                                date = day.date,
-                                selected = selected && day.position == MonthDate,
-                                onClick = {
-                                    if (state.selectedDate != day.date) {
-                                        state.selectedDate = day.date
-                                    } else {
-                                        coroutineScope.launch {
-                                            state.animateScrollToDate(day.date)
-                                        }
-                                    }
-                                },
-                                events = events?.value,
-                                outOfMonth = day.position != MonthDate,
-                                border = if (day.date == today) BorderStroke(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                ) else null,
-                            )
+                            }
                         },
-                        monthHeader = {
-                            WeekHeader(
-                                modifier = headerModifier,
-                                daysOfWeek = state.daysOfWeek,
-                                locale = locale,
-                                textStyle = headerTextStyle,
-                            )
-                        },
+                        events = events?.value,
+                        outOfMonth = day.position != MonthDate,
+                        border = if (day.date == today) BorderStroke(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) else null,
                     )
-
-                    Week -> WeekCalendar(
-                        modifier = Modifier.fillMaxSize(),
-                        state = state.weekCalendarState,
-                        dayContent = { day ->
-                            val selected = day.date == state.selectedDate
-
-                            val events by remember(day) {
-                                snapshotFlow { state.timeZone }.flatMapLatest {
-                                    val startOfDay = day.date.atStartOfDayIn(it)
-                                    val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                                    getEvents(startOfDay, endOfDay)
-                                }
-                            }.collectAsState(initial = emptyList())
-
-                            Day(
-                                date = day.date,
-                                selected = selected,
-                                onClick = { state.selectedDate = day.date },
-                                hasEvents = events.isNotEmpty(),
-                                border = if (day.date == today) BorderStroke(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                ) else null,
-                            )
-                        },
-                        weekHeader = {
-                            WeekHeader(
-                                modifier = headerModifier,
-                                daysOfWeek = state.daysOfWeek,
-                                locale = locale,
-                                textStyle = headerTextStyle,
-                            )
-                        },
+                },
+                monthHeader = {
+                    WeekHeader(
+                        modifier = headerModifier,
+                        daysOfWeek = state.daysOfWeek,
+                        locale = locale,
+                        textStyle = headerTextStyle,
                     )
-                }
-            }
+                },
+            )
+
+            Week -> WeekCalendar(
+                modifier = Modifier.fillMaxSize(),
+                state = state.weekCalendarState,
+                dayContent = { day ->
+                    val selected = day.date == state.selectedDate
+
+                    val events by remember(day) {
+                        snapshotFlow { state.timeZone }.flatMapLatest {
+                            val startOfDay = day.date.atStartOfDayIn(it)
+                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
+                            getEvents(startOfDay, endOfDay)
+                        }
+                    }.collectAsState(initial = emptyList())
+
+                    Day(
+                        date = day.date,
+                        selected = selected,
+                        onClick = { state.selectedDate = day.date },
+                        hasEvents = events.isNotEmpty(),
+                        border = if (day.date == today) BorderStroke(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) else null,
+                    )
+                },
+                weekHeader = {
+                    WeekHeader(
+                        modifier = headerModifier,
+                        daysOfWeek = state.daysOfWeek,
+                        locale = locale,
+                        textStyle = headerTextStyle,
+                    )
+                },
+            )
         }
     }
 
