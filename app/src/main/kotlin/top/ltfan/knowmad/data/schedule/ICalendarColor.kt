@@ -18,11 +18,12 @@
 
 package top.ltfan.knowmad.data.schedule
 
-import biweekly.property.Color
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.uuid.Uuid
+import androidx.compose.ui.graphics.Color as ComposeColor
+import biweekly.property.Color as BiweeklyColor
 
 @Serializable
 enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: UByte) {
@@ -189,10 +190,17 @@ enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: 
 
     }
 
-    val property = Color(value)
+    val argb by lazy {
+        (0xFF shl 24) or
+                (r.toInt() shl 16) or
+                (g.toInt() shl 8) or
+                b.toInt()
+    }
+    val compose by lazy { ComposeColor(argb) }
+    val property by lazy { BiweeklyColor(value) }
 }
 
-fun Color?.toICalendarColor(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
+fun BiweeklyColor?.toICalendarColor(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
     this?.value?.let { ICalendarColor.fromValue(it) }?.let { return it }
     for (id in ids) {
         id?.let { return ICalendarColor.fromId(it) }
