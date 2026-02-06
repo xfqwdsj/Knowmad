@@ -530,11 +530,7 @@ private fun Dot(
 fun Event(
     event: Event,
     modifier: Modifier = Modifier,
-    color: Color = Color(
-        red = event.color.r.toInt(),
-        green = event.color.g.toInt(),
-        blue = event.color.b.toInt(),
-    ),
+    color: Color = event.color.compose,
     shape: Shape = MaterialTheme.shapes.small,
 ) {
     Surface(
