@@ -267,8 +267,7 @@ fun MarkdownParagraph(
                     val result = renderResult?.getOrNull()
                     val display = result?.display == true
 
-                    val ex =
-                        rememberEx(TextStyle(fontSize = if (display) mathFontSize.display else mathFontSize.nonDisplay))
+                    val ex = rememberEx(TextStyle(fontSize = mathFontSize.get(display)))
 
                     val placeholder = remember(result, ex, density) {
                         result?.let { result ->

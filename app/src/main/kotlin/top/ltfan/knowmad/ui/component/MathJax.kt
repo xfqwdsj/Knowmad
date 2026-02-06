@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -97,8 +98,7 @@ fun MathJax(
         display = display,
     )
 
-    val ex =
-        rememberEx(TextStyle(fontSize = if (display) fontSize.display else fontSize.nonDisplay))
+    val ex = rememberEx(TextStyle(fontSize = fontSize.get(display)))
 
     renderResult?.onSuccess { result ->
         MathJax(
@@ -324,7 +324,10 @@ val MathJaxRenderResult.display
 data class MathJaxFontSize(
     val nonDisplay: TextUnit = MathJaxDefaultFontSize,
     val display: TextUnit = MathJaxDefaultFontSize * 1.2f,
-)
+) {
+    @Stable
+    fun get(display: Boolean) = if (display) this.display else this.nonDisplay
+}
 
 @Composable
 fun rememberMathJaxRendererState(
