@@ -24,17 +24,17 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @SerialName("ICalendarPriority")
-enum class ICalendarPriority(val value: UByte, val type: PriorityType) {
-    None(0u, PriorityType.None),
-    P1(1u, High),
-    P2(2u, High),
-    P3(3u, High),
-    P4(4u, High),
-    P5(5u, Medium),
-    P6(6u, Low),
-    P7(7u, Low),
-    P8(8u, Low),
-    P9(9u, Low);
+enum class ICalendarPriority(val value: UByte) {
+    None(0u),
+    P1(1u),
+    P2(2u),
+    P3(3u),
+    P4(4u),
+    P5(5u),
+    P6(6u),
+    P7(7u),
+    P8(8u),
+    P9(9u);
 
     companion object {
         private val map = entries.associateBy(ICalendarPriority::value)
@@ -48,13 +48,31 @@ enum class ICalendarPriority(val value: UByte, val type: PriorityType) {
         }
     }
 
+    val type by lazy {
+        for (priorityType in PriorityType.entries) {
+            if (value <= priorityType.maxPriorityValue) {
+                return@lazy priorityType
+            }
+        }
+        PriorityType.None
+    }
+    val reversedValueInType by lazy {
+        if (type == PriorityType.None) {
+            0u
+        } else {
+            type.maxPriorityValue - value + 1u
+        }
+    }
     val comparableValue = value.takeIf { it in 1u..9u } ?: 10u
     val property = Priority(value.toInt())
 }
 
 @Serializable
-enum class PriorityType {
-    High, Medium, Low, None;
+enum class PriorityType(val maxPriorityValue: UByte) {
+    None(0u),
+    High(4u),
+    Medium(5u),
+    Low(9u);
 }
 
 fun Priority?.toICalendarPriority(): ICalendarPriority {
