@@ -346,7 +346,7 @@ fun Day(
             }
         }
 
-        events?.let { Events(events, date) } ?: hasEvents?.let { hasEvents ->
+        events?.let { Events(date, events) } ?: hasEvents?.let { hasEvents ->
             AnimatedVisibility(
                 visible = hasEvents,
                 enter = expandIn(),
@@ -400,8 +400,8 @@ private fun DaySecondaryText(
 
 @Composable
 fun Events(
-    events: List<Event>,
     date: LocalDate,
+    events: List<Event>,
 ) {
     localSharedTransitionScope {
         Column(
