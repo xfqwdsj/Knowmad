@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -302,26 +303,49 @@ fun EventInformationScreen(
     event: Event,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    eventModifier: Modifier = Modifier,
+    listModifier: @Composable (padding: PaddingValues) -> Modifier = {
+        Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(it)
+    },
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        DetailedEvent(
-            event = event,
-            onClick = { onBack() },
-            selected = true,
-            locale = locale,
-            timeZone = timeZone,
-            animatedVisibilityScope = animatedVisibilityScope,
-        )
-        DetailedEventInformation(
-            event = event,
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-        )
+    SubcomposeLayout(modifier) { constraints ->
+        val eventPlaceable = subcompose("event") {
+            DetailedEvent(
+                event = event,
+                onClick = { onBack() },
+                modifier = eventModifier,
+                selected = true,
+                locale = locale,
+                timeZone = timeZone,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }.first().measure(constraints)
+
+        val eventWidth = eventPlaceable.width
+        val eventHeight = eventPlaceable.height + 16.dp.roundToPx()
+
+        val listPlaceable = subcompose("list") {
+            DetailedEventInformation(
+                event = event,
+                modifier = listModifier(PaddingValues(top = eventHeight.toDp())),
+            )
+        }.first().measure(constraints)
+
+        val listWidth = listPlaceable.width
+        val listHeight = listPlaceable.height
+
+        val width = maxOf(eventWidth, listWidth)
+        val height = maxOf(eventHeight, listHeight)
+
+        layout(width, height) {
+            listPlaceable.placeRelative(0, 0)
+            eventPlaceable.placeRelative(0, 0)
+        }
     }
 }
 

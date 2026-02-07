@@ -26,9 +26,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
@@ -44,6 +47,7 @@ import top.ltfan.knowmad.ui.component.Dialog
 import top.ltfan.knowmad.ui.component.DialogMargin
 import top.ltfan.knowmad.ui.component.EventInformationScreen
 import top.ltfan.knowmad.ui.component.EventsDialogContent
+import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.EventsDialogPageViewModel
@@ -157,12 +161,29 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
     override fun Content() {
         val viewModel = viewModel<EventsDialogPageViewModel>()
 
+        val layoutDirection = LocalLayoutDirection.current
+
+        val contentPadding = contentPadding + PaddingValues(8.dp)
+
         EventInformationScreen(
             event = selectedEvent,
             onBack = viewModel::onBack,
-            modifier = Modifier
-                .padding(contentPadding)
-                .padding(8.dp),
+            eventModifier = Modifier.padding(
+                contentPadding.copy(
+                    layoutDirection,
+                    bottom = 0.dp,
+                ),
+            ),
+            listModifier = {
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        it + contentPadding.copy(
+                            layoutDirection,
+                            top = 0.dp,
+                        ),
+                    )
+            },
             locale = viewModel.locale,
             timeZone = viewModel.timeZone,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
