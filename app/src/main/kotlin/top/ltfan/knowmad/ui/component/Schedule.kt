@@ -59,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -137,7 +139,17 @@ fun EventsDialogContent(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
-        modifier = modifier.sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth),
+        modifier = modifier
+            .sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent().changes.asSequence()
+                            .filter { it.changedToUp() }
+                            .forEach { it.consume() }
+                    }
+                }
+            },
         shape = shape,
         tonalElevation = 4.dp,
         shadowElevation = 4.dp,
