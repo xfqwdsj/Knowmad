@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.component
 
+import android.content.res.Resources
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
@@ -46,12 +47,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,6 +80,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.scene.Scene
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
@@ -92,9 +94,14 @@ import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.util.contractColorFor
+import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 @Composable
@@ -235,7 +242,10 @@ fun DetailedEventList(
     timeZone: TimeZone = rememberSystemTimeZone(),
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    val resources = LocalResources.current
+
     var highlighted by remember { mutableStateOf<Event?>(null) }
+    var indicator by remember { mutableStateOf<IndicatorData?>(null) }
 
     LazyColumn(
         modifier = modifier,
@@ -243,10 +253,15 @@ fun DetailedEventList(
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
     ) {
-        items(events, key = { it.id }) {
+        items(
+            count = events.size,
+            key = { events[it].id },
+        ) { index ->
+            val event = events[index]
+
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 AnimatedVisibility(
-                    visible = it == highlighted,
+                    visible = indicator?.index == index && indicator?.isIn == false,
                     enter = fadeIn() + expandVertically(
                         expandFrom = Alignment.Top,
                         clip = false,
@@ -256,31 +271,66 @@ fun DetailedEventList(
                         clip = false,
                     ),
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.asterisk_24px),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.secondary,
-                        )
-                        Text(
-                            text = stringResource(R.string.label_just_clicked),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
+                    indicator?.let { IndicatorLabel(it.text) }
+                }
+                AnimatedVisibility(
+                    visible = event == highlighted,
+                    enter = fadeIn() + expandVertically(
+                        expandFrom = Alignment.Top,
+                        clip = false,
+                    ),
+                    exit = fadeOut() + shrinkVertically(
+                        shrinkTowards = Alignment.Top,
+                        clip = false,
+                    ),
+                ) {
+                    JustClickedLabel()
                 }
                 DetailedEvent(
-                    event = it,
-                    onClick = { onEventSelected(it) },
-                    selected = it == selectedEvent,
+                    event = event,
+                    onClick = { onEventSelected(event) },
+                    selected = event == selectedEvent,
                     locale = locale,
                     timeZone = timeZone,
                     animatedVisibilityScope = animatedVisibilityScope,
-                )
+                ) {
+                    AnimatedVisibility(
+                        visible = indicator?.index == index && indicator?.isIn == true,
+                        enter = fadeIn() + expandVertically(
+                            expandFrom = Alignment.Top,
+                            clip = false,
+                        ),
+                        exit = fadeOut() + shrinkVertically(
+                            shrinkTowards = Alignment.Top,
+                            clip = false,
+                        ),
+                    ) {
+                        indicator?.let {
+                            IndicatorLabel(
+                                it.text,
+                                tint = LocalContentColor.current,
+                            )
+                        }
+                    }
+                }
+                AnimatedVisibility(
+                    visible = indicator?.index == index + 1 && index == events.lastIndex,
+                    enter = fadeIn() + expandVertically(
+                        expandFrom = Alignment.Top,
+                        clip = false,
+                    ),
+                    exit = fadeOut() + shrinkVertically(
+                        shrinkTowards = Alignment.Top,
+                        clip = false,
+                    ),
+                ) {
+                    indicator?.let {
+                        IndicatorLabel(
+                            it.text,
+                            modifier = Modifier.padding(start = 16.dp),
+                        )
+                    }
+                }
             }
         }
     }
@@ -294,6 +344,13 @@ fun DetailedEventList(
                     highlighted = event
                 }
             }
+        }
+    }
+
+    LaunchedEffect(events, resources, locale) {
+        while (true) {
+            indicator = calculateIndicator(events, resources, locale = locale)
+            delay(1.seconds)
         }
     }
 }
@@ -362,6 +419,7 @@ fun DetailedEvent(
     color: Color = event.color.compose,
     interactionSource: MutableInteractionSource? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    additionalContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val contentColor =
         MaterialTheme.colorScheme.contentColorFor(color).takeOrElse { contractColorFor(color) }
@@ -452,6 +510,7 @@ fun DetailedEvent(
                             )
                         }
                     }
+                    additionalContent?.let { it() }
                 }
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -694,6 +753,125 @@ fun ColoredLabel(
             color = color,
             contentColor = contentColor,
             content = content,
+        )
+    }
+}
+
+@Composable
+fun JustClickedLabel() {
+    LabelInList(
+        icon = R.drawable.asterisk_24px,
+        label = stringResource(R.string.label_just_clicked),
+    )
+}
+
+@Composable
+context(animatedVisibilityScope: AnimatedVisibilityScope)
+private fun IndicatorLabel(
+    label: String,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.secondary,
+) {
+    localSharedTransitionScope {
+        LabelInList(
+            icon = R.drawable.info_24px,
+            label = label,
+            modifier = modifier
+                .sharedElement(
+                    rememberSharedContentState("indicator"),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+            tint = tint,
+        )
+    }
+}
+
+private fun calculateIndicator(
+    events: List<Event>,
+    resources: Resources,
+    now: Instant = Clock.System.now(),
+    locale: Locale = Locale.getDefault(),
+): IndicatorData {
+    val candidateIndex = events.indexOfFirst { it.endTime > now }
+
+    if (candidateIndex == -1) return IndicatorData(
+        index = events.size,
+        isIn = false,
+        text = resources.getString(R.string.schedule_event_list_indicator_label_day_ended),
+    )
+
+    val event = events[candidateIndex]
+
+    val isIn = now >= event.startTime
+    val offset = if (isIn) event.endTime - now else event.startTime - now
+    val isNear = offset <= 15.minutes
+
+    if (!isIn) return when {
+        candidateIndex == 0 && !isNear -> IndicatorData(
+            index = candidateIndex,
+            isIn = false,
+            text = resources.getString(R.string.schedule_event_list_indicator_label_new_day),
+        )
+
+        !isNear -> IndicatorData(
+            index = candidateIndex,
+            isIn = false,
+            text = resources.getString(R.string.schedule_event_list_indicator_label_not_started),
+        )
+
+        else -> IndicatorData(
+            index = candidateIndex,
+            isIn = false,
+            text = resources.getString(
+                R.string.schedule_event_list_indicator_label_close_to_start,
+                offset.format(locale),
+            ),
+        )
+    }
+
+    val templateId = if (isNear) {
+        R.string.schedule_event_list_indicator_label_close_to_end
+    } else {
+        R.string.schedule_event_list_indicator_label_started
+    }
+
+    return IndicatorData(
+        index = candidateIndex,
+        isIn = true,
+        text = resources.getString(templateId, offset.format(locale)),
+    )
+}
+
+@Immutable
+private data class IndicatorData(
+    val index: Int,
+    val isIn: Boolean,
+    val text: String,
+)
+
+@Composable
+private fun LabelInList(
+    @DrawableRes icon: Int,
+    label: String,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    tint: Color = MaterialTheme.colorScheme.secondary,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painterResource(icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(16.dp),
+            tint = tint,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = tint,
         )
     }
 }

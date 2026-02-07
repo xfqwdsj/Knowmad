@@ -139,4 +139,10 @@
     <string name="schedule_event_reminder_relative_label_after_end">结束后%s</string>
     <string name="schedule_event_color_label">颜色</string>
     <string name="schedule_event_dot_label">存在事件</string>
+    <string name="schedule_event_list_indicator_label_new_day">新的一天</string>
+    <string name="schedule_event_list_indicator_label_not_started">进行到这里了</string>
+    <string name="schedule_event_list_indicator_label_close_to_start">进行到这里了，距离开始还有%s</string>
+    <string name="schedule_event_list_indicator_label_started">进行中，已开始%s</string>
+    <string name="schedule_event_list_indicator_label_close_to_end">进行中，距结束还有%s</string>
+    <string name="schedule_event_list_indicator_label_day_ended">这一天的所有事件都已结束</string>
 </resources>

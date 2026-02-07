@@ -19,9 +19,6 @@
 package top.ltfan.knowmad.data.schedule
 
 import android.content.res.Resources
-import android.icu.text.MeasureFormat
-import android.icu.util.Measure
-import android.icu.util.MeasureUnit
 import biweekly.property.Trigger
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
@@ -29,6 +26,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.ui.util.format
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
@@ -75,20 +73,7 @@ sealed interface ICalendarTrigger {
                 else -> error("Unreachable")
             }
 
-            val days = absOffset.inWholeDays
-            val hours = absOffset.inWholeHours % 24
-            val minutes = absOffset.inWholeMinutes % 60
-            val seconds = absOffset.inWholeSeconds % 60
-
-            val measures = buildList {
-                if (days > 0) add(Measure(days, MeasureUnit.DAY))
-                if (hours > 0) add(Measure(hours, MeasureUnit.HOUR))
-                if (minutes > 0) add(Measure(minutes, MeasureUnit.MINUTE))
-                if (seconds > 0) add(Measure(seconds, MeasureUnit.SECOND))
-            }
-
-            val format = MeasureFormat.getInstance(locale, SHORT)
-            return resources.getString(templateId, format.formatMeasures(*measures.toTypedArray()))
+            return resources.getString(templateId, absOffset.format(locale))
         }
     }
 

@@ -140,4 +140,10 @@
     <string name="schedule_event_reminder_relative_label_after_end">%s after end</string>
     <string name="schedule_event_color_label">Color</string>
     <string name="schedule_event_dot_label">Has Events</string>
+    <string name="schedule_event_list_indicator_label_new_day">New Day</string>
+    <string name="schedule_event_list_indicator_label_not_started">Up to here</string>
+    <string name="schedule_event_list_indicator_label_close_to_start">Up to here, next starts in %s</string>
+    <string name="schedule_event_list_indicator_label_started">In Progress, started %s ago</string>
+    <string name="schedule_event_list_indicator_label_close_to_end">In Progress, ending in %s</string>
+    <string name="schedule_event_list_indicator_label_day_ended">All events for this day have ended</string>
 </resources>
