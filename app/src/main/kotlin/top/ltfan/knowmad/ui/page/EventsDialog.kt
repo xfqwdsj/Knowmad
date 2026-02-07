@@ -23,6 +23,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ import kotlinx.serialization.Transient
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.component.DetailedEventList
 import top.ltfan.knowmad.ui.component.Dialog
+import top.ltfan.knowmad.ui.component.DialogMargin
 import top.ltfan.knowmad.ui.component.EventInformationScreen
 import top.ltfan.knowmad.ui.component.EventsDialogContent
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -76,7 +78,9 @@ class EventsDialogPage(
         Dialog(
             onDismissRequest = { appViewModel.closeEventsDialog(this) },
         ) {
-            DialogContent(contentPadding)
+            Box(Modifier.padding(DialogMargin)) {
+                DialogContent(contentPadding)
+            }
         }
     }
 

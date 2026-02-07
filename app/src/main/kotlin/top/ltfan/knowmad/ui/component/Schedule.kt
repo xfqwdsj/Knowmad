@@ -28,13 +28,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -138,29 +136,22 @@ fun EventsDialogContent(
     locale: Locale = LocalConfiguration.current.locales[0],
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .padding(DialogMargin)
-            .fillMaxSize(),
-        contentAlignment = Alignment.Center,
+    Surface(
+        modifier = modifier.sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth),
+        shape = shape,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
     ) {
-        Surface(
-            modifier = Modifier.sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth),
-            shape = shape,
-            tonalElevation = 4.dp,
-            shadowElevation = 4.dp,
-        ) {
-            Column(Modifier.padding(contentPadding)) {
-                Spacer(Modifier.height(24.dp))
-                EventsDateHeader(
-                    date = date,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    locale = locale,
-                )
-                Spacer(Modifier.height(8.dp))
-                content()
-            }
+        Column(Modifier.padding(contentPadding)) {
+            Spacer(Modifier.height(24.dp))
+            EventsDateHeader(
+                date = date,
+                modifier = Modifier.padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                locale = locale,
+            )
+            Spacer(Modifier.height(8.dp))
+            content()
         }
     }
 }
