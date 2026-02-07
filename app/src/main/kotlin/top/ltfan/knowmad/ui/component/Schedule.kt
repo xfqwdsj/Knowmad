@@ -439,9 +439,10 @@ fun DetailedEvent(
         Surface(
             onClick = onClick,
             modifier = modifier.fillMaxWidth().run {
-                if (animatedVisibilityScope != null) sharedElement(
+                if (animatedVisibilityScope != null) sharedBounds(
                     rememberSharedContentState(ScheduleSharedKey.Event(event.id)),
                     animatedVisibilityScope = animatedVisibilityScope,
+                    resizeMode = RemeasureToBounds,
                 ) else this
             },
             shape = shape,
