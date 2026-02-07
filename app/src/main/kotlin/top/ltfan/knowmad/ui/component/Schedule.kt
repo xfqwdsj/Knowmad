@@ -245,7 +245,15 @@ fun DetailedEventList(
     val resources = LocalResources.current
 
     var highlighted by remember { mutableStateOf<Event?>(null) }
-    var indicator by remember { mutableStateOf<IndicatorData?>(null) }
+    var indicator by remember {
+        mutableStateOf(
+            calculateIndicator(
+                events,
+                resources,
+                locale = locale,
+            ),
+        )
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -261,7 +269,7 @@ fun DetailedEventList(
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 AnimatedVisibility(
-                    visible = indicator?.index == index && indicator?.isIn == false,
+                    visible = indicator.index == index && !indicator.isIn,
                     enter = fadeIn() + expandVertically(
                         expandFrom = Alignment.Top,
                         clip = false,
@@ -271,7 +279,7 @@ fun DetailedEventList(
                         clip = false,
                     ),
                 ) {
-                    indicator?.let { IndicatorLabel(it.text) }
+                    IndicatorLabel(indicator.text)
                 }
                 AnimatedVisibility(
                     visible = event == highlighted,
@@ -295,7 +303,7 @@ fun DetailedEventList(
                     animatedVisibilityScope = animatedVisibilityScope,
                 ) {
                     AnimatedVisibility(
-                        visible = indicator?.index == index && indicator?.isIn == true,
+                        visible = indicator.index == index && indicator.isIn,
                         enter = fadeIn() + expandVertically(
                             expandFrom = Alignment.Top,
                             clip = false,
@@ -305,16 +313,14 @@ fun DetailedEventList(
                             clip = false,
                         ),
                     ) {
-                        indicator?.let {
-                            IndicatorLabel(
-                                it.text,
-                                tint = LocalContentColor.current,
-                            )
-                        }
+                        IndicatorLabel(
+                            indicator.text,
+                            tint = LocalContentColor.current,
+                        )
                     }
                 }
                 AnimatedVisibility(
-                    visible = indicator?.index == index + 1 && index == events.lastIndex,
+                    visible = indicator.index == index + 1 && index == events.lastIndex,
                     enter = fadeIn() + expandVertically(
                         expandFrom = Alignment.Top,
                         clip = false,
@@ -324,12 +330,10 @@ fun DetailedEventList(
                         clip = false,
                     ),
                 ) {
-                    indicator?.let {
-                        IndicatorLabel(
-                            it.text,
-                            modifier = Modifier.padding(start = 16.dp),
-                        )
-                    }
+                    IndicatorLabel(
+                        indicator.text,
+                        modifier = Modifier.padding(start = 16.dp),
+                    )
                 }
             }
         }
@@ -349,8 +353,8 @@ fun DetailedEventList(
 
     LaunchedEffect(events, resources, locale) {
         while (true) {
-            indicator = calculateIndicator(events, resources, locale = locale)
             delay(1.seconds)
+            indicator = calculateIndicator(events, resources, locale = locale)
         }
     }
 }
