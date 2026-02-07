@@ -60,6 +60,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -786,6 +787,7 @@ private fun IndicatorLabel(
     }
 }
 
+@Stable
 private fun calculateIndicator(
     events: List<Event>,
     resources: Resources,
