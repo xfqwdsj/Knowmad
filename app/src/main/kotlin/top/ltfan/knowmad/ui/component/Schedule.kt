@@ -245,7 +245,7 @@ fun DetailedEventList(
 ) {
     val resources = LocalResources.current
 
-    var highlighted by remember { mutableStateOf<Event?>(null) }
+    var highlighted by remember { mutableStateOf(highlight?.tryReceive()?.getOrNull()) }
     var indicator by remember {
         mutableStateOf(
             calculateIndicator(
