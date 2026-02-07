@@ -411,10 +411,10 @@ fun DetailedEvent(
                                 event.startTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
                             formatter.format(localDateTime)
                         },
-                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(
+                        style = MaterialTheme.typography.bodyLargeEmphasized.copy(
                             fontFeatureSettings = "tnum",
                         ),
-                        fontWeight = Bold,
+                        fontWeight = ExtraBold,
                     )
                     Text(
                         text = remember(event.endTime, formatter, timeZone) {
