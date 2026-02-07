@@ -38,6 +38,7 @@ fun Duration.format(
         if (hours > 0) add(Measure(hours, MeasureUnit.HOUR))
         if (minutes > 0) add(Measure(minutes, MeasureUnit.MINUTE))
         if (seconds > 0) add(Measure(seconds, MeasureUnit.SECOND))
+        if (isEmpty()) add(Measure(0, MeasureUnit.SECOND))
     }
 
     val format = MeasureFormat.getInstance(locale, width)
