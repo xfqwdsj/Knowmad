@@ -30,7 +30,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.ui.page.BackStackRoute
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
@@ -76,14 +75,7 @@ class MainActivity : KnowmadActivity() {
                         if (viewModel.appReady) {
                             NavDisplay(
                                 backStack = viewModel.backStack.expanded,
-                                onBack = {
-                                    val last = viewModel.backStack.lastOrNull() ?: return@NavDisplay
-                                    if (last is BackStackRoute) {
-                                        last.onBack()
-                                    } else {
-                                        viewModel.backStack.removeLastOrNull()
-                                    }
-                                },
+                                onBack = viewModel::onBack,
                                 entryDecorators = listOf(
                                     rememberSaveableStateHolderNavEntryDecorator(),
                                     rememberViewModelStoreNavEntryDecorator(),

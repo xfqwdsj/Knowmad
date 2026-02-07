@@ -45,6 +45,7 @@ import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
+import top.ltfan.knowmad.ui.page.back
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -176,6 +177,10 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         }
 
         // TODO: UI feedback for that
+    }
+
+    fun onBack() {
+        backStack.back()
     }
 }
 

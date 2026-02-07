@@ -75,6 +75,15 @@ abstract class BackStackRoute(
     }
 }
 
+fun NavBackStack<Route>.back() {
+    val last = lastOrNull() ?: return
+    if (last is BackStackRoute) {
+        last.onBack()
+    } else {
+        removeLastOrNull()
+    }
+}
+
 val NavBackStack<Route>.expanded: List<Page>
     get() = buildList {
         for (entry in this@expanded) {
