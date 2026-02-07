@@ -42,10 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,87 +69,157 @@ import kotlin.uuid.Uuid
 fun EventsDialogContent(
     date: LocalDate,
     events: List<Event>,
+    selectedEvent: Event?,
+    onEventSelected: (Event?) -> Unit,
     modifier: Modifier = Modifier,
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
     shape: Shape = MaterialTheme.shapes.large,
 ) {
-    var selectedEvent by remember { mutableStateOf<Event?>(null) }
-
-    Surface(
+    EventsDialogContent(
         modifier = modifier,
         shape = shape,
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
     ) {
-        val dateFormatter = remember(locale) {
-            DateTimeFormatter
-                .ofLocalizedDate(SHORT)
-                .withLocale(locale)
-        }
-
-        val weekDayFormatter = remember(locale) {
-            DateTimeFormatter
-                .ofPattern("E")
-                .withLocale(locale)
-        }
-
         AnimatedContent(
             targetState = selectedEvent,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
         ) { event ->
             Column {
                 Spacer(Modifier.height(24.dp))
-                Row(
+                EventsDateHeader(
+                    date = date,
                     modifier = Modifier.padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = remember(date, dateFormatter) {
-                            dateFormatter.format(date.toJavaLocalDate())
-                        },
-                        modifier = Modifier.alignByBaseline(),
-                        style = MaterialTheme.typography.headlineMediumEmphasized,
-                    )
-                    Text(
-                        text = remember(date, weekDayFormatter) {
-                            weekDayFormatter.format(date.toJavaLocalDate())
-                        },
-                        modifier = Modifier.alignByBaseline(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                    )
-                }
+                    locale = locale,
+                )
                 Spacer(Modifier.height(8.dp))
                 if (event == null) {
-                    LazyColumn(
+                    DetailedEventList(
+                        events = events,
+                        onEventSelected = onEventSelected,
                         contentPadding = PaddingValues(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(events, key = { it.id }) {
-                            DetailedEvent(
-                                event = it,
-                                onClick = { selectedEvent = it },
-                                locale = locale,
-                                timeZone = timeZone,
-                                animatedVisibilityScope = this@AnimatedContent,
-                            )
-                        }
-                    }
+                        locale = locale,
+                        timeZone = timeZone,
+                        animatedVisibilityScope = this@AnimatedContent,
+                    )
                 } else {
-                    Column(Modifier.padding(8.dp)) {
-                        DetailedEvent(
-                            event = event,
-                            onClick = { selectedEvent = null },
-                            locale = locale,
-                            timeZone = timeZone,
-                            animatedVisibilityScope = this@AnimatedContent,
-                        )
-                        DetailedEventInformation(event = event)
-                    }
+                    EventInformationScreen(
+                        event = event,
+                        onBack = { onEventSelected(null) },
+                        modifier = Modifier.padding(8.dp),
+                        locale = locale,
+                        timeZone = timeZone,
+                        animatedVisibilityScope = this@AnimatedContent,
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun EventsDialogContent(
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.large,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp,
+        content = content,
+    )
+}
+
+@Composable
+fun EventsDateHeader(
+    date: LocalDate,
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    locale: Locale = LocalConfiguration.current.locales[0],
+) {
+    val dateFormatter = remember(locale) {
+        DateTimeFormatter
+            .ofLocalizedDate(SHORT)
+            .withLocale(locale)
+    }
+
+    val weekDayFormatter = remember(locale) {
+        DateTimeFormatter
+            .ofPattern("E")
+            .withLocale(locale)
+    }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = horizontalArrangement,
+    ) {
+        Text(
+            text = remember(date, dateFormatter) {
+                dateFormatter.format(date.toJavaLocalDate())
+            },
+            modifier = Modifier.alignByBaseline(),
+            style = MaterialTheme.typography.headlineMediumEmphasized,
+        )
+        Text(
+            text = remember(date, weekDayFormatter) {
+                weekDayFormatter.format(date.toJavaLocalDate())
+            },
+            modifier = Modifier.alignByBaseline(),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
+        )
+    }
+}
+
+@Composable
+fun DetailedEventList(
+    events: List<Event>,
+    onEventSelected: (Event) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    locale: Locale = LocalConfiguration.current.locales[0],
+    timeZone: TimeZone = rememberSystemTimeZone(),
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding,
+        verticalArrangement = verticalArrangement,
+    ) {
+        items(events, key = { it.id }) {
+            DetailedEvent(
+                event = it,
+                onClick = { onEventSelected(it) },
+                locale = locale,
+                timeZone = timeZone,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }
+    }
+}
+
+@Composable
+fun EventInformationScreen(
+    event: Event,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    locale: Locale = LocalConfiguration.current.locales[0],
+    timeZone: TimeZone = rememberSystemTimeZone(),
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    Column(modifier) {
+        DetailedEvent(
+            event = event,
+            onClick = { onBack() },
+            locale = locale,
+            timeZone = timeZone,
+            animatedVisibilityScope = animatedVisibilityScope,
+        )
+        DetailedEventInformation(event = event)
     }
 }
 

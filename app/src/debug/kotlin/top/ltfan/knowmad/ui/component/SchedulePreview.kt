@@ -21,7 +21,10 @@ package top.ltfan.knowmad.ui.component
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.datetime.LocalDate
@@ -44,6 +47,8 @@ fun EventsDialogContentPreview() {
             timeZone = UTC,
         )
     }
+
+    var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
     AppTheme {
         Surface {
@@ -89,6 +94,8 @@ fun EventsDialogContentPreview() {
                         priority = P2,
                     ),
                 ),
+                selectedEvent = selectedEvent,
+                onEventSelected = { selectedEvent = it },
                 modifier = Modifier.windowInsetsPadding(AppWindowInsets),
                 locale = Locale.getDefault(),
                 timeZone = UTC,
