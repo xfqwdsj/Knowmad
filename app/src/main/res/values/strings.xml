@@ -46,6 +46,7 @@
     <string name="label_deleted">Deleted</string>
     <string name="label_need_attention">Needs Attention</string>
     <string name="label_not_changed">Not Changed</string>
+    <string name="label_just_clicked">Just Clicked</string>
     <string name="agent_label_chat">Chat with Noma</string>
     <string name="agent_standalone_label_enter">Enter Standalone Page</string>
     <string name="agent_standalone_label_exit">Exit Standalone Page</string>

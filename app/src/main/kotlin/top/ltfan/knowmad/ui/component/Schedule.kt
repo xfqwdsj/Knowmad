@@ -21,11 +21,14 @@ package top.ltfan.knowmad.ui.component
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -240,15 +243,44 @@ fun DetailedEventList(
         verticalArrangement = verticalArrangement,
     ) {
         items(events, key = { it.id }) {
-            DetailedEvent(
-                event = it,
-                onClick = { onEventSelected(it) },
-                selected = it == selectedEvent,
-                highlighted = it == highlighted,
-                locale = locale,
-                timeZone = timeZone,
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                AnimatedVisibility(
+                    visible = it == highlighted,
+                    enter = fadeIn() + expandVertically(
+                        expandFrom = Alignment.Top,
+                        clip = false,
+                    ),
+                    exit = fadeOut() + shrinkVertically(
+                        shrinkTowards = Alignment.Top,
+                        clip = false,
+                    ),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.asterisk_24px),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                        Text(
+                            text = stringResource(R.string.label_just_clicked),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
+                DetailedEvent(
+                    event = it,
+                    onClick = { onEventSelected(it) },
+                    selected = it == selectedEvent,
+                    locale = locale,
+                    timeZone = timeZone,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+            }
         }
     }
 
