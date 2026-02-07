@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.animateDp
@@ -28,6 +30,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,7 +45,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,6 +68,7 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.coerceAtLeast
@@ -75,6 +82,11 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.schedule.ICalendarColor
+import top.ltfan.knowmad.data.schedule.PriorityType
+import top.ltfan.knowmad.data.schedule.Reminder
+import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
+import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import java.time.format.DateTimeFormatter
@@ -262,7 +274,10 @@ fun EventInformationScreen(
     timeZone: TimeZone = rememberSystemTimeZone(),
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    Column(modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         DetailedEvent(
             event = event,
             onClick = { onBack() },
@@ -271,7 +286,10 @@ fun EventInformationScreen(
             timeZone = timeZone,
             animatedVisibilityScope = animatedVisibilityScope,
         )
-        DetailedEventInformation(event = event)
+        DetailedEventInformation(
+            event = event,
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+        )
     }
 }
 
@@ -421,57 +439,209 @@ fun DetailedEventInformation(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        val notes = event.notes
-        if (notes != null) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.label_24px,
+            label = R.string.schedule_event_name_label,
+            content = { Text(event.name.ifBlank { stringResource(R.string.schedule_event_name_label_none) }) },
+        )
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.location_on_24px,
+            label = R.string.schedule_event_location_label,
+        ) {
             Text(
-                text = stringResource(R.string.schedule_event_notes_label),
-                style = MaterialTheme.typography.titleMedium,
+                text = event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) },
             )
-            Text(text = notes, style = MaterialTheme.typography.bodyMedium)
         }
 
-        when (event) {
-            is Event.Course -> {
-                Text(
-                    text = stringResource(R.string.schedule_event_course_label),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(text = event.course.name, style = MaterialTheme.typography.bodyMedium)
-
-                Text(
-                    text = stringResource(R.string.schedule_event_instructor_label),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(text = event.instructor, style = MaterialTheme.typography.bodyMedium)
-            }
-
-            is Event.Normal -> Unit
-        }
-
-        Text(
-            text = stringResource(R.string.schedule_event_semester_label),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(text = event.semester.name, style = MaterialTheme.typography.bodyMedium)
-
-        Text(
-            text = stringResource(R.string.schedule_event_priority_label),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(text = event.priority.name, style = MaterialTheme.typography.bodyMedium)
-
-        if (event.reminders.list.isNotEmpty()) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.notes_24px,
+            label = R.string.schedule_event_notes_label,
+        ) {
             Text(
-                text = stringResource(R.string.schedule_event_reminders_label),
-                style = MaterialTheme.typography.titleMedium,
+                text = event.notes?.ifBlank { null }
+                    ?: stringResource(R.string.schedule_event_notes_label_none),
             )
-            for (reminder in event.reminders.list) {
-                Text(text = reminder.toString(), style = MaterialTheme.typography.bodyMedium)
+        }
+        DetailedEventInformationEntry(
+            icon = R.drawable.book_24px,
+            label = R.string.schedule_event_course_label,
+        ) {
+            if (event is Course) {
+                Text(event.course.name)
+            } else {
+                Text(stringResource(R.string.schedule_event_course_label_none))
             }
         }
+
+        if (event is Course) {
+            DetailedEventInformationEntry(
+                icon = R.drawable.podium_24px,
+                label = R.string.schedule_event_instructor_label,
+            ) {
+                Text(
+                    text = event.instructor.ifBlank { stringResource(R.string.schedule_event_instructor_label_none) },
+                )
+            }
+        }
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.event_repeat_24px,
+            label = R.string.schedule_event_semester_label,
+            content = { Text(event.semester.name) },
+        )
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.priority_24px,
+            label = R.string.schedule_event_priority_label,
+            content = { event.priority.type.Label() },
+        )
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.alarm_24px,
+            label = R.string.schedule_event_reminders_label,
+        ) {
+            if (event.reminders.list.isEmpty()) {
+                Text(stringResource(R.string.schedule_event_reminders_label_none))
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Spacer(Modifier.height(4.dp))
+                    event.reminders.list.forEach { reminder ->
+                        reminder.Label()
+                    }
+                }
+            }
+        }
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.palette_24px,
+            label = R.string.schedule_event_color_label,
+            content = { event.color.Label() },
+        )
+    }
+}
+
+@Composable
+private fun DetailedEventInformationEntry(
+    @DrawableRes icon: Int,
+    @StringRes label: Int,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    ProvideCompatibleShapes {
+        if (onClick != null) {
+            ListItem(
+                onClick = onClick,
+                modifier = modifier,
+                leadingContent = { DetailedEventInformationEntryIcon(icon) },
+                overlineContent = { Text(stringResource(label)) },
+                content = content,
+            )
+        } else {
+            ListItem(
+                headlineContent = content,
+                modifier = modifier,
+                leadingContent = { DetailedEventInformationEntryIcon(icon) },
+                overlineContent = { Text(stringResource(label)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailedEventInformationEntryIcon(
+    @DrawableRes icon: Int,
+    modifier: Modifier = Modifier,
+) {
+    ProvideShapes {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = modifier,
+        ) {
+            Icon(
+                painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(12.dp)
+                    .size(24.dp),
+            )
+        }
+    }
+}
+
+@Composable
+fun PriorityType.Label() {
+    ColoredLabel(
+        color = when (this) {
+            High -> MaterialTheme.colorScheme.error
+            Medium -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.secondary
+        },
+    ) {
+        Text(
+            text = name.takeIf { this@Label != None }
+                ?: stringResource(R.string.schedule_event_priority_label_none),
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+fun Reminder.Label(
+    timeZone: TimeZone = rememberSystemTimeZone(),
+    locale: Locale = LocalConfiguration.current.locales[0],
+) {
+    val resources = LocalResources.current
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painterResource(R.drawable.notifications_24px),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = trigger.getString(resources, timeZone, locale),
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
+
+@Composable
+fun ICalendarColor.Label() {
+    ColoredLabel(color = compose) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+fun ColoredLabel(
+    color: Color,
+    contentColor: Color = MaterialTheme.colorScheme.contentColorFor(color)
+        .takeOrElse { contractColorFor(color) },
+    content: @Composable () -> Unit,
+) {
+    Box(Modifier.padding(2.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = color,
+            contentColor = contentColor,
+            content = content,
+        )
     }
 }
 
