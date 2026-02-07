@@ -23,7 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import com.kizitonwose.calendar.core.plusDays
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -40,7 +40,7 @@ class EventsDialogPageViewModel(
     val timeZone: TimeZone,
     val locale: Locale,
     initialEvents: List<Event>,
-    highlight: Flow<Event>?,
+    highlight: Channel<Event>?,
     private val dao: ScheduleDao,
 ) : ViewModel() {
     val backStack = NavBackStack(EventsDialogSubPage.first(highlight))

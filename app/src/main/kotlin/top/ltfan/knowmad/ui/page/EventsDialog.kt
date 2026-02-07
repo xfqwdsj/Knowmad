@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
@@ -57,7 +57,7 @@ import java.util.Locale
 @Serializable
 sealed class EventsDialogSubPage : SubPage<EventsDialogSubPage>() {
     companion object {
-        fun first(highlight: Flow<Event>?): EventsDialogSubPage = ListPage(highlight)
+        fun first(highlight: Channel<Event>?): EventsDialogSubPage = ListPage(highlight)
     }
 }
 
@@ -68,7 +68,7 @@ class EventsDialogPage(
     private val localeLanguageTag: String,
     private val initialEvents: List<Event>,
     @Transient
-    private val highlight: Flow<Event>? = null,
+    private val highlight: Channel<Event>? = null,
 ) : Page() {
     // TODO: uncomment on navigation3 1.1.0
 //    @Transient
@@ -126,7 +126,7 @@ class EventsDialogPage(
 @Serializable
 private class ListPage(
     @Transient
-    private val highlight: Flow<Event>? = null,
+    private val highlight: Channel<Event>? = null,
 ) : EventsDialogSubPage() {
     @Composable
     context(contentPadding: PaddingValues)

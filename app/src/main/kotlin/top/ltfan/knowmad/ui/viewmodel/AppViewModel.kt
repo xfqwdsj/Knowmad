@@ -28,9 +28,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -176,13 +176,17 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     var eventsDialogPage by mutableStateOf<EventsDialogPage?>(null)
 
     fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {
+        val highlight = Channel<Event>(capacity = 1).apply {
+            trySend(clickedEvent)
+        }
+
         // TODO: remove
         eventsDialogPage = EventsDialogPage(
             date = date,
             timeZone = calendarState.timeZone,
             localeLanguageTag = application.resources.configuration.locales[0].toLanguageTag(),
             initialEvents = initialEvents,
-            highlight = flowOf(clickedEvent),
+            highlight = highlight,
         )
     }
 

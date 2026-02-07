@@ -78,7 +78,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.scene.Scene
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
@@ -228,7 +228,7 @@ fun DetailedEventList(
     onEventSelected: (Event) -> Unit,
     modifier: Modifier = Modifier,
     lazyListState: LazyListState = rememberLazyListState(),
-    highlight: Flow<Event>? = null,
+    highlight: Channel<Event>? = null,
     contentPadding: PaddingValues = PaddingValues(),
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     locale: Locale = LocalConfiguration.current.locales[0],
@@ -287,7 +287,7 @@ fun DetailedEventList(
 
     highlight?.let { highlight ->
         LaunchedEffect(highlight) {
-            highlight.collect { event ->
+            for (event in highlight) {
                 val index = events.indexOfFirst { it.id == event.id }
                 if (index != -1) {
                     lazyListState.animateScrollToItem(index)
