@@ -42,12 +42,15 @@ sealed class PageRoute<K : Route> : Route() {
         contentPadding: PaddingValues = PaddingValues(),
     ) = @Suppress("UNCHECKED_CAST") NavEntry(
         key = this as K,
+        contentKey = contentKey(),
         metadata = metadata,
     ) {
         context(contentPadding) {
             Content()
         }
     }
+
+    open fun contentKey(): Any = toString()
 }
 
 /** A page in the navigation hierarchy. */

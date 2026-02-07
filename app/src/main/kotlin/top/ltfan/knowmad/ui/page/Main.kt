@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.page
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -53,6 +54,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
@@ -68,6 +71,7 @@ import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.component.rememberWeekHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.ProvideLocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
@@ -233,6 +237,24 @@ class MainPage : Page() {
                                 getEvents = viewModel::getEvents,
                                 onEventClick = viewModel::onCalendarEventClick,
                             )
+
+                            viewModel.eventsDialogPage?.let { eventsDialogPage ->
+                                Dialog(
+                                    onDismissRequest = {
+                                        viewModel.closeEventsDialog(eventsDialogPage)
+                                    },
+                                    properties = DialogProperties(
+                                        dismissOnBackPress = true,
+                                        usePlatformDefaultWidth = false,
+                                    ),
+                                ) {
+                                    SharedTransitionLayout {
+                                        ProvideLocalSharedTransitionScope {
+                                            eventsDialogPage.DialogContent()
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

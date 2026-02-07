@@ -66,6 +66,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.scene.Scene
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -289,7 +290,14 @@ fun DetailedEvent(
         MaterialTheme.colorScheme.contentColorFor(color).takeOrElse { contractColorFor(color) }
 
     val minShadowElevation by animatedVisibilityScope?.transition?.animateDp {
-        if (selected && it == Visible) 4.dp else 0.dp
+        val sceneTransition = animatedVisibilityScope.transition.parentTransition
+        val targetScene = sceneTransition?.targetState as? Scene<*>
+        val targetContentKey = targetScene?.entries?.lastOrNull()?.contentKey
+        val currentScene = sceneTransition?.currentState as? Scene<*>
+        val currentContentKey = currentScene?.entries?.lastOrNull()?.contentKey
+        val isForward = (targetContentKey == event.id && it == Visible) ||
+                (currentContentKey == event.id && it != Visible)
+        if (isForward) 4.dp else 0.dp
     } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
 
     localSharedTransitionScope {

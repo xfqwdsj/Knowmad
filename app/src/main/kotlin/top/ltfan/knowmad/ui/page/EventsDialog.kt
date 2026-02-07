@@ -72,6 +72,17 @@ class EventsDialogPage(
     context(contentPadding: PaddingValues)
     override fun Content() {
         val appViewModel = LocalAppViewModel.current
+
+        Dialog(
+            onDismissRequest = { appViewModel.closeEventsDialog(this) },
+        ) {
+            DialogContent(contentPadding)
+        }
+    }
+
+    @Composable
+    fun DialogContent(contentPadding: PaddingValues = PaddingValues()) {
+        val appViewModel = LocalAppViewModel.current
         val viewModel = viewModel {
             EventsDialogPageViewModel(
                 date = date,
@@ -83,26 +94,22 @@ class EventsDialogPage(
             )
         }
 
-        Dialog(
-            onDismissRequest = { appViewModel.backStack.removeIf { it == this } },
+        EventsDialogContent(
+            date = viewModel.date,
+            contentPadding = contentPadding,
+            locale = viewModel.locale,
         ) {
-            EventsDialogContent(
-                date = viewModel.date,
-                contentPadding = contentPadding,
-                locale = viewModel.locale,
-            ) {
-                localSharedTransitionScope {
-                    NavDisplay(
-                        backStack = viewModel.backStack,
-                        contentAlignment = Alignment.TopCenter,
-                        sharedTransitionScope = this,
-                        sizeTransform = SizeTransform(),
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        popTransitionSpec = { fadeIn() togetherWith fadeOut() },
-                        predictivePopTransitionSpec = { fadeIn() togetherWith fadeOut() },
-                        entryProvider = { it.navEntry() },
-                    )
-                }
+            localSharedTransitionScope {
+                NavDisplay(
+                    backStack = viewModel.backStack,
+                    contentAlignment = Alignment.TopCenter,
+                    sharedTransitionScope = this,
+                    sizeTransform = SizeTransform(),
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    popTransitionSpec = { fadeIn() togetherWith fadeOut() },
+                    predictivePopTransitionSpec = { fadeIn() togetherWith fadeOut() },
+                    entryProvider = { it.navEntry() },
+                )
             }
         }
     }
@@ -135,6 +142,8 @@ private class ListPage(
 @Serializable
 sealed class EventDetailsSubPage : EventsDialogSubPage() {
     abstract val selectedEvent: Event
+
+    override fun contentKey() = selectedEvent.id
 }
 
 @Serializable
