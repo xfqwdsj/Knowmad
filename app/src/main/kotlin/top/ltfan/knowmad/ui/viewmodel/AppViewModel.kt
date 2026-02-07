@@ -30,10 +30,12 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
+import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
 import top.ltfan.knowmad.ui.component.CalendarState
@@ -42,6 +44,7 @@ import top.ltfan.knowmad.ui.component.MathJaxRendererState
 import top.ltfan.knowmad.ui.component.MathJaxRendererState.Initializing
 import top.ltfan.knowmad.ui.component.jsDelivrMathJaxLoadExternal
 import top.ltfan.knowmad.ui.page.AgentPage
+import top.ltfan.knowmad.ui.page.EventsDialogPage
 import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
@@ -169,6 +172,18 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     }
 
     val calendarState = CalendarState()
+
+    fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {
+        backStack.add(
+            EventsDialogPage(
+                date = date,
+                timeZone = calendarState.timeZone,
+                localeLanguageTag = application.resources.configuration.locales[0].toLanguageTag(),
+                initialEvents = initialEvents,
+                highlight = flowOf(clickedEvent),
+            ),
+        )
+    }
 
     fun onSystemDateChanged(lastDay: LocalDate, newDay: LocalDate) {
         if (lastDay == calendarState.selectedDate) {

@@ -18,12 +18,16 @@
 
 package top.ltfan.knowmad.ui.scene
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import androidx.navigation3.ui.NavDisplay
 
 class OverlayContentScene<T : Any>(
     override val key: Any,
@@ -74,7 +78,11 @@ class OverlayContentSceneStrategy<T : Any> : SceneStrategy<T> {
     }
 
     companion object {
-        fun overlayContent(): Map<String, Any> = mapOf(KEY to true)
+        fun overlayContent(): Map<String, Any> = mapOf(KEY to true) +
+                NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
+                NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
+                NavDisplay.predictivePopTransitionSpec { fadeIn() togetherWith fadeOut() }
+
         private const val KEY = "overlay-content"
     }
 }

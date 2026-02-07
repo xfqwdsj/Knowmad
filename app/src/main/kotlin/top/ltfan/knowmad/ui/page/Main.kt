@@ -231,6 +231,7 @@ class MainPage : Page() {
                                 state = viewModel.calendarState,
                                 onSystemDateChanged = viewModel::onSystemDateChanged,
                                 getEvents = viewModel::getEvents,
+                                onEventClick = viewModel::onCalendarEventClick,
                             )
                         }
                     }

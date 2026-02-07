@@ -97,30 +97,31 @@ fun CalendarPreview() {
                         .height(height),
                     state = state,
                     locale = Locale.getDefault(),
-                ) { _, _ ->
-                    flowOf(
-                        listOf(
-                            Event.Normal(
-                                semester = semester,
-                                name = "Mathematics Lecture",
-                                location = "Room 101, Science Building",
-                                color = ICalendarColor.fromRandom(Random),
-                                startTime = Instant.parse("2024-03-01T09:00:00Z"),
-                                endTime = Instant.parse("2024-03-01T10:30:00Z"),
-                                notes = "Weekly mathematics lecture covering calculus and linear algebra.",
+                    getEvents = { _, _ ->
+                        flowOf(
+                            listOf(
+                                Event.Normal(
+                                    semester = semester,
+                                    name = "Mathematics Lecture",
+                                    location = "Room 101, Science Building",
+                                    color = ICalendarColor.fromRandom(Random),
+                                    startTime = Instant.parse("2024-03-01T09:00:00Z"),
+                                    endTime = Instant.parse("2024-03-01T10:30:00Z"),
+                                    notes = "Weekly mathematics lecture covering calculus and linear algebra.",
+                                ),
+                                Event.Normal(
+                                    semester = semester,
+                                    name = "Mathematics Lecture",
+                                    location = "Room 101, Science Building",
+                                    color = ICalendarColor.fromRandom(Random),
+                                    startTime = Instant.parse("2024-03-01T09:00:00Z"),
+                                    endTime = Instant.parse("2024-03-01T10:30:00Z"),
+                                    notes = "Weekly mathematics lecture covering calculus and linear algebra.",
+                                ),
                             ),
-                            Event.Normal(
-                                semester = semester,
-                                name = "Mathematics Lecture",
-                                location = "Room 101, Science Building",
-                                color = ICalendarColor.fromRandom(Random),
-                                startTime = Instant.parse("2024-03-01T09:00:00Z"),
-                                endTime = Instant.parse("2024-03-01T10:30:00Z"),
-                                notes = "Weekly mathematics lecture covering calculus and linear algebra.",
-                            ),
-                        ),
-                    )
-                }
+                        )
+                    },
+                )
             }
         }
     }

@@ -20,22 +20,30 @@ package top.ltfan.knowmad.ui.component
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,7 +51,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,7 +64,9 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
@@ -92,6 +106,7 @@ fun EventsDialogContent(
             if (event == null) {
                 DetailedEventList(
                     events = events,
+                    selectedEvent = selectedEvent,
                     onEventSelected = onEventSelected,
                     contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -122,22 +137,29 @@ fun EventsDialogContent(
     locale: Locale = LocalConfiguration.current.locales[0],
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = shape,
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
+    Box(
+        modifier = modifier
+            .padding(DialogMargin)
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(Modifier.padding(contentPadding)) {
-            Spacer(Modifier.height(24.dp))
-            EventsDateHeader(
-                date = date,
-                modifier = Modifier.padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                locale = locale,
-            )
-            Spacer(Modifier.height(8.dp))
-            content()
+        Surface(
+            modifier = Modifier.sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth),
+            shape = shape,
+            tonalElevation = 4.dp,
+            shadowElevation = 4.dp,
+        ) {
+            Column(Modifier.padding(contentPadding)) {
+                Spacer(Modifier.height(24.dp))
+                EventsDateHeader(
+                    date = date,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    locale = locale,
+                )
+                Spacer(Modifier.height(8.dp))
+                content()
+            }
         }
     }
 }
@@ -150,15 +172,11 @@ fun EventsDateHeader(
     locale: Locale = LocalConfiguration.current.locales[0],
 ) {
     val dateFormatter = remember(locale) {
-        DateTimeFormatter
-            .ofLocalizedDate(SHORT)
-            .withLocale(locale)
+        DateTimeFormatter.ofLocalizedDate(SHORT).withLocale(locale)
     }
 
     val weekDayFormatter = remember(locale) {
-        DateTimeFormatter
-            .ofPattern("E")
-            .withLocale(locale)
+        DateTimeFormatter.ofPattern("E").withLocale(locale)
     }
 
     Row(
@@ -186,16 +204,22 @@ fun EventsDateHeader(
 @Composable
 fun DetailedEventList(
     events: List<Event>,
+    selectedEvent: Event?,
     onEventSelected: (Event) -> Unit,
     modifier: Modifier = Modifier,
+    lazyListState: LazyListState = rememberLazyListState(),
+    highlight: Flow<Event>? = null,
     contentPadding: PaddingValues = PaddingValues(),
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    var highlighted by remember { mutableStateOf<Event?>(null) }
+
     LazyColumn(
         modifier = modifier,
+        state = lazyListState,
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
     ) {
@@ -203,10 +227,24 @@ fun DetailedEventList(
             DetailedEvent(
                 event = it,
                 onClick = { onEventSelected(it) },
+                selected = it == selectedEvent,
+                highlighted = it == highlighted,
                 locale = locale,
                 timeZone = timeZone,
                 animatedVisibilityScope = animatedVisibilityScope,
             )
+        }
+    }
+
+    highlight?.let { highlight ->
+        LaunchedEffect(highlight) {
+            highlight.collect { event ->
+                val index = events.indexOfFirst { it.id == event.id }
+                if (index != -1) {
+                    lazyListState.animateScrollToItem(index)
+                    highlighted = event
+                }
+            }
         }
     }
 }
@@ -224,6 +262,7 @@ fun EventInformationScreen(
         DetailedEvent(
             event = event,
             onClick = { onBack() },
+            selected = true,
             locale = locale,
             timeZone = timeZone,
             animatedVisibilityScope = animatedVisibilityScope,
@@ -237,27 +276,31 @@ fun DetailedEvent(
     event: Event,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    highlighted: Boolean = false,
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
-    color: Color = event.color.compose,
     shape: Shape = MaterialTheme.shapes.medium,
+    color: Color = event.color.compose,
     interactionSource: MutableInteractionSource? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
-        .takeOrElse { contractColorFor(color) }
+    val contentColor =
+        MaterialTheme.colorScheme.contentColorFor(color).takeOrElse { contractColorFor(color) }
+
+    val minShadowElevation by animatedVisibilityScope?.transition?.animateDp {
+        if (selected && it == Visible) 4.dp else 0.dp
+    } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
 
     localSharedTransitionScope {
         Surface(
             onClick = onClick,
-            modifier = modifier
-                .fillMaxWidth()
-                .run {
-                    if (animatedVisibilityScope != null) sharedElement(
-                        rememberSharedContentState(ScheduleSharedKey.Event(event.id)),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    ) else this
-                },
+            modifier = modifier.fillMaxWidth().run {
+                if (animatedVisibilityScope != null) sharedElement(
+                    rememberSharedContentState(ScheduleSharedKey.Event(event.id)),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ) else this
+            },
             shape = shape,
             color = color,
             contentColor = contentColor,
@@ -265,7 +308,10 @@ fun DetailedEvent(
                 event.priority.reversedValueInType.toInt().dp
             } else {
                 0.dp
-            },
+            }.coerceAtLeast(minShadowElevation),
+            border = if (highlighted) {
+                BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
+            } else null,
             interactionSource = interactionSource,
         ) {
             Row(
@@ -299,8 +345,7 @@ fun DetailedEvent(
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            text = event.location
-                                .ifBlank { stringResource(R.string.schedule_event_location_label_none) },
+                            text = event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) },
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -327,9 +372,7 @@ fun DetailedEvent(
                     horizontalAlignment = Alignment.End,
                 ) {
                     val formatter = remember(locale) {
-                        DateTimeFormatter
-                            .ofLocalizedTime(SHORT)
-                            .withLocale(locale)
+                        DateTimeFormatter.ofLocalizedTime(SHORT).withLocale(locale)
                     }
 
                     Text(
@@ -338,7 +381,9 @@ fun DetailedEvent(
                                 event.startTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
                             formatter.format(localDateTime)
                         },
-                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(
+                            fontFeatureSettings = "tnum",
+                        ),
                         fontWeight = Bold,
                     )
                     Text(
@@ -348,7 +393,9 @@ fun DetailedEvent(
                             formatter.format(localDateTime)
                         },
                         color = contentColor.copy(alpha = .7f),
-                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(
+                            fontFeatureSettings = "tnum",
+                        ),
                         fontWeight = Bold,
                     )
                 }

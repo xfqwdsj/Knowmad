@@ -18,16 +18,19 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import com.kizitonwose.calendar.core.plusDays
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.ui.page.EventDetailsSubPage
 import top.ltfan.knowmad.ui.page.EventsDialogSubPage
 import top.ltfan.knowmad.util.collectAsState
 import java.util.Locale
@@ -37,11 +40,12 @@ class EventsDialogPageViewModel(
     val timeZone: TimeZone,
     val locale: Locale,
     initialEvents: List<Event>,
+    highlight: Flow<Event>?,
     private val dao: ScheduleDao,
 ) : ViewModel() {
-    val backStack = NavBackStack(EventsDialogSubPage.First)
+    val backStack = NavBackStack(EventsDialogSubPage.first(highlight))
 
-    val events = dao.getEventsFlowInRange(
+    val events by dao.getEventsFlowInRange(
         startTime = date.atStartOfDayIn(timeZone),
         endTime = date.plusDays(1).atStartOfDayIn(timeZone),
     ).stateIn(
@@ -49,4 +53,17 @@ class EventsDialogPageViewModel(
         started = Eagerly,
         initialValue = initialEvents,
     ).collectAsState()
+
+    val eventPages
+        inline get() = backStack.asSequence().filterIsInstance<EventDetailsSubPage>()
+
+    val selectedEvent inline get() = eventPages.lastOrNull()?.selectedEvent
+
+    fun getPagesForEvent(event: Event) = eventPages.filter { it.selectedEvent == event }
+
+    fun onBack() {
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+        }
+    }
 }

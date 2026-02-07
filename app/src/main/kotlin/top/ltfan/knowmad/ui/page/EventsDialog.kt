@@ -18,22 +18,32 @@
 
 package top.ltfan.knowmad.ui.page
 
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.ui.component.DetailedEventList
 import top.ltfan.knowmad.ui.component.Dialog
+import top.ltfan.knowmad.ui.component.EventInformationScreen
 import top.ltfan.knowmad.ui.component.EventsDialogContent
-import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
+import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.EventsDialogPageViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import java.util.Locale
@@ -41,7 +51,7 @@ import java.util.Locale
 @Serializable
 sealed class EventsDialogSubPage : SubPage<EventsDialogSubPage>() {
     companion object {
-        val First: EventsDialogSubPage = ListPage()
+        fun first(highlight: Flow<Event>?): EventsDialogSubPage = ListPage(highlight)
     }
 }
 
@@ -51,8 +61,12 @@ class EventsDialogPage(
     private val timeZone: TimeZone,
     private val localeLanguageTag: String,
     private val initialEvents: List<Event>,
+    @Transient
+    private val highlight: Flow<Event>? = null,
 ) : Page() {
-    override val metadata = OverlayContentSceneStrategy.overlayContent()
+    // TODO: uncomment on navigation3 1.1.0
+//    @Transient
+//    override val metadata = OverlayContentSceneStrategy.overlayContent()
 
     @Composable
     context(contentPadding: PaddingValues)
@@ -64,25 +78,28 @@ class EventsDialogPage(
                 timeZone = timeZone,
                 locale = Locale.forLanguageTag(localeLanguageTag),
                 initialEvents = initialEvents,
+                highlight = highlight,
                 dao = appViewModel.scheduleDao,
             )
         }
 
         Dialog(
-            onDismissRequest = appViewModel::onBack,
+            onDismissRequest = { appViewModel.backStack.removeIf { it == this } },
         ) {
             EventsDialogContent(
                 date = viewModel.date,
+                contentPadding = contentPadding,
                 locale = viewModel.locale,
             ) {
                 localSharedTransitionScope {
                     NavDisplay(
                         backStack = viewModel.backStack,
                         contentAlignment = Alignment.TopCenter,
+                        sharedTransitionScope = this,
+                        sizeTransform = SizeTransform(),
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
                         popTransitionSpec = { fadeIn() togetherWith fadeOut() },
                         predictivePopTransitionSpec = { fadeIn() togetherWith fadeOut() },
-                        sharedTransitionScope = this,
                         entryProvider = { it.navEntry() },
                     )
                 }
@@ -92,25 +109,56 @@ class EventsDialogPage(
 }
 
 @Serializable
-private class ListPage : EventsDialogSubPage() {
+private class ListPage(
+    @Transient
+    private val highlight: Flow<Event>? = null,
+) : EventsDialogSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<EventsDialogPageViewModel>()
 
+        DetailedEventList(
+            events = viewModel.events,
+            selectedEvent = viewModel.selectedEvent,
+            onEventSelected = { viewModel.backStack.add(DetailsPage(it)) },
+            highlight = highlight,
+            contentPadding = contentPadding + PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            locale = viewModel.locale,
+            timeZone = viewModel.timeZone,
+            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+        )
     }
 }
 
 @Serializable
-private class DetailsPage : EventsDialogSubPage() {
+sealed class EventDetailsSubPage : EventsDialogSubPage() {
+    abstract val selectedEvent: Event
+}
+
+@Serializable
+private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<EventsDialogPageViewModel>()
 
+        EventInformationScreen(
+            event = selectedEvent,
+            onBack = viewModel::onBack,
+            modifier = Modifier
+                .padding(contentPadding)
+                .padding(8.dp),
+            locale = viewModel.locale,
+            timeZone = viewModel.timeZone,
+            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+        )
     }
 }
 
 @Serializable
-private class EditPage : EventsDialogSubPage() {
+private class EditPage(override val selectedEvent: Event) : EventDetailsSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {

@@ -52,11 +52,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -151,6 +153,7 @@ fun Calendar(
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
         flowOf(emptyList())
     },
+    onEventClick: ((date: LocalDate, clickedEvent: Event, events: List<Event>) -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -192,6 +195,11 @@ fun Calendar(
                             }
                         },
                         events = events?.value,
+                        onEventClick = onEventClick?.let { callback ->
+                            { clicked, events ->
+                                callback(day.date, clicked, events)
+                            }
+                        },
                         outOfMonth = day.position != MonthDate,
                         border = if (day.date == today) BorderStroke(
                             width = 2.dp,
@@ -228,6 +236,11 @@ fun Calendar(
                         selected = selected,
                         onClick = { state.selectedDate = day.date },
                         hasEvents = events.isNotEmpty(),
+                        onEventClick = onEventClick?.let { callback ->
+                            { clicked, events ->
+                                callback(day.date, clicked, events)
+                            }
+                        },
                         border = if (day.date == today) BorderStroke(
                             width = 2.dp,
                             color = MaterialTheme.colorScheme.primary,
@@ -280,6 +293,7 @@ fun Day(
     modifier: Modifier = Modifier,
     events: List<Event>? = null,
     hasEvents: Boolean? = null,
+    onEventClick: ((clicked: Event, events: List<Event>) -> Unit)? = null,
     outOfMonth: Boolean = false,
     border: BorderStroke? = null,
 ) {
@@ -340,7 +354,15 @@ fun Day(
             }
         }
 
-        events?.let { Events(date, events) } ?: hasEvents?.let { hasEvents ->
+        events?.let {
+            Events(
+                date = date,
+                events = events,
+                onEventClick = onEventClick?.let { callback ->
+                    { callback(it, events) }
+                },
+            )
+        } ?: hasEvents?.let { hasEvents ->
             AnimatedVisibility(
                 visible = hasEvents,
                 enter = expandIn(),
@@ -396,6 +418,7 @@ private fun DaySecondaryText(
 fun Events(
     date: LocalDate,
     events: List<Event>,
+    onEventClick: ((event: Event) -> Unit)? = null,
 ) {
     localSharedTransitionScope {
         Column(
@@ -460,7 +483,7 @@ fun Events(
                                 if (it == Visible) AppRadiusSmall else 2.dp
                             }
                             Event(
-                                event,
+                                event = event,
                                 modifier = when (index) {
                                     0 if positioned -> Modifier
                                         .sharedBounds(
@@ -474,6 +497,9 @@ fun Events(
                                     }
 
                                     else -> Modifier
+                                },
+                                onClick = onEventClick?.let { callback ->
+                                    { callback(event) }
                                 },
                                 shape = ContinuousRoundedRectangle(radius),
                             )
@@ -530,14 +556,11 @@ private fun Dot(
 fun Event(
     event: Event,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     color: Color = event.color.compose,
     shape: Shape = MaterialTheme.shapes.small,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = shape,
-        color = color,
-    ) {
+    (@Composable {
         Text(
             text = event.name,
             modifier = Modifier
@@ -549,6 +572,25 @@ fun Event(
             maxLines = 1,
             style = MaterialTheme.typography.bodySmallEmphasized,
         )
+    }).let {
+        if (onClick != null) {
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Surface(
+                    onClick = onClick,
+                    modifier = modifier.fillMaxWidth(),
+                    shape = shape,
+                    color = color,
+                    content = it,
+                )
+            }
+        } else {
+            Surface(
+                modifier = modifier.fillMaxWidth(),
+                shape = shape,
+                color = color,
+                content = it,
+            )
+        }
     }
 }
 
