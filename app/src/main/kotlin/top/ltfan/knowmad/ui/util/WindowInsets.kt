@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,7 @@ object WindowInsetsSidesBuilder {
 inline fun WindowInsets.only(block: WindowInsetsSidesBuilder.() -> WindowInsetsSides) =
     this.only(WindowInsetsSidesBuilder.block())
 
+@Stable
 @Composable
 operator fun WindowInsets.plus(padding: PaddingValues): WindowInsets {
     val layoutDirection = LocalLayoutDirection.current

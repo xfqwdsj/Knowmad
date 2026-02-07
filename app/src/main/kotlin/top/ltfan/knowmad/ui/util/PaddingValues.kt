@@ -23,12 +23,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 
+@Stable
 fun PaddingValues.copy(
     layoutDirection: LayoutDirection,
     start: Dp = this.calculateStartPadding(layoutDirection),
@@ -42,6 +44,7 @@ fun PaddingValues.copy(
     bottom = bottom,
 )
 
+@Stable
 @Composable
 operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
     val layoutDirection = LocalLayoutDirection.current
@@ -67,6 +70,7 @@ operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
     }
 }
 
+@Stable
 @Composable
 operator fun PaddingValues.minus(other: PaddingValues): PaddingValues {
     val layoutDirection = LocalLayoutDirection.current
@@ -95,6 +99,7 @@ operator fun PaddingValues.minus(other: PaddingValues): PaddingValues {
 @Composable
 fun PaddingValues.asWindowInsets(): WindowInsets = remember(this) { PaddingValuesInsets(this) }
 
+@Stable
 class PaddingValuesInsets(private val paddingValues: PaddingValues) : WindowInsets {
     override fun getLeft(density: Density, layoutDirection: LayoutDirection) =
         with(density) { paddingValues.calculateLeftPadding(layoutDirection).roundToPx() }
