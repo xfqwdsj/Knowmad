@@ -26,6 +26,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,42 +78,34 @@ fun EventsDialogContent(
     shape: Shape = MaterialTheme.shapes.large,
 ) {
     EventsDialogContent(
+        date = date,
         modifier = modifier,
+        locale = locale,
         shape = shape,
     ) {
         AnimatedContent(
             targetState = selectedEvent,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
         ) { event ->
-            Column {
-                Spacer(Modifier.height(24.dp))
-                EventsDateHeader(
-                    date = date,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+            if (event == null) {
+                DetailedEventList(
+                    events = events,
+                    onEventSelected = onEventSelected,
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     locale = locale,
+                    timeZone = timeZone,
+                    animatedVisibilityScope = this@AnimatedContent,
                 )
-                Spacer(Modifier.height(8.dp))
-                if (event == null) {
-                    DetailedEventList(
-                        events = events,
-                        onEventSelected = onEventSelected,
-                        contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        locale = locale,
-                        timeZone = timeZone,
-                        animatedVisibilityScope = this@AnimatedContent,
-                    )
-                } else {
-                    EventInformationScreen(
-                        event = event,
-                        onBack = { onEventSelected(null) },
-                        modifier = Modifier.padding(8.dp),
-                        locale = locale,
-                        timeZone = timeZone,
-                        animatedVisibilityScope = this@AnimatedContent,
-                    )
-                }
+            } else {
+                EventInformationScreen(
+                    event = event,
+                    onBack = { onEventSelected(null) },
+                    modifier = Modifier.padding(8.dp),
+                    locale = locale,
+                    timeZone = timeZone,
+                    animatedVisibilityScope = this@AnimatedContent,
+                )
             }
         }
     }
@@ -120,17 +113,30 @@ fun EventsDialogContent(
 
 @Composable
 fun EventsDialogContent(
+    date: LocalDate,
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.large,
-    content: @Composable () -> Unit,
+    locale: Locale = LocalConfiguration.current.locales[0],
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
         modifier = modifier,
         shape = shape,
         tonalElevation = 8.dp,
         shadowElevation = 8.dp,
-        content = content,
-    )
+    ) {
+        Column {
+            Spacer(Modifier.height(24.dp))
+            EventsDateHeader(
+                date = date,
+                modifier = Modifier.padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                locale = locale,
+            )
+            Spacer(Modifier.height(8.dp))
+            content()
+        }
+    }
 }
 
 @Composable
@@ -355,13 +361,13 @@ fun DetailedEventInformation(
 ) {
     Column(
         modifier = modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val notes = event.notes
         if (notes != null) {
             Text(
                 text = stringResource(R.string.schedule_event_notes_label),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             Text(text = notes, style = MaterialTheme.typography.bodyMedium)
         }
@@ -370,13 +376,13 @@ fun DetailedEventInformation(
             is Event.Course -> {
                 Text(
                     text = stringResource(R.string.schedule_event_course_label),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 Text(text = event.course.name, style = MaterialTheme.typography.bodyMedium)
 
                 Text(
                     text = stringResource(R.string.schedule_event_instructor_label),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 Text(text = event.instructor, style = MaterialTheme.typography.bodyMedium)
             }
@@ -386,20 +392,20 @@ fun DetailedEventInformation(
 
         Text(
             text = stringResource(R.string.schedule_event_semester_label),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
         )
         Text(text = event.semester.name, style = MaterialTheme.typography.bodyMedium)
 
         Text(
             text = stringResource(R.string.schedule_event_priority_label),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
         )
         Text(text = event.priority.name, style = MaterialTheme.typography.bodyMedium)
 
         if (event.reminders.list.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.schedule_event_reminders_label),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             for (reminder in event.reminders.list) {
                 Text(text = reminder.toString(), style = MaterialTheme.typography.bodyMedium)
