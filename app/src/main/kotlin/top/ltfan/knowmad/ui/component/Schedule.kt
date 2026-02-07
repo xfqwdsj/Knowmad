@@ -479,37 +479,8 @@ fun DetailedEvent(
                         }
                         Text(text = event.name, style = MaterialTheme.typography.titleMedium)
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.location_on_24px),
-                            contentDescription = stringResource(R.string.schedule_event_location_label),
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) },
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    val notes = event.notes
-                    if (!notes.isNullOrBlank()) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                painterResource(R.drawable.notes_24px),
-                                contentDescription = stringResource(R.string.schedule_event_notes_label),
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Text(
-                                text = notes,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
+                    EventLocationLabel(event)
+                    EventNotesLabel(event)
                     additionalContent?.let { it() }
                 }
                 Column(
@@ -542,6 +513,29 @@ fun DetailedEvent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EventLocationLabel(event: Event) {
+    LabelWithIcon(
+        icon = R.drawable.location_on_24px,
+        label = event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) },
+        contentDescription = stringResource(R.string.schedule_event_location_label),
+        tint = LocalContentColor.current,
+    )
+}
+
+@Composable
+private fun EventNotesLabel(event: Event) {
+    val notes = event.notes
+    if (!notes.isNullOrBlank()) {
+        LabelWithIcon(
+            icon = R.drawable.notes_24px,
+            label = notes,
+            contentDescription = stringResource(R.string.schedule_event_notes_label),
+            tint = LocalContentColor.current,
+        )
     }
 }
 
@@ -759,7 +753,7 @@ fun ColoredLabel(
 
 @Composable
 fun JustClickedLabel() {
-    LabelInList(
+    LabelWithIcon(
         icon = R.drawable.asterisk_24px,
         label = stringResource(R.string.label_just_clicked),
     )
@@ -773,7 +767,7 @@ private fun IndicatorLabel(
     tint: Color = MaterialTheme.colorScheme.secondary,
 ) {
     localSharedTransitionScope {
-        LabelInList(
+        LabelWithIcon(
             icon = R.drawable.info_24px,
             label = label,
             modifier = modifier
@@ -850,7 +844,7 @@ private data class IndicatorData(
 )
 
 @Composable
-private fun LabelInList(
+private fun LabelWithIcon(
     @DrawableRes icon: Int,
     label: String,
     modifier: Modifier = Modifier,
