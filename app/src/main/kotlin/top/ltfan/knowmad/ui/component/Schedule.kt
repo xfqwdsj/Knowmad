@@ -90,7 +90,7 @@ import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ICalendarColor
-import top.ltfan.knowmad.data.schedule.PriorityType
+import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
@@ -610,7 +610,7 @@ fun DetailedEventInformation(
         DetailedEventInformationEntry(
             icon = R.drawable.priority_24px,
             label = R.string.schedule_event_priority_label,
-            content = { event.priority.type.Label() },
+            content = { event.priority.Label() },
         )
 
         DetailedEventInformationEntry(
@@ -690,9 +690,9 @@ private fun DetailedEventInformationEntryIcon(
 }
 
 @Composable
-fun PriorityType.Label() {
+fun ICalendarPriority.Label() {
     ColoredLabel(
-        color = when (this) {
+        color = when (type) {
             High -> MaterialTheme.colorScheme.error
             Medium -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.secondary
