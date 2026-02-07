@@ -73,6 +73,7 @@ fun EventsDialogContent(
     selectedEvent: Event?,
     onEventSelected: (Event?) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
     shape: Shape = MaterialTheme.shapes.large,
@@ -80,6 +81,7 @@ fun EventsDialogContent(
     EventsDialogContent(
         date = date,
         modifier = modifier,
+        contentPadding = contentPadding,
         locale = locale,
         shape = shape,
     ) {
@@ -115,6 +117,7 @@ fun EventsDialogContent(
 fun EventsDialogContent(
     date: LocalDate,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     shape: Shape = MaterialTheme.shapes.large,
     locale: Locale = LocalConfiguration.current.locales[0],
     content: @Composable ColumnScope.() -> Unit,
@@ -125,7 +128,7 @@ fun EventsDialogContent(
         tonalElevation = 8.dp,
         shadowElevation = 8.dp,
     ) {
-        Column {
+        Column(Modifier.padding(contentPadding)) {
             Spacer(Modifier.height(24.dp))
             EventsDateHeader(
                 date = date,
