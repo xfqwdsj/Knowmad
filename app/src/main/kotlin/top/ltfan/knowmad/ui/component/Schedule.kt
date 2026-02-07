@@ -467,9 +467,7 @@ fun DetailedEvent(
                                 event.startTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
                             formatter.format(localDateTime)
                         },
-                        style = MaterialTheme.typography.bodyLargeEmphasized.copy(
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = MaterialTheme.typography.bodyLargeEmphasized,
                         fontWeight = ExtraBold,
                     )
                     Text(
@@ -479,9 +477,7 @@ fun DetailedEvent(
                             formatter.format(localDateTime)
                         },
                         color = contentColor.copy(alpha = .7f),
-                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
                         fontWeight = Bold,
                     )
                 }
