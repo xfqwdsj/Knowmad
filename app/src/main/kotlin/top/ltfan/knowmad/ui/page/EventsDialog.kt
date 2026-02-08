@@ -171,6 +171,8 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
             event = selectedEvent,
             onBack = viewModel::onBack,
             onRequestEdit = { viewModel.backStack.add(EditPage(selectedEvent, it)) },
+            onEdit = viewModel::onEdit,
+            onRequestBatchEdit = viewModel::onRequestBatchEdit,
             eventModifier = Modifier.padding(
                 contentPadding.copy(
                     layoutDirection,

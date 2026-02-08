@@ -26,9 +26,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -45,16 +47,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,6 +101,8 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.schedule.Event.Course
+import top.ltfan.knowmad.data.schedule.Event.Normal
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminder
@@ -102,6 +112,7 @@ import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.format
+import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -150,6 +161,8 @@ fun EventsDialogContent(
                     event = event,
                     onBack = { onEventSelected(null) },
                     onRequestEdit = {},
+                    onEdit = {},
+                    onRequestBatchEdit = { _, _ -> },
                     modifier = Modifier.padding(8.dp),
                     locale = locale,
                     timeZone = timeZone,
@@ -375,6 +388,8 @@ fun EventInformationScreen(
     event: Event,
     onBack: () -> Unit,
     onRequestEdit: (EventEdit) -> Unit,
+    onEdit: (EventEditResult) -> Unit,
+    onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
     modifier: Modifier = Modifier,
     eventModifier: Modifier = Modifier,
     listModifier: @Composable (padding: PaddingValues) -> Modifier = {
@@ -406,6 +421,8 @@ fun EventInformationScreen(
             DetailedEventInformation(
                 event = event,
                 onRequestEdit = onRequestEdit,
+                onEdit = onEdit,
+                onRequestBatchEdit = onRequestBatchEdit,
                 modifier = listModifier(PaddingValues(top = eventHeight.toDp())),
             )
         }.first().measure(constraints)
@@ -482,17 +499,31 @@ fun EventEditScreen(
 @Immutable
 sealed class EventEdit {
     @Composable
-    abstract fun EditContent(
+    open fun EditContent(
         event: Event,
         onBack: () -> Unit,
         onEdit: (EventEditResult) -> Unit,
         modifier: Modifier = Modifier,
+    ) {
+    }
+
+    @Composable
+    abstract fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
     )
 }
 
 @Immutable
+fun interface EventEditChange {
+    fun Event.applyChange(): Event
+}
+
+@Immutable
 fun interface EventEditResult {
-    suspend fun apply(dao: ScheduleDao): Event
+    suspend fun applyWith(dao: ScheduleDao): Event
 }
 
 @Composable
@@ -633,6 +664,8 @@ private fun EventNotesLabel(event: Event) {
 fun DetailedEventInformation(
     event: Event,
     onRequestEdit: (EventEdit) -> Unit,
+    onEdit: (EventEditResult) -> Unit,
+    onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -654,16 +687,8 @@ fun DetailedEventInformation(
             )
         }
 
-        DetailedEventInformationEntry(
-            icon = R.drawable.notes_24px,
-            label = R.string.schedule_event_notes_label,
-            onClick = { onRequestEdit(NotesEdit) },
-        ) {
-            Text(
-                text = event.notes?.ifBlank { null }
-                    ?: stringResource(R.string.schedule_event_notes_label_none),
-            )
-        }
+        NotesEdit.ListItem(event, onRequestEdit, onEdit, onRequestBatchEdit)
+
         DetailedEventInformationEntry(
             icon = R.drawable.book_24px,
             label = R.string.schedule_event_course_label,
@@ -692,11 +717,7 @@ fun DetailedEventInformation(
             content = { Text(event.semester.name) },
         )
 
-        DetailedEventInformationEntry(
-            icon = R.drawable.priority_24px,
-            label = R.string.schedule_event_priority_label,
-            content = { event.priority.Label() },
-        )
+        PriorityEdit.ListItem(event, onRequestEdit, onEdit, onRequestBatchEdit)
 
         DetailedEventInformationEntry(
             icon = R.drawable.alarm_24px,
@@ -774,6 +795,98 @@ private object NotesEdit : EventEdit() {
             }
         }
     }
+
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.notes_24px,
+            label = R.string.schedule_event_notes_label,
+            onClick = { onRequestEdit(NotesEdit) },
+        ) {
+            Text(
+                text = event.notes?.ifBlank { null }
+                    ?: stringResource(R.string.schedule_event_notes_label_none),
+            )
+        }
+    }
+}
+
+@Immutable
+private object PriorityEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+    ) {
+        var showMenu by remember { mutableStateOf(false) }
+        var lastChange by remember { mutableStateOf<EventEditChange?>(null) }
+
+        DetailedEventInformationEntry(
+            icon = R.drawable.priority_24px,
+            label = R.string.schedule_event_priority_label,
+            onClick = { showMenu = true },
+            trailingContent = {
+                AnimatedVisibility(
+                    visible = lastChange != null,
+                    enter = fadeIn() + expandHorizontally(
+                        expandFrom = Alignment.Start,
+                        clip = false,
+                    ),
+                    exit = fadeOut() + shrinkHorizontally(
+                        shrinkTowards = Alignment.Start,
+                        clip = false,
+                    ),
+                ) {
+                    BatchEditButton {
+                        lastChange?.let { onRequestBatchEdit(this@PriorityEdit, it) }
+                    }
+                }
+            },
+        ) {
+            Box {
+                event.priority.Label()
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    val entries = ICalendarPriority.entries
+
+                    entries.forEachIndexed { index, priority ->
+                        DropdownMenuItem(
+                            onClick = {
+                                onEdit(
+                                    EventEditResult { dao ->
+                                        EventEditChange {
+                                            when (this) {
+                                                is Normal -> copy(priority = priority)
+                                                is Course -> copy(priority = priority)
+                                            }
+                                        }.run {
+                                            event.applyChange().also {
+                                                dao.updateEvent(it.toEntity())
+                                                lastChange = this
+                                            }
+                                        }
+                                    },
+                                )
+                                showMenu = false
+                            },
+                            text = { priority.Label() },
+                            shape = MenuDefaults.itemThemedShape(index, entries.size),
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -782,6 +895,7 @@ private fun DetailedEventInformationEntry(
     @StringRes label: Int,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     ProvideCompatibleShapes {
@@ -790,6 +904,7 @@ private fun DetailedEventInformationEntry(
                 onClick = onClick,
                 modifier = modifier,
                 leadingContent = { DetailedEventInformationEntryIcon(icon) },
+                trailingContent = trailingContent,
                 overlineContent = { Text(stringResource(label)) },
                 content = content,
             )
@@ -798,10 +913,54 @@ private fun DetailedEventInformationEntry(
                 headlineContent = content,
                 modifier = modifier,
                 leadingContent = { DetailedEventInformationEntryIcon(icon) },
+                trailingContent = trailingContent,
                 overlineContent = { Text(stringResource(label)) },
             )
         }
     }
+}
+
+@Composable
+private fun BatchEditButton(onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Icon(
+            painterResource(R.drawable.checklist_24px),
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(stringResource(R.string.schedule_event_edit_batch_label))
+    }
+}
+
+@Composable
+fun EventBatchEditDialog(
+    event: Event,
+    change: EventEditChange,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.schedule_event_edit_batch_label)) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable

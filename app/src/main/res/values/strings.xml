@@ -146,5 +146,15 @@
     <string name="schedule_event_list_indicator_label_started">In Progress, started %s ago</string>
     <string name="schedule_event_list_indicator_label_close_to_end">In Progress, ending in %s</string>
     <string name="schedule_event_list_indicator_label_day_ended">All events for this day have ended</string>
+    <string name="schedule_event_edit_batch_label">Batch Edit</string>
+    <string name="schedule_event_edit_batch_label_confirmation">Apply the above changes to…</string>
+    <plurals name="schedule_event_edit_batch_label_affection">
+        <item quantity="one">Affect %d event</item>
+        <item quantity="other">Affect %d events</item>
+    </plurals>
+    <plurals name="schedule_event_edit_batch_label_success">
+        <item quantity="one">Successfully modified %d event</item>
+        <item quantity="other">Successfully modified %d events</item>
+    </plurals>
     <string name="schedule_event_edit_notes_label_input">New Notes</string>
 </resources>

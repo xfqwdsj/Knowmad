@@ -33,6 +33,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.ui.component.EventEdit
+import top.ltfan.knowmad.ui.component.EventEditChange
 import top.ltfan.knowmad.ui.component.EventEditResult
 import top.ltfan.knowmad.ui.page.EventDetailsSubPage
 import top.ltfan.knowmad.ui.page.EventsDialogSubPage
@@ -73,7 +75,7 @@ class EventsDialogPageViewModel(
 
     fun onEdit(result: EventEditResult) {
         viewModelScope.launch {
-            val event = withContext(Dispatchers.IO) { result.apply(dao) }
+            val event = withContext(Dispatchers.IO) { result.applyWith(dao) }
             val iterator = backStack.listIterator()
             while (iterator.hasNext()) {
                 val entry = iterator.next()
@@ -82,5 +84,9 @@ class EventsDialogPageViewModel(
                 }
             }
         }
+    }
+
+    fun onRequestBatchEdit(edit: EventEdit, change: EventEditChange) {
+
     }
 }

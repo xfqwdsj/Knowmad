@@ -145,5 +145,13 @@
     <string name="schedule_event_list_indicator_label_started">进行中，已开始%s</string>
     <string name="schedule_event_list_indicator_label_close_to_end">进行中，距结束还有%s</string>
     <string name="schedule_event_list_indicator_label_day_ended">这一天的所有事件都已结束</string>
+    <string name="schedule_event_edit_batch_label">批量编辑</string>
+    <string name="schedule_event_edit_batch_label_confirmation">将上述修改应用到……</string>
+    <plurals name="schedule_event_edit_batch_label_affection">
+        <item quantity="other">将影响%d个事件</item>
+    </plurals>
+    <plurals name="schedule_event_edit_batch_label_success">
+        <item quantity="other">成功修改了%d个事件</item>
+    </plurals>
     <string name="schedule_event_edit_notes_label_input">新的备注</string>
 </resources>
