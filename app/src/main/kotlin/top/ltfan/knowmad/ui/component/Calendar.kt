@@ -560,21 +560,26 @@ fun Event(
     color: Color = event.color.compose,
     shape: Shape = MaterialTheme.shapes.small,
 ) {
-    (@Composable {
-        Text(
-            text = event.name,
-            modifier = Modifier
-                .basicMarquee(iterations = Int.MAX_VALUE)
-                .padding(2.dp),
-            color = MaterialTheme.colorScheme.contentColorFor(color)
-                .takeOrElse { contractColorFor(color) },
-            softWrap = false,
-            maxLines = 1,
-            style = MaterialTheme.typography.bodySmallEmphasized,
-        )
-    }).let {
-        if (onClick != null) {
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+    val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
+        .takeOrElse { contractColorFor(color) }
+        .copy(alpha = .9f)
+
+    CompositionLocalProvider(
+        LocalContentColor provides contentColor,
+        LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
+    ) {
+        (@Composable {
+            Text(
+                text = event.name,
+                modifier = Modifier
+                    .basicMarquee(iterations = Int.MAX_VALUE)
+                    .padding(2.dp),
+                softWrap = false,
+                maxLines = 1,
+                style = MaterialTheme.typography.bodySmallEmphasized,
+            )
+        }).let {
+            if (onClick != null) {
                 Surface(
                     onClick = onClick,
                     modifier = modifier.fillMaxWidth(),
@@ -582,14 +587,14 @@ fun Event(
                     color = color,
                     content = it,
                 )
+            } else {
+                Surface(
+                    modifier = modifier.fillMaxWidth(),
+                    shape = shape,
+                    color = color,
+                    content = it,
+                )
             }
-        } else {
-            Surface(
-                modifier = modifier.fillMaxWidth(),
-                shape = shape,
-                color = color,
-                content = it,
-            )
         }
     }
 }
