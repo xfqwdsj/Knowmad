@@ -118,7 +118,9 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minusMonth
 import kotlinx.datetime.number
+import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
@@ -161,6 +163,14 @@ fun Calendar(
 
     val transition = rememberTransition(state.transitionState)
 
+    val allEvents by remember {
+        snapshotFlow { state.currentMonth to state.timeZone }.flatMapLatest { (month, timeZone) ->
+            val startTime = month.minusMonth().firstDay.atStartOfDayIn(timeZone)
+            val endTime = month.plusMonth().lastDay.plusDays(1).atStartOfDayIn(timeZone)
+            getEvents(startTime, endTime)
+        }
+    }.collectAsState(initial = emptyList())
+
     transition.AnimatedContent(
         modifier = modifier,
         transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -173,14 +183,12 @@ fun Calendar(
                 dayContent = { day ->
                     val selected = day.date == state.selectedDate
 
-                    val events = remember(day) {
+                    val events = remember(day, state.timeZone, allEvents) {
                         if (day.position != MonthDate) return@remember null
-                        snapshotFlow { state.timeZone }.flatMapLatest {
-                            val startOfDay = day.date.atStartOfDayIn(it)
-                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                            getEvents(startOfDay, endOfDay)
-                        }
-                    }?.collectAsState(initial = emptyList())
+                        val startTime = day.date.atStartOfDayIn(state.timeZone)
+                        val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
+                        allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
+                    }
 
                     Day(
                         date = day.date,
@@ -194,7 +202,7 @@ fun Calendar(
                                 }
                             }
                         },
-                        events = events?.value,
+                        events = events,
                         onEventClick = onEventClick?.let { callback ->
                             { clicked, events ->
                                 callback(day.date, clicked, events)
@@ -223,19 +231,17 @@ fun Calendar(
                 dayContent = { day ->
                     val selected = day.date == state.selectedDate
 
-                    val events by remember(day) {
-                        snapshotFlow { state.timeZone }.flatMapLatest {
-                            val startOfDay = day.date.atStartOfDayIn(it)
-                            val endOfDay = day.date.plusDays(1).atStartOfDayIn(it)
-                            getEvents(startOfDay, endOfDay)
-                        }
-                    }.collectAsState(initial = emptyList())
+                    val hasEvents = remember(day, state.timeZone, allEvents) {
+                        val startTime = day.date.atStartOfDayIn(state.timeZone)
+                        val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
+                        allEvents.any { it.startTime <= endTime && it.endTime >= startTime }
+                    }
 
                     Day(
                         date = day.date,
                         selected = selected,
                         onClick = { state.selectedDate = day.date },
-                        hasEvents = events.isNotEmpty(),
+                        hasEvents = hasEvents,
                         onEventClick = onEventClick?.let { callback ->
                             { clicked, events ->
                                 callback(day.date, clicked, events)
@@ -721,8 +727,8 @@ class CalendarState(
         }
     }
 
-    private var lastFirstVisibleMonth by mutableStateOf(monthCalendarState.firstVisibleMonth.yearMonth)
-    private var lastLastVisibleMonth by mutableStateOf(monthCalendarState.lastVisibleMonth.yearMonth)
+    private var lastFirstVisibleMonth = monthCalendarState.firstVisibleMonth.yearMonth
+    private var lastLastVisibleMonth = monthCalendarState.lastVisibleMonth.yearMonth
     val currentMonth by derivedStateOf {
         val firstVisibleMonth = monthCalendarState.firstVisibleMonth.yearMonth
         val lastVisibleMonth = monthCalendarState.lastVisibleMonth.yearMonth
