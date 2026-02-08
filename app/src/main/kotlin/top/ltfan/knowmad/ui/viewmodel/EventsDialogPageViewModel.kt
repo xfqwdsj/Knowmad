@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -71,8 +72,15 @@ class EventsDialogPageViewModel(
     }
 
     fun onEdit(result: EventEditResult) {
-        viewModelScope.launch(Dispatchers.IO) {
-            result.apply(dao)
+        viewModelScope.launch {
+            val event = withContext(Dispatchers.IO) { result.apply(dao) }
+            val iterator = backStack.listIterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry is EventDetailsSubPage && entry.selectedEvent.id == event.id) {
+                    iterator.set(entry.replaceEvent(event))
+                }
+            }
         }
     }
 }

@@ -154,6 +154,8 @@ sealed class EventDetailsSubPage : EventsDialogSubPage() {
     abstract val selectedEvent: Event
 
     override fun contentKey() = selectedEvent.id
+
+    abstract fun replaceEvent(event: Event): EventDetailsSubPage
 }
 
 @Serializable
@@ -190,6 +192,8 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
     }
+
+    override fun replaceEvent(event: Event): EventDetailsSubPage = DetailsPage(event)
 }
 
 @Serializable
@@ -230,4 +234,6 @@ private class EditPage(
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
     }
+
+    override fun replaceEvent(event: Event): EventDetailsSubPage = EditPage(event, edit)
 }

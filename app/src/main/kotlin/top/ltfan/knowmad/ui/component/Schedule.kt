@@ -491,8 +491,8 @@ sealed class EventEdit {
 }
 
 @Immutable
-interface EventEditResult {
-    suspend fun apply(dao: ScheduleDao)
+fun interface EventEditResult {
+    suspend fun apply(dao: ScheduleDao): Event
 }
 
 @Composable
@@ -759,13 +759,12 @@ private object NotesEdit : EventEdit() {
                 TextButton(
                     onClick = {
                         onEdit(
-                            object : EventEditResult {
-                                override suspend fun apply(dao: ScheduleDao) {
-                                    dao.updateEvent(
-                                        event.toEntity().copy(
-                                            notes = text.ifBlank { null },
-                                        ),
-                                    )
+                            EventEditResult { dao ->
+                                when (event) {
+                                    is Normal -> event.copy(notes = text.ifBlank { null })
+                                    is Course -> event.copy(notes = text.ifBlank { null })
+                                }.also {
+                                    dao.updateEvent(it.toEntity())
                                 }
                             },
                         )
