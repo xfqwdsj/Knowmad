@@ -158,11 +158,11 @@ data class CourseFtsEntity(
         Index("recurrenceRuleId"),
         Index(
             "startTime", "priority", "endTime", "createdAt",
-            orders = [ASC, DESC, ASC],
+            orders = [ASC, ASC, DESC, ASC],
         ),
         Index(
             "semesterId", "startTime", "priority", "endTime", "createdAt",
-            orders = [ASC, ASC, DESC, ASC],
+            orders = [ASC, ASC, ASC, DESC, ASC],
         ),
     ],
     foreignKeys = [
