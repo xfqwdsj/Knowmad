@@ -343,12 +343,15 @@ fun DetailedEventList(
     highlight?.let { highlight ->
         LaunchedEffect(highlight) {
             for (event in highlight) {
-                val index = events.indexOfFirst { it.id == event.id }
-                if (index != -1) {
-                    lazyListState.animateScrollToItem(index)
-                    highlighted = event
-                }
+                highlighted = event
             }
+        }
+    }
+
+    LaunchedEffect(highlighted) {
+        val index = events.indexOfFirst { it.id == highlighted?.id }
+        if (index != -1) {
+            lazyListState.animateScrollToItem(index)
         }
     }
 
