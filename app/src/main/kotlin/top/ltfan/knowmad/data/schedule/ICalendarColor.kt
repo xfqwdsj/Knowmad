@@ -176,11 +176,23 @@ enum class ICalendarColor(val value: String, val r: UByte, val g: UByte, val b: 
     Yellowgreen("yellowgreen", 154u, 205u, 50u);
 
     companion object {
-        private val map = entries.associateBy(ICalendarColor::value)
+        private val drop = setOf(
+            Aqua,
+            Darkgrey,
+            Darkslategrey,
+            Dimgrey,
+            Fuchsia,
+            Grey,
+            Lightgrey,
+            Lightslategrey,
+            Slategrey,
+        )
+        private val map by lazy { entries.associateBy(ICalendarColor::value) }
+        private val droppedList by lazy { entries.filterNot { it in drop } }
 
         fun fromValue(value: String) = map[value]
 
-        fun fromUInt(value: UInt) = entries[
+        fun fromUInt(value: UInt) = droppedList[
             (value % ICalendarColor.entries.size.toUInt()).toInt()
         ]
 
