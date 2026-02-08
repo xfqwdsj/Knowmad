@@ -340,7 +340,7 @@ fun DetailedEventList(
                 ) {
                     IndicatorLabel(
                         indicator.text,
-                        modifier = Modifier.padding(start = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
             }
