@@ -431,7 +431,6 @@ fun DetailedEvent(
 ) {
     val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
         .takeOrElse { contractColorFor(color) }
-        .copy(alpha = .9f)
 
     val minShadowElevation by animatedVisibilityScope?.transition?.animateDp {
         val sceneTransition = animatedVisibilityScope.transition.parentTransition

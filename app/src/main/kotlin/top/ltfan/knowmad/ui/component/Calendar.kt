@@ -562,7 +562,6 @@ fun Event(
 ) {
     val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
         .takeOrElse { contractColorFor(color) }
-        .copy(alpha = .9f)
 
     CompositionLocalProvider(
         LocalContentColor provides contentColor,

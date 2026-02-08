@@ -19,10 +19,28 @@
 package top.ltfan.knowmad.ui.util
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import com.materialkolor.hct.Hct
 
 fun contractColorFor(
     backgroundColor: Color,
-    lightColor: Color = Color.White,
-    darkColor: Color = Color.Black,
-) = if (backgroundColor.luminance() > 0.5f) darkColor else lightColor
+    toneDelta: Double = 60.0,
+    minTone: Double = 15.0,
+    maxTone: Double = 85.0,
+    chromaDelta: Double = -15.0,
+): Color {
+    val hct = Hct.fromInt(backgroundColor.toArgb())
+
+    val originalTone = hct.tone
+    val contrastTone = if (originalTone < 50) {
+        (originalTone + toneDelta).coerceAtMost(maxTone)
+    } else {
+        (originalTone - toneDelta).coerceAtLeast(minTone)
+    }
+
+    val newChroma = (hct.chroma + chromaDelta).coerceAtLeast(0.0)
+
+    val contrastHct = Hct.from(hct.hue, newChroma, contrastTone)
+
+    return Color(contrastHct.toInt())
+}
