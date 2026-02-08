@@ -23,13 +23,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import com.kizitonwose.calendar.core.plusDays
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.ui.component.EventEditResult
 import top.ltfan.knowmad.ui.page.EventDetailsSubPage
 import top.ltfan.knowmad.ui.page.EventsDialogSubPage
 import top.ltfan.knowmad.util.collectAsState
@@ -64,6 +67,12 @@ class EventsDialogPageViewModel(
     fun onBack() {
         if (backStack.size > 1) {
             backStack.removeLastOrNull()
+        }
+    }
+
+    fun onEdit(result: EventEditResult) {
+        viewModelScope.launch(Dispatchers.IO) {
+            result.apply(dao)
         }
     }
 }

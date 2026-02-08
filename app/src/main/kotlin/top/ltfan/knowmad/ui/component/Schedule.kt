@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -56,6 +57,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -87,13 +90,16 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminder
+import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
+import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -143,6 +149,7 @@ fun EventsDialogContent(
                 EventInformationScreen(
                     event = event,
                     onBack = { onEventSelected(null) },
+                    onRequestEdit = {},
                     modifier = Modifier.padding(8.dp),
                     locale = locale,
                     timeZone = timeZone,
@@ -367,6 +374,7 @@ fun DetailedEventList(
 fun EventInformationScreen(
     event: Event,
     onBack: () -> Unit,
+    onRequestEdit: (EventEdit) -> Unit,
     modifier: Modifier = Modifier,
     eventModifier: Modifier = Modifier,
     listModifier: @Composable (padding: PaddingValues) -> Modifier = {
@@ -397,6 +405,7 @@ fun EventInformationScreen(
         val listPlaceable = subcompose("list") {
             DetailedEventInformation(
                 event = event,
+                onRequestEdit = onRequestEdit,
                 modifier = listModifier(PaddingValues(top = eventHeight.toDp())),
             )
         }.first().measure(constraints)
@@ -412,6 +421,78 @@ fun EventInformationScreen(
             eventPlaceable.placeRelative(0, 0)
         }
     }
+}
+
+@Composable
+fun EventEditScreen(
+    event: Event,
+    edit: EventEdit,
+    onBack: () -> Unit,
+    onEdit: (EventEditResult) -> Unit,
+    modifier: Modifier = Modifier,
+    eventModifier: Modifier = Modifier,
+    editModifier: @Composable (padding: PaddingValues) -> Modifier = {
+        Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(it)
+    },
+    locale: Locale = LocalConfiguration.current.locales[0],
+    timeZone: TimeZone = rememberSystemTimeZone(),
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+) {
+    SubcomposeLayout(modifier) { constraints ->
+        val eventPlaceable = subcompose("event") {
+            DetailedEvent(
+                event = event,
+                onClick = { onBack() },
+                modifier = eventModifier,
+                selected = true,
+                locale = locale,
+                timeZone = timeZone,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }.first().measure(constraints)
+
+        val eventWidth = eventPlaceable.width
+        val eventHeight = eventPlaceable.height + 16.dp.roundToPx()
+
+        val editPlaceable = subcompose("edit") {
+            edit.EditContent(
+                event = event,
+                onBack = onBack,
+                onEdit = onEdit,
+                modifier = editModifier(PaddingValues(top = eventHeight.toDp())),
+            )
+        }.first().measure(constraints)
+
+        val editWidth = editPlaceable.width
+        val editHeight = editPlaceable.height
+
+        val width = maxOf(eventWidth, editWidth)
+        val height = maxOf(eventHeight, editHeight)
+
+        layout(width, height) {
+            editPlaceable.placeRelative(0, 0)
+            eventPlaceable.placeRelative(0, 0)
+        }
+    }
+}
+
+@Serializable
+@Immutable
+sealed class EventEdit {
+    @Composable
+    abstract fun EditContent(
+        event: Event,
+        onBack: () -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        modifier: Modifier = Modifier,
+    )
+}
+
+@Immutable
+interface EventEditResult {
+    suspend fun apply(dao: ScheduleDao)
 }
 
 @Composable
@@ -551,6 +632,7 @@ private fun EventNotesLabel(event: Event) {
 @Composable
 fun DetailedEventInformation(
     event: Event,
+    onRequestEdit: (EventEdit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -575,6 +657,7 @@ fun DetailedEventInformation(
         DetailedEventInformationEntry(
             icon = R.drawable.notes_24px,
             label = R.string.schedule_event_notes_label,
+            onClick = { onRequestEdit(NotesEdit) },
         ) {
             Text(
                 text = event.notes?.ifBlank { null }
@@ -638,6 +721,61 @@ fun DetailedEventInformation(
             label = R.string.schedule_event_color_label,
             content = { event.color.Label() },
         )
+    }
+}
+
+@Immutable
+private object NotesEdit : EventEdit() {
+    @Composable
+    override fun EditContent(
+        event: Event,
+        onBack: () -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        modifier: Modifier,
+    ) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            var text by remember { mutableStateOf(event.notes ?: "") }
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .widthIn(max = TextFieldMaxWidth)
+                    .fillMaxWidth(),
+                label = { Text(stringResource(R.string.schedule_event_edit_notes_label_input)) },
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.End),
+            ) {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        onEdit(
+                            object : EventEditResult {
+                                override suspend fun apply(dao: ScheduleDao) {
+                                    dao.updateEvent(
+                                        event.toEntity().copy(
+                                            notes = text.ifBlank { null },
+                                        ),
+                                    )
+                                }
+                            },
+                        )
+                        onBack()
+                    },
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            }
+        }
     }
 }
 

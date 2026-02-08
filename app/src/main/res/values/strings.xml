@@ -146,4 +146,5 @@
     <string name="schedule_event_list_indicator_label_started">In Progress, started %s ago</string>
     <string name="schedule_event_list_indicator_label_close_to_end">In Progress, ending in %s</string>
     <string name="schedule_event_list_indicator_label_day_ended">All events for this day have ended</string>
+    <string name="schedule_event_edit_notes_label_input">New Notes</string>
 </resources>

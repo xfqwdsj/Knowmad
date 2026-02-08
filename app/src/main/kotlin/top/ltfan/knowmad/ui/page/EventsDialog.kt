@@ -45,6 +45,8 @@ import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.ui.component.DetailedEventList
 import top.ltfan.knowmad.ui.component.Dialog
 import top.ltfan.knowmad.ui.component.DialogMargin
+import top.ltfan.knowmad.ui.component.EventEdit
+import top.ltfan.knowmad.ui.component.EventEditScreen
 import top.ltfan.knowmad.ui.component.EventInformationScreen
 import top.ltfan.knowmad.ui.component.EventsDialogContent
 import top.ltfan.knowmad.ui.util.copy
@@ -160,14 +162,13 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
     context(contentPadding: PaddingValues)
     override fun Content() {
         val viewModel = viewModel<EventsDialogPageViewModel>()
-
         val layoutDirection = LocalLayoutDirection.current
-
         val contentPadding = contentPadding + PaddingValues(8.dp)
 
         EventInformationScreen(
             event = selectedEvent,
             onBack = viewModel::onBack,
+            onRequestEdit = { viewModel.backStack.add(EditPage(selectedEvent, it)) },
             eventModifier = Modifier.padding(
                 contentPadding.copy(
                     layoutDirection,
@@ -192,10 +193,41 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
 }
 
 @Serializable
-private class EditPage(override val selectedEvent: Event) : EventDetailsSubPage() {
+private class EditPage(
+    override val selectedEvent: Event,
+    val edit: EventEdit,
+) : EventDetailsSubPage() {
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val viewModel = viewModel<EventsDialogPageViewModel>()
+        val layoutDirection = LocalLayoutDirection.current
+        val contentPadding = contentPadding + PaddingValues(8.dp)
 
+        EventEditScreen(
+            event = selectedEvent,
+            edit = edit,
+            onBack = viewModel::onBack,
+            onEdit = viewModel::onEdit,
+            eventModifier = Modifier.padding(
+                contentPadding.copy(
+                    layoutDirection,
+                    bottom = 0.dp,
+                ),
+            ),
+            editModifier = {
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        it + contentPadding.copy(
+                            layoutDirection,
+                            top = 0.dp,
+                        ),
+                    )
+            },
+            locale = viewModel.locale,
+            timeZone = viewModel.timeZone,
+            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+        )
     }
 }
