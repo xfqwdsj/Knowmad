@@ -733,17 +733,15 @@ private object NotesEdit : EventEdit() {
         onEdit: (EventEditResult) -> Unit,
         modifier: Modifier,
     ) {
-        Column(
-            modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Column(modifier) {
             var text by remember { mutableStateOf(event.notes ?: "") }
             TextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier
                     .widthIn(max = TextFieldMaxWidth)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally),
                 label = { Text(stringResource(R.string.schedule_event_edit_notes_label_input)) },
             )
             Spacer(Modifier.height(8.dp))
