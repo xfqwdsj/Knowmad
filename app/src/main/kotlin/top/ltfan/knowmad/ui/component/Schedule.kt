@@ -828,9 +828,10 @@ private object NotesEdit : EventEdit() {
                     onClick = {
                         onEdit(
                             EventEditResult { dao ->
+                                val text = text.trim().ifBlank { null }
                                 when (event) {
-                                    is Normal -> event.copy(notes = text.ifBlank { null })
-                                    is Course -> event.copy(notes = text.ifBlank { null })
+                                    is Normal -> event.copy(notes = text)
+                                    is Course -> event.copy(notes = text)
                                 }.also {
                                     dao.updateEvent(it.toEntity())
                                 }
