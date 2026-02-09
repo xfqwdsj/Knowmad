@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.page
 
+import android.os.Parcelable
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,6 +40,7 @@ import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import top.ltfan.knowmad.data.schedule.Event
@@ -56,6 +58,7 @@ import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.EventsDialogPageViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import java.util.Locale
+import kotlin.uuid.Uuid
 
 @Serializable
 sealed class EventsDialogSubPage : SubPage<EventsDialogSubPage>() {
@@ -153,10 +156,19 @@ private class ListPage(
 sealed class EventDetailsSubPage : EventsDialogSubPage() {
     abstract val selectedEvent: Event
 
-    override fun contentKey() = selectedEvent.id
+    override fun contentKey() = EventDetailsSubPageKey(
+        eventId = selectedEvent.id,
+        pageHash = hashCode(),
+    )
 
     abstract fun replaceEvent(event: Event): EventDetailsSubPage
 }
+
+@Parcelize
+data class EventDetailsSubPageKey(
+    val eventId: Uuid,
+    val pageHash: Int,
+) : Parcelable
 
 @Serializable
 private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPage() {

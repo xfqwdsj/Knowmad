@@ -105,6 +105,7 @@ import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.ui.page.EventDetailsSubPageKey
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
@@ -578,11 +579,13 @@ fun DetailedEvent(
     val minShadowElevation by animatedVisibilityScope?.transition?.animateDp {
         val sceneTransition = animatedVisibilityScope.transition.parentTransition
         val targetScene = sceneTransition?.targetState as? Scene<*>
-        val targetContentKey = targetScene?.entries?.lastOrNull()?.contentKey
+        val targetContentKey =
+            targetScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
         val currentScene = sceneTransition?.currentState as? Scene<*>
-        val currentContentKey = currentScene?.entries?.lastOrNull()?.contentKey
-        val isForward = (targetContentKey == event.id && it == Visible) ||
-                (currentContentKey == event.id && it != Visible)
+        val currentContentKey =
+            currentScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
+        val isForward = (targetContentKey?.eventId == event.id && it == Visible) ||
+                (currentContentKey?.eventId == event.id && it != Visible)
         if (isForward) 4.dp else 0.dp
     } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
 
