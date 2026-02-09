@@ -801,22 +801,24 @@ private object NotesEdit : EventEdit() {
         onEdit: (EventEditResult) -> Unit,
         modifier: Modifier,
     ) {
-        Column(modifier) {
+        Column(
+            modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             var text by remember { mutableStateOf(event.notes ?: "") }
             TextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier
                     .widthIn(max = TextFieldMaxWidth)
-                    .fillMaxWidth()
-                    .align(Alignment.CenterHorizontally),
+                    .fillMaxWidth(),
                 label = { Text(stringResource(R.string.schedule_event_edit_notes_label_input)) },
             )
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 8.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.End),
             ) {
                 TextButton(onClick = onBack) {
