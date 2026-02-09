@@ -60,9 +60,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -180,7 +183,7 @@ fun EventsDialogContent(
     date: LocalDate,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    shape: Shape = MaterialTheme.shapes.large,
+    shape: Shape = MaterialTheme.shapes.extraLarge,
     locale: Locale = LocalConfiguration.current.locales[0],
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -189,8 +192,8 @@ fun EventsDialogContent(
             .sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth)
             .dialogContent(),
         shape = shape,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp,
     ) {
         Column(Modifier.padding(contentPadding)) {
             Spacer(Modifier.height(24.dp))
@@ -587,7 +590,7 @@ fun DetailedEvent(
     highlighted: Boolean = false,
     locale: Locale = LocalConfiguration.current.locales[0],
     timeZone: TimeZone = rememberSystemTimeZone(),
-    shape: Shape = MaterialTheme.shapes.medium,
+    shape: Shape = MaterialTheme.shapes.large,
     color: Color = event.color.compose,
     interactionSource: MutableInteractionSource? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -1055,9 +1058,13 @@ private fun DetailedEventInformationEntry(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    // TODO: refactor to non-null when Material 3 supports animate CornerBasedShape
+    shapes: ListItemShapes? = null,
     content: @Composable () -> Unit,
 ) {
     ProvideCompatibleShapes {
+        val shapes = shapes ?: DetailedEventInformationEntryDefaults.shapes
+
         if (onClick != null) {
             ListItem(
                 onClick = onClick,
@@ -1065,6 +1072,7 @@ private fun DetailedEventInformationEntry(
                 leadingContent = { DetailedEventInformationEntryIcon(icon) },
                 trailingContent = trailingContent,
                 overlineContent = { Text(stringResource(label)) },
+                shapes = shapes,
                 content = content,
             )
         } else {
@@ -1076,6 +1084,26 @@ private fun DetailedEventInformationEntry(
                 overlineContent = { Text(stringResource(label)) },
             )
         }
+    }
+}
+
+private object DetailedEventInformationEntryDefaults {
+    private var _shapes: Pair<Shapes, ListItemShapes>? = null
+    val shapes
+        @Composable get() = MaterialTheme.shapes.run {
+            get() ?: ListItemDefaults.shapes(
+                shape = MaterialTheme.shapes.large,
+                selectedShape = MaterialTheme.shapes.extraLarge,
+                pressedShape = MaterialTheme.shapes.extraLarge,
+                focusedShape = MaterialTheme.shapes.extraLarge,
+                hoveredShape = MaterialTheme.shapes.largeIncreased,
+                draggedShape = MaterialTheme.shapes.extraLarge,
+            ).also { set(it) }
+        }
+
+    private fun Shapes.get() = _shapes?.takeIf { it.first == this }?.second
+    private fun Shapes.set(shapes: ListItemShapes) {
+        _shapes = this to shapes
     }
 }
 
