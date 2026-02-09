@@ -88,6 +88,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
+import androidx.compose.ui.util.fastMaxBy
 import androidx.navigation3.scene.Scene
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -476,23 +479,23 @@ fun EventEditScreen(
         val eventWidth = eventPlaceable.width
         val eventHeight = eventPlaceable.height + 16.dp.roundToPx()
 
-        val editPlaceable = subcompose("edit") {
+        val editPlaceables = subcompose("edit") {
             edit.EditContent(
                 event = event,
                 onBack = onBack,
                 onEdit = onEdit,
                 modifier = editModifier(PaddingValues(top = eventHeight.toDp())),
             )
-        }.first().measure(constraints)
+        }.fastMap { it.measure(constraints) }
 
-        val editWidth = editPlaceable.width
-        val editHeight = editPlaceable.height
+        val editWidth = editPlaceables.fastMaxBy { it.width }?.width ?: 0
+        val editHeight = editPlaceables.fastMaxBy { it.height }?.height ?: 0
 
         val width = maxOf(eventWidth, editWidth)
         val height = maxOf(eventHeight, editHeight)
 
         layout(width, height) {
-            editPlaceable.placeRelative(0, 0)
+            editPlaceables.fastForEach { it.placeRelative(0, 0) }
             eventPlaceable.placeRelative(0, 0)
         }
     }
@@ -546,6 +549,23 @@ sealed class EventEdit {
         onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
         modifier: Modifier = Modifier,
     )
+
+    protected val ((EventEdit) -> Unit).onClick: () -> Unit
+        get() = { this(this@EventEdit) }
+
+    companion object {
+        val allEdits = listOf(
+            LabelEdit,
+            LocationEdit,
+            NotesEdit,
+            CourseEdit,
+            InstructorEdit,
+            SemesterEdit,
+            PriorityEdit,
+            RemindersEdit,
+            ColorEdit,
+        )
+    }
 }
 
 @Immutable
@@ -707,87 +727,54 @@ fun DetailedEventInformation(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        EventEdit.allEdits.fastForEach {
+            it.SharedListItem(
+                event,
+                onRequestEdit,
+                onEdit,
+                onRequestBatchEdit,
+                animatedVisibilityScope,
+            )
+        }
+    }
+}
+
+@Immutable
+private object LabelEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
         DetailedEventInformationEntry(
             icon = R.drawable.label_24px,
             label = R.string.schedule_event_name_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
             content = { Text(event.name.ifBlank { stringResource(R.string.schedule_event_name_label_none) }) },
         )
+    }
+}
 
+@Immutable
+private object LocationEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
         DetailedEventInformationEntry(
             icon = R.drawable.location_on_24px,
             label = R.string.schedule_event_location_label,
-        ) {
-            Text(
-                text = event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) },
-            )
-        }
-
-        NotesEdit.SharedListItem(
-            event,
-            onRequestEdit,
-            onEdit,
-            onRequestBatchEdit,
-            animatedVisibilityScope,
-        )
-
-        DetailedEventInformationEntry(
-            icon = R.drawable.book_24px,
-            label = R.string.schedule_event_course_label,
-        ) {
-            if (event is Course) {
-                Text(event.course.name)
-            } else {
-                Text(stringResource(R.string.schedule_event_course_label_none))
-            }
-        }
-
-        if (event is Course) {
-            DetailedEventInformationEntry(
-                icon = R.drawable.podium_24px,
-                label = R.string.schedule_event_instructor_label,
-            ) {
-                Text(
-                    text = event.instructor.ifBlank { stringResource(R.string.schedule_event_instructor_label_none) },
-                )
-            }
-        }
-
-        DetailedEventInformationEntry(
-            icon = R.drawable.event_repeat_24px,
-            label = R.string.schedule_event_semester_label,
-            content = { Text(event.semester.name) },
-        )
-
-        PriorityEdit.SharedListItem(
-            event,
-            onRequestEdit,
-            onEdit,
-            onRequestBatchEdit,
-            animatedVisibilityScope,
-        )
-
-        DetailedEventInformationEntry(
-            icon = R.drawable.alarm_24px,
-            label = R.string.schedule_event_reminders_label,
-        ) {
-            if (event.reminders.list.isEmpty()) {
-                Text(stringResource(R.string.schedule_event_reminders_label_none))
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Spacer(Modifier.height(4.dp))
-                    event.reminders.list.forEach { reminder ->
-                        reminder.Label()
-                    }
-                }
-            }
-        }
-
-        DetailedEventInformationEntry(
-            icon = R.drawable.palette_24px,
-            label = R.string.schedule_event_color_label,
-            content = { event.color.Label() },
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+            content = { Text(event.location.ifBlank { stringResource(R.string.schedule_event_location_label_none) }) },
         )
     }
 }
@@ -869,6 +856,72 @@ private object NotesEdit : EventEdit() {
 }
 
 @Immutable
+private object CourseEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.book_24px,
+            label = R.string.schedule_event_course_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+        ) {
+            if (event is Course) {
+                Text(event.course.name)
+            } else {
+                Text(stringResource(R.string.schedule_event_course_label_none))
+            }
+        }
+    }
+}
+
+@Immutable
+private object InstructorEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (event !is Course) return
+        DetailedEventInformationEntry(
+            icon = R.drawable.podium_24px,
+            label = R.string.schedule_event_instructor_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+            content = { Text(event.instructor.ifBlank { stringResource(R.string.schedule_event_instructor_label_none) }) },
+        )
+    }
+}
+
+@Immutable
+private object SemesterEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.event_repeat_24px,
+            label = R.string.schedule_event_semester_label,
+            modifier = modifier,
+            onClick = {},
+            content = { Text(event.semester.name) },
+        )
+    }
+}
+
+@Immutable
 private object PriorityEdit : EventEdit() {
     @Composable
     override fun ListItem(
@@ -943,6 +996,58 @@ private object PriorityEdit : EventEdit() {
     }
 }
 
+@Immutable
+private object RemindersEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.alarm_24px,
+            label = R.string.schedule_event_reminders_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+        ) {
+            if (event.reminders.list.isEmpty()) {
+                Text(stringResource(R.string.schedule_event_reminders_label_none))
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Spacer(Modifier.height(4.dp))
+                    event.reminders.list.forEach { reminder ->
+                        reminder.Label()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Immutable
+private object ColorEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.palette_24px,
+            label = R.string.schedule_event_color_label,
+            modifier = modifier,
+            onClick = {},
+            content = { event.color.Label() },
+        )
+    }
+}
+
 @Composable
 private fun DetailedEventInformationEntry(
     @DrawableRes icon: Int,
@@ -991,7 +1096,8 @@ private fun BatchEditButton(onClick: () -> Unit) {
 fun EventBatchEditDialog(
     event: Event,
     change: EventEditChange,
-    onConfirm: () -> Unit,
+    getAffection: (List<EventEdit>) -> Int,
+    onConfirm: (List<EventEdit>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -1005,7 +1111,7 @@ fun EventBatchEditDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = {}) {
                 Text(stringResource(android.R.string.ok))
             }
         },
