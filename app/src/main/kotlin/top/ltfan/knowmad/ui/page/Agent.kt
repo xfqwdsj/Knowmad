@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxOfOrNull
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -278,7 +279,7 @@ class AgentMainPage : AgentSubPage() {
                                 .fillMaxWidth()
                                 .heightIn(max = 200.dp),
                         )
-                    }.map { it.measure(constraints) }
+                    }.fastMap { it.measure(constraints) }
 
                     val inputHeight = inputPlaceables.fastMaxOfOrNull { it.height } ?: 0
 
@@ -307,7 +308,7 @@ class AgentMainPage : AgentSubPage() {
                                     .background(color),
                             )
                         }
-                    }.map {
+                    }.fastMap {
                         it.measure(
                             constraints.copy(
                                 minHeight = inputHeight,
@@ -368,7 +369,7 @@ class AgentMainPage : AgentSubPage() {
                                 viewModel.messagesListState.animateScrollToItem(0)
                             }
                         }
-                    }.map { it.measure(constraints) }
+                    }.fastMap { it.measure(constraints) }
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         listPlaceables.fastForEach {
