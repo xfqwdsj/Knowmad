@@ -173,27 +173,24 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
 
     val calendarState = CalendarState()
 
-    var eventsDialogPage by mutableStateOf<EventsDialogPage?>(null)
-
     fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {
         val highlight = Channel<Event>(capacity = 1).apply {
             trySend(clickedEvent)
         }
 
-        // TODO: remove
-        eventsDialogPage = EventsDialogPage(
-            date = date,
-            timeZone = calendarState.timeZone,
-            localeLanguageTag = application.resources.configuration.locales[0].toLanguageTag(),
-            initialEvents = initialEvents,
-            highlight = highlight,
+        backStack.add(
+            EventsDialogPage(
+                date = date,
+                timeZone = calendarState.timeZone,
+                localeLanguageTag = application.resources.configuration.locales[0].toLanguageTag(),
+                initialEvents = initialEvents,
+                highlight = highlight,
+            ),
         )
     }
 
     fun closeEventsDialog(page: EventsDialogPage) {
-        eventsDialogPage = null
-        // TODO: change to this
-        // appViewModel.backStack.removeIf { it == page }
+        backStack.removeIf { it == page }
     }
 
     fun onSystemDateChanged(lastDay: LocalDate, newDay: LocalDate) {

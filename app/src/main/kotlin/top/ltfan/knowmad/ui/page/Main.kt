@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.ui.page
 
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -40,7 +39,6 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -48,8 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.changedToUp
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
@@ -57,11 +53,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
@@ -72,13 +63,11 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
-import top.ltfan.knowmad.ui.component.DialogMargin
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.component.rememberWeekHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.ui.util.LocalSharedTransitionScope
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
@@ -244,55 +233,6 @@ class MainPage : Page() {
                                 getEvents = viewModel::getEvents,
                                 onEventClick = viewModel::onCalendarEventClick,
                             )
-
-                            viewModel.eventsDialogPage?.let { eventsDialogPage ->
-                                Dialog(
-                                    onDismissRequest = {
-                                        viewModel.closeEventsDialog(eventsDialogPage)
-                                    },
-                                    properties = DialogProperties(
-                                        usePlatformDefaultWidth = false,
-                                    ),
-                                ) {
-                                    val owner = remember {
-                                        object : ViewModelStoreOwner {
-                                            override val viewModelStore = ViewModelStore()
-                                        }
-                                    }
-
-                                    Box(
-                                        Modifier
-                                            .pointerInput(Unit) {
-                                                awaitPointerEventScope {
-                                                    while (true) {
-                                                        val event = awaitPointerEvent()
-                                                        if (event.changes.any { change -> change.changedToUp() }) {
-                                                            viewModel.closeEventsDialog(
-                                                                eventsDialogPage,
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            .padding(DialogMargin),
-                                    ) {
-                                        SharedTransitionLayout {
-                                            CompositionLocalProvider(
-                                                LocalSharedTransitionScope provides this,
-                                                LocalViewModelStoreOwner provides owner,
-                                            ) {
-                                                eventsDialogPage.DialogContent()
-                                            }
-                                        }
-                                    }
-
-                                    DisposableEffect(owner) {
-                                        onDispose {
-                                            owner.viewModelStore.clear()
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }

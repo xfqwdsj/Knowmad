@@ -49,6 +49,7 @@ import top.ltfan.knowmad.ui.component.EventEdit
 import top.ltfan.knowmad.ui.component.EventEditScreen
 import top.ltfan.knowmad.ui.component.EventInformationScreen
 import top.ltfan.knowmad.ui.component.EventsDialogContent
+import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.plus
@@ -72,9 +73,8 @@ class EventsDialogPage(
     @Transient
     private val highlight: Channel<Event>? = null,
 ) : Page() {
-    // TODO: uncomment on navigation3 1.1.0
-//    @Transient
-//    override val metadata = OverlayContentSceneStrategy.overlayContent()
+    @Transient
+    override val metadata = OverlayContentSceneStrategy.overlayContent()
 
     @Composable
     context(contentPadding: PaddingValues)

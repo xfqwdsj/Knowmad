@@ -22,8 +22,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.util.fastForEachReversed
 import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
@@ -31,34 +31,37 @@ import androidx.navigation3.ui.NavDisplay
 
 class OverlayContentScene<T : Any>(
     override val key: Any,
-    private val entry: NavEntry<T>,
+    override val entries: List<NavEntry<T>>,
     override val previousEntries: List<NavEntry<T>>,
-    override val overlaidEntries: List<NavEntry<T>>,
-) : OverlayScene<T> {
-    override val entries: List<NavEntry<T>> = listOf(entry)
-    override val content: @Composable (() -> Unit) = entry::Content
+) : Scene<T> {
+    override val content: @Composable () -> Unit = {
+        entries.fastForEachReversed { it.Content() }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || this::class != other::class) return false
+        if (javaClass != other?.javaClass) return false
 
         other as OverlayContentScene<*>
 
-        return key == other.key &&
-                previousEntries == other.previousEntries &&
-                overlaidEntries == other.overlaidEntries &&
-                entry == other.entry
+        if (key != other.key) return false
+        if (entries != other.entries) return false
+        if (previousEntries != other.previousEntries) return false
+        if (content != other.content) return false
+
+        return true
     }
 
     override fun hashCode(): Int {
-        return key.hashCode() * 31 +
-                previousEntries.hashCode() * 31 +
-                overlaidEntries.hashCode() * 31 +
-                entry.hashCode() * 31
+        var result = key.hashCode()
+        result = 31 * result + entries.hashCode()
+        result = 31 * result + previousEntries.hashCode()
+        result = 31 * result + content.hashCode()
+        return result
     }
 
     override fun toString(): String {
-        return "OverlayContentScene(key=$key, entry=$entry, previousEntries=$previousEntries, overlaidEntries=$overlaidEntries)"
+        return "OverlayContentScene(key=$key entries=$entries, previousEntries=$previousEntries, content=$content)"
     }
 }
 
@@ -66,14 +69,19 @@ class OverlayContentSceneStrategy<T : Any> : SceneStrategy<T> {
     override fun SceneStrategyScope<T>.calculateScene(
         entries: List<NavEntry<T>>,
     ): Scene<T>? {
-        val lastEntry = entries.lastOrNull()
-        val metadata = lastEntry?.metadata?.get(KEY) as? Boolean ?: return null
-        if (!metadata) return null
+        val takenEntries = entries.takeLastWhile {
+            it.metadata[KEY] as? Boolean ?: false
+        }.toMutableList()
+        if (takenEntries.isEmpty()) return null
+        val key = takenEntries.last().contentKey
+        entries.getOrNull(entries.size - takenEntries.size - 1)?.let { overlaidEntry ->
+            takenEntries += overlaidEntry
+        }
+
         return OverlayContentScene(
-            key = lastEntry.contentKey,
-            entry = lastEntry,
+            key = key,
+            entries = takenEntries,
             previousEntries = entries.dropLast(1),
-            overlaidEntries = entries.dropLast(1),
         )
     }
 

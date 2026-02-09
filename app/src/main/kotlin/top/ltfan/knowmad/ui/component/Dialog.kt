@@ -63,6 +63,16 @@ fun Dialog(
     }
 }
 
+fun Modifier.dialogContent() = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.asSequence()
+                .filter { it.changedToUp() }
+                .forEach { it.consume() }
+        }
+    }
+}
+
 val DialogMinWidth = 280.dp
 val DialogMaxWidth = 560.dp
 val DialogMargin = 48.dp
