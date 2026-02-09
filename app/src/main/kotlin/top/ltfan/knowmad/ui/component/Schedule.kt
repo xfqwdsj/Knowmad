@@ -414,6 +414,7 @@ fun EventInformationScreen(
                 onEdit = onEdit,
                 onRequestBatchEdit = onRequestBatchEdit,
                 modifier = listModifier(PaddingValues(top = eventHeight.toDp())),
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }.first().measure(constraints)
 
@@ -449,15 +450,26 @@ fun EventEditScreen(
 ) {
     SubcomposeLayout(modifier) { constraints ->
         val eventPlaceable = subcompose("event") {
-            DetailedEvent(
-                event = event,
-                onClick = { onBack() },
+            Column(
                 modifier = eventModifier,
-                selected = true,
-                locale = locale,
-                timeZone = timeZone,
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                DetailedEvent(
+                    event = event,
+                    onClick = { onBack() },
+                    selected = true,
+                    locale = locale,
+                    timeZone = timeZone,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+                edit.SharedListItem(
+                    event = event,
+                    onRequestEdit = {},
+                    onEdit = {},
+                    onRequestBatchEdit = { _, _ -> },
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+            }
         }.first().measure(constraints)
 
         val eventWidth = eventPlaceable.width
@@ -498,11 +510,40 @@ sealed class EventEdit {
     }
 
     @Composable
+    fun SharedListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        animatedVisibilityScope: AnimatedVisibilityScope?,
+    ) {
+        localSharedTransitionScope {
+            ListItem(
+                event = event,
+                onRequestEdit = onRequestEdit,
+                onEdit = onEdit,
+                onRequestBatchEdit = onRequestBatchEdit,
+                modifier = Modifier.run {
+                    if (animatedVisibilityScope != null) {
+                        sharedElement(
+                            rememberSharedContentState(
+                                ScheduleSharedKey.EditItem(event.id, this@EventEdit),
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    } else this
+                },
+            )
+        }
+    }
+
+    @Composable
     abstract fun ListItem(
         event: Event,
         onRequestEdit: (EventEdit) -> Unit,
         onEdit: (EventEditResult) -> Unit,
         onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier = Modifier,
     )
 }
 
@@ -657,6 +698,7 @@ fun DetailedEventInformation(
     onEdit: (EventEditResult) -> Unit,
     onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
     modifier: Modifier = Modifier,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     Column(
         modifier = modifier,
@@ -677,7 +719,13 @@ fun DetailedEventInformation(
             )
         }
 
-        NotesEdit.ListItem(event, onRequestEdit, onEdit, onRequestBatchEdit)
+        NotesEdit.SharedListItem(
+            event,
+            onRequestEdit,
+            onEdit,
+            onRequestBatchEdit,
+            animatedVisibilityScope,
+        )
 
         DetailedEventInformationEntry(
             icon = R.drawable.book_24px,
@@ -707,7 +755,13 @@ fun DetailedEventInformation(
             content = { Text(event.semester.name) },
         )
 
-        PriorityEdit.ListItem(event, onRequestEdit, onEdit, onRequestBatchEdit)
+        PriorityEdit.SharedListItem(
+            event,
+            onRequestEdit,
+            onEdit,
+            onRequestBatchEdit,
+            animatedVisibilityScope,
+        )
 
         DetailedEventInformationEntry(
             icon = R.drawable.alarm_24px,
@@ -792,10 +846,12 @@ private object NotesEdit : EventEdit() {
         onRequestEdit: (EventEdit) -> Unit,
         onEdit: (EventEditResult) -> Unit,
         onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
             icon = R.drawable.notes_24px,
             label = R.string.schedule_event_notes_label,
+            modifier = modifier,
             onClick = { onRequestEdit(NotesEdit) },
         ) {
             Text(
@@ -814,6 +870,7 @@ private object PriorityEdit : EventEdit() {
         onRequestEdit: (EventEdit) -> Unit,
         onEdit: (EventEditResult) -> Unit,
         onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
     ) {
         var showMenu by remember { mutableStateOf(false) }
         var lastChange by remember { mutableStateOf<EventEditChange?>(null) }
@@ -821,6 +878,7 @@ private object PriorityEdit : EventEdit() {
         DetailedEventInformationEntry(
             icon = R.drawable.priority_24px,
             label = R.string.schedule_event_priority_label,
+            modifier = modifier,
             onClick = { showMenu = true },
             trailingContent = {
                 AnimatedVisibility(
@@ -1168,4 +1226,7 @@ private fun LabelWithIcon(
 sealed interface ScheduleSharedKey {
     @Immutable
     data class Event(val id: Uuid) : ScheduleSharedKey
+
+    @Immutable
+    data class EditItem(val id: Uuid, val edit: EventEdit) : ScheduleSharedKey
 }
