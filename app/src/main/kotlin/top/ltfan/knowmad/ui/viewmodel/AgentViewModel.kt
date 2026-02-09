@@ -481,8 +481,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             }
             launch {
                 while (updateChannel.receiveCatching().isSuccess) {
-                    withContext(Dispatchers.IO) {
+                    val result = withContext(Dispatchers.IO) {
                         chatDao.updateMessage(state.toEntity())
+                    }
+                    if (result < 1) {
+                        logger.warn { "Failed to update message with id ${state.id} on streaming update." }
+                        cancellationEvent.send(Unit)
                     }
                 }
             }
