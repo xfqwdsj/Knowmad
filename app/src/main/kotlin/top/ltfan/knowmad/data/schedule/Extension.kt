@@ -18,14 +18,26 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.content.res.Resources
 import biweekly.ICalendar
 import biweekly.io.TimezoneAssignment
 import biweekly.io.TimezoneInfo
-import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaZoneId
-import java.util.TimeZone
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.datetime.toLocalDateTime
+import top.ltfan.knowmad.R
+import top.ltfan.knowmad.ui.util.format
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
+import top.ltfan.omnical.icalendar.ICalendarTrigger
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle.MEDIUM
+import java.util.Locale
+import kotlin.uuid.Uuid
+import androidx.compose.ui.graphics.Color as ComposeColor
+import biweekly.property.Color as BiweeklyColor
+import kotlinx.datetime.TimeZone as KotlinTimeZone
+import java.util.TimeZone as JavaTimeZone
 
 fun SemesterEntity.constructICalendar(): ICalendar = ICalendar().apply {
     version = ICalendarVersion
@@ -33,7 +45,7 @@ fun SemesterEntity.constructICalendar(): ICalendar = ICalendar().apply {
     addName(name)
     timezoneInfo = TimezoneInfo().apply {
         defaultTimezone = TimezoneAssignment(
-            TimeZone.getTimeZone(timeZone.toJavaZoneId()),
+            JavaTimeZone.getTimeZone(timeZone.toJavaZoneId()),
             timeZone.id,
         )
     }
@@ -77,30 +89,46 @@ fun ICalendar.parse(
     )
 }
 
-fun Duration.toProperty(): biweekly.util.Duration {
-    return biweekly.util.Duration.fromMillis(this.inWholeMilliseconds)
+fun ICalendarRecurrenceRule.toProperty() = KnowmadRecurrenceProperty(this)
+
+fun ICalendarColor.Companion.pickFromPalette(id: Uuid): ICalendarColor = pickFromPalette(id.hashCode().toUInt())
+
+fun BiweeklyColor?.convertOrDefault(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
+    this?.value?.let { ICalendarColor.fromValue(it) }?.let { return it }
+    for (id in ids) {
+        id?.let { return ICalendarColor.pickFromPalette(it) }
+    }
+    return ICalendarColor.pickFromPalette(defaultId)
 }
 
-fun biweekly.util.Duration.toDuration(): Duration {
-    return toMillis().milliseconds
-}
+val ICalendarColor.compose inline get() = ComposeColor(argb)
 
-fun biweekly.util.DayOfWeek.toKotlinDayOfWeek(): DayOfWeek = when (this) {
-    MONDAY -> MONDAY
-    TUESDAY -> TUESDAY
-    WEDNESDAY -> WEDNESDAY
-    THURSDAY -> THURSDAY
-    FRIDAY -> FRIDAY
-    SATURDAY -> SATURDAY
-    SUNDAY -> SUNDAY
-}
+fun ICalendarTrigger.getString(
+    resources: Resources,
+    timeZone: KotlinTimeZone = KotlinTimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String = when (this) {
+    is Relative -> {
+        val negative = offset.isNegative()
+        val absOffset = if (negative) -offset else offset
+        val templateId = when {
+            negative && related == Start -> R.string.schedule_event_reminder_relative_label_before_start
+            negative && related == End -> R.string.schedule_event_reminder_relative_label_before_end
+            !negative && related == Start -> R.string.schedule_event_reminder_relative_label_after_start
+            !negative && related == End -> R.string.schedule_event_reminder_relative_label_after_end
+            else -> error("Unreachable")
+        }
 
-fun DayOfWeek.toICalDayOfWeek(): biweekly.util.DayOfWeek = when (this) {
-    MONDAY -> MONDAY
-    TUESDAY -> TUESDAY
-    WEDNESDAY -> WEDNESDAY
-    THURSDAY -> THURSDAY
-    FRIDAY -> FRIDAY
-    SATURDAY -> SATURDAY
-    SUNDAY -> SUNDAY
+        resources.getString(templateId, absOffset.format(locale))
+    }
+
+    is Absolute -> {
+        val localDateTime = time.toLocalDateTime(timeZone).toJavaLocalDateTime()
+
+        val formatter = DateTimeFormatter
+            .ofLocalizedDateTime(MEDIUM)
+            .withLocale(locale)
+
+        formatter.format(localDateTime)
+    }
 }

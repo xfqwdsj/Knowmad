@@ -36,11 +36,7 @@ import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
-import top.ltfan.knowmad.data.schedule.ICalendarColor
-import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.ICalendarRuleArguments
-import top.ltfan.knowmad.data.schedule.ICalendarTrigger
-import top.ltfan.knowmad.data.schedule.ICalendarTrigger.Relative.Related.Start
 import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
@@ -48,8 +44,13 @@ import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.parse
+import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarPriority
+import top.ltfan.omnical.icalendar.ICalendarTrigger
+import top.ltfan.omnical.icalendar.biweekly.format
 import java.io.ByteArrayInputStream
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -1352,7 +1353,7 @@ object ScheduleTools {
         ): ICalendarColor {
             return colorStr?.let {
                 ICalendarColor.fromValue(it)
-            } ?: ICalendarColor.fromId(courseId ?: semesterId)
+            } ?: ICalendarColor.pickFromPalette(courseId ?: semesterId)
         }
 
         private fun parseReminders(

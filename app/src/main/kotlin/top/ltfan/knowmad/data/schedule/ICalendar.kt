@@ -35,6 +35,9 @@ import biweekly.util.Recurrence
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
+import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
+import top.ltfan.omnical.icalendar.biweekly.toBiweeklyValue
+import top.ltfan.omnical.icalendar.biweekly.toOmnicalValue
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.reflect.KClass
@@ -286,7 +289,7 @@ data class CourseProperty(
 
 data class KnowmadRecurrenceProperty(
     val recurrenceRule: ICalendarRecurrenceRule?,
-) : RecurrenceProperty(recurrenceRule?.toICalValue()) {
+) : RecurrenceProperty(recurrenceRule?.toBiweeklyValue()) {
     companion object : RecurrencePropertyScribe<KnowmadRecurrenceProperty>(
         KnowmadRecurrenceProperty::class.java,
         KnowmadRecurrenceProperty.PROPERTY_NAME,
@@ -294,7 +297,7 @@ data class KnowmadRecurrenceProperty(
         const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE"
 
         override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty {
-            val rule = value?.toICalendarRecurrenceRule()
+            val rule = value?.toOmnicalValue()
             return KnowmadRecurrenceProperty(rule)
         }
     }

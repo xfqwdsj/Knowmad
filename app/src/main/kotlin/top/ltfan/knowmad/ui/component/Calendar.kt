@@ -126,6 +126,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.schedule.compose
 import top.ltfan.knowmad.ui.theme.AppRadiusSmall
 import top.ltfan.knowmad.ui.util.autoScale
 import top.ltfan.knowmad.ui.util.contractColorFor

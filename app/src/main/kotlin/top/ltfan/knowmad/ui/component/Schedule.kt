@@ -107,10 +107,12 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.Event.Course
 import top.ltfan.knowmad.data.schedule.Event.Normal
-import top.ltfan.knowmad.data.schedule.ICalendarColor
-import top.ltfan.knowmad.data.schedule.ICalendarPriority
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.data.schedule.compose
+import top.ltfan.knowmad.data.schedule.getString
+import top.ltfan.knowmad.data.schedule.reversedValueInType
+import top.ltfan.knowmad.data.schedule.type
 import top.ltfan.knowmad.ui.page.EventDetailsSubPageKey
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.theme.ProvideShapes
@@ -119,6 +121,8 @@ import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarPriority
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.Clock

@@ -30,11 +30,11 @@ import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
 import top.ltfan.knowmad.data.chat.UiMessage
-import top.ltfan.knowmad.data.schedule.ICalendarPriority
-import top.ltfan.knowmad.data.schedule.ICalendarRecurrenceRule
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
+import top.ltfan.omnical.icalendar.ICalendarPriority
+import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
@@ -148,7 +148,7 @@ object AppDatabaseConverters {
 
     @TypeConverter
     fun toICalendarPriority(data: Int): ICalendarPriority {
-        return ICalendarPriority.fromValue(data.toUByte())
+        return ICalendarPriority.fromValue(data.toUByte()) ?: None
     }
 
     @TypeConverter

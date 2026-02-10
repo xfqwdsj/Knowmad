@@ -41,10 +41,10 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.data.schedule.Event
-import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.omnical.icalendar.ICalendarColor
 import java.util.Locale
 import kotlin.random.Random
 import kotlin.time.Instant
@@ -104,7 +104,7 @@ fun CalendarPreview() {
                                     semester = semester,
                                     name = "Mathematics Lecture",
                                     location = "Room 101, Science Building",
-                                    color = ICalendarColor.fromRandom(Random),
+                                    color = ICalendarColor.pickFromPalette(0u),
                                     startTime = Instant.parse("2024-03-01T09:00:00Z"),
                                     endTime = Instant.parse("2024-03-01T10:30:00Z"),
                                     notes = "Weekly mathematics lecture covering calculus and linear algebra.",
@@ -113,7 +113,7 @@ fun CalendarPreview() {
                                     semester = semester,
                                     name = "Mathematics Lecture",
                                     location = "Room 101, Science Building",
-                                    color = ICalendarColor.fromRandom(Random),
+                                    color = ICalendarColor.pickFromPalette(1u),
                                     startTime = Instant.parse("2024-03-01T09:00:00Z"),
                                     endTime = Instant.parse("2024-03-01T10:30:00Z"),
                                     notes = "Weekly mathematics lecture covering calculus and linear algebra.",

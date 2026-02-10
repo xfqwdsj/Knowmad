@@ -29,10 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.data.schedule.Event
-import top.ltfan.knowmad.data.schedule.ICalendarColor
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.omnical.icalendar.ICalendarColor
 import java.util.Locale
 import kotlin.time.Instant
 
@@ -59,7 +59,7 @@ fun EventsDialogContentPreview() {
                         semester = semester,
                         name = "Event 1",
                         location = "",
-                        color = ICalendarColor.fromUInt(8u),
+                        color = ICalendarColor.pickFromPalette(8u),
                         startTime = Instant.parse("2024-06-01T09:00:00Z"),
                         endTime = Instant.parse("2024-06-01T10:00:00Z"),
                         notes = "Description for Event 1",
@@ -68,7 +68,7 @@ fun EventsDialogContentPreview() {
                         semester = semester,
                         name = "Event 2",
                         location = "",
-                        color = ICalendarColor.fromUInt(18u),
+                        color = ICalendarColor.pickFromPalette(18u),
                         startTime = Instant.parse("2024-06-01T11:00:00Z"),
                         endTime = Instant.parse("2024-06-01T12:00:00Z"),
                         notes = "Description for Event 2",
@@ -78,7 +78,7 @@ fun EventsDialogContentPreview() {
                         semester = semester,
                         name = "Event 3",
                         location = "",
-                        color = ICalendarColor.fromUInt(0u),
+                        color = ICalendarColor.pickFromPalette(0u),
                         startTime = Instant.parse("2024-06-01T14:00:00Z"),
                         endTime = Instant.parse("2024-06-01T15:00:00Z"),
                         priority = P4,
@@ -87,7 +87,7 @@ fun EventsDialogContentPreview() {
                         semester = semester,
                         name = "Event 4",
                         location = "",
-                        color = ICalendarColor.fromUInt(0u),
+                        color = ICalendarColor.pickFromPalette(0u),
                         startTime = Instant.parse("2024-06-01T16:00:00Z"),
                         endTime = Instant.parse("2024-06-01T17:00:00Z"),
                         notes = "Description for Event 4",

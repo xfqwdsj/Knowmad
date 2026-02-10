@@ -33,6 +33,9 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarPriority
+import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant

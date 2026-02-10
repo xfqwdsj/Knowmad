@@ -26,6 +26,12 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarPriority
+import top.ltfan.omnical.icalendar.ICalendarTrigger
+import top.ltfan.omnical.icalendar.biweekly.toBiweeklyValue
+import top.ltfan.omnical.icalendar.biweekly.toKotlinDuration
+import top.ltfan.omnical.icalendar.biweekly.toOmnicalValue
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import kotlin.time.Clock
@@ -205,7 +211,7 @@ sealed interface Event {
     }
 
     fun VEvent.color() {
-        color = this@Event.color.property
+        color = this@Event.color.toBiweeklyValue()
     }
 
     fun VEvent.dateStartAndEnd() {
@@ -224,7 +230,7 @@ sealed interface Event {
     }
 
     fun VEvent.priority() {
-        priority = this@Event.priority.property
+        priority = this@Event.priority.toBiweeklyValue()
     }
 
     fun VEvent.metaTimes() {
@@ -287,13 +293,13 @@ sealed interface Event {
 
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
-            val color = vEvent.color.toICalendarColor(course?.id, defaultId = semester.id)
+            val color = vEvent.color.convertOrDefault(course?.id, defaultId = semester.id)
             val startDate = vEvent.dateStart?.value ?: run {
                 errors.add("Start date not found in event: $identifier")
                 return emptyList()
             }
             val startTime = startDate.toInstant().toKotlinInstant()
-            val duration = vEvent.duration?.value?.toDuration()
+            val duration = vEvent.duration?.value?.toKotlinDuration()
                 ?: vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()?.let { it - startTime }
                 ?: run {
                     errors.add("Cannot determine duration in event: $identifier")
@@ -301,7 +307,7 @@ sealed interface Event {
                 }
             val reminders = vEvent.alarms.toReminders(name, errors)
             val notes = vEvent.description?.value
-            val priority = vEvent.priority.toICalendarPriority()
+            val priority = vEvent.priority?.toOmnicalValue() ?: None
             val now = Clock.System.now()
             val createdAt = vEvent.created?.value?.toInstant()?.toKotlinInstant() ?: now
             val updatedAt = vEvent.lastModified?.value?.toInstant()?.toKotlinInstant() ?: now
@@ -316,7 +322,7 @@ sealed interface Event {
                     ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
                 val entity = RecurrenceRuleEntity(
                     id = id,
-                    rule = rule.value.toICalendarRecurrenceRule(errors) ?: run {
+                    rule = rule.value.toOmnicalValue(errors) ?: run {
                         errors.add("Cannot parse recurrence rule in event: $identifier")
                         return emptyList()
                     },
@@ -550,7 +556,7 @@ data class Reminder(
     )
 
     fun toVAlarm(defaultDisplayText: String? = null): VAlarm = VAlarm.display(
-        trigger.toProperty(),
+        trigger.toBiweeklyValue(),
         displayText ?: defaultDisplayText,
     )
 }
@@ -568,7 +574,7 @@ fun VAlarm.toReminder(
         errors += "VAlarm does not have a trigger"
         return null
     }
-    val trigger = triggerProperty.toICalendarTrigger(errors) ?: run {
+    val trigger = triggerProperty.toOmnicalValue(errors) ?: run {
         errors += "Cannot parse VAlarm trigger: $triggerProperty"
         return null
     }

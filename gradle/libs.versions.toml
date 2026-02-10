@@ -23,7 +23,7 @@ capsule = "1.1.1"
 reorderable = "3.0.0"
 coil = "3.3.0"
 markdown = "0.39.2"
-biweekly = "0.6.8"
+omnical = "0.1.0-alpha01"
 calendar = "2.10.0"
 tyme = "1.4.2"
 webview = "2.0.3"
@@ -69,7 +69,7 @@ coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer-android", version.ref = "markdown" }
 markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "markdown" }
-biweekly = { module = "net.sf.biweekly:biweekly", version.ref = "biweekly" }
+omnical-biweekly = { module = "top.ltfan.omnical:omnical-biweekly", version.ref = "omnical" }
 calendar = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "calendar" }
 tyme = { module = "cn.6tail:tyme4kt", version.ref = "tyme" }
 webview = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "webview" }
@@ -123,7 +123,7 @@ all = [
     "markdown-renderer",
     "markdown-renderer-m3",
     # calendar
-    "biweekly",
+    "omnical-biweekly",
     "calendar",
     "tyme",
     # webview
