@@ -127,7 +127,7 @@ fun MarkdownView(
 
                     appendInlineContent(
                         id = id,
-                        alternateText = expression,
+                        alternateText = expression.ifBlank { "<math expression>" },
                     )
                     val mutableResults = mathResults as? MutableMap
                     mutableResults?.getOrPut(id) { null }?.getOrNull().let { result ->
