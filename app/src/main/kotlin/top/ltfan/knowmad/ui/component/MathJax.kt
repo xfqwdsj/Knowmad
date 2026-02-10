@@ -48,10 +48,8 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.size.Size
 import coil3.svg.SvgDecoder
-import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.binding.JsObject
 import com.dokar.quickjs.binding.asyncFunction
-import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.converter.JsObjectConverter
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -71,6 +69,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 import top.ltfan.knowmad.ui.util.rememberEx
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.QuickJsHolder
 import kotlin.math.roundToInt
 import kotlin.reflect.typeOf
 
@@ -177,7 +176,7 @@ fun MathJax(
 class MathJaxRenderer(
     val assets: AssetManager,
     val cacheCapacity: Int = 100,
-) : AutoCloseable {
+) : QuickJsHolder() {
     private val files = listOf(
         "mathjax/startup.js",
         "mathjax/core.js",
@@ -188,17 +187,11 @@ class MathJaxRenderer(
         "index.js",
     )
 
-    private val logger = Logger("MathJaxRenderer")
+    override val logger = Logger("MathJaxRenderer")
 
-    private val quickJs = QuickJs.create(Dispatchers.Default).apply {
-        addTypeConverters(MathJaxRenderResult)
-
-        define("console") {
-            function("log") { args ->
-                logger.debug { args.joinToString(" ") }
-                null
-            }
-        }
+    override fun prepare() {
+        super.prepare()
+        quickJs.addTypeConverters(MathJaxRenderResult)
     }
 
     suspend fun initialize(
@@ -249,19 +242,6 @@ class MathJaxRenderer(
             cache[key] = result
             return result
         }
-
-    override fun close() {
-        quickJs.close()
-    }
-
-    companion object {
-        suspend operator fun invoke(
-            assets: AssetManager,
-            loadExternal: MathJaxLoadExternal,
-        ) = MathJaxRenderer(assets).apply {
-            initialize(loadExternal)
-        }
-    }
 }
 
 sealed interface MathJaxRendererState {

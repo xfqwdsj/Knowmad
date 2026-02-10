@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.first
 class RemendProcessor(
     val assets: AssetManager,
 ) : QuickJsHolder() {
+    override val logger = Logger("RemendProcessor")
+
     private val initialized = MutableStateFlow(false)
 
     suspend fun initialize() {
