@@ -24,12 +24,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -129,11 +132,19 @@ fun MathJax(
     val context = LocalContext.current
     val density = LocalDensity.current
 
-    val size = remember(rendererResult, ex) { rendererResult?.pxSizeOrNull(ex) }
+    var size by remember { mutableStateOf(rendererResult?.pxSizeOrNull(ex)) }
+
+    LaunchedEffect(rendererResult, ex) {
+        rendererResult?.pxSizeOrNull(ex)?.let {
+            size = it
+        }
+    }
+
     val dpSize = with(density) { size?.let { DpSize(it.width.toDp(), it.height.toDp()) } }
         ?: DpSize.Unspecified
 
     val imageRequest = remember(context, rendererResult, size) {
+        val size = size
         if (rendererResult == null || size == null) {
             return@remember null
         }

@@ -33,8 +33,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -269,24 +271,40 @@ fun MarkdownParagraph(
 
                     val ex = rememberEx(TextStyle(fontSize = mathFontSize.get(display)))
 
-                    val placeholder = remember(result, ex, density) {
-                        result?.let { result ->
-                            result.dpSizeOrNull(
-                                ex = ex,
-                                density = density,
-                            )?.let {
-                                calculatePlaceHolder(
-                                    width = if (display) maxWidth
-                                    else it.width.coerceAtMost(maxWidth),
-                                    height = it.height,
+                    var placeholder by remember {
+                        mutableStateOf(
+                            result?.let { result ->
+                                result.dpSizeOrNull(
+                                    ex = ex,
                                     density = density,
-                                )
-                            }
-                        } ?: Placeholder(
-                            width = 0.sp,
-                            height = 0.sp,
-                            placeholderVerticalAlign = Center,
+                                )?.let {
+                                    calculatePlaceHolder(
+                                        width = if (display) maxWidth
+                                        else it.width.coerceAtMost(maxWidth),
+                                        height = it.height,
+                                        density = density,
+                                    )
+                                }
+                            } ?: Placeholder(
+                                width = 0.sp,
+                                height = 0.sp,
+                                placeholderVerticalAlign = Center,
+                            ),
                         )
+                    }
+
+                    LaunchedEffect(result, ex, density) {
+                        result?.dpSizeOrNull(
+                            ex = ex,
+                            density = density,
+                        )?.let {
+                            placeholder = calculatePlaceHolder(
+                                width = if (display) maxWidth
+                                else it.width.coerceAtMost(maxWidth),
+                                height = it.height,
+                                density = density,
+                            )
+                        }
                     }
 
                     InlineTextContent(placeholder) {
