@@ -87,6 +87,7 @@ import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.ui.util.SnapshotLruCache
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.RemendProcessor
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
@@ -363,6 +364,15 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
+    val remend = RemendProcessor(application.assets)
+
+    init {
+        addCloseable(remend)
+        viewModelScope.launch {
+            remend.initialize()
+        }
+    }
+
     val canSendMessage
         get() = !isRunning &&
                 selectedModelEntity != null &&
@@ -447,6 +457,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 model = service.agentConfig.model,
                 coroutineScope = viewModelScope,
                 conversationId = conversationId,
+                remend = remend,
                 onUpdate = {
                     updateChannel.trySend(Unit)
                 },

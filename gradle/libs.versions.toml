@@ -27,7 +27,7 @@ omnical = "0.1.0-alpha01"
 calendar = "2.10.0"
 tyme = "1.4.2"
 webview = "2.0.3"
-quickjs = "1.0.1"
+quickjs = "1.0.2"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }

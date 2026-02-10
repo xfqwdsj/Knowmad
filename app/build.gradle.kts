@@ -137,7 +137,7 @@ abstract class DownloadMathJaxTask : DefaultTask() {
         val api = "https://data.jsdelivr.com/v1/packages/npm/mathjax/resolved"
         val apiUrl = URI(api).toURL()
 
-        val mainMetaString = try {
+        val metaString = try {
             println("Reading MathJax metadata from $api...")
             apiUrl.readText()
         } catch (e: Throwable) {
@@ -146,7 +146,7 @@ abstract class DownloadMathJaxTask : DefaultTask() {
             ""
         }
 
-        val meta = JsonSlurper().parseText(mainMetaString) as? Map<*, *>
+        val meta = JsonSlurper().parseText(metaString) as? Map<*, *>
         val version = meta?.get("version") as? String ?: "latest"
 
         inputs.property("version", version)
@@ -199,6 +199,65 @@ abstract class DownloadMathJaxTask : DefaultTask() {
     }
 }
 
+abstract class DownloadRemendTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    init {
+        outputDir.convention(
+            project.layout.buildDirectory.dir("generated/remend/${name}"),
+        )
+
+        val api = "https://data.jsdelivr.com/v1/packages/npm/remend/resolved"
+        val apiUrl = URI(api).toURL()
+
+        val metaString = try {
+            println("Reading Remend metadata from $api...")
+            apiUrl.readText()
+        } catch (e: Throwable) {
+            println("Failed to read Remend metadata: ${e.localizedMessage}")
+            e.printStackTrace()
+            ""
+        }
+
+        val meta = JsonSlurper().parseText(metaString) as? Map<*, *>
+        val version = meta?.get("version") as? String ?: "latest"
+
+        inputs.property("version", version)
+    }
+
+    @TaskAction
+    fun download() {
+        val targetDir = outputDir.dir("remend").get()
+        val targetFile = targetDir.asFile
+
+        val version: String by inputs.properties
+
+        try {
+            if (!targetFile.exists()) targetFile.mkdirs()
+
+            targetDir.file("version").asFile.writeText(version)
+
+            println("Downloading Remend...")
+
+            val fileUrl = "https://cdn.jsdelivr.net/npm/remend@$version/dist/index.js"
+            println("Downloading index.js from $fileUrl...")
+            URI(fileUrl).toURL().openStream().use { input ->
+                val targetOutput = targetDir.file("index.js").asFile
+                if (!targetOutput.parentFile.exists()) {
+                    targetOutput.parentFile.mkdirs()
+                }
+                targetOutput.outputStream().use { input.copyTo(it) }
+            }
+
+            println("Remend downloaded successfully.")
+        } catch (e: Throwable) {
+            println("Failed to download Remend: ${e.localizedMessage}")
+            throw e
+        }
+    }
+}
+
 androidComponents {
     onVariants { variant ->
         val mathJaxProvider = tasks.register<DownloadMathJaxTask>(
@@ -214,6 +273,21 @@ androidComponents {
         variant.sources.assets?.addGeneratedSourceDirectory(
             mathJaxProvider,
             DownloadMathJaxTask::outputDir,
+        )
+
+        val remendProvider = tasks.register<DownloadRemendTask>(
+            "downloadRemend${
+                variant.name.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(
+                        Locale.getDefault(),
+                    ) else it.toString()
+                }
+            }",
+        )
+
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            remendProvider,
+            DownloadRemendTask::outputDir,
         )
     }
 }

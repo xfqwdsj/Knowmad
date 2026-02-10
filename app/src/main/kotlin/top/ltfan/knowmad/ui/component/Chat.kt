@@ -117,6 +117,7 @@ import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.RemendProcessor
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -989,6 +990,7 @@ sealed interface AssistantMessageState {
         override var parentId: Uuid? = null,
         override var depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
+        remend: RemendProcessor? = null,
         onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
@@ -1017,6 +1019,7 @@ sealed interface AssistantMessageState {
                                     flow = MutableStateFlow(""),
                                     model = model,
                                     coroutineScope = coroutineScope,
+                                    remend = remend,
                                 )
                                 contents.add(newContent)
                                 onUpdate()
