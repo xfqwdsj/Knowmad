@@ -34,7 +34,10 @@ abstract class QuickJsHolder(
         quickJs.define("console") {
             function("log") { args ->
                 logger.debug { args.joinToString(" ") }
-                null
+            }
+
+            function("warn") { args ->
+                logger.warn { args.joinToString(" ") }
             }
         }
     }

@@ -191,6 +191,44 @@ abstract class DownloadMathJaxTask : DefaultTask() {
                 }
             }
 
+            val fileTreeApi = "https://data.jsdelivr.com/v1/packages/npm/mathjax@$version"
+            println("Reading MathJax file tree from $fileTreeApi...")
+            val fileTreeString = URI(fileTreeApi).toURL().readText()
+
+            val fileTree = JsonSlurper().parseText(fileTreeString) as? Map<*, *>
+
+            val extensions = (fileTree?.get("files") as? List<*>)
+                ?.first { (it as? Map<*, *>)?.get("name") as? String == "input" }
+                ?.let { (it as? Map<*, *>)?.get("files") as? List<*> }
+                ?.first { (it as? Map<*, *>)?.get("name") as? String == "tex" }
+                ?.let { (it as? Map<*, *>)?.get("files") as? List<*> }
+                ?.first { (it as? Map<*, *>)?.get("name") as? String == "extensions" }
+                ?.let { (it as? Map<*, *>)?.get("files") as? List<*> }
+                ?.mapNotNull { ((it as? Map<*, *>)?.get("name") as? String) }
+                ?: run {
+                    System.err.println("Failed to find MathJax extensions in metadata")
+                    null
+                }
+
+            extensions?.forEach { ext ->
+                val fileUrl =
+                    "https://cdn.jsdelivr.net/npm/mathjax@$version/input/tex/extensions/$ext"
+                println("Downloading extension $ext from $fileUrl...")
+                try {
+                    URI(fileUrl).toURL().openStream().use { input ->
+                        val targetOutput =
+                            targetDir.file("mathjax/input/tex/extensions/$ext").asFile
+                        if (!targetOutput.parentFile.exists()) {
+                            targetOutput.parentFile.mkdirs()
+                        }
+                        targetOutput.outputStream().use { input.copyTo(it) }
+                    }
+                } catch (e: Throwable) {
+                    System.err.println("Failed to download extension $ext: ${e.localizedMessage}")
+                    e.printStackTrace()
+                }
+            }
+
             println("MathJax downloaded successfully.")
         } catch (e: Throwable) {
             println("Failed to download MathJax: ${e.localizedMessage}")

@@ -64,7 +64,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.encodeToJsonElement
 import top.ltfan.knowmad.ui.util.rememberEx
 import top.ltfan.knowmad.util.Json
@@ -99,7 +101,9 @@ fun MathJax(
 
     val ex = rememberEx(TextStyle(fontSize = fontSize.get(display)))
 
-    renderResult?.onSuccess { result ->
+    renderResult?.onFailure {
+        failure?.invoke(it)
+    }?.getOrNull().let { result ->
         MathJax(
             rendererResult = result,
             contentDescription = contentDescription,
@@ -109,8 +113,6 @@ fun MathJax(
             colorFilter = colorFilter,
             ex = ex,
         )
-    }?.onFailure {
-        failure?.invoke(it)
     }
 }
 
@@ -177,35 +179,20 @@ class MathJaxRenderer(
     val assets: AssetManager,
     val cacheCapacity: Int = 100,
 ) : QuickJsHolder() {
-    private val files = listOf(
+    val mathJax = listOf(
         "mathjax/startup.js",
         "mathjax/core.js",
         "mathjax/adaptors/liteDOM.js",
         "mathjax/input/tex.js",
         "mathjax/output/svg.js",
         "@mathjax/mathjax-newcm-font/svg.js",
+    )
+
+    val main = listOf(
         "index.js",
     )
 
     override val logger = Logger("MathJaxRenderer")
-
-    override fun prepare() {
-        super.prepare()
-        quickJs.addTypeConverters(MathJaxRenderResult)
-    }
-
-    suspend fun initialize(
-        loadExternal: MathJaxLoadExternal,
-    ) {
-        quickJs.asyncFunction("loadExternal") { path: String ->
-            loadExternal(path)
-        }
-        files.forEach { file ->
-            val code = assets.open("mathjax/$file").bufferedReader().use { it.readText() } +
-                    "\n;void 0;"
-            quickJs.evaluate<Unit>(code, filename = file)
-        }
-    }
 
     private val mutex = Mutex()
 
@@ -242,6 +229,65 @@ class MathJaxRenderer(
             cache[key] = result
             return result
         }
+
+    override fun prepare() {
+        super.prepare()
+        quickJs.addTypeConverters(MathJaxRenderResult)
+    }
+
+    suspend fun setupLoadExternal(loadExternal: MathJaxLoadExternal) {
+        quickJs.asyncFunction("loadExternal") { path: String ->
+            loadExternal(path)
+        }
+    }
+
+    suspend fun loadScripts(scripts: List<String>) {
+        scripts.forEach { file ->
+            val code = assets.open("mathjax/$file").bufferedReader().use { it.readText() } +
+                    ";void 0;"
+            quickJs.evaluate<Unit>(code, filename = file)
+        }
+    }
+
+    suspend fun initialize(
+        loadExternal: MathJaxLoadExternal,
+    ) {
+        setupLoadExternal(loadExternal)
+        loadMathJaxWithExtensions()
+    }
+
+    suspend fun loadMathJaxWithExtensions() {
+        loadScripts(mathJax)
+        val extensions = assets.list("mathjax/input/tex/extensions")
+        val deferred = setOf("cancel", "cases")
+        val successful = mutableListOf("base")
+        extensions?.forEach { extension ->
+            if (extension in deferred) return@forEach
+            try {
+                val content = assets.open("mathjax/input/tex/extensions/$extension")
+                    .bufferedReader().use { it.readText() } + ";void 0;"
+                quickJs.evaluate<Unit>(content, "mathjax/input/tex/extensions/$extension")
+                successful.add(extension)
+            } catch (e: Exception) {
+                logger.warn(e) { "Failed to load MathJax extension: $extension" }
+            }
+        }
+        extensions?.forEach { extension ->
+            if (extension !in deferred) return@forEach
+            try {
+                val content = assets.open("mathjax/input/tex/extensions/$extension")
+                    .bufferedReader().use { reader -> reader.readText() } + ";void 0;"
+                quickJs.evaluate<Unit>(content, "mathjax/input/tex/extensions/$extension")
+            } catch (e: Exception) {
+                logger.warn(e) { "Failed to load deferred MathJax extension: $extension" }
+            }
+        }
+        val packages = buildJsonArray {
+            successful.forEach { add(it.removeSuffix(".js")) }
+        }
+        quickJs.evaluate<Unit>("globalThis.texPackages = ${Json.encodeToString(packages)}; void 0;")
+        loadScripts(main)
+    }
 }
 
 sealed interface MathJaxRendererState {

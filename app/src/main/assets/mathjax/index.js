@@ -1,7 +1,12 @@
 const adaptor = MathJax._.adaptors.liteAdaptor.liteAdaptor();
 const html = MathJax._.handlers.html;
 const fontData = MathJax.config.svg.fontData;
-const tex = new MathJax._.input.tex_ts.TeX();
+const tex = new MathJax._.input.tex_ts.TeX({
+    packages: globalThis.texPackages || ['base'],
+    formatError: (jax, err) => {
+        throw err;
+    },
+});
 const svg = new MathJax._.output.svg_ts.SVG({
     linebreaks: {inline: false},
     fontData: fontData,
