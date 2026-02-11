@@ -125,8 +125,6 @@
     <string name="schedule_event_location_label_none">No Location</string>
     <string name="schedule_event_notes_label">Notes</string>
     <string name="schedule_event_notes_label_none">No Notes</string>
-    <string name="schedule_event_instructor_label">Instructor</string>
-    <string name="schedule_event_instructor_label_none">No Instructor</string>
     <string name="schedule_event_course_label">Course</string>
     <string name="schedule_event_course_label_none">No Course</string>
     <string name="schedule_event_semester_label">Semester</string>
@@ -138,6 +136,10 @@
     <string name="schedule_event_reminder_relative_label_after_start">%s after start</string>
     <string name="schedule_event_reminder_relative_label_before_end">%s before end</string>
     <string name="schedule_event_reminder_relative_label_after_end">%s after end</string>
+    <string name="schedule_event_instructor_label">Instructor</string>
+    <string name="schedule_event_instructor_label_none">No Instructor</string>
+    <string name="schedule_event_recurrence_rule_label">Recurrence Rule</string>
+    <string name="schedule_event_recurrence_rule_label_none">Not part of any recurrence rule</string>
     <string name="schedule_event_color_label">Color</string>
     <string name="schedule_event_dot_label">Has Events</string>
     <string name="schedule_event_list_indicator_label_new_day">New Day</string>

@@ -566,10 +566,11 @@ sealed class EventEdit {
             LocationEdit,
             NotesEdit,
             CourseEdit,
-            InstructorEdit,
-            SemesterEdit,
             PriorityEdit,
             RemindersEdit,
+            InstructorEdit,
+            RecurrenceRuleEdit,
+            SemesterEdit,
             ColorEdit,
         )
     }
@@ -888,47 +889,6 @@ private object CourseEdit : EventEdit() {
 }
 
 @Immutable
-private object InstructorEdit : EventEdit() {
-    @Composable
-    override fun ListItem(
-        event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
-        modifier: Modifier,
-    ) {
-        if (event !is Course) return
-        DetailedEventInformationEntry(
-            icon = R.drawable.podium_24px,
-            label = R.string.schedule_event_instructor_label,
-            modifier = modifier,
-            onClick = onRequestEdit.onClick,
-            content = { Text(event.instructor.ifBlank { stringResource(R.string.schedule_event_instructor_label_none) }) },
-        )
-    }
-}
-
-@Immutable
-private object SemesterEdit : EventEdit() {
-    @Composable
-    override fun ListItem(
-        event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
-        modifier: Modifier,
-    ) {
-        DetailedEventInformationEntry(
-            icon = R.drawable.event_repeat_24px,
-            label = R.string.schedule_event_semester_label,
-            modifier = modifier,
-            onClick = {},
-            content = { Text(event.semester.name) },
-        )
-    }
-}
-
-@Immutable
 private object PriorityEdit : EventEdit() {
     @Composable
     override fun ListItem(
@@ -1036,6 +996,67 @@ private object RemindersEdit : EventEdit() {
 }
 
 @Immutable
+private object InstructorEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (event !is Course) return
+        DetailedEventInformationEntry(
+            icon = R.drawable.podium_24px,
+            label = R.string.schedule_event_instructor_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+            content = { Text(event.instructor.ifBlank { stringResource(R.string.schedule_event_instructor_label_none) }) },
+        )
+    }
+}
+
+@Immutable
+private object RecurrenceRuleEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.event_repeat_24px,
+            label = R.string.schedule_event_recurrence_rule_label,
+            modifier = modifier,
+            onClick = onRequestEdit.onClick,
+            content = {},
+        )
+    }
+}
+
+@Immutable
+private object SemesterEdit : EventEdit() {
+    @Composable
+    override fun ListItem(
+        event: Event,
+        onRequestEdit: (EventEdit) -> Unit,
+        onEdit: (EventEditResult) -> Unit,
+        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        modifier: Modifier,
+    ) {
+        DetailedEventInformationEntry(
+            icon = R.drawable.cycle_24px,
+            label = R.string.schedule_event_semester_label,
+            modifier = modifier,
+            onClick = {},
+            content = { Text(event.semester.name) },
+        )
+    }
+}
+
+@Immutable
 private object ColorEdit : EventEdit() {
     @Composable
     override fun ListItem(
@@ -1128,7 +1149,7 @@ private fun BatchEditButton(onClick: () -> Unit) {
 fun EventBatchEditDialog(
     event: Event,
     change: EventEditChange,
-    getAffection: (List<EventEdit>) -> Int,
+    getAffection: suspend (List<EventEdit>) -> Int,
     onConfirm: (List<EventEdit>) -> Unit,
     onDismiss: () -> Unit,
 ) {
