@@ -19,11 +19,8 @@
 package top.ltfan.knowmad.data
 
 import android.app.Application
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
@@ -34,11 +31,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -52,7 +47,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
-import kotlin.time.Duration.Companion.seconds
 
 class AppDataStore<T>(
     serializer: KSerializer<T>,
@@ -93,11 +87,7 @@ class AppDataStore<T>(
     ) = object : ReadWriteProperty<Any?, T> {
         private var state by mutableStateOf(dataStateFlow.value)
 
-        private val writeRequest = MutableSharedFlow<T>(
-            replay = 0,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val writeRequest = Channel<T>(Channel.CONFLATED)
 
         private suspend fun write(value: T) {
             withContext(Dispatchers.IO) {
@@ -107,16 +97,8 @@ class AppDataStore<T>(
 
         init {
             coroutineScope.launch {
-                writeRequest
-                    .debounce(1.seconds)
-                    .collect { value ->
-                        write(value)
-                    }
-            }
-
-            coroutineScope.launch {
-                dataStateFlow.collect { value ->
-                    state = value
+                for (value in writeRequest) {
+                    write(value)
                 }
             }
         }
@@ -127,7 +109,7 @@ class AppDataStore<T>(
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             state = value
-            writeRequest.tryEmit(value)
+            writeRequest.trySend(value)
         }
     }
 
@@ -136,19 +118,6 @@ class AppDataStore<T>(
         dataStateFlow = dataStateFlow,
         coroutineScope = viewModel.viewModelScope,
     )
-
-    @Composable
-    fun asMutableState(
-        dataStateFlow: StateFlow<T>,
-    ): ReadWriteProperty<Any?, T> {
-        val coroutineScope = rememberCoroutineScope()
-        return remember(dataStateFlow, coroutineScope) {
-            asMutableState(
-                dataStateFlow = dataStateFlow,
-                coroutineScope = coroutineScope,
-            )
-        }
-    }
 }
 
 interface DataStoreCompanion<T> {
