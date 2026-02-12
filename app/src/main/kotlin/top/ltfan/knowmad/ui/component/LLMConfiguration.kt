@@ -99,7 +99,6 @@ import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.llm.decryptedApiKey
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
@@ -708,19 +707,17 @@ fun LLMProviderConfigItem(
                         horizontalAlignment = Alignment.Start,
                     )
 
-                    ProvideCompatibleShapes {
-                        TextButton(
-                            onClick = onAddModel,
-                            shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Icon(
-                                painterResource(R.drawable.add_24px),
-                                contentDescription = null,
-                                modifier = Modifier.size(ButtonDefaults.IconSize),
-                            )
-                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(stringResource(R.string.llm_model_label_add))
-                        }
+                    TextButton(
+                        onClick = onAddModel,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.add_24px),
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize),
+                        )
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(stringResource(R.string.llm_model_label_add))
                     }
                 }
             }
@@ -883,38 +880,36 @@ fun LLMConfigItem(
     elevation: ListItemElevation = ListItemDefaults.elevation(),
     interactionSource: MutableInteractionSource? = null,
 ) {
-    ProvideCompatibleShapes {
-        ListItem(
-            onClick = onEdit,
-            modifier = modifier,
-            trailingContent = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            painterResource(R.drawable.edit_24px),
-                            contentDescription = stringResource(R.string.label_edit),
-                        )
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            painterResource(R.drawable.delete_24px),
-                            contentDescription = stringResource(R.string.label_delete),
-                        )
-                    }
-                    dragHandle()
+    ListItem(
+        onClick = onEdit,
+        modifier = modifier,
+        trailingContent = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        painterResource(R.drawable.edit_24px),
+                        contentDescription = stringResource(R.string.label_edit),
+                    )
                 }
-            },
-            overlineContent = {
-                Text(entity.model.id)
-            },
-            elevation = elevation,
-            interactionSource = interactionSource,
-        ) {
-            Text(entity.name)
-        }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        painterResource(R.drawable.delete_24px),
+                        contentDescription = stringResource(R.string.label_delete),
+                    )
+                }
+                dragHandle()
+            }
+        },
+        overlineContent = {
+            Text(entity.model.id)
+        },
+        elevation = elevation,
+        interactionSource = interactionSource,
+    ) {
+        Text(entity.name)
     }
 }
 

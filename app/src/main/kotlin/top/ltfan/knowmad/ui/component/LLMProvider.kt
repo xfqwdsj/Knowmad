@@ -50,8 +50,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMProviderInfo
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 
 @Composable
@@ -61,20 +59,18 @@ fun LLMProviderInfo(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    ProvideCompatibleShapes {
-        ListItem(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = modifier,
-            leadingContent = {
-                LLMProviderIcon(info)
-            },
-            supportingContent = {
-                Text(stringResource(info.description))
-            },
-        ) {
-            Text(stringResource(info.label))
-        }
+    ListItem(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        leadingContent = {
+            LLMProviderIcon(info)
+        },
+        supportingContent = {
+            Text(stringResource(info.description))
+        },
+    ) {
+        Text(stringResource(info.label))
     }
 }
 
@@ -213,19 +209,17 @@ fun LLMProviderIcon(
     info: LLMProviderInfo,
     modifier: Modifier = Modifier,
 ) {
-    ProvideShapes {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = modifier,
-        ) {
-            Icon(
-                painterResource(info.icon),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(12.dp)
-                    .size(32.dp),
-            )
-        }
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier,
+    ) {
+        Icon(
+            painterResource(info.icon),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(12.dp)
+                .size(32.dp),
+        )
     }
 }

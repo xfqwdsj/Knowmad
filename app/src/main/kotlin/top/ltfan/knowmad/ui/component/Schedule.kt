@@ -114,8 +114,6 @@ import top.ltfan.knowmad.data.schedule.getString
 import top.ltfan.knowmad.data.schedule.reversedValueInType
 import top.ltfan.knowmad.data.schedule.type
 import top.ltfan.knowmad.ui.page.EventDetailsSubPageKey
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
-import top.ltfan.knowmad.ui.theme.ProvideShapes
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.format
@@ -1083,32 +1081,27 @@ private fun DetailedEventInformationEntry(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
-    // TODO: refactor to non-null when Material 3 supports animate CornerBasedShape
-    shapes: ListItemShapes? = null,
+    shapes: ListItemShapes = DetailedEventInformationEntryDefaults.shapes,
     content: @Composable () -> Unit,
 ) {
-    ProvideCompatibleShapes {
-        val shapes = shapes ?: DetailedEventInformationEntryDefaults.shapes
-
-        if (onClick != null) {
-            ListItem(
-                onClick = onClick,
-                modifier = modifier,
-                leadingContent = { DetailedEventInformationEntryIcon(icon) },
-                trailingContent = trailingContent,
-                overlineContent = { Text(stringResource(label)) },
-                shapes = shapes,
-                content = content,
-            )
-        } else {
-            ListItem(
-                headlineContent = content,
-                modifier = modifier,
-                leadingContent = { DetailedEventInformationEntryIcon(icon) },
-                trailingContent = trailingContent,
-                overlineContent = { Text(stringResource(label)) },
-            )
-        }
+    if (onClick != null) {
+        ListItem(
+            onClick = onClick,
+            modifier = modifier,
+            leadingContent = { DetailedEventInformationEntryIcon(icon) },
+            trailingContent = trailingContent,
+            overlineContent = { Text(stringResource(label)) },
+            shapes = shapes,
+            content = content,
+        )
+    } else {
+        ListItem(
+            headlineContent = content,
+            modifier = modifier,
+            leadingContent = { DetailedEventInformationEntryIcon(icon) },
+            trailingContent = trailingContent,
+            overlineContent = { Text(stringResource(label)) },
+        )
     }
 }
 
@@ -1181,20 +1174,18 @@ private fun DetailedEventInformationEntryIcon(
     @DrawableRes icon: Int,
     modifier: Modifier = Modifier,
 ) {
-    ProvideShapes {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = modifier,
-        ) {
-            Icon(
-                painterResource(icon),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(12.dp)
-                    .size(24.dp),
-            )
-        }
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier,
+    ) {
+        Icon(
+            painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(12.dp)
+                .size(24.dp),
+        )
     }
 }
 

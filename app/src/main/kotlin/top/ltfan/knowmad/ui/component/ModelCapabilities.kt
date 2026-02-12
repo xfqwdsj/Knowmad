@@ -56,7 +56,6 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMCapabilities
 import top.ltfan.knowmad.data.llm.LLMCapabilityInfo
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 
 @Composable
@@ -105,16 +104,14 @@ fun ModelCapabilitiesList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (item in LLMCapabilities) {
-            ProvideCompatibleShapes {
-                CapabilityListItem(
-                    capabilities = capabilities,
-                    item = item,
-                    enabled = enabled,
-                    onAdd = onAdd,
-                    onRemove = onRemove,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
-            }
+            CapabilityListItem(
+                capabilities = capabilities,
+                item = item,
+                enabled = enabled,
+                onAdd = onAdd,
+                onRemove = onRemove,
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
         }
     }
 }

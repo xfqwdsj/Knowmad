@@ -131,7 +131,6 @@ import top.ltfan.knowmad.ui.theme.ContentContainerColor
 import top.ltfan.knowmad.ui.theme.ContentContainerPadding
 import top.ltfan.knowmad.ui.theme.ContentContainerShape
 import top.ltfan.knowmad.ui.theme.ListItemMaxWidth
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -249,47 +248,45 @@ class WizardPage : Page() {
                             .horizontalScroll(rememberScrollState())
                             .padding(horizontalPadding),
                     ) {
-                        ProvideCompatibleShapes {
-                            Spacer(Modifier.width(16.dp))
-                            TextButton(
-                                onClick = {
-                                    if (currentPage.isFinal) {
-                                        viewModel.finishWizard()
-                                        return@TextButton
-                                    }
-                                    viewModel.skipWizard()
-                                },
-                                shapes = ButtonDefaults.shapes(),
-                            ) {
-                                Text(stringResource(R.string.label_skip_for_now))
-                            }
-                            Spacer(Modifier.weight(1f))
-                            OutlinedButton(
-                                onClick = {
-                                    backStack.removeLastOrNull()
-                                },
-                                shapes = ButtonDefaults.shapes(),
-                                enabled = backStack.size > 1,
-                            ) {
-                                Text(stringResource(R.string.label_previous))
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    val pageOrNull = currentPage.nextPage(viewModel)
-                                    if (pageOrNull == null) {
-                                        viewModel.finishWizard()
-                                        return@Button
-                                    }
-                                    viewModel.backStack.add(pageOrNull)
-                                },
-                                shapes = ButtonDefaults.shapes(),
-                                enabled = currentPage.canContinue(viewModel),
-                            ) {
-                                Text(stringResource(R.string.label_next))
-                            }
-                            Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(16.dp))
+                        TextButton(
+                            onClick = {
+                                if (currentPage.isFinal) {
+                                    viewModel.finishWizard()
+                                    return@TextButton
+                                }
+                                viewModel.skipWizard()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.label_skip_for_now))
                         }
+                        Spacer(Modifier.weight(1f))
+                        OutlinedButton(
+                            onClick = {
+                                backStack.removeLastOrNull()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                            enabled = backStack.size > 1,
+                        ) {
+                            Text(stringResource(R.string.label_previous))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                val pageOrNull = currentPage.nextPage(viewModel)
+                                if (pageOrNull == null) {
+                                    viewModel.finishWizard()
+                                    return@Button
+                                }
+                                viewModel.backStack.add(pageOrNull)
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                            enabled = currentPage.canContinue(viewModel),
+                        ) {
+                            Text(stringResource(R.string.label_next))
+                        }
+                        Spacer(Modifier.width(16.dp))
                     }
                     Spacer(Modifier.height(16.dp))
                 }
@@ -871,26 +868,24 @@ class WizardFinishPage : WizardSubPage() {
                     },
                     state = rememberTooltipState(),
                 ) {
-                    ProvideCompatibleShapes {
-                        val size = ButtonDefaults.MediumContainerHeight
-                        Button(
-                            onClick = viewModel::finishWizard,
-                            shapes = ButtonDefaults.shapesFor(size),
-                            modifier = localSharedTransitionScope {
-                                Modifier.sharedBounds(
-                                    rememberSharedContentState(WizardSharedTransitionKey),
-                                    LocalNavAnimatedContentScope.current,
-                                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                                )
-                            },
-                            contentPadding = ButtonDefaults.contentPaddingFor(size),
-                        ) {
-                            Icon(
-                                painterResource(R.drawable.arrow_forward_24px),
-                                contentDescription = stringResource(R.string.label_finish),
-                                modifier = Modifier.size(ButtonDefaults.iconSizeFor(size)),
+                    val size = ButtonDefaults.MediumContainerHeight
+                    Button(
+                        onClick = viewModel::finishWizard,
+                        shapes = ButtonDefaults.shapesFor(size),
+                        modifier = localSharedTransitionScope {
+                            Modifier.sharedBounds(
+                                rememberSharedContentState(WizardSharedTransitionKey),
+                                LocalNavAnimatedContentScope.current,
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                             )
-                        }
+                        },
+                        contentPadding = ButtonDefaults.contentPaddingFor(size),
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.arrow_forward_24px),
+                            contentDescription = stringResource(R.string.label_finish),
+                            modifier = Modifier.size(ButtonDefaults.iconSizeFor(size)),
+                        )
                     }
                 }
                 AnimatedVisibility(

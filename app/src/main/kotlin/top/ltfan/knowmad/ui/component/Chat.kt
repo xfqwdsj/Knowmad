@@ -114,7 +114,6 @@ import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
-import top.ltfan.knowmad.ui.theme.ProvideCompatibleShapes
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.RemendProcessor
@@ -215,44 +214,40 @@ fun ChatModelSelector(
 
     SplitButtonLayout(
         leadingButton = {
-            ProvideCompatibleShapes {
-                SplitButtonDefaults.LeadingButton(
-                    onClick = { expanded = true },
-                    shapes = SplitButtonDefaults.leadingButtonShapesFor(size),
-                    colors = colors,
-                    border = border,
-                    contentPadding = SplitButtonDefaults.leadingButtonContentPaddingFor(size),
-                ) {
-                    SharedTransitionLayout {
-                        Text(
-                            selectedModel?.name
-                                ?: stringResource(R.string.chat_input_model_label_select),
-                            modifier = Modifier
-                                .animateBounds(this)
-                                .skipToLookaheadSize { true },
-                        )
-                    }
+            SplitButtonDefaults.LeadingButton(
+                onClick = { expanded = true },
+                shapes = SplitButtonDefaults.leadingButtonShapesFor(size),
+                colors = colors,
+                border = border,
+                contentPadding = SplitButtonDefaults.leadingButtonContentPaddingFor(size),
+            ) {
+                SharedTransitionLayout {
+                    Text(
+                        selectedModel?.name
+                            ?: stringResource(R.string.chat_input_model_label_select),
+                        modifier = Modifier
+                            .animateBounds(this)
+                            .skipToLookaheadSize { true },
+                    )
                 }
             }
         },
         trailingButton = {
-            ProvideCompatibleShapes {
-                SplitButtonDefaults.TrailingButton(
-                    checked = expanded,
-                    onCheckedChange = { expanded = it },
-                    shapes = SplitButtonDefaults.trailingButtonShapesFor(size),
-                    colors = colors,
-                    border = border,
-                    contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(size),
-                ) {
-                    Icon(
-                        painterResource(R.drawable.arrow_drop_down_24px),
-                        contentDescription = stringResource(
-                            if (!expanded) R.string.chat_input_model_label_expand
-                            else R.string.chat_input_model_label_collapse,
-                        ),
-                    )
-                }
+            SplitButtonDefaults.TrailingButton(
+                checked = expanded,
+                onCheckedChange = { expanded = it },
+                shapes = SplitButtonDefaults.trailingButtonShapesFor(size),
+                colors = colors,
+                border = border,
+                contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(size),
+            ) {
+                Icon(
+                    painterResource(R.drawable.arrow_drop_down_24px),
+                    contentDescription = stringResource(
+                        if (!expanded) R.string.chat_input_model_label_expand
+                        else R.string.chat_input_model_label_collapse,
+                    ),
+                )
             }
 
             var expandedProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }

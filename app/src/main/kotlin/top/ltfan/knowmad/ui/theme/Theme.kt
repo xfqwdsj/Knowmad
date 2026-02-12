@@ -146,22 +146,6 @@ fun AppTheme(
     }
 }
 
-@Composable
-fun ProvideShapes(content: @Composable () -> Unit) {
-    MaterialExpressiveTheme(
-        shapes = AppShapes,
-        content = content,
-    )
-}
-
-@Composable
-fun ProvideCompatibleShapes(content: @Composable () -> Unit) {
-    MaterialExpressiveTheme(
-        shapes = AppShapesCompatible,
-        content = content,
-    )
-}
-
 val ContentContainerPadding = 8.dp
 val ContentContainerShape @Composable inline get() = MaterialTheme.shapes.extraLarge
 val ContentContainerColor @Composable inline get() = MaterialTheme.colorScheme.surfaceContainerLowest
