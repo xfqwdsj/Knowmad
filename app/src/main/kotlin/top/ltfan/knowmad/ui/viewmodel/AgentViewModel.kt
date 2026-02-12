@@ -259,7 +259,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 application.getString(
                     R.string.llm_prompt_generate_conversation_title,
                     chatMessages,
-                ),
+                ).trimIndent(),
             )
         }
 

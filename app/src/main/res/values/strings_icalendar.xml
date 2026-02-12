@@ -17,7 +17,7 @@
   -->
 
 <resources>
-    <string name="icalendar_rule"><![CDATA[
+    <string name="icalendar_rule">"
         Knowmad-Specific Extended iCalendar Exchange Format, based on the iCalendar 2.0 standard defined in RFC 5545
 
         ## General Rules
@@ -40,7 +40,7 @@
 
         - Required: `DTSTART`, `%1$s`
         - At least one of: `DURATION`, `DTEND`
-        - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, they may be left empty to inherit the corresponding course\'s information unless special arrangements are made; manually specified values will override defaults
+        - For regular events, required: `SUMMARY` (event name), `LOCATION`. In course events, they may be left empty to inherit the corresponding course's information unless special arrangements are made; manually specified values will override defaults
         - For course events, required: `%5$s`
         - Optional: `%9$s`, `RRULE`, `EXDATE`, `LOCATION`, `COLOR`, `DESCRIPTION`, `PRIORITY`
 
@@ -82,6 +82,6 @@
 
         ### %9$s
 
-        - Value: Text, instructor\'s name
-    ]]></string>
+        - Value: Text, instructor's name
+    "</string>
 </resources>

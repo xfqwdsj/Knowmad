@@ -17,7 +17,7 @@
   -->
 
 <resources>
-    <string name="icalendar_rule"><![CDATA[
+    <string name="icalendar_rule">"
         知行专用扩展iCalendar交换格式，使用RFC 5545规定的iCalendar 2.0标准
 
         ## 总则
@@ -83,5 +83,5 @@
         ### %9$s
 
         - 值：文本，讲师姓名
-    ]]></string>
+    "</string>
 </resources>
