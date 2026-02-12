@@ -22,7 +22,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.util.fastForEachReversed
+import androidx.compose.ui.util.fastForEach
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
@@ -35,7 +35,7 @@ class OverlayContentScene<T : Any>(
     override val previousEntries: List<NavEntry<T>>,
 ) : Scene<T> {
     override val content: @Composable () -> Unit = {
-        entries.fastForEachReversed { it.Content() }
+        entries.fastForEach { it.Content() }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -73,13 +73,12 @@ class OverlayContentSceneStrategy<T : Any> : SceneStrategy<T> {
             it.metadata[KEY] as? Boolean ?: false
         }.toMutableList()
         if (takenEntries.isEmpty()) return null
-        val key = takenEntries.last().contentKey
         entries.getOrNull(entries.size - takenEntries.size - 1)?.let { overlaidEntry ->
-            takenEntries += overlaidEntry
+            takenEntries.add(0, overlaidEntry)
         }
 
         return OverlayContentScene(
-            key = key,
+            key = takenEntries.last().contentKey,
             entries = takenEntries,
             previousEntries = entries.dropLast(1),
         )
