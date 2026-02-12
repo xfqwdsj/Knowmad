@@ -31,6 +31,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -81,9 +83,6 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         transformIn = { data },
         transformOut = { copy(data = it) },
     )
-
-    fun getEvents(startTime: Instant, endTime: Instant) =
-        scheduleDao.getEventsFlowInRange(startTime, endTime)
 
     fun onFinishWizard(
         entry: LLMConfigEntry,
@@ -172,6 +171,20 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     }
 
     val calendarState = CalendarState()
+
+    private val eventsCache =
+        object : LinkedHashMap<Pair<Instant, Instant>, List<Event>>(10, .75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<Pair<Instant, Instant>, List<Event>>): Boolean {
+                return size > 10
+            }
+        }
+
+    fun getEvents(startTime: Instant, endTime: Instant) =
+        scheduleDao.getEventsFlowInRange(startTime, endTime).onStart {
+            eventsCache[startTime to endTime]?.let { emit(it) }
+        }.onEach {
+            eventsCache[startTime to endTime] = it
+        }
 
     fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {
         val highlight = Channel<Event>(capacity = 1).apply {
