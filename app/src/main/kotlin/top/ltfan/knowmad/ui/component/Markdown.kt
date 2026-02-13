@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -48,20 +50,28 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtMost
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.kyant.capsule.ContinuousRoundedRectangle
 import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
 import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
 import com.mikepenz.markdown.compose.LocalMarkdownAnimations
+import com.mikepenz.markdown.compose.LocalMarkdownColors
+import com.mikepenz.markdown.compose.LocalMarkdownDimens
 import com.mikepenz.markdown.compose.LocalMarkdownInlineContent
+import com.mikepenz.markdown.compose.LocalMarkdownPadding
 import com.mikepenz.markdown.compose.LocalMarkdownTypography
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.MarkdownSuccess
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownCodeBackground
+import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
+import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.DefaultMarkdownInlineContent
@@ -158,6 +168,16 @@ fun MarkdownView(
             }
         },
         components = markdownComponents(
+            codeFence = { (content, node, typography) ->
+                MarkdownCodeFence(content, node, typography.code) { code, language, style ->
+                    MarkdownCode(code, language, style, showHeader = true)
+                }
+            },
+            codeBlock = { (content, node, typography) ->
+                MarkdownCodeBlock(content, node, typography.code) { code, language, style ->
+                    MarkdownCode(code, language, style)
+                }
+            },
             paragraph = { (content, node, typography) ->
                 MarkdownParagraph(
                     content = content,
@@ -237,6 +257,38 @@ fun MarkdownView(
         ),
         success = success,
     )
+}
+
+@Composable
+fun MarkdownCode(
+    code: String,
+    language: String? = null,
+    style: TextStyle = LocalMarkdownTypography.current.code,
+    showHeader: Boolean = false,
+) {
+    val backgroundCodeColor = LocalMarkdownColors.current.codeBackground
+    val codeBackgroundCornerSize = LocalMarkdownDimens.current.codeBackgroundCornerSize
+    val codeBlockPadding = LocalMarkdownPadding.current.codeBlock
+    MarkdownCodeBackground(
+        color = backgroundCodeColor,
+        shape = ContinuousRoundedRectangle(codeBackgroundCornerSize),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        showHeader = showHeader,
+        language = language,
+        code = code,
+    ) {
+        SelectionContainer {
+            Text(
+                text = code,
+                style = style,
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(codeBlockPadding),
+            )
+        }
+    }
 }
 
 @Composable
