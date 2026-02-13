@@ -359,6 +359,7 @@ fun ChatMessageList(
     assistantMessageStates: MutableMap<Any, AssistantMessageState> = remember { mutableStateMapOf() },
     topToBottom: Boolean = false,
     reverseIndexing: Boolean = false,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -367,6 +368,7 @@ fun ChatMessageList(
         state = lazyListState,
         contentPadding = contentPadding,
         reverseLayout = !topToBottom,
+        verticalArrangement = verticalArrangement,
     ) {
         items(
             count = getMessageCount(),
@@ -403,12 +405,10 @@ fun ChatMessageList(
                                     val delta = previousHeight?.let { previousHeight ->
                                         height - previousHeight
                                     } ?: 0
-                                    coroutineScope.launch {
-                                        lazyListState.scrollToItem(
-                                            index = lazyListState.firstVisibleItemIndex,
-                                            scrollOffset = lazyListState.firstVisibleItemScrollOffset + delta,
-                                        )
-                                    }
+                                    lazyListState.requestScrollToItem(
+                                        index = lazyListState.firstVisibleItemIndex,
+                                        scrollOffset = lazyListState.firstVisibleItemScrollOffset + delta,
+                                    )
                                 }
                                 previousHeight = height
                             },
