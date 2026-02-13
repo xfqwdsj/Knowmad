@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.viewmodel
 
 import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedException
+import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
@@ -37,6 +38,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -59,13 +61,16 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.ChatAgentRerun
 import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
 import top.ltfan.knowmad.agent.runPromptForSimpleResult
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
+import top.ltfan.knowmad.agent.tool.gatherToolsTool
 import top.ltfan.knowmad.agent.tool.scheduleTools
+import top.ltfan.knowmad.agent.tool.scheduleToolsExtended
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
@@ -82,6 +87,7 @@ import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
+import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.Finish
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
@@ -493,25 +499,46 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     }
                 }
             }
+            logger.debug { "Running agent..." }
+            chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
+            runAgent(
+                state = state,
+                eventFlow = eventFlow,
+            ) {
+                service.run(
+                    userParts = parts,
+                    eventFlow = eventFlow,
+                    state = state,
+                    tools = ToolRegistry {
+                        conversationTools(application.resources, conversation, chatDao)
+                        scheduleTools(application.resources, scheduleDao)
+                        gatherToolsTool(application.resources) {
+                            scheduleToolsExtended(application.resources, scheduleDao)
+                        }
+                    },
+                    buildPrompt = {
+                        system?.let { message(it) } ?: messages(messages)
+                        message(environmentMessage)
+                    },
+                )
+            }
+        }
+    }
+
+    private suspend fun CoroutineScope.runAgent(
+        state: AssistantMessageState.Streaming,
+        eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
+        block: suspend CoroutineScope.() -> Unit,
+    ) {
+        val channel = Channel<suspend CoroutineScope.() -> Unit>(1)
+        channel.send(block)
+
+        for (block in channel) {
             try { // TODO: UI feedback
                 coroutineScope {
-                    logger.debug { "Running agent..." }
                     isRunning = true
-                    chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
                     val agentJob = async {
-                        service.run(
-                            userParts = parts,
-                            eventFlow = eventFlow,
-                            state = state,
-                            tools = {
-                                conversationTools(application.resources, conversation, chatDao)
-                                scheduleTools(application.resources, scheduleDao)
-                            },
-                            buildPrompt = {
-                                system?.let { message(it) } ?: messages(messages)
-                                message(environmentMessage)
-                            },
-                        )
+                        block()
                         false
                     }
 
@@ -529,6 +556,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         cancellationReceiver.cancel()
                     }
                 }.takeIf { it }?.let { logger.info { "Agent run cancelled." } }
+            } catch (rerun: ChatAgentRerun) {
+                logger.info { "Agent will rerun" }
+                channel.send { rerun.run() }
+                continue
             } catch (e: AIAgentMaxNumberOfIterationsReachedException) {
                 logger.info { "Agent reached max number of iterations: ${e.message}" }
 
@@ -576,13 +607,13 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     uiMessage = UiMessage.Error(errorMessage),
                     coroutineScope = viewModelScope,
                 )
-            } finally {
-                isRunning = false
-                logger.debug { "Agent run completed." }
-                eventFlow.emit(Finish)
-                state.awaitCompletedState()
-                cancel()
             }
+
+            isRunning = false
+            logger.debug { "Agent run completed." }
+            eventFlow.emit(Finish)
+            state.awaitCompletedState()
+            cancel()
         }
     }
 

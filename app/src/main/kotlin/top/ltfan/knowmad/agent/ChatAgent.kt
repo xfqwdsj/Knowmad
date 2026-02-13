@@ -19,8 +19,10 @@
 package top.ltfan.knowmad.agent
 
 import ai.koog.agents.core.agent.AIAgentService
+import ai.koog.agents.core.agent.GraphAIAgent
 import ai.koog.agents.core.agent.GraphAIAgentService
 import ai.koog.agents.core.agent.config.AIAgentConfig
+import ai.koog.agents.core.agent.context.AIAgentLLMContext
 import ai.koog.agents.core.dsl.builder.AIAgentEdgeBuilderIntermediate
 import ai.koog.agents.core.dsl.builder.EdgeTransformationDslMarker
 import ai.koog.agents.core.dsl.builder.forwardTo
@@ -30,6 +32,7 @@ import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.environment.executeTools
 import ai.koog.agents.core.environment.result
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.dsl.PromptBuilder
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
@@ -43,17 +46,21 @@ import android.content.res.Resources
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 
 private val logger = Logger("ChatAgent")
 
 typealias ChatAgentService = GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>
+typealias ChatAgent = GraphAIAgent<ChatAgentData<List<ContentPart>>, List<Message.Response>>
 
 fun getChatAgentService(
     promptExecutor: PromptExecutor,
@@ -61,6 +68,21 @@ fun getChatAgentService(
     maxAgentIterations: Int = 50,
 ): ChatAgentService {
     val strategy = strategy("chat") {
+        val nodeInitialization by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<ContentPart>>> { data ->
+            for (tool in llm.toolRegistry.tools) {
+                if (tool is SystemPromptInjectorTool) {
+                    llm.writeSession {
+                        appendPrompt {
+                            system(tool.additionalSystemPrompt)
+                        }
+                    }
+                }
+                if (tool is ContextualInitializationTool) {
+                    tool.initialize(llm)
+                }
+            }
+            data
+        }
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
             val (eventFlow, state, userParts) = data
             var partIndex = data.partIndex
@@ -142,14 +164,20 @@ fun getChatAgentService(
                 }
             }
         }
-        val nodeExecuteTools by node<ChatAgentData<List<Message.Tool.Call>>, ChatAgentData<List<ReceivedToolResult>>> { data ->
+        val nodeExecuteTools by node<ChatAgentData<List<Message.Tool.Call>>, ChatAgentData<Pair<List<ReceivedToolResult>, ChatAgentToolCallContext>>> { data ->
             logger.debug { "Executing tools for ${data.state.id}..." }
-            data.copy(newContent = environment.executeTools(data.content)).also {
-                logger.debug { "Executed tools for ${it.state.id}, got ${it.content.size} results." }
+            val context = ChatAgentToolCallContext(llm, data)
+            data.copy(
+                newContent = withContext(context) {
+                    environment.executeTools(data.content)
+                } to context,
+            ).also {
+                logger.debug { "Executed tools for ${it.state.id}, got ${it.content.first.size} results." }
             }
         }
-        val nodeAppendToolResults by node<ChatAgentData<List<ReceivedToolResult>>, ChatAgentData<List<ContentPart>>> { data ->
-            val (eventFlow, _, toolResults) = data
+        val nodeAppendToolResults by node<ChatAgentData<Pair<List<ReceivedToolResult>, ChatAgentToolCallContext>>, ChatAgentData<List<ContentPart>>> { data ->
+            val (eventFlow, _, dataContent) = data
+            val (toolResults, context) = dataContent
             var partIndex = data.partIndex
             llm.writeSession {
                 appendPrompt {
@@ -171,11 +199,13 @@ fun getChatAgentService(
                     "Appended tool results for ${it.state.id}. " +
                             "Part index: ${it.partIndex}"
                 }
+                context.rerun?.let { rerun -> throw rerun }
             }
         }
 
         // TODO: recognize and restore uncompleted tool calls at every session start
-        edge(nodeStart forwardTo nodeLLMRequest)
+        edge(nodeStart forwardTo nodeInitialization)
+        edge(nodeInitialization forwardTo nodeLLMRequest)
         edge(
             nodeLLMRequest forwardTo nodeExecuteTools
                     extracted { onMultipleToolCalls { true } },
@@ -208,34 +238,46 @@ val Resources.chatSystemPrompt
         R.string.llm_agent_chat_prompt,
     )
 
+suspend fun ChatAgentService.create(
+    state: AssistantMessageState.Streaming,
+    tools: ToolRegistry = EMPTY,
+    basePrompt: Prompt = agentConfig.prompt,
+    buildPrompt: PromptBuilder.() -> Unit = {},
+) = createAgent(
+    id = state.id.toString(),
+    additionalToolRegistry = tools,
+    agentConfig = AIAgentConfig(
+        prompt = prompt(basePrompt) {
+            buildPrompt()
+        },
+        model = agentConfig.model,
+        maxAgentIterations = agentConfig.maxAgentIterations,
+        missingToolsConversionStrategy = agentConfig.missingToolsConversionStrategy,
+        responseProcessor = agentConfig.responseProcessor,
+    ),
+)
+
 suspend fun ChatAgentService.run(
     userParts: List<ContentPart>,
     eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
     state: AssistantMessageState.Streaming,
-    tools: ToolRegistry.Builder.() -> Unit = {},
+    tools: ToolRegistry = EMPTY,
     buildPrompt: PromptBuilder.() -> Unit = {},
 ) {
-    createAgentAndRun(
-        agentInput = ChatAgentData(
-            eventFlow = eventFlow,
+    withContext(ChatAgentContext(this)) {
+        create(
             state = state,
-            content = userParts,
-            partIndex = -1,
-        ),
-        id = state.id.toString(),
-        additionalToolRegistry = ToolRegistry {
-            tools()
-        },
-        agentConfig = AIAgentConfig(
-            prompt = prompt(agentConfig.prompt) {
-                buildPrompt()
-            },
-            model = agentConfig.model,
-            maxAgentIterations = agentConfig.maxAgentIterations,
-            missingToolsConversionStrategy = agentConfig.missingToolsConversionStrategy,
-            responseProcessor = agentConfig.responseProcessor,
-        ),
-    )
+            tools = tools,
+            buildPrompt = buildPrompt,
+        ).run(
+            agentInput = ChatAgentData(
+                eventFlow = eventFlow,
+                state = state,
+                content = userParts,
+                partIndex = -1,
+            ),
+        )
+    }
 }
 
 data class ChatAgentData<T>(
@@ -259,6 +301,32 @@ data class ChatAgentData<T>(
         content = newContent,
         partIndex = partIndex,
     )
+}
+
+data class ChatAgentContext(
+    val service: ChatAgentService,
+) : AbstractCoroutineContextElement(ChatAgentContext) {
+    companion object Key : CoroutineContext.Key<ChatAgentContext>
+}
+
+data class ChatAgentToolCallContext(
+    val llm: AIAgentLLMContext,
+    val data: ChatAgentData<List<Message.Tool.Call>>,
+    var rerun: ChatAgentRerun? = null,
+) : AbstractCoroutineContextElement(ChatAgentToolCallContext) {
+    companion object Key : CoroutineContext.Key<ChatAgentToolCallContext>
+}
+
+data class ChatAgentRerun(
+    private val service: ChatAgentService,
+    private val agent: ChatAgent,
+    private val data: ChatAgentData<List<ContentPart>>,
+) : Throwable() {
+    suspend fun run() {
+        withContext(ChatAgentContext(service)) {
+            agent.run(agentInput = data)
+        }
+    }
 }
 
 @EdgeTransformationDslMarker

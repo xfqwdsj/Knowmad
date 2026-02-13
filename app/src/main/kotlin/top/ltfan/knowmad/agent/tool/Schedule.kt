@@ -59,15 +59,20 @@ import kotlin.uuid.Uuid
 fun ToolRegistry.Builder.scheduleTools(
     resources: Resources, dao: ScheduleDao,
 ) {
-    tool(ScheduleTools.ImportFromICalendarTool(resources, dao))
     tool(ScheduleTools.QuerySemestersTool(resources, dao))
+    tool(ScheduleTools.QueryEventsTool(resources, dao))
+}
+
+fun ToolRegistry.Builder.scheduleToolsExtended(
+    resources: Resources, dao: ScheduleDao,
+) {
+    tool(ScheduleTools.ImportFromICalendarTool(resources, dao))
     tool(ScheduleTools.SearchSemestersTool(resources, dao))
     tool(ScheduleTools.CreateSemesterTool(resources, dao))
     tool(ScheduleTools.UpdateSemesterTool(resources, dao))
     tool(ScheduleTools.SearchCoursesTool(resources, dao))
     tool(ScheduleTools.CreateCoursesTool(resources, dao))
     tool(ScheduleTools.UpdateCourseTool(resources, dao))
-    tool(ScheduleTools.QueryEventsTool(resources, dao))
     tool(ScheduleTools.SearchEventsTool(resources, dao))
     tool(ScheduleTools.CreateEventsTool(resources, dao))
     tool(ScheduleTools.UpdateEventTool(resources, dao))
