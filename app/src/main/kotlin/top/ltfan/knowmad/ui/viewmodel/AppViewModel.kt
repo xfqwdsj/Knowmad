@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
+import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
@@ -56,25 +57,8 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
-    private val httpClient = HttpClient().also {
-        addCloseable(it)
-    }
-
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
-
-    var mathJaxRendererState by mutableStateOf<MathJaxRendererState>(Initializing)
-
-    init {
-        val renderer = MathJaxRenderer(application.assets)
-        addCloseable(renderer)
-        viewModelScope.launch {
-            renderer.initialize(jsDelivrMathJaxLoadExternal(httpClient))
-            mathJaxRendererState = MathJaxRendererState.Ready(renderer)
-        }
-    }
-
-    val scheduleDao = application.appDatabase.scheduleDao()
 
     private val wizardStateStore = WizardState.createDataStore()
     private val wizardStateFlow = wizardStateStore.dataStateFlow()
@@ -83,6 +67,37 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         transformIn = { data },
         transformOut = { copy(data = it) },
     )
+
+    init {
+        viewModelScope.launch {
+            if (wizardStateStore.data.first().data == null) {
+                backStack.add(WizardPage())
+            } else {
+                navigateToMainPage()
+            }
+            appReady = true
+        }
+    }
+
+    private val llmDataStore = LLMData.createDataStore()
+    private val llmDataStateFlow = llmDataStore.dataStateFlow()
+    private val llmDataState = llmDataStore.asMutableState(llmDataStateFlow.value)
+
+    var conversationNameGenerationModelId by llmDataState.transform(
+        transformIn = { conversationNameGenerationModelId },
+        transformOut = { copy(conversationNameGenerationModelId = it) },
+    )
+
+    var recurrenceRuleSummaryGenerationModelId by llmDataState.transform(
+        transformIn = { recurrenceRuleSummaryGenerationModelId },
+        transformOut = { copy(recurrenceRuleSummaryGenerationModelId = it) },
+    )
+
+    private val httpClient = HttpClient().also {
+        addCloseable(it)
+    }
+
+    val scheduleDao = application.appDatabase.scheduleDao()
 
     fun onFinishWizard(
         entry: LLMConfigEntry,
@@ -126,17 +141,6 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             backStack.removeAt(index)
         } else {
             backStack.add(AgentPage())
-        }
-    }
-
-    init {
-        viewModelScope.launch {
-            if (wizardStateStore.data.first().data == null) {
-                backStack.add(WizardPage())
-            } else {
-                navigateToMainPage()
-            }
-            appReady = true
         }
     }
 
@@ -213,6 +217,17 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         }
 
         // TODO: UI feedback for that
+    }
+
+    var mathJaxRendererState by mutableStateOf<MathJaxRendererState>(Initializing)
+
+    init {
+        val renderer = MathJaxRenderer(application.assets)
+        addCloseable(renderer)
+        viewModelScope.launch {
+            renderer.initialize(jsDelivrMathJaxLoadExternal(httpClient))
+            mathJaxRendererState = MathJaxRendererState.Ready(renderer)
+        }
     }
 
     fun onBack() {
