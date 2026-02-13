@@ -62,6 +62,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
+import top.ltfan.knowmad.agent.runPromptForSimpleResult
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.scheduleTools
@@ -263,23 +264,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             )
         }
 
-        return runCatching {
-            logger.debug { "Generating conversation title with LLM..." }
-            executor.execute(
-                prompt = prompt,
-                model = model,
-            ).filterIsInstance<Message.Assistant>()
-                .joinToString(" ") { it.content }
-                .trim()
-                .replace("\\s+".toRegex(), " ")
-                .ifEmpty {
-                    logger.warn { "LLM generated empty title" }
-                    return null
-                }
-        }
-            .onSuccess { logger.debug { "Generated conversation title: $it" } }
-            .onFailure { logger.error(it) { "Error generating conversation title" } }
-            .getOrNull()
+        return executor.runPromptForSimpleResult(
+            model = model,
+            prompt = prompt,
+            beforeStart = { logger.debug { "Generating conversation title with LLM..." } },
+            ifEmpty = { logger.warn { "LLM generated empty title" } },
+            onSuccess = { logger.debug { "Generated conversation title: $it" } },
+            onFailure = { logger.error(it) { "Error generating conversation title" } },
+        )
     }
 
     fun deleteConversation(

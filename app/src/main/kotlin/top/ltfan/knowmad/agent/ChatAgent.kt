@@ -53,11 +53,13 @@ import kotlin.time.Clock
 
 private val logger = Logger("ChatAgent")
 
+typealias ChatAgentService = GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>
+
 fun getChatAgentService(
     promptExecutor: PromptExecutor,
     model: LLModel,
     maxAgentIterations: Int = 50,
-): GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>> {
+): ChatAgentService {
     val strategy = strategy("chat") {
         val nodeLLMRequest by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<Message.Response>>> { data ->
             val (eventFlow, state, userParts) = data
@@ -206,7 +208,7 @@ val Resources.chatSystemPrompt
         R.string.llm_agent_chat_prompt,
     )
 
-suspend fun GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>.run(
+suspend fun ChatAgentService.run(
     userParts: List<ContentPart>,
     eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
     state: AssistantMessageState.Streaming,
