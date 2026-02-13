@@ -37,6 +37,20 @@
 
         %s
     "</string>
+    <string name="llm_prompt_generate_recurrence_rule_summary">"
+        请为以下的重复规则生成一个简洁的总结，要求清晰表达重复的频率和条件且语言自然、简洁明了。
+
+        要求：
+
+        - 考虑所有相关的重复规则细节，包括频率、周期、结束条件等，确保总结全面准确；
+        - 只允许输出总结文本，禁止使用“总结：”“我的建议是”等解释性引言；
+        - 禁止使用Markdown标记和非必要的标点符号；
+        - 禁止换行。
+
+        以下是符合iCalendar RRULE规范的重复规则。
+
+        %s
+    "</string>
     <string name="llm_agent_chat_prompt">你的任务是在多轮对话中协助用户。</string>
     <string name="llm_memory_preferred_search_engine_description">用户偏好的搜索引擎</string>
     <string name="llm_tool_time_description">获取当前的日期和时间</string>
