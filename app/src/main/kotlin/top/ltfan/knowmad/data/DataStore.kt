@@ -55,7 +55,7 @@ import kotlin.reflect.KProperty
 class AppDataStore<T>(
     serializer: KSerializer<T>,
     val defaultValue: T,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    scope: CoroutineScope,
     produceFile: () -> File,
 ) : DataStore<T> by DataStoreFactory.create(
     serializer = DatastoreSerializer(
@@ -165,20 +165,24 @@ class DataStoreMutableStateProperty<T>(
     }
 }
 
-interface DataStoreCompanion<T> {
-    val fileName: String
-    val default: T
-    fun serializer(): KSerializer<T>
+abstract class DataStoreCompanion<T> {
+    abstract val fileName: String
+    abstract val default: T
+    abstract fun serializer(): KSerializer<T>
+
+    private var _instance: AppDataStore<T>? = null
 
     context(application: Application)
     fun createDataStore(
         coroutineScope: CoroutineScope,
-    ) = AppDataStore(
+    ) = _instance ?: AppDataStore(
         serializer = serializer(),
         defaultValue = default,
         scope = coroutineScope + Dispatchers.IO,
         produceFile = { application.dataStoreFile(fileName) },
-    )
+    ).also {
+        _instance = it
+    }
 
     context(viewModel: AndroidViewModel<*>)
     fun createDataStore() = context(viewModel.application) {

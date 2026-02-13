@@ -27,7 +27,7 @@ data class LLMData(
     val conversationNameGenerationModelId: Uuid? = null,
     val recurrenceRuleSummaryGenerationModelId: Uuid? = null,
 ) {
-    companion object : DataStoreCompanion<LLMData> {
+    companion object : DataStoreCompanion<LLMData>() {
         override val fileName = "llm_data"
         override val default = LLMData()
     }

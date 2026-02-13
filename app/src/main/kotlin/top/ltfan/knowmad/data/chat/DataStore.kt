@@ -30,7 +30,7 @@ data class ChatData(
     val defaultReasoningVisibility: Boolean = true,
     val defaultToolVisibility: Boolean = true,
 ) {
-    companion object : DataStoreCompanion<ChatData> {
+    companion object : DataStoreCompanion<ChatData>() {
         override val fileName = "chat_data"
         override val default = ChatData()
     }

@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ data class WizardData(
     val baseUrl: String = "",
     val model: LLModel? = null,
 ) {
-    companion object : DataStoreCompanion<WizardData> {
+    companion object : DataStoreCompanion<WizardData>() {
         override val fileName = "wizard_data"
         override val default = WizardData()
     }
@@ -40,7 +40,7 @@ data class WizardData(
 data class WizardState(
     val data: FirstJoinedData? = null,
 ) {
-    companion object : DataStoreCompanion<WizardState> {
+    companion object : DataStoreCompanion<WizardState>() {
         override val fileName = "wizard_state"
         override val default = WizardState()
     }
