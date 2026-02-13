@@ -164,18 +164,19 @@ fun getChatAgentService(
                 }
             }
         }
-        val nodeExecuteTools by node<ChatAgentData<List<Message.Tool.Call>>, ChatAgentData<Pair<List<ReceivedToolResult>, ChatAgentToolCallContext>>> { data ->
+        val nodeExecuteTools by node<ChatAgentData<List<Message.Tool.Call>>, ChatAgentData<ToolResultWithContext>> { data ->
             logger.debug { "Executing tools for ${data.state.id}..." }
             val context = ChatAgentToolCallContext(llm, data)
             data.copy(
-                newContent = withContext(context) {
-                    environment.executeTools(data.content)
-                } to context,
+                newContent = ToolResultWithContext(
+                    result = environment.executeTools(data.content),
+                    context = context,
+                ),
             ).also {
-                logger.debug { "Executed tools for ${it.state.id}, got ${it.content.first.size} results." }
+                logger.debug { "Executed tools for ${it.state.id}, got ${it.content.result.size} results." }
             }
         }
-        val nodeAppendToolResults by node<ChatAgentData<Pair<List<ReceivedToolResult>, ChatAgentToolCallContext>>, ChatAgentData<List<ContentPart>>> { data ->
+        val nodeAppendToolResults by node<ChatAgentData<ToolResultWithContext>, ChatAgentData<List<ContentPart>>> { data ->
             val (eventFlow, _, dataContent) = data
             val (toolResults, context) = dataContent
             var partIndex = data.partIndex
@@ -302,6 +303,11 @@ data class ChatAgentData<T>(
         partIndex = partIndex,
     )
 }
+
+private data class ToolResultWithContext(
+    val result: List<ReceivedToolResult>,
+    val context: ChatAgentToolCallContext,
+)
 
 data class ChatAgentContext(
     val service: ChatAgentService,
