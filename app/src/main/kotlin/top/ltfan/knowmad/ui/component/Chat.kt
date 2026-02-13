@@ -98,6 +98,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toStdlibInstant
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -115,6 +116,7 @@ import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.util.itemThemedShape
+import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.RemendProcessor
 import kotlin.time.Clock
@@ -723,6 +725,19 @@ fun ToolMessage(
         message.tool,
     )
 
+    val content = remember(message.content) {
+        try {
+            val element = Json.decodeFromString<JsonElement>(message.content)
+            val newJson = Json {
+                prettyPrint = true
+                prettyPrintIndent = "  "
+            }
+            "```json\n${newJson.encodeToString(element)}\n```"
+        } catch (e: Throwable) {
+            "```\n${message.content.trim()}\n```"
+        }
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -749,13 +764,7 @@ fun ToolMessage(
                 exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
             ) {
                 MarkdownView(
-                    rememberSavedMarkdownState(
-                        """
-                            ```
-                            ${message.content.trim()}
-                            ```
-                        """.trimIndent(),
-                    ),
+                    rememberSavedMarkdownState(content),
                     mathJaxRendererState = mathJaxRendererState,
                     modifier = Modifier.padding(
                         start = 16.dp,
