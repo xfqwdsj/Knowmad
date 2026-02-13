@@ -104,7 +104,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val chatDataStore = ChatData.createDataStore()
     val chatDataStateFlow = chatDataStore.dataStateFlow()
-    val chatData = chatDataStore.asMutableState(chatDataStateFlow)
+    val chatData = chatDataStore.asMutableState(chatDataStateFlow.value)
 
     val drawerState = DrawerState(DrawerValue.Closed)
     val messagesListState = LazyListState()

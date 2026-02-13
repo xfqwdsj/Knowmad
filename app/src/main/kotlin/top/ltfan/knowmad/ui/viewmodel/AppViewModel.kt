@@ -78,7 +78,7 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
 
     private val wizardStateStore = WizardState.createDataStore()
     private val wizardStateFlow = wizardStateStore.dataStateFlow()
-    private val wizardState = wizardStateStore.asMutableState(wizardStateFlow)
+    private val wizardState = wizardStateStore.asMutableState(wizardStateFlow.value)
     var firstJoinedData by wizardState.transform(
         transformIn = { data },
         transformOut = { copy(data = it) },

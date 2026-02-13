@@ -31,10 +31,13 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
@@ -45,6 +48,7 @@ import top.ltfan.knowmad.util.Cbor
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -82,42 +86,83 @@ class AppDataStore<T>(
     )
 
     fun asMutableState(
-        dataStateFlow: StateFlow<T>,
+        initialValue: T = defaultValue,
         coroutineScope: CoroutineScope,
-    ) = object : ReadWriteProperty<Any?, T> {
-        private var state by mutableStateOf(dataStateFlow.value)
+    ) = DataStoreMutableStateProperty(
+        dataStore = this,
+        coroutineScope = coroutineScope,
+        initialValue = initialValue,
+    )
 
-        private val writeRequest = Channel<T>(Channel.CONFLATED)
+    context(viewModel: ViewModel)
+    fun asMutableState(initialValue: T = defaultValue) = asMutableState(
+        initialValue = initialValue,
+        coroutineScope = viewModel.viewModelScope,
+    ).also {
+        viewModel.addCloseable(it)
+    }
+}
 
-        private suspend fun write(value: T) {
-            withContext(Dispatchers.IO) {
-                updateData { value }
-            }
-        }
+class DataStoreMutableStateProperty<T>(
+    private val dataStore: AppDataStore<T>,
+    coroutineScope: CoroutineScope,
+    initialValue: T = dataStore.defaultValue,
+) : ReadWriteProperty<Any?, T>, AutoCloseable {
+    private val job = coroutineScope.coroutineContext.job
+    private val coroutineScope =
+        CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(job))
 
-        init {
-            coroutineScope.launch {
-                for (value in writeRequest) {
-                    write(value)
-                }
-            }
-        }
+    private var state by mutableStateOf(initialValue)
 
-        override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            return state
-        }
+    private val writeRequest = Channel<T>(Channel.CONFLATED)
 
-        override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-            state = value
-            writeRequest.trySend(value)
+    private suspend fun write(value: T) {
+        withContext(Dispatchers.IO) {
+            dataStore.updateData { value }
         }
     }
 
-    context(viewModel: ViewModel)
-    fun asMutableState(dataStateFlow: StateFlow<T>) = asMutableState(
-        dataStateFlow = dataStateFlow,
-        coroutineScope = viewModel.viewModelScope,
-    )
+    init {
+        coroutineScope.launch {
+            while (isActive) {
+                val syncJob = launch {
+                    dataStore.data.collect { diskValue ->
+                        if (writeRequest.isEmpty) {
+                            state = diskValue
+                        }
+                    }
+                }
+
+                val firstWrite = writeRequest.receive()
+                syncJob.cancelAndJoin()
+
+                var pendingWrite = firstWrite
+                while (true) {
+                    pendingWrite = writeRequest.tryReceive().getOrNull() ?: break
+                }
+
+                try {
+                    write(pendingWrite)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return state
+    }
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        state = value
+        writeRequest.trySend(value)
+    }
+
+    override fun close() {
+        coroutineScope.cancel()
+    }
 }
 
 interface DataStoreCompanion<T> {

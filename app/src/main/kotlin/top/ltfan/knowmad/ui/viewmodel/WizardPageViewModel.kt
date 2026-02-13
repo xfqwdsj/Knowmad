@@ -72,7 +72,7 @@ class WizardPageViewModel(
 
     private val wizardDataStore = WizardData.createDataStore()
     private val wizardDataStateFlow = wizardDataStore.dataStateFlow()
-    private val wizardData = wizardDataStore.asMutableState(wizardDataStateFlow)
+    private val wizardData = wizardDataStore.asMutableState(wizardDataStateFlow.value)
 
     fun generateCryptoKey(
         setReady: (Boolean) -> Unit,
