@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -27,7 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.kizitonwose.calendar.core.minusDays
+import com.kizitonwose.calendar.core.now
+import com.kizitonwose.calendar.core.plusDays
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.ui.theme.AppTheme
@@ -35,6 +43,133 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.omnical.icalendar.ICalendarColor
 import java.util.Locale
 import kotlin.time.Instant
+
+@Preview
+@Composable
+fun MonthBottomSheetContentPreview() {
+    val semester1 = remember {
+        SemesterEntity(
+            name = "Semester 1",
+            startDate = LocalDate(2024, 1, 1),
+            endDate = LocalDate(2024, 12, 31),
+            timeZone = UTC,
+        )
+    }
+
+    val semester2 = remember {
+        SemesterEntity(
+            name = "Semester 2",
+            startDate = LocalDate.now().minusDays(279),
+            endDate = LocalDate.now().plusDays(201),
+            timeZone = TimeZone.currentSystemDefault(),
+        )
+    }
+
+    val semester3 = remember {
+        SemesterEntity(
+            name = "Semester 3",
+            startDate = LocalDate.now().minusDays(279),
+            endDate = LocalDate.now().plusDays(201),
+            timeZone = UTC,
+        )
+    }
+
+    val semester4 = remember {
+        SemesterEntity(
+            name = "Semester 4",
+            startDate = LocalDate.now().plusDays(30),
+            endDate = LocalDate.now().plusDays(300),
+            timeZone = TimeZone.currentSystemDefault(),
+        )
+    }
+
+    AppTheme {
+        Surface {
+            MonthBottomSheetContent(
+                month = YearMonth.now(),
+                semesters = listOf(semester1, semester2, semester3, semester4),
+                locale = Locale.getDefault(),
+                currentTimeZone = TimeZone.currentSystemDefault(),
+                today = LocalDate.now(),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun SemesterInformationPreview() {
+    val semester1 = remember {
+        SemesterEntity(
+            name = "Semester 1",
+            startDate = LocalDate(2024, 1, 1),
+            endDate = LocalDate(2024, 12, 31),
+            timeZone = UTC,
+        )
+    }
+
+    val semester2 = remember {
+        SemesterEntity(
+            name = "Semester 2",
+            startDate = LocalDate.now().minusDays(279),
+            endDate = LocalDate.now().plusDays(201),
+            timeZone = TimeZone.currentSystemDefault(),
+        )
+    }
+
+    val semester3 = remember {
+        SemesterEntity(
+            name = "Semester 3",
+            startDate = LocalDate.now().minusDays(279),
+            endDate = LocalDate.now().plusDays(201),
+            timeZone = UTC,
+        )
+    }
+
+    val semester4 = remember {
+        SemesterEntity(
+            name = "Semester 4",
+            startDate = LocalDate.now().plusDays(30),
+            endDate = LocalDate.now().plusDays(300),
+            timeZone = TimeZone.currentSystemDefault(),
+        )
+    }
+
+    AppTheme {
+        Surface {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SemesterInformation(
+                    semester = semester1,
+                    modifier = Modifier.windowInsetsPadding(AppWindowInsets),
+                    locale = Locale.getDefault(),
+                    currentTimeZone = TimeZone.currentSystemDefault(),
+                    today = LocalDate.now(),
+                )
+                SemesterInformation(
+                    semester = semester2,
+                    modifier = Modifier.windowInsetsPadding(AppWindowInsets),
+                    locale = Locale.getDefault(),
+                    currentTimeZone = TimeZone.currentSystemDefault(),
+                    today = LocalDate.now(),
+                )
+                SemesterInformation(
+                    semester = semester3,
+                    modifier = Modifier.windowInsetsPadding(AppWindowInsets),
+                    locale = Locale.getDefault(),
+                    currentTimeZone = TimeZone.currentSystemDefault(),
+                    today = LocalDate.now(),
+                )
+                SemesterInformation(
+                    semester = semester4,
+                    modifier = Modifier.windowInsetsPadding(AppWindowInsets),
+                    locale = Locale.getDefault(),
+                    currentTimeZone = TimeZone.currentSystemDefault(),
+                    today = LocalDate.now(),
+                )
+            }
+        }
+    }
+}
 
 @Preview
 @Composable

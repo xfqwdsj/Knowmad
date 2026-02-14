@@ -18,7 +18,10 @@
 
 package top.ltfan.knowmad.ui.component
 
+import android.content.ClipData
 import android.content.res.Resources
+import android.icu.text.DateTimePatternGenerator
+import android.icu.text.NumberFormat
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
@@ -34,6 +37,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,12 +57,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
@@ -78,6 +84,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,22 +92,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
 import androidx.navigation3.scene.Scene
+import com.kizitonwose.calendar.core.minusDays
+import com.kizitonwose.calendar.core.plusDays
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toJavaYearMonth
+import kotlinx.datetime.toJavaZoneId
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
@@ -109,6 +127,7 @@ import top.ltfan.knowmad.data.schedule.Event.Course
 import top.ltfan.knowmad.data.schedule.Event.Normal
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.ScheduleDao
+import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.compose
 import top.ltfan.knowmad.data.schedule.getString
 import top.ltfan.knowmad.data.schedule.reversedValueInType
@@ -118,16 +137,332 @@ import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.itemThemedShape
+import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
+import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+
+@Composable
+fun MonthBottomSheetContent(
+    month: YearMonth,
+    semesters: List<SemesterEntity>,
+    locale: Locale = LocalConfiguration.current.locales[0],
+    currentTimeZone: TimeZone = rememberSystemTimeZone(),
+    today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
+    onExport: (suspend (SemesterEntity) -> String)? = null,
+    onBackup: (suspend (SemesterEntity) -> String)? = null,
+) {
+    val currentSemesters = remember(month, semesters) {
+        semesters.filter {
+            it.startDate < month.lastDay.plusDays(1) && it.endDate > month.firstDay
+        }
+    }
+
+    val formatter = remember(locale) {
+        val pattern = DateTimePatternGenerator.getInstance(locale).getBestPattern("yMMM")
+        DateTimeFormatter.ofPattern(pattern).withLocale(locale)
+    }
+
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = remember(month, formatter) {
+                formatter.format(month.toJavaYearMonth())
+            },
+            style = MaterialTheme.typography.headlineMediumEmphasized,
+        )
+        currentSemesters.fastForEach { semester ->
+            SemesterInformation(
+                semester = semester,
+                locale = locale,
+                currentTimeZone = currentTimeZone,
+                today = today,
+                onExport = onExport?.let { { it(semester) } },
+                onBackup = onBackup?.let { { it(semester) } },
+            )
+        }
+    }
+}
+
+@Composable
+fun SemesterInformation(
+    semester: SemesterEntity,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.large,
+    tonalElevation: Dp = 4.dp,
+    locale: Locale = LocalConfiguration.current.locales[0],
+    currentTimeZone: TimeZone = rememberSystemTimeZone(),
+    today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
+    onExport: (suspend () -> String)? = null,
+    onBackup: (suspend () -> String)? = null,
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val dateFormatter = remember(locale) {
+        DateTimeFormatter.ofLocalizedDate(SHORT).withLocale(locale)
+    }
+
+    val (destinationStart, destinationEnd) = remember(semester, dateFormatter) {
+        val startDate = dateFormatter.format(semester.startDate.toJavaLocalDate())
+        val endDate = dateFormatter.format(semester.endDate.minusDays(1).toJavaLocalDate())
+        startDate to endDate
+    }
+
+    val destinationToday = remember(today, currentTimeZone, semester) {
+        if (currentTimeZone == semester.timeZone) {
+            today
+        } else {
+            today.atStartOfDayIn(currentTimeZone).toLocalDateTime(semester.timeZone).date
+        }
+    }
+
+    var showMenu by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = { showMenu = true },
+        modifier = modifier,
+        shape = shape,
+        tonalElevation = tonalElevation,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = semester.name,
+                style = MaterialTheme.typography.titleMediumEmphasized,
+            )
+            if (semester.id == SemesterEntity.DefaultSemesterId) return@Column
+            LabelWithIcon(
+                icon = R.drawable.date_range_24px,
+                label = if (currentTimeZone == semester.timeZone) {
+                    stringResource(
+                        R.string.schedule_semester_label_date_range,
+                        destinationStart,
+                        destinationEnd,
+                    )
+                } else {
+                    val timeZone = remember(semester, locale) {
+                        semester.timeZone.toJavaZoneId().getDisplayName(SHORT, locale)
+                    }
+                    stringResource(
+                        R.string.schedule_semester_label_date_range_with_time_zone,
+                        destinationStart,
+                        destinationEnd,
+                        timeZone,
+                    )
+                },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (currentTimeZone != semester.timeZone) {
+                val timeFormatter = remember(locale) {
+                    DateTimeFormatter.ofLocalizedDateTime(SHORT).withLocale(locale)
+                }
+                val (localStart, localEnd) = remember(semester, currentTimeZone, timeFormatter) {
+                    val start = semester.startDate.atStartOfDayIn(semester.timeZone)
+                        .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
+                    val end = semester.endDate.atStartOfDayIn(semester.timeZone)
+                        .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
+                    val startTime = timeFormatter.format(start)
+                    val endTime = timeFormatter.format(end)
+                    startTime to endTime
+                }
+                val timeZone = remember(currentTimeZone, locale) {
+                    currentTimeZone.toJavaZoneId().getDisplayName(FULL, locale)
+                }
+                LabelWithIcon(
+                    icon = R.drawable.date_range_24px,
+                    label = stringResource(
+                        R.string.schedule_semester_label_date_range_with_time_zone,
+                        localStart,
+                        localEnd,
+                        timeZone,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            LabelWithIcon(
+                icon = R.drawable.schedule_24px,
+                label = stringResource(
+                    R.string.schedule_semester_label_length,
+                    remember(semester, locale) {
+                        semester.startDate.daysUntil(semester.endDate).days.format(locale)
+                    },
+                ),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (destinationToday < semester.startDate) {
+                LabelWithIcon(
+                    icon = R.drawable.event_upcoming_24px,
+                    label = stringResource(
+                        R.string.schedule_semester_label_start_in,
+                        remember(destinationToday, semester, locale) {
+                            destinationToday.daysUntil(semester.startDate).days.format(locale)
+                        },
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (destinationToday >= semester.startDate && destinationToday < semester.endDate) {
+                val progressFormatter = remember(locale) {
+                    NumberFormat.getPercentInstance(locale)
+                }
+
+                val (length, spent) = remember(destinationToday, currentTimeZone, semester) {
+                    val length = semester.startDate.daysUntil(semester.endDate)
+                    val spent = semester.startDate.daysUntil(destinationToday)
+                    length to spent
+                }
+
+                val progress = if (length == 0) 1f else spent.toFloat() / length
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = remember(progressFormatter, progress) {
+                            progressFormatter.format(progress)
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.schedule_semester_label_remaining,
+                            remember(length, spent, locale) {
+                                (length - spent).days.format(locale)
+                            },
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        var exportationContent by remember { mutableStateOf<String?>(null) }
+        var backupContent by remember { mutableStateOf<String?>(null) }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            DropdownMenuItem(
+                onClick = {
+                    showMenu = false
+                    coroutineScope.launch {
+                        exportationContent = onExport?.invoke()
+                    }
+                },
+                text = { Text(stringResource(R.string.schedule_semester_label_export)) },
+                shape = MenuDefaults.leadingItemThemedShape,
+                leadingIcon = {
+                    Icon(
+                        painterResource(R.drawable.file_export_24px),
+                        contentDescription = null,
+                    )
+                },
+                enabled = onExport != null,
+            )
+            DropdownMenuItem(
+                onClick = {
+                    showMenu = false
+                    coroutineScope.launch {
+                        backupContent = onBackup?.invoke()
+                    }
+                },
+                text = { Text(stringResource(R.string.schedule_semester_label_backup)) },
+                shape = MenuDefaults.trailingItemThemedShape,
+                leadingIcon = {
+                    Icon(
+                        painterResource(R.drawable.file_export_24px),
+                        contentDescription = null,
+                    )
+                },
+                enabled = onBackup != null,
+            )
+        }
+
+        exportationContent?.let {
+            ICalendarContentDialog(
+                onDismissRequest = { exportationContent = null },
+                title = stringResource(R.string.schedule_semester_label_export),
+                content = it,
+            )
+        }
+
+        backupContent?.let {
+            ICalendarContentDialog(
+                onDismissRequest = { backupContent = null },
+                title = stringResource(R.string.schedule_semester_label_backup),
+                content = it,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ICalendarContentDialog(
+    onDismissRequest: () -> Unit,
+    title: String,
+    content: String,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(title) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val data = ClipData.newPlainText(null, content)
+                    coroutineScope.launch {
+                        clipboard.setClipEntry(ClipEntry(data))
+                    }
+                },
+                content = { Text(stringResource(android.R.string.copy)) },
+            )
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                content = { Text(stringResource(android.R.string.cancel)) },
+            )
+        },
+        text = {
+            // TODO: use MarkdownCode directly after refactor
+            SelectionContainer {
+                Text(
+                    text = content,
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .verticalScroll(rememberScrollState()),
+                    fontFamily = Monospace,
+                    softWrap = false,
+                )
+            }
+        },
+    )
+}
 
 @Composable
 fun EventsDialogContent(

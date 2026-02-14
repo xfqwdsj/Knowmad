@@ -33,12 +33,18 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.schedule.SemesterEntity
+import top.ltfan.knowmad.data.schedule.exportICalendar
+import top.ltfan.knowmad.data.schedule.toICalendar
+import top.ltfan.knowmad.data.schedule.writeCustomized
+import top.ltfan.knowmad.data.schedule.writeStandard
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
 import top.ltfan.knowmad.ui.component.CalendarState
@@ -52,6 +58,7 @@ import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 import top.ltfan.knowmad.ui.page.back
+import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -175,6 +182,22 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     }
 
     val calendarState = CalendarState()
+
+    val allSemesters by scheduleDao.getAllSemestersFlow().stateIn(
+        scope = viewModelScope,
+        started = Eagerly,
+        initialValue = emptyList(),
+    ).collectAsState()
+
+    var showMonthBottomSheet by mutableStateOf(false)
+
+    suspend fun exportSemester(semester: SemesterEntity) =
+        semester.exportICalendar(scheduleDao.getAllEventsBySemester(semester.id))
+            .writeStandard()
+
+    suspend fun backupSemester(semester: SemesterEntity) =
+        semester.toICalendar(scheduleDao.getAllEventsBySemester(semester.id))
+            .writeCustomized()
 
     private val eventsCache =
         object : LinkedHashMap<Pair<Instant, Instant>, List<Event>>(10, .75f, true) {

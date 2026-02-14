@@ -20,6 +20,8 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -33,6 +35,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -65,6 +68,7 @@ import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
+import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.component.rememberWeekHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
@@ -191,6 +195,11 @@ class MainPage : Page() {
                                         .getDisplayName(FULL, configuration.locales[0]),
                                 )
                             },
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { viewModel.showMonthBottomSheet = true },
+                            ),
                         )
                     },
                     floatingActionButton = {
@@ -236,6 +245,17 @@ class MainPage : Page() {
                         }
                     }
                 }
+            }
+        }
+
+        if (viewModel.showMonthBottomSheet) {
+            ModalBottomSheet(onDismissRequest = { viewModel.showMonthBottomSheet = false }) {
+                MonthBottomSheetContent(
+                    month = viewModel.calendarState.currentMonth,
+                    semesters = viewModel.allSemesters,
+                    onExport = viewModel::exportSemester,
+                    onBackup = viewModel::backupSemester,
+                )
             }
         }
     }

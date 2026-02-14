@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.data.schedule
 
 import android.content.res.Resources
+import biweekly.Biweekly
 import biweekly.ICalendar
 import biweekly.io.TimezoneAssignment
 import biweekly.io.TimezoneInfo
@@ -63,6 +64,20 @@ fun SemesterEntity.exportICalendar(
     addExportedEvents(events)
 }
 
+fun ICalendar.writeStandard(): String = Biweekly.write(this).apply {
+    version(ICalendarVersion)
+    foldLines(false)
+}.go()
+
+fun ICalendar.writeCustomized(): String = Biweekly.write(this).apply {
+    version(ICalendarVersion)
+    foldLines(false)
+    register(SemesterProperty)
+    register(CourseProperty)
+    register(InstructorProperty)
+    register(KnowmadRecurrenceProperty)
+}.go()
+
 fun ICalendar.addEvents(events: List<Event>) {
     events.forEach { event ->
         addEvent(event.toVEvent())
@@ -91,7 +106,8 @@ fun ICalendar.parse(
 
 fun ICalendarRecurrenceRule.toProperty() = KnowmadRecurrenceProperty(this)
 
-fun ICalendarColor.Companion.pickFromPalette(id: Uuid): ICalendarColor = pickFromPalette(id.hashCode().toUInt())
+fun ICalendarColor.Companion.pickFromPalette(id: Uuid): ICalendarColor =
+    pickFromPalette(id.hashCode().toUInt())
 
 fun BiweeklyColor?.convertOrDefault(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
     this?.value?.let { ICalendarColor.fromValue(it) }?.let { return it }
