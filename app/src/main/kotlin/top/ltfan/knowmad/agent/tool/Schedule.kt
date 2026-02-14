@@ -114,7 +114,7 @@ object ScheduleTools {
 
             val errors = mutableListOf<String>()
 
-            val pendingRecurrenceRules = mutableListOf<RecurrenceRuleEntity>()
+            val pendingRecurrenceRules = mutableMapOf<Uuid, RecurrenceRuleEntity>()
 
             val iCal = ByteArrayInputStream(args.icsContent.encodeToByteArray()).use { stream ->
                 customICalReader(stream).use { reader ->
@@ -124,7 +124,7 @@ object ScheduleTools {
 
             val events = iCal.parse(
                 onNewRecurrenceRule = { rule, course ->
-                    pendingRecurrenceRules += rule
+                    pendingRecurrenceRules += rule.id to rule
                     course?.copy(
                         recurrenceRuleId = rule.id,
                     )
@@ -195,12 +195,12 @@ object ScheduleTools {
 
             run {
                 val recurrenceRulesInsertionResults = withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllRecurrenceRules(pendingRecurrenceRules) }
+                    runCatching { dao.insertAllRecurrenceRules(pendingRecurrenceRules.values.toList()) }
                 }.onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
                     .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
 
                 val failedRecurrenceRuleIds =
-                    (pendingRecurrenceRules.asSequence() zip recurrenceRulesInsertionResults.asSequence())
+                    (pendingRecurrenceRules.values.asSequence() zip recurrenceRulesInsertionResults.asSequence())
                         .filter { it.second < 0L }
                         .map { it.first }
                         .onEach {
