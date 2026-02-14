@@ -169,7 +169,7 @@ fun getChatAgentService(
             val context = ChatAgentToolCallContext(llm, data)
             data.copy(
                 newContent = ToolResultWithContext(
-                    result = environment.executeTools(data.content),
+                    result = withContext(context) { environment.executeTools(data.content) },
                     context = context,
                 ),
             ).also {
