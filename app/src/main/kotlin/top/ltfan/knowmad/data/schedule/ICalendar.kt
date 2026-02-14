@@ -18,8 +18,10 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import biweekly.Biweekly
 import biweekly.ICalDataType
 import biweekly.ICalVersion
+import biweekly.ICalendar
 import biweekly.io.ParseContext
 import biweekly.io.WriteContext
 import biweekly.io.scribe.property.ICalPropertyScribe
@@ -43,6 +45,27 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 val ICalendarVersion = ICalVersion.V2_0
+
+fun readCustomizedICalendar(content: String): ICalendar = Biweekly.parse(content).apply {
+    register(SemesterProperty)
+    register(CourseProperty)
+    register(InstructorProperty)
+    register(KnowmadRecurrenceRuleProperty)
+}.first()
+
+fun ICalendar.writeStandard(): String = Biweekly.write(this).apply {
+    version(ICalendarVersion)
+    foldLines(false)
+}.go()
+
+fun ICalendar.writeCustomized(): String = Biweekly.write(this).apply {
+    version(ICalendarVersion)
+    foldLines(false)
+    register(SemesterProperty)
+    register(CourseProperty)
+    register(InstructorProperty)
+    register(KnowmadRecurrenceRuleProperty)
+}.go()
 
 fun customICalReader(stream: InputStream) = ICalReader(stream).apply {
     registerScribe(SemesterProperty)

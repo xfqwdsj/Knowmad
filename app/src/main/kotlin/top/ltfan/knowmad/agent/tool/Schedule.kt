@@ -41,15 +41,14 @@ import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
-import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.importFromICalendar
 import top.ltfan.knowmad.data.schedule.pickFromPalette
+import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import top.ltfan.omnical.icalendar.ICalendarTrigger
-import java.io.ByteArrayInputStream
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -112,11 +111,7 @@ object ScheduleTools {
 
             val errors = mutableListOf<String>()
 
-            val iCal = ByteArrayInputStream(args.icsContent.encodeToByteArray()).use { stream ->
-                customICalReader(stream).use { reader ->
-                    reader.readNext()
-                }
-            }
+            val iCal = readCustomizedICalendar(args.icsContent)
 
             val events = dao.importFromICalendar(
                 iCalendar = iCal,

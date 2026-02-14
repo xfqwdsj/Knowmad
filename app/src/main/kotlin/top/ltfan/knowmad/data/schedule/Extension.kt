@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.data.schedule
 
 import android.content.res.Resources
-import biweekly.Biweekly
 import biweekly.ICalendar
 import biweekly.io.TimezoneAssignment
 import biweekly.io.TimezoneInfo
@@ -62,20 +61,6 @@ fun SemesterEntity.exportICalendar(
 ): ICalendar = constructICalendar().apply {
     addExportedEvents(events)
 }
-
-fun ICalendar.writeStandard(): String = Biweekly.write(this).apply {
-    version(ICalendarVersion)
-    foldLines(false)
-}.go()
-
-fun ICalendar.writeCustomized(): String = Biweekly.write(this).apply {
-    version(ICalendarVersion)
-    foldLines(false)
-    register(SemesterProperty)
-    register(CourseProperty)
-    register(InstructorProperty)
-    register(KnowmadRecurrenceRuleProperty)
-}.go()
 
 fun ICalendar.addEvents(events: List<Event>) {
     events.forEach { event ->
