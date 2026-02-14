@@ -58,10 +58,10 @@ data class SemesterEntity(
 ) {
     companion object {
         const val DEFAULT_SEMESTER_ID = "019c0c33-1400-7225-a55f-906660045bdc"
-        val DefaultSemesterId = Uuid.parse(DEFAULT_SEMESTER_ID)
+        val DefaultSemesterId by lazy { Uuid.parse(DEFAULT_SEMESTER_ID) }
 
         const val UNSPECIFIED_SEMESTER_ID = "019c0c33-1400-75bc-a0fa-852a8eb44edf"
-        val UnspecifiedSemesterId = Uuid.parse(UNSPECIFIED_SEMESTER_ID)
+        val UnspecifiedSemesterId by lazy { Uuid.parse(UNSPECIFIED_SEMESTER_ID) }
 
         fun createDefault(resources: Resources?) = SemesterEntity(
             id = DefaultSemesterId,
@@ -71,7 +71,6 @@ data class SemesterEntity(
             endDate = Instant.DISTANT_FUTURE.toLocalDateTime(UTC).date,
             timeZone = UTC,
         )
-
     }
 }
 
@@ -207,7 +206,7 @@ data class EventEntity(
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
 ) {
-    val vAlarms inline get() = reminders.list.map { it.toVAlarm(defaultDisplayText = name) }
+    val vAlarms inline get() = reminders.toVAlarms { name }
 }
 
 @Serializable

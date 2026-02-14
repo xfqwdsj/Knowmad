@@ -523,7 +523,8 @@ value class Reminders(
 
     fun notEmptyOrNull(): Reminders? = if (list.isNotEmpty()) this else null
 
-    fun toVAlarms() = list.map { it.toVAlarm() }
+    inline fun toVAlarms(defaultDisplayText: (Reminder) -> String? = { null }) =
+        list.map { it.toVAlarm(defaultDisplayText(it)) }
 
     companion object {
         val Empty = Reminders(emptyList())
