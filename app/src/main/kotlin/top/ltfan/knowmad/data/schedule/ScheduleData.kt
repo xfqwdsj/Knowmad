@@ -189,8 +189,18 @@ sealed interface Event {
             addProperty(CourseProperty(course))
         }
 
+        override fun VEvent.summary() {
+            setSummary(eventName)
+        }
+
         fun VEvent.instructor() {
-            addProperty(InstructorProperty(instructor))
+            eventInstructor?.let { eventInstructor ->
+                addProperty(InstructorProperty(eventInstructor))
+            }
+        }
+
+        override fun VEvent.location() {
+            setLocation(eventLocation)
         }
     }
 

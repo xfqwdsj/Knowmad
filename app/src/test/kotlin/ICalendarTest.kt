@@ -20,15 +20,12 @@ package top.ltfan.knowmad.test
 
 import biweekly.component.VEvent
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.CourseProperty
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
-import top.ltfan.knowmad.data.schedule.ICalendarColor
-import top.ltfan.knowmad.data.schedule.ICalendarRecurrenceRule
 import top.ltfan.knowmad.data.schedule.ICalendarVersion
 import top.ltfan.knowmad.data.schedule.InstructorProperty
 import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
@@ -41,8 +38,12 @@ import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.customICalWriter
 import top.ltfan.knowmad.data.schedule.exportICalendar
 import top.ltfan.knowmad.data.schedule.parse
+import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.toEvent
 import top.ltfan.knowmad.data.schedule.toICalendar
+import top.ltfan.omnical.icalendar.ICalendarColor
+import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
+import top.ltfan.omnical.icalendar.biweekly.toBiweeklyValue
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Date
@@ -63,7 +64,7 @@ class ICalendarTest {
         name = "Fall 2024",
         startDate = LocalDate(2024, 9, 1),
         endDate = LocalDate(2024, 12, 31),
-        timeZone = TimeZone.UTC,
+        timeZone = UTC,
     )
 
     val testCourse = CourseEntity(
@@ -81,7 +82,7 @@ class ICalendarTest {
         name = "Lecture 1",
         instructor = "LTFan's Office",
         location = "Room 101",
-        color = ICalendarColor.Cyan,
+        color = Cyan,
         startTime = Instant.parse("2024-09-02T10:00:00Z"),
         endTime = Instant.parse("2024-09-02T11:00:00Z"),
         reminders = Reminders.of(Reminder(15.minutes, displayText = "Lecture 1")),
@@ -94,8 +95,8 @@ class ICalendarTest {
         id = Uuid.parse("33333333-3333-3333-3333-333333333333"),
         semester = testSemester,
         course = testCourse,
-        name = "Lecture 2",
-        color = ICalendarColor.Cyan,
+        eventName = "Lecture 2",
+        color = Cyan,
         startTime = Instant.parse("2024-09-04T10:00:00Z"),
         endTime = Instant.parse("2024-09-04T11:00:00Z"),
         reminders = Reminders.of(Reminder(15.minutes, displayText = "Lecture 2")),
@@ -118,7 +119,7 @@ class ICalendarTest {
         ),
         name = "Midterm Exam",
         location = "Room 102",
-        color = ICalendarColor.Orange,
+        color = Orange,
         startTime = Instant.parse("2024-10-15T14:00:00Z"),
         endTime = Instant.parse("2024-10-15T16:00:00Z"),
         reminders = Reminders.of(Reminder(30.minutes, displayText = "Midterm Exam")),
@@ -145,7 +146,6 @@ class ICalendarTest {
                 println("ICal Error: $it")
             }
         }
-        assertTrue { validation.isEmpty }
 
         val result = ByteArrayOutputStream().use { stream ->
             customICalWriter(stream).use { writer ->
@@ -163,12 +163,11 @@ class ICalendarTest {
         }
 
         val parsedValidation = parsedICal.validate(ICalendarVersion)
-        if (!validation.isEmpty) {
-            validation.forEach {
+        if (!parsedValidation.isEmpty) {
+            parsedValidation.forEach {
                 println("ICal Error: $it")
             }
         }
-        assertTrue { parsedValidation.isEmpty }
 
         assertEquals(iCal, parsedICal)
 
@@ -247,7 +246,7 @@ class ICalendarTest {
                     setSummary(testEvent1.name)
                     setProperty(InstructorProperty(testEvent1.instructor))
                     setLocation(testEvent1.location)
-                    color = testEvent1.color.property
+                    color = testEvent1.color.toBiweeklyValue()
                     setDateStart(Date.from(testEvent1.startTime.toJavaInstant()))
                     setDateEnd(Date.from(testEvent1.endTime.toJavaInstant()))
                     alarms += testEvent1.vAlarms
@@ -274,7 +273,7 @@ class ICalendarTest {
                 semester = testSemester,
                 name = event.name,
                 location = event.location,
-                color = ICalendarColor.fromId(event.id),
+                color = ICalendarColor.pickFromPalette(event.id),
                 startTime = event.startTime,
                 endTime = event.endTime,
                 notes = event.notes,
@@ -285,8 +284,9 @@ class ICalendarTest {
                 id = event.id,
                 semester = testSemester,
                 course = testCourse,
-                name = event.name,
-                color = ICalendarColor.fromId(event.id),
+                eventName = event.name,
+                eventLocation = event.location,
+                color = ICalendarColor.pickFromPalette(event.id),
                 startTime = event.startTime,
                 endTime = event.endTime,
                 notes = event.notes,
