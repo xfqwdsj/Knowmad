@@ -27,6 +27,7 @@ import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.ChatAgentToolCallContext
 import top.ltfan.knowmad.agent.ContextualInitializationTool
@@ -78,14 +79,12 @@ class GatherMoreToolsTool(
     override suspend fun execute(args: Args): Result {
         val context = currentCoroutineContext()[ChatAgentToolCallContext] ?: run {
             logger.error { "No ChatAgentToolCallContext in context" }
-            return Result(
-                success = null,
-                notFound = args.tools,
-            )
+            return Result(notFound = args.tools)
         }
 
-        val foundNames = mutableListOf<String>()
-        val notFoundNames = mutableListOf<String>()
+        val foundNames = mutableSetOf<String>()
+        val notFoundNames = mutableSetOf<String>()
+        val messages = mutableListOf<JsonElement>()
 
         val toolsToAppend = mutableListOf<ToolDescriptor>()
 
@@ -95,11 +94,15 @@ class GatherMoreToolsTool(
                 continue
             }
 
-            val descriptor = managedTools[requestedName]?.descriptor
-            if (descriptor != null) {
+            val tool = managedTools[requestedName]
+            if (tool != null) {
+                val descriptor = tool.descriptor
                 toolsToAppend += descriptor
                 foundNames += requestedName
                 gatheredNames += requestedName
+                if (tool is MessageWhenGatheringTool) {
+                    messages += tool.messageWhenGathering
+                }
             } else {
                 notFoundNames += requestedName
             }
@@ -110,8 +113,9 @@ class GatherMoreToolsTool(
         }
 
         return Result(
-            success = foundNames.toSet().ifEmpty { null },
-            notFound = notFoundNames.toSet().ifEmpty { null },
+            success = foundNames.ifEmpty { null },
+            notFound = notFoundNames.ifEmpty { null },
+            messages = messages.ifEmpty { null },
         )
     }
 
@@ -120,8 +124,9 @@ class GatherMoreToolsTool(
 
     @Serializable
     data class Result(
-        val success: Set<String>?,
-        val notFound: Set<String>?,
+        val success: Set<String>? = null,
+        val notFound: Set<String>? = null,
+        val messages: List<JsonElement>? = null,
     )
 
     override suspend fun initialize(llm: AIAgentLLMContext) {
@@ -131,4 +136,8 @@ class GatherMoreToolsTool(
             }
         }
     }
+}
+
+interface MessageWhenGatheringTool {
+    val messageWhenGathering: JsonElement
 }
