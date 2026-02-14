@@ -166,4 +166,9 @@
         <item quantity="other">Successfully modified %d events</item>
     </plurals>
     <string name="schedule_event_edit_notes_label_input">New Notes</string>
+    <string name="schedule_import_from_icalendar_error_semester_insertion_failed">Error occurred while inserting semester %s into database</string>
+    <string name="schedule_import_from_icalendar_error_recurrence_rule_insertion_failed">Error occurred while inserting rule %s into database</string>
+    <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
+    <string name="schedule_import_from_icalendar_error_course_insertion_failed">Error occurred while inserting course %s into database</string>
+    <string name="schedule_import_from_icalendar_error_event_insertion_failed">Error occurred while inserting event %s into database</string>
 </resources>

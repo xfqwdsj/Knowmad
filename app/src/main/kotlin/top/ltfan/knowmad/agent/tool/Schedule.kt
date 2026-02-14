@@ -37,20 +37,18 @@ import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.ICalendarRuleArguments
-import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.customICalReader
-import top.ltfan.knowmad.data.schedule.parse
+import top.ltfan.knowmad.data.schedule.importFromICalendar
 import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import top.ltfan.omnical.icalendar.ICalendarTrigger
-import top.ltfan.omnical.icalendar.biweekly.format
 import java.io.ByteArrayInputStream
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -114,207 +112,23 @@ object ScheduleTools {
 
             val errors = mutableListOf<String>()
 
-            val pendingRecurrenceRules = mutableMapOf<Uuid, RecurrenceRuleEntity>()
-
             val iCal = ByteArrayInputStream(args.icsContent.encodeToByteArray()).use { stream ->
                 customICalReader(stream).use { reader ->
                     reader.readNext()
                 }
             }
 
-            val events = iCal.parse(
-                onNewRecurrenceRule = { rule, course ->
-                    pendingRecurrenceRules += rule.id to rule
-                    course?.copy(
-                        recurrenceRuleId = rule.id,
+            val events = dao.importFromICalendar(
+                iCalendar = iCal,
+                resources = resources,
+                onQueryFailed = {
+                    return Result.Failure(
+                        reason = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error),
+                        errors = errors.takeIf { it.isNotEmpty() },
                     )
                 },
                 errors = errors,
-            ).toMutableList()
-
-            if (events.isEmpty()) {
-                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-            }
-
-            run {
-                val semestersToInsert = mutableMapOf<Uuid, SemesterEntity>()
-                val semesterIds = hashSetOf<Uuid>()
-                val eventsSemesterIndex = mutableMapOf<Uuid, MutableList<Int>>()
-
-                events.asSequence()
-                    .onEachIndexed { index, event ->
-                        eventsSemesterIndex
-                            .getOrPut(event.semester.id) { mutableListOf() }
-                            .add(index)
-                    }
-                    .distinctBy { it.semester.id }
-                    .map { it.semester }
-                    .forEach { semester ->
-                        semestersToInsert += semester.id to semester
-                        semesterIds += semester.id
-                    }
-
-                withContext(Dispatchers.IO) {
-                    runCatching { dao.getAllSemestersByIds(semesterIds.toList()) }
-                }.onFailure { logger.error(it) { "Failed to query existing semesters from database" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-                    .forEach { semester ->
-                        errors.removeAll { it.contains(semester.id.toString()) }
-                        semestersToInsert.remove(semester.id)
-                        eventsSemesterIndex[semester.id]?.forEach { index ->
-                            events[index] = when (val event = events[index]) {
-                                is Course -> event.copy(semester = semester)
-                                is Normal -> event.copy(semester = semester)
-                            }
-                        }
-                    }
-
-                withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllSemesters(semestersToInsert.values.toList()) }
-                }.onFailure { logger.error(it) { "Failed to insert semesters" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-                    .asSequence()
-                    .zip(semestersToInsert.asSequence())
-                    .forEach { (result, entry) ->
-                        val (_, semester) = entry
-                        if (result < 0L) {
-                            errors += resources.getString(
-                                R.string.llm_tool_schedule_import_from_icalendar_result_error_semester_insertion_failed,
-                                semester.name,
-                            )
-                            semesterIds -= semester.id
-                        }
-                    }
-
-                events.retainAll { it.semester.id in semesterIds }
-            }
-
-            if (events.isEmpty()) {
-                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-            }
-
-            run {
-                val recurrenceRulesInsertionResults = withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllRecurrenceRules(pendingRecurrenceRules.values.toList()) }
-                }.onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-
-                val failedRecurrenceRuleIds =
-                    (pendingRecurrenceRules.values.asSequence() zip recurrenceRulesInsertionResults.asSequence())
-                        .filter { it.second < 0L }
-                        .map { it.first }
-                        .onEach {
-                            errors += resources.getString(
-                                R.string.llm_tool_schedule_import_from_icalendar_result_error_recurrence_rule_insertion_failed,
-                                it.rule.format(),
-                            )
-                        }
-                        .map { it.id }
-                        .toHashSet()
-
-                events.removeAll { event ->
-                    val ruleId = event.recurrenceRule?.id ?: return@removeAll false
-                    ruleId in failedRecurrenceRuleIds
-                }
-            }
-
-            if (events.isEmpty()) {
-                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-            }
-
-            run {
-                val coursesToInsert = mutableMapOf<Uuid, CourseEntity>()
-                val courseIds = hashSetOf<Uuid>()
-                val eventsCourseIndex = mutableMapOf<Uuid, MutableList<Int>>()
-
-                events.asSequence()
-                    .onEachIndexed { index, event ->
-                        if (event !is Course) return@onEachIndexed
-                        eventsCourseIndex
-                            .getOrPut(event.course.id) { mutableListOf() }
-                            .add(index)
-                    }
-                    .filterIsInstance<Event.Course>()
-                    .distinctBy { it.course.id }
-                    .map { it.course }
-                    .forEach { course ->
-                        coursesToInsert += course.id to course
-                        courseIds += course.id
-                    }
-
-                withContext(Dispatchers.IO) {
-                    runCatching { dao.getAllCoursesByIds(courseIds.toList()) }
-                }.onFailure { logger.error(it) { "Failed to query existing courses from database" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-                    .forEach { (course, semester) ->
-                        errors.removeAll { it.contains(course.id.toString()) }
-                        val courseToInsert = coursesToInsert[course.id] ?: return@forEach
-                        coursesToInsert.remove(course.id)
-                        if (courseToInsert.semesterId != semester.id) {
-                            errors += resources.getString(
-                                R.string.llm_tool_schedule_import_from_icalendar_result_error_course_semester_mismatch,
-                                course.name,
-                            )
-                            courseIds -= course.id
-                            return@forEach
-                        }
-                        eventsCourseIndex[course.id]?.forEach { index ->
-                            events[index] = when (val event = events[index]) {
-                                is Course -> event.copy(
-                                    course = course,
-                                    semester = semester,
-                                )
-
-                                else -> event
-                            }
-                        }
-                    }
-
-                withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllCourses(coursesToInsert.values.toList()) }
-                }.onFailure { logger.error(it) { "Failed to insert courses" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-                    .asSequence()
-                    .zip(coursesToInsert.asSequence())
-                    .forEach { (result, entry) ->
-                        val (_, course) = entry
-                        if (result < 0L) {
-                            errors += resources.getString(
-                                R.string.llm_tool_schedule_import_from_icalendar_result_error_course_insertion_failed,
-                                course.name,
-                            )
-                            courseIds -= course.id
-                        }
-                    }
-
-                events.retainAll { event ->
-                    if (event !is Course) return@retainAll true
-                    event.course.id in courseIds
-                }
-            }
-
-            if (events.isEmpty()) {
-                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-            }
-
-            val eventsInsertionResults = withContext(Dispatchers.IO) {
-                runCatching { dao.insertAllEvents(events.map { it.toEntity() }) }
-            }.onFailure { logger.error(it) { "Failed to insert events" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error)) }
-
-            for (i in eventsInsertionResults.indices.reversed()) {
-                if (eventsInsertionResults[i] < 0L) {
-                    errors += resources.getString(
-                        R.string.llm_tool_schedule_import_from_icalendar_result_error_event_insertion_failed,
-                        events[i].name,
-                    )
-                    events.removeAt(i)
-                }
-            }
-
-            if (events.isEmpty()) {
-                return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-            }
+            ) ?: return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
 
             return Result.Success(
                 events = events,

@@ -18,17 +18,24 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.content.res.Resources
+import biweekly.ICalendar
 import biweekly.component.VAlarm
 import biweekly.component.VEvent
 import biweekly.io.TimezoneInfo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.R
+import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import top.ltfan.omnical.icalendar.ICalendarTrigger
+import top.ltfan.omnical.icalendar.biweekly.format
 import top.ltfan.omnical.icalendar.biweekly.toBiweeklyValue
 import top.ltfan.omnical.icalendar.biweekly.toKotlinDuration
 import top.ltfan.omnical.icalendar.biweekly.toOmnicalValue
@@ -249,11 +256,11 @@ sealed interface Event {
                 course: CourseEntity?,
             ) -> CourseEntity? = { _, _ -> null },
             recurrenceEndBound: Instant? = null,
-            errors: MutableList<String> = mutableListOf(),
+            errors: MutableList<String>? = null,
         ): List<Event> {
             val id = vEvent.uid?.value?.let {
                 Uuid.parseOrNull(it) ?: run {
-                    errors.add("Cannot parse UUID from UID in event: $it")
+                    errors?.add("Cannot parse UUID from UID in event: $it")
                     return emptyList()
                 }
             } ?: Uuid.generateV7()
@@ -262,20 +269,20 @@ sealed interface Event {
             val identifier = name ?: id.toString()
 
             val semesterProperty = vEvent.getProperty(SemesterProperty::class.java) ?: run {
-                errors.add("Cannot parse semester in event: $identifier")
+                errors?.add("Cannot parse semester in event: $identifier")
                 return emptyList()
             }
-            semesterProperty.errors?.let { errors.addAll(it) }
+            semesterProperty.errors?.let { errors?.addAll(it) }
             val semester = semesterProperty.semester ?: run {
-                errors.add("Some fields are missing or invalid in semester property in event: $identifier")
+                errors?.add("Some fields are missing or invalid in semester property in event: $identifier")
                 return emptyList()
             }
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
-            courseProperty?.errors?.let { errors.addAll(it) }
+            courseProperty?.errors?.let { errors?.addAll(it) }
             val course = courseProperty?.course.let {
                 if (it == null) {
                     if (courseProperty != null) {
-                        errors.add("Some fields are missing or invalid in course property in event: $identifier")
+                        errors?.add("Some fields are missing or invalid in course property in event: $identifier")
                     }
                     return@let null
                 }
@@ -285,7 +292,7 @@ sealed interface Event {
                     )
                 }
                 if (it.semesterId != semester.id) {
-                    errors.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $identifier")
+                    errors?.add("Course semester ID ${it.semesterId} does not match event semester ID ${semester.id} in event: $identifier")
                     return emptyList()
                 }
                 it
@@ -295,14 +302,14 @@ sealed interface Event {
             val location = vEvent.location?.value
             val color = vEvent.color.convertOrDefault(course?.id, defaultId = semester.id)
             val startDate = vEvent.dateStart?.value ?: run {
-                errors.add("Start date not found in event: $identifier")
+                errors?.add("Start date not found in event: $identifier")
                 return emptyList()
             }
             val startTime = startDate.toInstant().toKotlinInstant()
             val duration = vEvent.duration?.value?.toKotlinDuration()
                 ?: vEvent.dateEnd?.value?.toInstant()?.toKotlinInstant()?.let { it - startTime }
                 ?: run {
-                    errors.add("Cannot determine duration in event: $identifier")
+                    errors?.add("Cannot determine duration in event: $identifier")
                     return emptyList()
                 }
             val reminders = vEvent.alarms.toReminders(name, errors)
@@ -319,9 +326,9 @@ sealed interface Event {
 
             val recurrenceRuleProperty =
                 vEvent.getProperty(KnowmadRecurrenceRuleProperty::class.java)
-            recurrenceRuleProperty?.errors?.let { errors.addAll(it) }
+            recurrenceRuleProperty?.errors?.let { errors?.addAll(it) }
             val recurrenceRuleEntity = recurrenceRuleProperty?.recurrenceRule ?: run {
-                errors.add("Some fields are missing or invalid in recurrence rule property in event: $identifier")
+                errors?.add("Some fields are missing or invalid in recurrence rule property in event: $identifier")
                 null
             } ?: vEvent.recurrenceRule?.let { rule ->
                 val timeZone = timeZoneInfo?.getTimezone(rule)?.timeZone
@@ -329,7 +336,7 @@ sealed interface Event {
                 val entity = RecurrenceRuleEntity(
                     id = id,
                     rule = rule.value.toOmnicalValue(errors) ?: run {
-                        errors.add("Cannot parse recurrence rule in event: $identifier")
+                        errors?.add("Cannot parse recurrence rule in event: $identifier")
                         return emptyList()
                     },
                     startTime = startDate.toInstant().toKotlinInstant(),
@@ -340,7 +347,7 @@ sealed interface Event {
 
                 val isInfinite = entity.rule.count == null && entity.rule.until == null
                 if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
-                    errors.add("Infinite recurrence rule found in default semester in event: $identifier")
+                    errors?.add("Infinite recurrence rule found in default semester in event: $identifier")
                     return emptyList()
                 }
                 val semesterEndTime = semester.endDate.atStartOfDayIn(semester.timeZone)
@@ -353,13 +360,13 @@ sealed interface Event {
                     recurrenceEndBound?.let { instant ->
                         val date = Date.from(instant.toJavaInstant())
                         if (occurrenceStartDate.after(date)) {
-                            errors.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $identifier")
+                            errors?.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $identifier")
                             break
                         }
                     }
 
                     if (occurrenceStartDate.after(semesterEndDate)) {
-                        errors.add("Occurrence exceeds semester end date $semesterEndTime in event: $identifier")
+                        errors?.add("Occurrence exceeds semester end date $semesterEndTime in event: $identifier")
                         break
                     }
 
@@ -386,7 +393,7 @@ sealed interface Event {
                         )
                     } else {
                         if (name == null || location == null) {
-                            errors.add("Name or location is required for normal event: $identifier at $occurrenceStartTime")
+                            errors?.add("Name or location is required for normal event: $identifier at $occurrenceStartTime")
                             continue
                         }
                         events.add(
@@ -411,7 +418,7 @@ sealed interface Event {
             }
 
             if (startTime in exceptions) {
-                errors.add("Event is an exception: $identifier at $startTime")
+                errors?.add("Event is an exception: $identifier at $startTime")
                 return emptyList()
             }
 
@@ -439,7 +446,7 @@ sealed interface Event {
                 )
             } else {
                 if (name == null || location == null) {
-                    errors.add("Name or location is required for normal event: $identifier")
+                    errors?.add("Name or location is required for normal event: $identifier")
                     return emptyList()
                 }
                 listOf(
@@ -512,7 +519,7 @@ fun VEvent.parse(
         course: CourseEntity?,
     ) -> CourseEntity? = { _, _ -> null },
     recurrenceEndBound: Instant? = null,
-    errors: MutableList<String> = mutableListOf(),
+    errors: MutableList<String>? = null,
 ) = Event.parse(
     vEvent = this,
     timeZoneInfo = timeZoneInfo,
@@ -544,7 +551,7 @@ value class Reminders(
 @JvmName("vAlarmCollectionToReminders")
 fun Collection<VAlarm>?.toReminders(
     defaultDisplayText: String? = null,
-    errors: MutableList<String> = mutableListOf(),
+    errors: MutableList<String>? = null,
 ): Reminders {
     val reminders = this?.mapNotNull { it.toReminder(defaultDisplayText, errors) } ?: emptyList()
     return Reminders(reminders)
@@ -577,24 +584,319 @@ fun Collection<Reminder>.toReminders(): Reminders {
 
 fun VAlarm.toReminder(
     defaultDisplayText: String? = null,
-    errors: MutableList<String> = mutableListOf(),
+    errors: MutableList<String>? = null,
 ): Reminder? {
     val triggerProperty = trigger ?: run {
-        errors += "VAlarm does not have a trigger"
+        errors?.add("VAlarm does not have a trigger")
         return null
     }
     val trigger = triggerProperty.toOmnicalValue(errors) ?: run {
-        errors += "Cannot parse VAlarm trigger: $triggerProperty"
+        errors?.add("Cannot parse VAlarm trigger: $triggerProperty")
         return null
     }
     val displayText = description?.value
         ?: defaultDisplayText
         ?: run {
-            errors += "VAlarm does not have a description"
+            errors?.add("VAlarm does not have a description")
             return null
         }
     return Reminder(
         trigger = trigger,
         displayText = displayText,
     )
+}
+
+suspend inline fun ScheduleDao.importFromICalendar(
+    iCalendar: ICalendar,
+    resources: Resources,
+    onQueryFailed: (Throwable) -> Nothing = { throw it },
+    onSemesterShadowed: (existing: SemesterEntity, new: SemesterEntity) -> SemesterEntity = { _, new -> new },
+    onSemesterConflict: (existing: SemesterEntity, new: SemesterEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+    onRecurrenceRuleShadowed: (existing: RecurrenceRuleEntity, new: RecurrenceRuleEntity) -> RecurrenceRuleEntity = { _, new -> new },
+    onRecurrenceRuleConflict: (existing: RecurrenceRuleEntity, new: RecurrenceRuleEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+    onCourseShadowed: (existing: CourseEntity, new: CourseEntity) -> CourseEntity = { _, new -> new },
+    onCourseConflict: (existing: CourseEntity, new: CourseEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+    errors: MutableList<String>? = null,
+): List<Event>? {
+    val logger = Logger("ImportICalendar")
+
+    val events = iCalendar.parse(
+        onNewRecurrenceRule = { rule, course -> course?.copy(recurrenceRuleId = rule.id) },
+        errors = errors,
+    ).toMutableList()
+
+    if (events.isEmpty()) return null
+
+    run {
+        val semestersToInsert = mutableMapOf<Uuid, SemesterEntity>()
+        val semesterIds = hashSetOf<Uuid>()
+        val eventsSemesterIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+        events.asSequence()
+            .onEachIndexed { index, event ->
+                eventsSemesterIndex
+                    .getOrPut(event.semester.id) { mutableListOf() }
+                    .add(index)
+            }
+            .map { it.semester }
+            .forEach { semester ->
+                semestersToInsert[semester.id]?.let { existing ->
+                    if (existing == semester) return@let
+                    semestersToInsert[semester.id] = onSemesterShadowed(existing, semester)
+                } ?: run {
+                    semestersToInsert[semester.id] = semester
+                    semesterIds += semester.id
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { getAllSemestersByIds(semesterIds.toList()) }
+        }.onFailure { logger.error(it) { "Failed to query existing semesters from database" } }
+            .getOrElse { onQueryFailed(it) }
+            .forEach { existing ->
+                errors?.removeAll { it.contains(existing.id.toString()) }
+                val semester = semestersToInsert[existing.id]?.let { new ->
+                    when (onSemesterConflict(existing, new)) {
+                        Replace -> {
+                            withContext(Dispatchers.IO) {
+                                runCatching { updateSemester(new) }
+                            }.onFailure {
+                                logger.error(it) { "Failed to update semester ${new.name}" }
+                                onQueryFailed(it)
+                            }
+                            new
+                        }
+
+                        Skip -> null
+                    }
+                } ?: existing
+                semestersToInsert -= semester.id
+                eventsSemesterIndex[semester.id]?.forEach { index ->
+                    events[index] = when (val event = events[index]) {
+                        is Course -> event.copy(semester = semester)
+                        is Normal -> event.copy(semester = semester)
+                    }
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { insertAllSemesters(semestersToInsert.values.toList()) }
+        }.onFailure { logger.error(it) { "Failed to insert semesters" } }
+            .getOrElse { onQueryFailed(it) }
+            .asSequence()
+            .zip(semestersToInsert.asSequence())
+            .forEach { (result, entry) ->
+                val (_, semester) = entry
+                if (result < 0L) {
+                    errors?.add(
+                        resources.getString(
+                            R.string.schedule_import_from_icalendar_error_semester_insertion_failed,
+                            semester.name,
+                        ),
+                    )
+                    semesterIds -= semester.id
+                }
+            }
+
+        events.retainAll { it.semester.id in semesterIds }
+    }
+
+    if (events.isEmpty()) return null
+
+    run {
+        val recurrenceRulesToInsert = mutableMapOf<Uuid, RecurrenceRuleEntity>()
+        val recurrenceRuleIds = mutableSetOf<Uuid>()
+        val eventsRecurrenceRuleIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+        events.asSequence()
+            .onEachIndexed { index, event ->
+                val ruleId = event.recurrenceRule?.id ?: return@onEachIndexed
+                eventsRecurrenceRuleIndex
+                    .getOrPut(ruleId) { mutableListOf() }
+                    .add(index)
+            }
+            .mapNotNull { it.recurrenceRule }
+            .forEach { rule ->
+                recurrenceRulesToInsert[rule.id]?.let { existing ->
+                    if (existing == rule) return@let
+                    recurrenceRulesToInsert[rule.id] = onRecurrenceRuleShadowed(existing, rule)
+                } ?: run {
+                    recurrenceRulesToInsert[rule.id] = rule
+                    recurrenceRuleIds += rule.id
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { getAllRecurrenceRulesByIds(recurrenceRuleIds.toList()) }
+        }.onFailure { logger.error(it) { "Failed to query existing recurrence rules from database" } }
+            .getOrElse { onQueryFailed(it) }
+            .forEach { existing ->
+                errors?.removeAll { it.contains(existing.id.toString()) }
+                val rule = recurrenceRulesToInsert[existing.id]?.let { new ->
+                    when (onRecurrenceRuleConflict(existing, new)) {
+                        Replace -> {
+                            withContext(Dispatchers.IO) {
+                                runCatching { updateRecurrenceRule(new) }
+                            }.onFailure {
+                                logger.error(it) { "Failed to update recurrence rule ${new.rule.format()}" }
+                                onQueryFailed(it)
+                            }
+                            new
+                        }
+
+                        Skip -> null
+                    }
+                } ?: existing
+                recurrenceRulesToInsert -= rule.id
+                eventsRecurrenceRuleIndex[rule.id]?.forEach { index ->
+                    events[index] = when (val event = events[index]) {
+                        is Course -> event.copy(recurrenceRule = rule)
+                        is Normal -> event.copy(recurrenceRule = rule)
+                    }
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { insertAllRecurrenceRules(recurrenceRulesToInsert.values.toList()) }
+        }.onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
+            .getOrElse { onQueryFailed(it) }
+            .asSequence()
+            .zip(recurrenceRulesToInsert.asSequence())
+            .forEach { (result, entry) ->
+                val (_, rule) = entry
+                if (result < 0L) {
+                    errors?.add(
+                        resources.getString(
+                            R.string.schedule_import_from_icalendar_error_recurrence_rule_insertion_failed,
+                            rule.rule.format(),
+                        ),
+                    )
+                    recurrenceRuleIds -= rule.id
+                }
+            }
+
+        events.retainAll { event ->
+            val ruleId = event.recurrenceRule?.id ?: return@retainAll true
+            ruleId in recurrenceRuleIds
+        }
+    }
+
+    if (events.isEmpty()) return null
+
+    run {
+        val coursesToInsert = mutableMapOf<Uuid, CourseEntity>()
+        val courseIds = hashSetOf<Uuid>()
+        val eventsCourseIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+        events.asSequence()
+            .onEachIndexed { index, event ->
+                if (event !is Course) return@onEachIndexed
+                eventsCourseIndex
+                    .getOrPut(event.course.id) { mutableListOf() }
+                    .add(index)
+            }
+            .filterIsInstance<Event.Course>()
+            .map { it.course }
+            .forEach { course ->
+                coursesToInsert[course.id]?.let { existing ->
+                    if (existing == course) return@let
+                    coursesToInsert[course.id] = onCourseShadowed(existing, course)
+                } ?: run {
+                    coursesToInsert[course.id] = course
+                    courseIds += course.id
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { getAllCoursesByIds(courseIds.toList()) }
+        }.onFailure { logger.error(it) { "Failed to query existing courses from database" } }
+            .getOrElse { onQueryFailed(it) }
+            .forEach { (existingCourse, existingSemester) ->
+                errors?.removeAll { it.contains(existingCourse.id.toString()) }
+                val courseToInsert = coursesToInsert[existingCourse.id] ?: return@forEach
+                coursesToInsert -= existingCourse.id
+                if (courseToInsert.semesterId != existingSemester.id) {
+                    errors?.add(
+                        resources.getString(
+                            R.string.schedule_import_from_icalendar_error_course_semester_mismatch,
+                            existingCourse.name,
+                        ),
+                    )
+                    courseIds -= existingCourse.id
+                    return@forEach
+                }
+                val course = courseToInsert.let { new ->
+                    when (onCourseConflict(existingCourse, new)) {
+                        Replace -> {
+                            withContext(Dispatchers.IO) {
+                                runCatching { updateCourse(new) }
+                            }.onFailure {
+                                logger.error(it) { "Failed to update course ${new.name}" }
+                                onQueryFailed(it)
+                            }
+                            new
+                        }
+
+                        Skip -> null
+                    }
+                } ?: existingCourse
+                eventsCourseIndex[course.id]?.forEach { index ->
+                    events[index] = when (val event = events[index]) {
+                        is Course -> event.copy(course = course)
+                        else -> event
+                    }
+                }
+            }
+
+        withContext(Dispatchers.IO) {
+            runCatching { insertAllCourses(coursesToInsert.values.toList()) }
+        }.onFailure { logger.error(it) { "Failed to insert courses" } }
+            .getOrElse { onQueryFailed(it) }
+            .asSequence()
+            .zip(coursesToInsert.asSequence())
+            .forEach { (result, entry) ->
+                val (_, course) = entry
+                if (result < 0L) {
+                    errors?.add(
+                        resources.getString(
+                            R.string.schedule_import_from_icalendar_error_course_insertion_failed,
+                            course.name,
+                        ),
+                    )
+                    courseIds -= course.id
+                }
+            }
+
+        events.retainAll { event ->
+            if (event !is Course) return@retainAll true
+            event.course.id in courseIds
+        }
+    }
+
+    if (events.isEmpty()) return null
+
+    val eventsInsertionResults = withContext(Dispatchers.IO) {
+        runCatching { insertAllEvents(events.map { it.toEntity() }) }
+    }.onFailure { logger.error(it) { "Failed to insert events" } }
+        .getOrElse { onQueryFailed(it) }
+
+    for (i in eventsInsertionResults.indices.reversed()) {
+        if (eventsInsertionResults[i] < 0L) {
+            errors?.add(
+                resources.getString(
+                    R.string.schedule_import_from_icalendar_error_event_insertion_failed,
+                    events[i].name,
+                ),
+            )
+            events.removeAt(i)
+        }
+    }
+
+    if (events.isEmpty()) return null
+
+    return events
+}
+
+enum class ScheduleImportOnConflict {
+    Skip, Replace,
 }

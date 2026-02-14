@@ -139,6 +139,9 @@ interface ScheduleDao : FtsDao {
     @Query("SELECT * FROM RecurrenceRuleEntity WHERE id = :id")
     suspend fun getRecurrenceRuleById(id: Uuid): RecurrenceRuleEntity?
 
+    @Query("SELECT * FROM RecurrenceRuleEntity WHERE id IN (:ids)")
+    suspend fun getAllRecurrenceRulesByIds(ids: List<Uuid>): List<RecurrenceRuleEntity>
+
     @Transaction
     suspend fun getRecurrenceRuleByCourse(course: CourseEntity): RecurrenceRuleEntity? {
         val ruleId = course.recurrenceRuleId ?: return null

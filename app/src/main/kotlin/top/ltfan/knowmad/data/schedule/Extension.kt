@@ -94,7 +94,7 @@ fun ICalendar.parse(
         rule: RecurrenceRuleEntity,
         course: CourseEntity?,
     ) -> CourseEntity? = { _, _ -> null },
-    errors: MutableList<String> = mutableListOf(),
+    errors: MutableList<String>? = null,
 ) = events.flatMap { vEvent ->
     vEvent.parse(
         timeZoneInfo = timezoneInfo,
