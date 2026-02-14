@@ -411,6 +411,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 ),
                 metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
             )
+            var firstMessageId = databaseMessages.firstOrNull()?.message?.id
             withContext(Dispatchers.IO) {
                 system?.let {
                     chatDao.insertMessage(
@@ -419,7 +420,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             parts = listOf(it.toUiMessage()),
                             role = MessageEntityRole.System,
                             generatedBy = null,
-                        ),
+                        ).also { newMessage ->
+                            firstMessageId = newMessage.id
+                        },
                         fileIds = emptyList(),
                     )
                 }
@@ -456,6 +459,38 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 coroutineScope = viewModelScope,
                 conversationId = conversationId,
                 remend = remend,
+                onQueryConversationMetaInfo = {
+                    firstMessageId?.let { firstMessageId ->
+                        withContext(Dispatchers.IO) {
+                            chatDao.getMessageById(firstMessageId)
+                        }
+                    }?.parts?.firstOrNull { it is MetaInfo } as MetaInfo?
+                },
+                onUpdateConversationMetaInfo = { newMetaInfo ->
+                    launch {
+                        if (firstMessageId == null) {
+                            logger.warn { "First message id is null when updating conversation meta info." }
+                            return@launch
+                        }
+                        val oldMessage = withContext(Dispatchers.IO) {
+                            chatDao.getMessageById(firstMessageId)
+                        } ?: run {
+                            logger.warn { "Old message not found when updating conversation meta info." }
+                            return@launch
+                        }
+                        val oldUiMessages = oldMessage.parts.filterNot { it is MetaInfo }
+                        withContext(Dispatchers.IO) {
+                            chatDao.updateMessage(
+                                oldMessage.copy(
+                                    parts = buildList {
+                                        newMetaInfo?.let { add(it) }
+                                        addAll(oldUiMessages)
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                },
                 onUpdate = {
                     updateChannel.trySend(Unit)
                 },

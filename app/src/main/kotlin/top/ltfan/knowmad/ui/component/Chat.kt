@@ -558,6 +558,8 @@ fun AssistantMessage(
                             uiMessage.content,
                             modifier = Modifier.padding(8.dp),
                         )
+
+                        is NotDisplayed -> {}
                     }
                 }
             }
@@ -995,6 +997,8 @@ sealed interface AssistantMessageState {
         override var depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
         remend: RemendProcessor? = null,
+        onQueryConversationMetaInfo: suspend () -> UiMessage.MetaInfo? = { null },
+        onUpdateConversationMetaInfo: (UiMessage.MetaInfo?) -> Unit = {},
         onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
@@ -1082,6 +1086,11 @@ sealed interface AssistantMessageState {
                             )
                             onUpdate()
                         }
+
+                        is QueryConversationMetaInfo -> event.onResult(onQueryConversationMetaInfo())
+                        is UpdateConversationMetaInfo -> onUpdateConversationMetaInfo(
+                            event.updateMetaInfo(onQueryConversationMetaInfo()),
+                        )
 
                         is Finish -> cancel()
                     }
@@ -1280,6 +1289,16 @@ sealed interface AssistantMessageStreamingEvent {
             message.toUiMessage(),
         )
     }
+
+    @Immutable
+    data class QueryConversationMetaInfo(
+        val onResult: (UiMessage.MetaInfo?) -> Unit,
+    ) : AssistantMessageStreamingEvent
+
+    @Immutable
+    data class UpdateConversationMetaInfo(
+        val updateMetaInfo: (UiMessage.MetaInfo?) -> UiMessage.MetaInfo?,
+    ) : AssistantMessageStreamingEvent
 
     data object Finish : AssistantMessageStreamingEvent
 }

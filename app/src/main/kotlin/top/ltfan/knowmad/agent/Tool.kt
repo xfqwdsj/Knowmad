@@ -19,11 +19,16 @@
 package top.ltfan.knowmad.agent
 
 import ai.koog.agents.core.agent.context.AIAgentLLMContext
+import kotlinx.coroutines.flow.MutableSharedFlow
+import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 
 interface SystemPromptInjectorTool {
     val additionalSystemPrompt: String
 }
 
-interface ContextualInitializationTool {
-    suspend fun initialize(llm: AIAgentLLMContext)
+interface ChatAgentContextualInitializationTool {
+    suspend fun initializeWithChatAgentContext(
+        llm: AIAgentLLMContext,
+        eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
+    )
 }

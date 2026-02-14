@@ -77,8 +77,8 @@ fun getChatAgentService(
                         }
                     }
                 }
-                if (tool is ContextualInitializationTool) {
-                    tool.initialize(llm)
+                if (tool is ChatAgentContextualInitializationTool) {
+                    tool.initializeWithChatAgentContext(llm, data.eventFlow)
                 }
             }
             data

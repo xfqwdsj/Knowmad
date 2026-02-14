@@ -154,7 +154,7 @@ sealed interface UiMessage {
 
     @Serializable
     @Immutable
-    class Koog(
+    data class Koog(
         val message: Message,
         override val display: Boolean = true,
     ) : UiMessage {
@@ -168,6 +168,16 @@ sealed interface UiMessage {
         override val display: Boolean = true,
     ) : UiMessage
 
+    sealed class NotDisplayed : UiMessage {
+        override val content: String = ""
+        override val display = false
+    }
+
+    @Serializable
+    @Immutable
+    data class MetaInfo(
+        val gatheredTools: Set<String> = emptySet(),
+    ) : NotDisplayed()
 }
 
 sealed interface ChatListMessage {

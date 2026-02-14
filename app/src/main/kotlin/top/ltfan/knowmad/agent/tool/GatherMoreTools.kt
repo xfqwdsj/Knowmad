@@ -25,14 +25,21 @@ import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.ChatAgentContextualInitializationTool
 import top.ltfan.knowmad.agent.ChatAgentToolCallContext
-import top.ltfan.knowmad.agent.ContextualInitializationTool
 import top.ltfan.knowmad.agent.SystemPromptInjectorTool
+import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
+import kotlin.coroutines.resume
 
 fun ToolRegistry.Builder.gatherToolsTool(
     resources: Resources,
@@ -59,7 +66,7 @@ class GatherMoreToolsTool(
             ),
         ),
     ),
-), SystemPromptInjectorTool, ContextualInitializationTool {
+), SystemPromptInjectorTool, ChatAgentContextualInitializationTool {
     private val logger = Logger("GatherMoreToolsTool")
 
     private val registry = ToolRegistry(tools)
@@ -77,10 +84,11 @@ class GatherMoreToolsTool(
         }
 
     override suspend fun execute(args: Args): Result {
-        val context = currentCoroutineContext()[ChatAgentToolCallContext] ?: run {
+        val (llm, data) = currentCoroutineContext()[ChatAgentToolCallContext] ?: run {
             logger.error { "No ChatAgentToolCallContext in context" }
             return Result(notFound = args.tools)
         }
+        val (eventFlow) = data
 
         val foundNames = mutableSetOf<String>()
         val notFoundNames = mutableSetOf<String>()
@@ -108,9 +116,17 @@ class GatherMoreToolsTool(
             }
         }
 
-        context.llm.writeSession {
+        llm.writeSession {
             tools += toolsToAppend
         }
+
+        eventFlow.emit(
+            AssistantMessageStreamingEvent.UpdateConversationMetaInfo {
+                it?.copy(gatheredTools = gatheredNames) ?: UiMessage.MetaInfo(
+                    gatheredTools = gatheredNames,
+                )
+            },
+        )
 
         return Result(
             success = foundNames.ifEmpty { null },
@@ -129,10 +145,25 @@ class GatherMoreToolsTool(
         val messages: List<JsonElement>? = null,
     )
 
-    override suspend fun initialize(llm: AIAgentLLMContext) {
-        llm.writeSession {
-            tools = tools.filter { descriptor ->
-                descriptor.name !in managedTools || descriptor.name in gatheredNames
+    override suspend fun initializeWithChatAgentContext(
+        llm: AIAgentLLMContext,
+        eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
+    ) {
+        coroutineScope {
+            suspendCancellableCoroutine { continuation ->
+                launch {
+                    eventFlow.emit(
+                        AssistantMessageStreamingEvent.QueryConversationMetaInfo {
+                            it?.let { metaInfo -> gatheredNames += metaInfo.gatheredTools }
+                            continuation.resume(Unit)
+                        },
+                    )
+                }
+            }
+            llm.writeSession {
+                tools = tools.filter { descriptor ->
+                    descriptor.name !in managedTools || descriptor.name in gatheredNames
+                }
             }
         }
     }
