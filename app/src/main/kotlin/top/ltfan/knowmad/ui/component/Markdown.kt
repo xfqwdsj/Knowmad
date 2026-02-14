@@ -23,11 +23,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -284,7 +286,9 @@ fun MarkdownCode(
                 text = code,
                 style = style,
                 modifier = Modifier
+                    .heightIn(max = 400.dp)
                     .horizontalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState())
                     .padding(codeBlockPadding),
             )
         }
