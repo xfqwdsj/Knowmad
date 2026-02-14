@@ -337,95 +337,93 @@ sealed interface Event {
             val recurrenceRuleProperty =
                 vEvent.getProperty(KnowmadRecurrenceRuleProperty::class.java)
             recurrenceRuleProperty?.errors?.let { errors?.addAll(it) }
-            val recurrenceRuleEntity = recurrenceRuleProperty?.recurrenceRule ?: run {
-                errors?.add("Some fields are missing or invalid in recurrence rule property in event: $identifier")
-                null
-            } ?: vEvent.recurrenceRule?.let { rule ->
-                val timeZone = timeZoneInfo?.getTimezone(rule)?.timeZone
-                    ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
-                val entity = RecurrenceRuleEntity(
-                    id = id,
-                    rule = rule.value.toOmnicalValue(errors) ?: run {
-                        errors?.add("Cannot parse recurrence rule in event: $identifier")
+            val recurrenceRuleEntity =
+                recurrenceRuleProperty?.recurrenceRule ?: vEvent.recurrenceRule?.let { rule ->
+                    val timeZone = timeZoneInfo?.getTimezone(rule)?.timeZone
+                        ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
+                    val entity = RecurrenceRuleEntity(
+                        id = id,
+                        rule = rule.value.toOmnicalValue(errors) ?: run {
+                            errors?.add("Cannot parse recurrence rule in event: $identifier")
+                            return emptyList()
+                        },
+                        startTime = startDate.toInstant().toKotlinInstant(),
+                        duration = duration,
+                        exceptions = exceptions,
+                    )
+                    val newCourse = onNewRecurrenceRule(entity, course) ?: course
+
+                    val isInfinite = entity.rule.count == null && entity.rule.until == null
+                    if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
+                        errors?.add("Infinite recurrence rule found in default semester in event: $identifier")
                         return emptyList()
-                    },
-                    startTime = startDate.toInstant().toKotlinInstant(),
-                    duration = duration,
-                    exceptions = exceptions,
-                )
-                val newCourse = onNewRecurrenceRule(entity, course) ?: course
+                    }
+                    val semesterEndTime = semester.endDate.atStartOfDayIn(semester.timeZone)
+                    val semesterEndDate = Date.from(semesterEndTime.toJavaInstant())
+                    val iterator = vEvent.getDateIterator(timeZone)
+                    val events = mutableListOf<Event>()
+                    while (iterator.hasNext()) {
+                        val occurrenceStartDate = iterator.next()
 
-                val isInfinite = entity.rule.count == null && entity.rule.until == null
-                if (isInfinite && semester.id == SemesterEntity.DefaultSemesterId) {
-                    errors?.add("Infinite recurrence rule found in default semester in event: $identifier")
-                    return emptyList()
-                }
-                val semesterEndTime = semester.endDate.atStartOfDayIn(semester.timeZone)
-                val semesterEndDate = Date.from(semesterEndTime.toJavaInstant())
-                val iterator = vEvent.getDateIterator(timeZone)
-                val events = mutableListOf<Event>()
-                while (iterator.hasNext()) {
-                    val occurrenceStartDate = iterator.next()
+                        recurrenceEndBound?.let { instant ->
+                            val date = Date.from(instant.toJavaInstant())
+                            if (occurrenceStartDate.after(date)) {
+                                errors?.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $identifier")
+                                break
+                            }
+                        }
 
-                    recurrenceEndBound?.let { instant ->
-                        val date = Date.from(instant.toJavaInstant())
-                        if (occurrenceStartDate.after(date)) {
-                            errors?.add("Occurrence exceeds recurrence end bound $recurrenceEndBound in event: $identifier")
+                        if (occurrenceStartDate.after(semesterEndDate)) {
+                            errors?.add("Occurrence exceeds semester end date $semesterEndTime in event: $identifier")
                             break
                         }
-                    }
 
-                    if (occurrenceStartDate.after(semesterEndDate)) {
-                        errors?.add("Occurrence exceeds semester end date $semesterEndTime in event: $identifier")
-                        break
-                    }
-
-                    val occurrenceStartTime = occurrenceStartDate.toInstant().toKotlinInstant()
-                    val occurrenceEndTime = occurrenceStartTime + duration
-                    if (newCourse != null) {
-                        events.add(
-                            Course(
-                                semester = semester,
-                                course = newCourse,
-                                recurrenceRule = entity,
-                                eventName = name,
-                                eventInstructor = instructor,
-                                eventLocation = location,
-                                color = color,
-                                startTime = occurrenceStartTime,
-                                endTime = occurrenceEndTime,
-                                reminders = reminders,
-                                notes = notes,
-                                priority = priority,
-                                createdAt = createdAt,
-                                updatedAt = updatedAt,
-                            ),
-                        )
-                    } else {
-                        if (name == null || location == null) {
-                            errors?.add("Name or location is required for normal event: $identifier at $occurrenceStartTime")
-                            continue
+                        val occurrenceStartTime = occurrenceStartDate.toInstant().toKotlinInstant()
+                        val occurrenceEndTime = occurrenceStartTime + duration
+                        if (newCourse != null) {
+                            events.add(
+                                Course(
+                                    semester = semester,
+                                    course = newCourse,
+                                    recurrenceRule = entity,
+                                    eventName = name,
+                                    eventInstructor = instructor,
+                                    eventLocation = location,
+                                    color = color,
+                                    startTime = occurrenceStartTime,
+                                    endTime = occurrenceEndTime,
+                                    reminders = reminders,
+                                    notes = notes,
+                                    priority = priority,
+                                    createdAt = createdAt,
+                                    updatedAt = updatedAt,
+                                ),
+                            )
+                        } else {
+                            if (name == null || location == null) {
+                                errors?.add("Name or location is required for normal event: $identifier at $occurrenceStartTime")
+                                continue
+                            }
+                            events.add(
+                                Normal(
+                                    semester = semester,
+                                    recurrenceRule = entity,
+                                    name = name,
+                                    location = location,
+                                    color = color,
+                                    startTime = occurrenceStartTime,
+                                    endTime = occurrenceEndTime,
+                                    reminders = reminders,
+                                    notes = notes,
+                                    priority = priority,
+                                    createdAt = createdAt,
+                                    updatedAt = updatedAt,
+                                ),
+                            )
                         }
-                        events.add(
-                            Normal(
-                                semester = semester,
-                                recurrenceRule = entity,
-                                name = name,
-                                location = location,
-                                color = color,
-                                startTime = occurrenceStartTime,
-                                endTime = occurrenceEndTime,
-                                reminders = reminders,
-                                notes = notes,
-                                priority = priority,
-                                createdAt = createdAt,
-                                updatedAt = updatedAt,
-                            ),
-                        )
                     }
+                    return events
                 }
-                return events
-            }
 
             if (startTime in exceptions) {
                 errors?.add("Event is an exception: $identifier at $startTime")
