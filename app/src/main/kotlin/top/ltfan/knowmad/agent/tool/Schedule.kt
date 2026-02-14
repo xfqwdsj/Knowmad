@@ -30,6 +30,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.CombinedCourse
 import top.ltfan.knowmad.data.schedule.CombinedEvent
@@ -100,7 +102,7 @@ object ScheduleTools {
                 ),
             ),
         ),
-    ) {
+    ), MessageWhenGatheringTool {
         override suspend fun execute(args: Args): Result {
             if (args.acknowledgement != ACKNOWLEDGEMENT) {
                 return Result.RuleWithAcknowledgement(resources)
@@ -190,6 +192,17 @@ object ScheduleTools {
                     acknowledgement = ACKNOWLEDGEMENT,
                 )
             }
+        }
+
+        override val messageWhenGathering = buildJsonObject {
+            put(
+                "rule",
+                resources.getString(
+                    R.string.icalendar_rule,
+                    *ICalendarRuleArguments,
+                ).trimIndent(),
+            )
+            put("acknowledgement", ACKNOWLEDGEMENT)
         }
 
         companion object {
