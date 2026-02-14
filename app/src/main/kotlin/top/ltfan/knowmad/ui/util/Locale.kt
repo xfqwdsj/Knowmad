@@ -20,7 +20,6 @@ package top.ltfan.knowmad.ui.util
 
 import android.icu.text.MeasureFormat
 import android.icu.util.Measure
-import android.icu.util.MeasureUnit
 import java.util.Locale
 import kotlin.time.Duration
 
@@ -34,11 +33,11 @@ fun Duration.format(
     val seconds = inWholeSeconds % 60
 
     val measures = buildList {
-        if (days > 0) add(Measure(days, MeasureUnit.DAY))
-        if (hours > 0) add(Measure(hours, MeasureUnit.HOUR))
-        if (minutes > 0) add(Measure(minutes, MeasureUnit.MINUTE))
-        if (seconds > 0) add(Measure(seconds, MeasureUnit.SECOND))
-        if (isEmpty()) add(Measure(0, MeasureUnit.SECOND))
+        if (days > 0) add(Measure(days, DAY))
+        if (hours > 0) add(Measure(hours, HOUR))
+        if (minutes > 0) add(Measure(minutes, MINUTE))
+        if (seconds > 0) add(Measure(seconds, SECOND))
+        if (isEmpty()) add(Measure(0, SECOND))
     }
 
     val format = MeasureFormat.getInstance(locale, width)
