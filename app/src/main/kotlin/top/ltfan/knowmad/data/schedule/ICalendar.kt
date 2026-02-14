@@ -23,24 +23,23 @@ import biweekly.ICalVersion
 import biweekly.io.ParseContext
 import biweekly.io.WriteContext
 import biweekly.io.scribe.property.ICalPropertyScribe
-import biweekly.io.scribe.property.RecurrencePropertyScribe
 import biweekly.io.scribe.property.TextPropertyScribe
 import biweekly.io.text.ICalReader
 import biweekly.io.text.ICalWriter
 import biweekly.parameter.ICalParameters
 import biweekly.property.ICalProperty
-import biweekly.property.RecurrenceProperty
 import biweekly.property.TextProperty
-import biweekly.util.Recurrence
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
-import top.ltfan.omnical.icalendar.biweekly.toBiweeklyValue
-import top.ltfan.omnical.icalendar.biweekly.toOmnicalValue
+import top.ltfan.omnical.icalendar.biweekly.format
+import top.ltfan.omnical.icalendar.biweekly.parse
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.reflect.KClass
+import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 val ICalendarVersion = ICalVersion.V2_0
@@ -49,14 +48,14 @@ fun customICalReader(stream: InputStream) = ICalReader(stream).apply {
     registerScribe(SemesterProperty)
     registerScribe(CourseProperty)
     registerScribe(InstructorProperty)
-    registerScribe(KnowmadRecurrenceProperty)
+    registerScribe(KnowmadRecurrenceRuleProperty)
 }
 
 fun customICalWriter(stream: OutputStream) = ICalWriter(stream, ICalendarVersion).apply {
     registerScribe(SemesterProperty)
     registerScribe(CourseProperty)
     registerScribe(InstructorProperty)
-    registerScribe(KnowmadRecurrenceProperty)
+    registerScribe(KnowmadRecurrenceRuleProperty)
 }
 
 val ICalendarRuleArguments = arrayOf(
@@ -287,18 +286,98 @@ data class CourseProperty(
     }
 }
 
-data class KnowmadRecurrenceProperty(
-    val recurrenceRule: ICalendarRecurrenceRule?,
-) : RecurrenceProperty(recurrenceRule?.toBiweeklyValue()) {
-    companion object : RecurrencePropertyScribe<KnowmadRecurrenceProperty>(
-        KnowmadRecurrenceProperty::class.java,
-        KnowmadRecurrenceProperty.PROPERTY_NAME,
-    ) {
-        const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE"
+data class KnowmadRecurrenceRuleProperty(
+    val recurrenceRule: RecurrenceRuleEntity?,
+    override val errors: List<String>? = null,
+) : UuidProperty(), ParsingStatusProperty {
+    override val uuid = recurrenceRule?.id
 
-        override fun newInstance(value: Recurrence?): KnowmadRecurrenceProperty {
-            val rule = value?.toOmnicalValue()
-            return KnowmadRecurrenceProperty(rule)
+    companion object : UuidPropertyScribe<KnowmadRecurrenceRuleProperty>(
+        KnowmadRecurrenceRuleProperty::class,
+        KnowmadRecurrenceRuleProperty.PROPERTY_NAME,
+    ) {
+        const val PROPERTY_NAME = "X-KNOWMAD-RECURRENCE-RULE"
+
+        const val PARAM_RULE = "X-RULE"
+        const val PARAM_START_TIME = "X-START-TIME"
+        const val PARAM_DURATION = "X-DURATION"
+        const val PARAM_EXCEPTION = "X-EXCEPTION"
+
+        fun empty(errors: List<String>? = null) = KnowmadRecurrenceRuleProperty(null, errors)
+
+        override fun newInstance(
+            value: Uuid?,
+            dataType: ICalDataType?,
+            parameters: ICalParameters?,
+            context: ParseContext?,
+        ): KnowmadRecurrenceRuleProperty {
+            val errors = mutableListOf<String>()
+            if (parameters == null) {
+                errors.add("Recurrence rule parameters are missing")
+                return empty(errors)
+            }
+
+            val id = value ?: run {
+                errors.add("Recurrence rule ID is missing")
+                return empty(errors)
+            }
+            val identifier = id.toString()
+
+            val ruleString = parameters.get(PARAM_RULE)?.singleOrNull() ?: run {
+                errors.add("Rule of recurrence rule $identifier is missing")
+                return empty(errors)
+            }
+            val startTimeString = parameters.get(PARAM_START_TIME)?.singleOrNull() ?: run {
+                errors.add("Start time of recurrence rule $identifier is missing")
+                return empty(errors)
+            }
+            val durationString = parameters.get(PARAM_DURATION)?.singleOrNull() ?: run {
+                errors.add("Duration of recurrence rule $identifier is missing")
+                return empty(errors)
+            }
+            val exceptionStrings = parameters.get(PARAM_EXCEPTION) ?: emptyList()
+
+            val rule = ICalendarRecurrenceRule.parse(ruleString, errors = errors) ?: run {
+                errors.add("Rule of recurrence rule $identifier is invalid: $ruleString")
+                return empty(errors)
+            }
+            val startTime = Instant.parseOrNull(startTimeString) ?: run {
+                errors.add("Start time of recurrence rule $identifier is invalid: $startTimeString")
+                return empty(errors)
+            }
+            val duration = Duration.parseOrNull(durationString) ?: run {
+                errors.add("Duration of recurrence rule $identifier is invalid: $durationString")
+                return empty(errors)
+            }
+            val exceptions = exceptionStrings.asSequence()
+                .mapNotNull { exceptionString ->
+                    Instant.parseOrNull(exceptionString) ?: run {
+                        errors.add("Exception of recurrence rule $identifier is invalid: $exceptionString")
+                        null
+                    }
+                }.toSet()
+
+            return KnowmadRecurrenceRuleProperty(
+                RecurrenceRuleEntity(
+                    id = id,
+                    rule = rule,
+                    startTime = startTime,
+                    duration = duration,
+                    exceptions = exceptions,
+                ),
+                errors = errors.takeIf { it.isNotEmpty() },
+            )
+        }
+    }
+
+    init {
+        parameters.apply {
+            put(PARAM_RULE, recurrenceRule?.rule?.format())
+            put(PARAM_START_TIME, recurrenceRule?.startTime?.toString())
+            put(PARAM_DURATION, recurrenceRule?.duration?.toIsoString())
+            recurrenceRule?.exceptions?.forEach { exception ->
+                put(PARAM_EXCEPTION, exception.toString())
+            }
         }
     }
 }

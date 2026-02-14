@@ -198,7 +198,7 @@ sealed interface Event {
 
     fun VEvent.customRecurrenceRule() {
         this@Event.recurrenceRule?.let { entity ->
-            setProperty(entity.rule.toProperty())
+            setProperty(entity.toProperty())
         }
     }
 
@@ -317,7 +317,13 @@ sealed interface Event {
                     exDate.values.mapNotNull { it.toInstant().toKotlinInstant() }
                 }?.toSet() ?: emptySet()
 
-            vEvent.recurrenceRule?.let { rule ->
+            val recurrenceRuleProperty =
+                vEvent.getProperty(KnowmadRecurrenceRuleProperty::class.java)
+            recurrenceRuleProperty?.errors?.let { errors.addAll(it) }
+            val recurrenceRuleEntity = recurrenceRuleProperty?.recurrenceRule ?: run {
+                errors.add("Some fields are missing or invalid in recurrence rule property in event: $identifier")
+                null
+            } ?: vEvent.recurrenceRule?.let { rule ->
                 val timeZone = timeZoneInfo?.getTimezone(rule)?.timeZone
                     ?: java.util.TimeZone.getTimeZone(defaultTimeZone.toJavaZoneId())
                 val entity = RecurrenceRuleEntity(
@@ -409,13 +415,15 @@ sealed interface Event {
                 return emptyList()
             }
 
+            val newCourse = recurrenceRuleEntity?.let { onNewRecurrenceRule(it, course) } ?: course
+
             val endTime = startTime + duration
-            return if (course != null) {
+            return if (newCourse != null) {
                 listOf(
                     Course(
                         id = id,
                         semester = semester,
-                        course = course,
+                        course = newCourse,
                         eventName = name,
                         eventInstructor = instructor,
                         eventLocation = location,

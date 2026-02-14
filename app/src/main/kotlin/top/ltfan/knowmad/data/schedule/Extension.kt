@@ -29,7 +29,6 @@ import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.omnical.icalendar.ICalendarColor
-import top.ltfan.omnical.icalendar.ICalendarRecurrenceRule
 import top.ltfan.omnical.icalendar.ICalendarTrigger
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle.MEDIUM
@@ -75,7 +74,7 @@ fun ICalendar.writeCustomized(): String = Biweekly.write(this).apply {
     register(SemesterProperty)
     register(CourseProperty)
     register(InstructorProperty)
-    register(KnowmadRecurrenceProperty)
+    register(KnowmadRecurrenceRuleProperty)
 }.go()
 
 fun ICalendar.addEvents(events: List<Event>) {
@@ -104,7 +103,7 @@ fun ICalendar.parse(
     )
 }
 
-fun ICalendarRecurrenceRule.toProperty() = KnowmadRecurrenceProperty(this)
+fun RecurrenceRuleEntity.toProperty() = KnowmadRecurrenceRuleProperty(this)
 
 fun ICalendarColor.Companion.pickFromPalette(id: Uuid): ICalendarColor =
     pickFromPalette(id.hashCode().toUInt())
