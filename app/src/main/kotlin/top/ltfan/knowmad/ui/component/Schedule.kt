@@ -466,6 +466,7 @@ private fun ICalendarContentDialog(
                     val data = ClipData.newPlainText(null, content)
                     coroutineScope.launch {
                         clipboard.setClipEntry(ClipEntry(data))
+                        onDismissRequest()
                     }
                 },
                 content = { Text(stringResource(android.R.string.copy)) },
