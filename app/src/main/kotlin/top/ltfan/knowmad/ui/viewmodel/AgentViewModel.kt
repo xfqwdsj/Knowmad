@@ -263,10 +263,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
         val prompt = prompt("conversation-title") {
             system(
-                application.getString(
-                    R.string.llm_prompt_generate_conversation_title,
-                    chatMessages,
-                ).trimIndent(),
+                application.getString(R.string.llm_prompt_generate_conversation_title)
+                    .trimIndent().format(chatMessages),
             )
         }
 

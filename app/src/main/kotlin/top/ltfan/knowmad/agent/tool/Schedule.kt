@@ -187,10 +187,8 @@ object ScheduleTools {
                 val acknowledgement: String,
             ) : Result {
                 constructor(resources: Resources) : this(
-                    rule = resources.getString(
-                        R.string.icalendar_rule,
-                        *ICalendarRuleArguments,
-                    ).trimIndent(),
+                    rule = resources.getString(R.string.icalendar_rule)
+                        .trimIndent().format(*ICalendarRuleArguments),
                     acknowledgement = ACKNOWLEDGEMENT,
                 )
             }
@@ -199,10 +197,8 @@ object ScheduleTools {
         override val messageWhenGathering = buildJsonObject {
             put(
                 "rule",
-                resources.getString(
-                    R.string.icalendar_rule,
-                    *ICalendarRuleArguments,
-                ).trimIndent(),
+                resources.getString(R.string.icalendar_rule)
+                    .trimIndent().format(*ICalendarRuleArguments),
             )
             put("acknowledgement", ACKNOWLEDGEMENT)
         }
