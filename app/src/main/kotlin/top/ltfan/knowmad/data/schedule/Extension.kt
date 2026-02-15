@@ -80,12 +80,19 @@ fun ICalendar.parse(
         course: CourseEntity?,
     ) -> CourseEntity? = { _, _ -> null },
     errors: MutableList<String>? = null,
-) = events.flatMap { vEvent ->
-    vEvent.parse(
-        timeZoneInfo = timezoneInfo,
-        onNewRecurrenceRule = onNewRecurrenceRule,
-        errors = errors,
-    )
+) = events.let { events ->
+    if (events.isEmpty()) {
+        errors?.add("No events found in the iCalendar file")
+        emptyList()
+    } else {
+        events.flatMap { vEvent ->
+            vEvent.parse(
+                timeZoneInfo = timezoneInfo,
+                onNewRecurrenceRule = onNewRecurrenceRule,
+                errors = errors,
+            )
+        }
+    }
 }
 
 fun RecurrenceRuleEntity.toProperty() = KnowmadRecurrenceRuleProperty(this)
