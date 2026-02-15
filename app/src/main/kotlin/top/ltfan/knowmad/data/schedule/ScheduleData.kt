@@ -284,7 +284,7 @@ sealed interface Event {
             }
             semesterProperty.errors?.let { errors?.addAll(it) }
             val semester = semesterProperty.semester ?: run {
-                errors?.add("Some fields are missing or invalid in semester property in event: $identifier")
+                errors?.add("Some fields are missing or invalid in semester property ${SemesterProperty.PROPERTY_NAME} in event: $identifier")
                 return emptyList()
             }
             val courseProperty = vEvent.getProperty(CourseProperty::class.java)
@@ -292,7 +292,7 @@ sealed interface Event {
             val course = courseProperty?.course.let {
                 if (it == null) {
                     if (courseProperty != null) {
-                        errors?.add("Some fields are missing or invalid in course property in event: $identifier")
+                        errors?.add("Some fields are missing or invalid in course property ${CourseProperty.PROPERTY_NAME} in event: $identifier")
                     }
                     return@let null
                 }
@@ -660,7 +660,14 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { getAllSemestersByIds(semesterIds.toList()) }
         }.onFailure { logger.error(it) { "Failed to query existing semesters from database" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse {
+                onQueryFailed(
+                    Throwable(
+                        "Failed to query existing semesters from database",
+                        it,
+                    ),
+                )
+            }
             .forEach { existing ->
                 errors?.removeAll { it.contains(existing.id.toString()) }
                 val semester = semestersToInsert[existing.id]?.let { new ->
@@ -670,7 +677,12 @@ suspend inline fun ScheduleDao.importFromICalendar(
                                 runCatching { updateSemester(new) }
                             }.onFailure {
                                 logger.error(it) { "Failed to update semester ${new.name}" }
-                                onQueryFailed(it)
+                                onQueryFailed(
+                                    Throwable(
+                                        "Failed to update semester ${new.name}",
+                                        it,
+                                    ),
+                                )
                             }
                             new
                         }
@@ -690,7 +702,7 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { insertAllSemesters(semestersToInsert.values.toList()) }
         }.onFailure { logger.error(it) { "Failed to insert semesters" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse { onQueryFailed(Throwable("Failed to insert semesters", it)) }
             .asSequence()
             .zip(semestersToInsert.asSequence())
             .forEach { (result, entry) ->
@@ -737,7 +749,14 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { getAllRecurrenceRulesByIds(recurrenceRuleIds.toList()) }
         }.onFailure { logger.error(it) { "Failed to query existing recurrence rules from database" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse {
+                onQueryFailed(
+                    Throwable(
+                        "Failed to query existing recurrence rules from database",
+                        it,
+                    ),
+                )
+            }
             .forEach { existing ->
                 errors?.removeAll { it.contains(existing.id.toString()) }
                 val rule = recurrenceRulesToInsert[existing.id]?.let { new ->
@@ -747,7 +766,12 @@ suspend inline fun ScheduleDao.importFromICalendar(
                                 runCatching { updateRecurrenceRule(new) }
                             }.onFailure {
                                 logger.error(it) { "Failed to update recurrence rule ${new.rule.format()}" }
-                                onQueryFailed(it)
+                                onQueryFailed(
+                                    Throwable(
+                                        "Failed to update recurrence rule ${new.rule.format()}",
+                                        it,
+                                    ),
+                                )
                             }
                             new
                         }
@@ -767,7 +791,7 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { insertAllRecurrenceRules(recurrenceRulesToInsert.values.toList()) }
         }.onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse { onQueryFailed(Throwable("Failed to insert recurrence rules", it)) }
             .asSequence()
             .zip(recurrenceRulesToInsert.asSequence())
             .forEach { (result, entry) ->
@@ -818,7 +842,14 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { getAllCoursesByIds(courseIds.toList()) }
         }.onFailure { logger.error(it) { "Failed to query existing courses from database" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse {
+                onQueryFailed(
+                    Throwable(
+                        "Failed to query existing courses from database",
+                        it,
+                    ),
+                )
+            }
             .forEach { (existingCourse, existingSemester) ->
                 errors?.removeAll { it.contains(existingCourse.id.toString()) }
                 val courseToInsert = coursesToInsert[existingCourse.id] ?: return@forEach
@@ -840,7 +871,7 @@ suspend inline fun ScheduleDao.importFromICalendar(
                                 runCatching { updateCourse(new) }
                             }.onFailure {
                                 logger.error(it) { "Failed to update course ${new.name}" }
-                                onQueryFailed(it)
+                                onQueryFailed(Throwable("Failed to update course ${new.name}", it))
                             }
                             new
                         }
@@ -859,7 +890,7 @@ suspend inline fun ScheduleDao.importFromICalendar(
         withContext(Dispatchers.IO) {
             runCatching { insertAllCourses(coursesToInsert.values.toList()) }
         }.onFailure { logger.error(it) { "Failed to insert courses" } }
-            .getOrElse { onQueryFailed(it) }
+            .getOrElse { onQueryFailed(Throwable("Failed to insert courses", it)) }
             .asSequence()
             .zip(coursesToInsert.asSequence())
             .forEach { (result, entry) ->
@@ -886,7 +917,7 @@ suspend inline fun ScheduleDao.importFromICalendar(
     val eventsInsertionResults = withContext(Dispatchers.IO) {
         runCatching { insertAllEvents(events.map { it.toEntity() }) }
     }.onFailure { logger.error(it) { "Failed to insert events" } }
-        .getOrElse { onQueryFailed(it) }
+        .getOrElse { onQueryFailed(Throwable("Failed to insert events", it)) }
 
     for (i in eventsInsertionResults.indices.reversed()) {
         if (eventsInsertionResults[i] < 0L) {
