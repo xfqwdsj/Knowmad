@@ -27,6 +27,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandHorizontally
@@ -639,7 +640,7 @@ fun DetailedEventList(
     }
 
     LazyColumn(
-        modifier = modifier,
+        modifier = modifier.animateContentSize(),
         state = lazyListState,
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
@@ -650,7 +651,10 @@ fun DetailedEventList(
         ) { index ->
             val event = events[index]
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                modifier = Modifier.animateItem(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 AnimatedVisibility(
                     visible = indicator.index == index && !indicator.isIn,
                     enter = fadeIn() + expandVertically(
