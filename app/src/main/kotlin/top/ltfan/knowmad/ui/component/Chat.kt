@@ -25,6 +25,7 @@ import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.animateBounds
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -400,6 +401,7 @@ fun ChatMessageList(
                         },
                         modifier = Modifier
                             .fillParentMaxWidth()
+                            .animateContentSize()
                             .onSizeChanged { newSize ->
                                 val height = newSize.height
                                 if (lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset != 0) {
