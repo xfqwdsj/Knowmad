@@ -740,7 +740,7 @@ fun ToolMessage(
     }
 
     val content = prettyJson?.let {
-        "``json\n$it\n```"
+        "```json\n$it\n```"
     } ?: "```\n${message.content.trim()}\n```"
 
     CompositionLocalProvider(
