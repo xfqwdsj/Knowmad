@@ -22,13 +22,16 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
@@ -189,6 +192,16 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         initialValue = emptyList(),
     ).collectAsState()
 
+    val invisibleSemesters = mutableStateSetOf<SemesterEntity>()
+
+    fun onSemesterSelectionChange(semester: SemesterEntity, selected: Boolean) {
+        if (selected) {
+            invisibleSemesters.remove(semester)
+        } else {
+            invisibleSemesters.add(semester)
+        }
+    }
+
     var showMonthBottomSheet by mutableStateOf(false)
 
     suspend fun exportSemester(semester: SemesterEntity) =
@@ -211,6 +224,8 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             eventsCache[startTime to endTime]?.let { emit(it) }
         }.onEach {
             eventsCache[startTime to endTime] = it
+        }.combine(snapshotFlow { invisibleSemesters.toSet() }) { events, invisibleSemesters ->
+            events.filter { event -> event.semester !in invisibleSemesters }
         }
 
     fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {

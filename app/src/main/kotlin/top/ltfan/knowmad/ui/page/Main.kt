@@ -253,6 +253,8 @@ class MainPage : Page() {
                 MonthBottomSheetContent(
                     month = viewModel.calendarState.currentMonth,
                     semesters = viewModel.allSemesters,
+                    notSelectedSemesters = viewModel.invisibleSemesters,
+                    onSemesterSelectionChange = viewModel::onSemesterSelectionChange,
                     onExport = viewModel::exportSemester,
                     onBackup = viewModel::backupSemester,
                 )

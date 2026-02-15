@@ -37,6 +37,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -155,6 +156,8 @@ import kotlin.uuid.Uuid
 fun MonthBottomSheetContent(
     month: YearMonth,
     semesters: List<SemesterEntity>,
+    notSelectedSemesters: Set<SemesterEntity> = emptySet(),
+    onSemesterSelectionChange: ((SemesterEntity, Boolean) -> Unit)? = null,
     locale: Locale = LocalConfiguration.current.locales[0],
     currentTimeZone: TimeZone = rememberSystemTimeZone(),
     today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
@@ -185,6 +188,12 @@ fun MonthBottomSheetContent(
         currentSemesters.fastForEach { semester ->
             SemesterInformation(
                 semester = semester,
+                selected = semester !in notSelectedSemesters,
+                onSelectionChange = onSemesterSelectionChange?.let {
+                    { selected ->
+                        it(semester, selected)
+                    }
+                },
                 locale = locale,
                 currentTimeZone = currentTimeZone,
                 today = today,
@@ -199,8 +208,11 @@ fun MonthBottomSheetContent(
 fun SemesterInformation(
     semester: SemesterEntity,
     modifier: Modifier = Modifier,
+    selected: Boolean = true,
+    onSelectionChange: ((Boolean) -> Unit)? = null,
     shape: Shape = MaterialTheme.shapes.large,
-    tonalElevation: Dp = 4.dp,
+    tonalElevation: Dp = animateDpAsState(if (!selected) 6.dp else 4.dp).value,
+    shadowElevation: Dp = animateDpAsState(if (!selected) 2.dp else 0.dp).value,
     locale: Locale = LocalConfiguration.current.locales[0],
     currentTimeZone: TimeZone = rememberSystemTimeZone(),
     today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
@@ -230,92 +242,108 @@ fun SemesterInformation(
     var showMenu by remember { mutableStateOf(false) }
 
     Surface(
-        onClick = { showMenu = true },
         modifier = modifier,
         shape = shape,
         tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .combinedClickable(
+                    onLongClick = { showMenu = true },
+                    onClick = { onSelectionChange?.invoke(!selected) },
+                )
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = semester.name,
-                style = MaterialTheme.typography.titleMediumEmphasized,
-            )
-            if (semester.id == SemesterEntity.DefaultSemesterId) return@Column
-            LabelWithIcon(
-                icon = R.drawable.date_range_24px,
-                label = if (currentTimeZone == semester.timeZone) {
-                    stringResource(
-                        R.string.schedule_semester_label_date_range,
-                        destinationStart,
-                        destinationEnd,
+        ) content@{
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = semester.name,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                     )
-                } else {
-                    val timeZone = remember(semester, locale) {
-                        semester.timeZone.toJavaZoneId().getDisplayName(SHORT, locale)
-                    }
-                    stringResource(
-                        R.string.schedule_semester_label_date_range_with_time_zone,
-                        destinationStart,
-                        destinationEnd,
-                        timeZone,
-                    )
-                },
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (currentTimeZone != semester.timeZone) {
-                val timeFormatter = remember(locale) {
-                    DateTimeFormatter.ofLocalizedDateTime(SHORT).withLocale(locale)
-                }
-                val (localStart, localEnd) = remember(semester, currentTimeZone, timeFormatter) {
-                    val start = semester.startDate.atStartOfDayIn(semester.timeZone)
-                        .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
-                    val end = semester.endDate.atStartOfDayIn(semester.timeZone)
-                        .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
-                    val startTime = timeFormatter.format(start)
-                    val endTime = timeFormatter.format(end)
-                    startTime to endTime
-                }
-                val timeZone = remember(currentTimeZone, locale) {
-                    currentTimeZone.toJavaZoneId().getDisplayName(FULL, locale)
-                }
-                LabelWithIcon(
-                    icon = R.drawable.date_range_24px,
-                    label = stringResource(
-                        R.string.schedule_semester_label_date_range_with_time_zone,
-                        localStart,
-                        localEnd,
-                        timeZone,
-                    ),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            LabelWithIcon(
-                icon = R.drawable.schedule_24px,
-                label = stringResource(
-                    R.string.schedule_semester_label_length,
-                    remember(semester, locale) {
-                        semester.startDate.daysUntil(semester.endDate).days.format(locale)
-                    },
-                ),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (destinationToday < semester.startDate) {
-                LabelWithIcon(
-                    icon = R.drawable.event_upcoming_24px,
-                    label = stringResource(
-                        R.string.schedule_semester_label_start_in,
-                        remember(destinationToday, semester, locale) {
-                            destinationToday.daysUntil(semester.startDate).days.format(locale)
+                    if (semester.id == SemesterEntity.DefaultSemesterId) return@content
+                    LabelWithIcon(
+                        icon = R.drawable.date_range_24px,
+                        label = if (currentTimeZone == semester.timeZone) {
+                            stringResource(
+                                R.string.schedule_semester_label_date_range,
+                                destinationStart,
+                                destinationEnd,
+                            )
+                        } else {
+                            val timeZone = remember(semester, locale) {
+                                semester.timeZone.toJavaZoneId().getDisplayName(SHORT, locale)
+                            }
+                            stringResource(
+                                R.string.schedule_semester_label_date_range_with_time_zone,
+                                destinationStart,
+                                destinationEnd,
+                                timeZone,
+                            )
                         },
-                    ),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (destinationToday >= semester.startDate && destinationToday < semester.endDate) {
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (currentTimeZone != semester.timeZone) {
+                        val timeFormatter = remember(locale) {
+                            DateTimeFormatter.ofLocalizedDateTime(SHORT).withLocale(locale)
+                        }
+                        val (localStart, localEnd) = remember(
+                            semester, currentTimeZone, timeFormatter,
+                        ) {
+                            val start = semester.startDate.atStartOfDayIn(semester.timeZone)
+                                .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
+                            val end = semester.endDate.atStartOfDayIn(semester.timeZone)
+                                .toLocalDateTime(currentTimeZone).toJavaLocalDateTime()
+                            val startTime = timeFormatter.format(start)
+                            val endTime = timeFormatter.format(end)
+                            startTime to endTime
+                        }
+                        val timeZone = remember(currentTimeZone, locale) {
+                            currentTimeZone.toJavaZoneId().getDisplayName(FULL, locale)
+                        }
+                        LabelWithIcon(
+                            icon = R.drawable.date_range_24px,
+                            label = stringResource(
+                                R.string.schedule_semester_label_date_range_with_time_zone,
+                                localStart,
+                                localEnd,
+                                timeZone,
+                            ),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    LabelWithIcon(
+                        icon = R.drawable.schedule_24px,
+                        label = stringResource(
+                            R.string.schedule_semester_label_length,
+                            remember(semester, locale) {
+                                semester.startDate.daysUntil(semester.endDate).days.format(locale)
+                            },
+                        ),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (destinationToday < semester.startDate) {
+                        LabelWithIcon(
+                            icon = R.drawable.event_upcoming_24px,
+                            label = stringResource(
+                                R.string.schedule_semester_label_start_in,
+                                remember(destinationToday, semester, locale) {
+                                    destinationToday.daysUntil(semester.startDate).days.format(
+                                        locale,
+                                    )
+                                },
+                            ),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            if (destinationToday >= semester.startDate && destinationToday < semester.endDate) {
                 val progressFormatter = remember(locale) {
                     NumberFormat.getPercentInstance(locale)
                 }
