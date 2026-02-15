@@ -732,6 +732,28 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             copy(defaultToolVisibility = it)
         },
     )
+
+    suspend fun generateErrorExplanation(message: String, onAppend: (String) -> Unit) {
+        val service = currentAgentService.value ?: return
+        val executor = service.promptExecutor
+        val model = service.agentConfig.model
+
+        val prompt = prompt("error-explanation") {
+            system(
+                application.getString(R.string.llm_prompt_generate_error_explanation)
+                    .trimIndent().format(message.trim()),
+            )
+        }
+
+        executor.executeStreaming(
+            model = model,
+            prompt = prompt,
+        ).collect {
+            if (it is Append) {
+                onAppend(it.text)
+            }
+        }
+    }
 }
 
 data class ConversationAndChatData(

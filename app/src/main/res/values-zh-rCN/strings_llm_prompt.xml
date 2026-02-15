@@ -51,6 +51,18 @@
 
         %s
     "</string>
+    <string name="llm_prompt_generate_error_explanation">"
+        请为以下的错误信息提供一个清晰、简洁的解释，帮助用户理解错误的原因以及如何解决。
+
+        要求：
+
+        - 只允许输出解释文本，禁止使用“解释：”“该错误表明”等解释性引言；
+        - 使用自然、简洁明了的语言，确保解释易于理解。
+
+        以下是错误信息。
+
+        %s
+    "</string>
     <string name="llm_agent_chat_prompt">你的任务是在多轮对话中协助用户。</string>
     <string name="llm_memory_preferred_search_engine_description">用户偏好的搜索引擎</string>
     <string name="llm_tool_gather_more_tools_description">将需要使用的工具添加到工具列表，如果工具列表中已有你想使用的工具，则该工具将永远返回“Not found”</string>

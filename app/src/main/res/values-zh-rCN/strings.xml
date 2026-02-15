@@ -117,14 +117,20 @@
     <string name="crypto_key_initialization_error_retry_label">重试加密</string>
     <string name="crypto_use_plaintext_label">使用明文存储</string>
     <string name="crypto_use_plaintext_warning">您正在对敏感数据使用明文存储，这可能会带来安全风险。建议启用加密</string>
+    <string name="schedule_import_label">从iCalendar文件导入日程</string>
+    <plurals name="schedule_import_label_success">
+        <item quantity="other">成功导入了%d个事件</item>
+    </plurals>
+    <string name="schedule_import_message_success">成功导入了日程。请查看您的日历以确认导入的事件</string>
+    <string name="schedule_import_label_failure">导入失败</string>
     <string name="schedule_semester_label_default">默认学期</string>
     <string name="schedule_semester_label_date_range">%1$s - %2$s</string>
     <string name="schedule_semester_label_date_range_with_time_zone">%1$s - %2$s（%3$s）</string>
     <string name="schedule_semester_label_length">共%s</string>
     <string name="schedule_semester_label_start_in">%s后开始</string>
     <string name="schedule_semester_label_remaining">剩余%s</string>
-    <string name="schedule_semester_label_export">导出日程</string>
-    <string name="schedule_semester_label_backup">备份日程</string>
+    <string name="schedule_semester_label_export">导出学期内的日程（不可恢复）</string>
+    <string name="schedule_semester_label_backup">导出/备份学期内的日程</string>
     <string name="schedule_event_name_label">名称</string>
     <string name="schedule_event_name_label_none">无名称</string>
     <string name="schedule_event_location_label">地点</string>

@@ -21,6 +21,7 @@
     <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">Passphrase, call this tool with no arguments to get iCalendar rules and acknowledgement passphrase before inputting iCalendar</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar content, must be provided together with correct iCalendar acknowledgment, or the request will be rejected</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar content cannot be empty</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content">iCalendar content is invalid</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">Internal error while importing iCalendar</string>
 
     <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>

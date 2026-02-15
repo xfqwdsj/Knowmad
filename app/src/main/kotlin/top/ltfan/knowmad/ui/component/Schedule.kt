@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.ui.component
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.res.Resources
 import android.icu.text.DateTimePatternGenerator
@@ -31,10 +32,12 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -70,6 +73,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -99,6 +103,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
@@ -142,6 +147,7 @@ import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
+import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import java.time.format.DateTimeFormatter
@@ -164,7 +170,10 @@ fun MonthBottomSheetContent(
     today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
     onExport: (suspend (SemesterEntity) -> String)? = null,
     onBackup: (suspend (SemesterEntity) -> String)? = null,
+    onImport: (suspend (String, MutableList<String>?) -> Result<Int>)? = null,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     val currentSemesters = remember(month, semesters) {
         semesters.filter {
             it.startDate < month.lastDay.plusDays(1) && it.endDate > month.firstDay
@@ -176,16 +185,35 @@ fun MonthBottomSheetContent(
         DateTimeFormatter.ofPattern(pattern).withLocale(locale)
     }
 
+    var showImportDialog by remember { mutableStateOf(false) }
+    var importResult by remember { mutableStateOf<Result<Int>?>(null) }
+
+    @SuppressLint("MutableCollectionMutableState")
+    var importErrors by remember { mutableStateOf<MutableList<String>?>(null) }
+
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
-            text = remember(month, formatter) {
-                formatter.format(month.toJavaYearMonth())
-            },
-            style = MaterialTheme.typography.headlineMediumEmphasized,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = remember(month, formatter) {
+                    formatter.format(month.toJavaYearMonth())
+                },
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.headlineMediumEmphasized,
+            )
+            if (onImport != null) {
+                ImportIconButton(
+                    onImport = { showImportDialog = true },
+                    contentDescriptionRes = R.string.schedule_import_label,
+                )
+            }
+        }
         currentSemesters.fastForEach { semester ->
             SemesterInformation(
                 semester = semester,
@@ -203,6 +231,162 @@ fun MonthBottomSheetContent(
             )
         }
     }
+
+    if (showImportDialog) {
+        ICalendarImportDialog(
+            onDismissRequest = { showImportDialog = false },
+            onImport = { content ->
+                showImportDialog = false
+                val errors = mutableListOf<String>()
+                importErrors = errors
+                onImport?.let {
+                    coroutineScope.launch {
+                        importResult = it(content, errors)
+                    }
+                }
+            },
+        )
+    }
+
+    (importResult to importErrors).let { (result, errors) ->
+        if (result == null || errors == null) return@let
+        ICalendarImportResultDialog(
+            onDismissRequest = {
+                importResult = null
+                importErrors = null
+            },
+            result = result,
+            errors = errors.takeIf { it.isNotEmpty() },
+        )
+    }
+}
+
+@Composable
+private fun ICalendarImportDialog(
+    onDismissRequest: () -> Unit,
+    onImport: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.schedule_import_label)) },
+        confirmButton = {
+            TextButton(
+                onClick = { onImport(text) },
+                content = { Text(stringResource(android.R.string.ok)) },
+            )
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                content = { Text(stringResource(android.R.string.cancel)) },
+            )
+        },
+        text = {
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .widthIn(max = TextFieldMaxWidth)
+                    .fillMaxWidth(),
+            )
+        },
+    )
+}
+
+@Composable
+private fun ICalendarImportResultDialog(
+    onDismissRequest: () -> Unit,
+    result: Result<Int>,
+    errors: List<String>? = null,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text(
+                text = result.getOrNull()?.let {
+                    pluralStringResource(
+                        R.plurals.schedule_import_label_success,
+                        it, it,
+                    )
+                } ?: stringResource(R.string.schedule_import_label_failure),
+            )
+        },
+        text = {
+            (result.exceptionOrNull() to errors).let { (e, errors) ->
+                if (e == null && errors.isNullOrEmpty()) {
+                    Text(stringResource(R.string.schedule_import_message_success))
+                    return@let
+                }
+                val agentViewModel = LocalAgentViewModel.current
+                val message = buildString {
+                    appendLine("## ${stringResource(R.string.schedule_import_label)}")
+                    e?.let {
+                        appendLine()
+                        appendLine("### Exception")
+                        appendLine()
+                        appendLine(e.stackTraceToString())
+                    } ?: run {
+                        appendLine()
+                        appendLine("## Result")
+                        appendLine()
+                        appendLine("Success fully imported event count: ${result.getOrNull() ?: 0}.")
+                        if (!errors.isNullOrEmpty()) {
+                            appendLine()
+                            appendLine("However, there were some issues during import.")
+                        }
+                    }
+                    errors?.let {
+                        appendLine()
+                        appendLine("### Error messages")
+                        appendLine()
+                        it.forEach { error ->
+                            appendLine("- $error")
+                        }
+                    }
+                }
+
+                var explanation by remember { mutableStateOf("") }
+
+                Box(contentAlignment = Alignment.Center) {
+                    MarkdownView(
+                        explanation,
+                        mathJaxRendererState = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                    )
+
+                    AnimatedVisibility(
+                        visible = explanation.isBlank(),
+                        enter = fadeIn() + expandIn(
+                            expandFrom = Alignment.Center,
+                            clip = false,
+                        ),
+                        exit = fadeOut() + shrinkOut(
+                            shrinkTowards = Alignment.Center,
+                            clip = false,
+                        ),
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    agentViewModel.generateErrorExplanation(message) {
+                        explanation += it
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                content = { Text(stringResource(android.R.string.ok)) },
+            )
+        },
+    )
 }
 
 @Composable

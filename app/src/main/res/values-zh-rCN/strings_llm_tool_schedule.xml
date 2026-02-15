@@ -21,6 +21,7 @@
     <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请用空参数调用工具以获取iCalendar规则和acknowledgement口令</string>
     <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，请自行编写，必须与acknowledgement一起提供，否则请求将被拒绝</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar内容不能为空</string>
+    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content">iCalendar内容无效</string>
     <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">导入iCalendar时发生内部错误</string>
 
     <string name="llm_tool_schedule_query_semesters_description">查询与给定日期范围存在交集的学期或所有已存在的学期</string>

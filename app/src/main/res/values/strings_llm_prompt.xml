@@ -51,6 +51,18 @@
 
         %s
     "</string>
+    <string name="llm_prompt_generate_error_explanation">"
+        Please provide a clear and concise explanation for the following error message, helping users understand the cause of the error and how to resolve it.
+
+        Requirements:
+
+        - Output the explanation text only; explanatory prefixes such as "Explanation:" or "This error indicates" are prohibited;
+        - Use natural, concise language to ensure the explanation is easy to understand.
+
+        The following is the error message that needs an explanation.
+
+        %s
+    "</string>
     <string name="llm_agent_chat_prompt">Your task is to assist the user in a multi-turn conversation.</string>
     <string name="llm_memory_preferred_search_engine_description">User\'s preferred search engine</string>
     <string name="llm_tool_gather_more_tools_description">Add the tools you need to use to the tool list. If the tool you want to use is already in the tool list, this tool will always return "Not found"</string>
