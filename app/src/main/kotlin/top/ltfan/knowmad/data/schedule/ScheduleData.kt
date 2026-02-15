@@ -439,6 +439,7 @@ sealed interface Event {
                         id = id,
                         semester = semester,
                         course = newCourse,
+                        recurrenceRule = recurrenceRuleEntity,
                         eventName = name,
                         eventInstructor = instructor,
                         eventLocation = location,
@@ -461,6 +462,7 @@ sealed interface Event {
                     Normal(
                         id = id,
                         semester = semester,
+                        recurrenceRule = recurrenceRuleEntity,
                         name = name,
                         location = location,
                         color = color,
