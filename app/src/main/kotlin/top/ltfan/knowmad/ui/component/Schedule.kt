@@ -630,7 +630,7 @@ fun SemesterInformation(
                         contentDescription = null,
                     )
                 },
-                enabled = onDelete != null,
+                enabled = onDelete != null && semester.id != SemesterEntity.DefaultSemesterId,
                 colors = MenuDefaults.itemColors(
                     textColor = MaterialTheme.colorScheme.error,
                     leadingIconColor = MaterialTheme.colorScheme.error,
