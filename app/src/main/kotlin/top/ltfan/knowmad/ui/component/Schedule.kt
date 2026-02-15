@@ -170,6 +170,7 @@ fun MonthBottomSheetContent(
     today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
     onExport: (suspend (SemesterEntity) -> String)? = null,
     onBackup: (suspend (SemesterEntity) -> String)? = null,
+    onDelete: (suspend (SemesterEntity) -> Unit)? = null,
     onImport: (suspend (String, MutableList<String>?) -> Result<Int>)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -228,6 +229,7 @@ fun MonthBottomSheetContent(
                 today = today,
                 onExport = onExport?.let { { it(semester) } },
                 onBackup = onBackup?.let { { it(semester) } },
+                onDelete = onDelete?.let { { it(semester) } },
             )
         }
     }
@@ -403,6 +405,7 @@ fun SemesterInformation(
     today: LocalDate = rememberSystemDate(timeZone = currentTimeZone),
     onExport: (suspend () -> String)? = null,
     onBackup: (suspend () -> String)? = null,
+    onDelete: (suspend () -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -603,7 +606,7 @@ fun SemesterInformation(
                     }
                 },
                 text = { Text(stringResource(R.string.schedule_semester_label_backup)) },
-                shape = MenuDefaults.trailingItemThemedShape,
+                shape = MenuDefaults.middleItemShape,
                 leadingIcon = {
                     Icon(
                         painterResource(R.drawable.file_export_24px),
@@ -611,6 +614,27 @@ fun SemesterInformation(
                     )
                 },
                 enabled = onBackup != null,
+            )
+            DropdownMenuItem(
+                onClick = {
+                    showMenu = false
+                    coroutineScope.launch {
+                        onDelete?.invoke()
+                    }
+                },
+                text = { Text(stringResource(R.string.schedule_semester_label_delete)) },
+                shape = MenuDefaults.trailingItemThemedShape,
+                leadingIcon = {
+                    Icon(
+                        painterResource(R.drawable.delete_24px),
+                        contentDescription = null,
+                    )
+                },
+                enabled = onDelete != null,
+                colors = MenuDefaults.itemColors(
+                    textColor = MaterialTheme.colorScheme.error,
+                    leadingIconColor = MaterialTheme.colorScheme.error,
+                ),
             )
         }
 

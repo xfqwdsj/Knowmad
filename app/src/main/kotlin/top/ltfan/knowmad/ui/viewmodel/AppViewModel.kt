@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
@@ -213,6 +214,10 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     suspend fun backupSemester(semester: SemesterEntity) =
         semester.toICalendar(scheduleDao.getAllEventsBySemester(semester.id))
             .writeCustomized()
+
+    suspend fun deleteSemester(semester: SemesterEntity) {
+        withContext(Dispatchers.IO) { scheduleDao.deleteSemester(semester) }
+    }
 
     suspend fun importFromICalendar(
         content: String,

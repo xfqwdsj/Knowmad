@@ -133,6 +133,7 @@
     <string name="schedule_semester_label_remaining">%s remaining</string>
     <string name="schedule_semester_label_export">Export Schedule in Semester (Irreversible)</string>
     <string name="schedule_semester_label_backup">Export/Backup Schedule in Semester</string>
+    <string name="schedule_semester_label_delete">Delete Semester</string>
     <string name="schedule_event_name_label">Name</string>
     <string name="schedule_event_name_label_none">No Name</string>
     <string name="schedule_event_location_label">Location</string>

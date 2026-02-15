@@ -257,6 +257,7 @@ class MainPage : Page() {
                     onSemesterSelectionChange = viewModel::onSemesterSelectionChange,
                     onExport = viewModel::exportSemester,
                     onBackup = viewModel::backupSemester,
+                    onDelete = viewModel::deleteSemester,
                     onImport = viewModel::importFromICalendar,
                 )
             }

@@ -131,6 +131,7 @@
     <string name="schedule_semester_label_remaining">剩余%s</string>
     <string name="schedule_semester_label_export">导出学期内的日程（不可恢复）</string>
     <string name="schedule_semester_label_backup">导出/备份学期内的日程</string>
+    <string name="schedule_semester_label_delete">删除学期</string>
     <string name="schedule_event_name_label">名称</string>
     <string name="schedule_event_name_label_none">无名称</string>
     <string name="schedule_event_location_label">地点</string>
