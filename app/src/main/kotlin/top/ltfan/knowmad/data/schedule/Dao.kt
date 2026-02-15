@@ -361,4 +361,11 @@ interface ScheduleDao : FtsDao {
             .toList()
         return allEvents
     }
+
+    @Transaction
+    suspend fun searchEventsJoinedCourses(query: String): List<Event> {
+        return searchOriginalEventsJoinedCourses(query).map {
+            it.toEvent(getRecurrenceRuleByCombinedEvent(it))
+        }
+    }
 }

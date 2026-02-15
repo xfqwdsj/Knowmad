@@ -34,11 +34,11 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.CombinedCourse
-import top.ltfan.knowmad.data.schedule.CombinedEvent
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.ICalendarRuleArguments
+import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
@@ -849,7 +849,7 @@ object ScheduleTools {
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_end_time)) }
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.getOriginalEventsInRange(start, end) }
+                runCatching { dao.getEventsInRange(start, end) }
             }.onFailure { logger.error(it) { "Failed to query events in range" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
@@ -866,19 +866,26 @@ object ScheduleTools {
             data class Success(
                 val semesters: List<SemesterEntity>,
                 val courses: List<CourseEntity>?,
+                val recurrenceRules: List<RecurrenceRuleEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
-                constructor(events: List<CombinedEvent>) : this(
+                constructor(events: List<Event>) : this(
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
                         .toList(),
                     courses = events.asSequence()
-                        .mapNotNull { it.course }
+                        .filterIsInstance<Event.Course>()
+                        .map { it.course }
                         .distinctBy { it.id }
                         .toList()
                         .takeIf { it.isNotEmpty() },
-                    events = events.map { it.event },
+                    recurrenceRules = events.asSequence()
+                        .mapNotNull { it.recurrenceRule }
+                        .distinctBy { it.id }
+                        .toList()
+                        .takeIf { it.isNotEmpty() },
+                    events = events.map { it.toEntity() },
                 )
             }
 
@@ -909,7 +916,7 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_empty_query)) }
             val events = withContext(Dispatchers.IO) {
-                runCatching { dao.searchOriginalEventsJoinedCourses(args.query) }
+                runCatching { dao.searchEventsJoinedCourses(args.query) }
             }.onFailure { logger.error(it) { "Failed to search events" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
@@ -926,19 +933,26 @@ object ScheduleTools {
             data class Success(
                 val semesters: List<SemesterEntity>,
                 val courses: List<CourseEntity>?,
+                val recurrenceRules: List<RecurrenceRuleEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
-                constructor(events: List<CombinedEvent>) : this(
+                constructor(events: List<Event>) : this(
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
                         .toList(),
                     courses = events.asSequence()
-                        .mapNotNull { it.course }
+                        .filterIsInstance<Event.Course>()
+                        .map { it.course }
                         .distinctBy { it.id }
                         .toList()
                         .takeIf { it.isNotEmpty() },
-                    events = events.map { it.event },
+                    recurrenceRules = events.asSequence()
+                        .mapNotNull { it.recurrenceRule }
+                        .distinctBy { it.id }
+                        .toList()
+                        .takeIf { it.isNotEmpty() },
+                    events = events.map { it.toEntity() },
                 )
             }
 
