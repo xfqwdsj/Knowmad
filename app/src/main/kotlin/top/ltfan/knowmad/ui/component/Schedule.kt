@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.ui.component
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.res.Resources
 import android.icu.text.DateTimePatternGenerator
@@ -188,9 +187,7 @@ fun MonthBottomSheetContent(
 
     var showImportDialog by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<Result<Int>?>(null) }
-
-    @SuppressLint("MutableCollectionMutableState")
-    var importErrors by remember { mutableStateOf<MutableList<String>?>(null) }
+    var importErrors by remember { mutableStateOf<List<String>?>(null) }
 
     Column(
         modifier = Modifier.padding(16.dp),
@@ -240,10 +237,10 @@ fun MonthBottomSheetContent(
             onImport = { content ->
                 showImportDialog = false
                 val errors = mutableListOf<String>()
-                importErrors = errors
                 onImport?.let {
                     coroutineScope.launch {
                         importResult = it(content, errors)
+                        importErrors = errors
                     }
                 }
             },
