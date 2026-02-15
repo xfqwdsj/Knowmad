@@ -113,7 +113,9 @@ object ScheduleTools {
 
             val errors = mutableListOf<String>()
 
-            val iCal = readCustomizedICalendar(args.icsContent)
+            val iCal = readCustomizedICalendar(args.icsContent) ?: run {
+                return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content))
+            }
 
             val events = dao.importFromICalendar(
                 iCalendar = iCal,

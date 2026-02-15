@@ -46,7 +46,7 @@ import kotlin.uuid.Uuid
 
 val ICalendarVersion = ICalVersion.V2_0
 
-fun readCustomizedICalendar(content: String): ICalendar = Biweekly.parse(content).apply {
+fun readCustomizedICalendar(content: String): ICalendar? = Biweekly.parse(content).apply {
     register(SemesterProperty)
     register(CourseProperty)
     register(InstructorProperty)
