@@ -18,18 +18,25 @@
 
 package top.ltfan.knowmad.ui.component
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -45,7 +52,15 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -53,6 +68,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,9 +87,9 @@ import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.MarkdownSuccess
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.compose.elements.MarkdownCodeBackground
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
 import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
+import com.mikepenz.markdown.compose.elements.MarkdownDivider
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.DefaultMarkdownInlineContent
@@ -172,7 +188,7 @@ fun MarkdownView(
         components = markdownComponents(
             codeFence = { (content, node, typography) ->
                 MarkdownCodeFence(content, node, typography.code) { code, language, style ->
-                    MarkdownCode(code, language, style, showHeader = true)
+                    MarkdownCode(code, language, style)
                 }
             },
             codeBlock = { (content, node, typography) ->
@@ -266,10 +282,12 @@ fun MarkdownCode(
     code: String,
     language: String? = null,
     style: TextStyle = LocalMarkdownTypography.current.code,
-    showHeader: Boolean = false,
+    showHeader: Boolean = LocalMarkdownCodeEnableHeader.current,
 ) {
     val backgroundCodeColor = LocalMarkdownColors.current.codeBackground
     val codeBackgroundCornerSize = LocalMarkdownDimens.current.codeBackgroundCornerSize
+    val codeBlockMaxHeight = LocalMarkdownCodeMaxHeight.current
+    val codeBlockReversedScroll = LocalMarkdownReversedVerticalScroll.current
     val codeBlockPadding = LocalMarkdownPadding.current.codeBlock
     MarkdownCodeBackground(
         color = backgroundCodeColor,
@@ -286,10 +304,96 @@ fun MarkdownCode(
                 text = code,
                 style = style,
                 modifier = Modifier
-                    .heightIn(max = 400.dp)
+                    .heightIn(max = codeBlockMaxHeight)
                     .horizontalScroll(rememberScrollState())
-                    .verticalScroll(rememberScrollState())
+                    .run {
+                        if (codeBlockMaxHeight.isSpecified) {
+                            verticalScroll(
+                                rememberScrollState(),
+                                reverseScrolling = codeBlockReversedScroll,
+                            )
+                        } else this
+                    }
                     .padding(codeBlockPadding),
+            )
+        }
+    }
+}
+
+@Composable
+fun MarkdownCodeBackground(
+    color: Color,
+    modifier: Modifier = Modifier,
+    shape: Shape = RectangleShape,
+    border: BorderStroke? = null,
+    elevation: Dp = 0.dp,
+    showHeader: Boolean = false,
+    language: String? = null,
+    code: String = "",
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .shadow(elevation, shape, clip = false)
+            .then(if (border != null) Modifier.border(border, shape) else Modifier)
+            .background(color = color, shape = shape)
+            .clip(shape)
+            .semantics(mergeDescendants = false) {
+                isTraversalGroup = true
+            }
+            .pointerInput(Unit) {},
+        propagateMinConstraints = true,
+    ) {
+        if (showHeader) {
+            Column {
+                MarkdownCodeTopBar(
+                    language = language,
+                    code = code,
+                )
+                MarkdownDivider(
+                    color = LocalMarkdownColors.current.dividerColor.copy(alpha = 0.3f),
+                    thickness = 0.5.dp,
+                )
+                content()
+            }
+        } else {
+            content()
+        }
+    }
+}
+
+@Composable
+fun MarkdownCodeTopBar(
+    language: String?,
+    code: String,
+    modifier: Modifier = Modifier,
+) {
+    val textColor = LocalMarkdownColors.current.text
+
+    CompositionLocalProvider(LocalContentColor provides textColor.copy(alpha = .6f)) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = language?.uppercase() ?: "CODE",
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                style = TextStyle(
+                    fontSize = 10.sp,
+                    fontFamily = Monospace,
+                ),
+                softWrap = false,
+                maxLines = 1,
+            )
+
+            CopyIconButton(
+                onCopy = { null to code },
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -633,3 +737,7 @@ fun SavedMarkdownState(
 )
 
 val LocalMarkdownViewBlockParsing = staticCompositionLocalOf { false }
+
+val LocalMarkdownCodeEnableHeader = staticCompositionLocalOf { true }
+val LocalMarkdownCodeMaxHeight = staticCompositionLocalOf { Dp.Unspecified }
+val LocalMarkdownReversedVerticalScroll = staticCompositionLocalOf { false }

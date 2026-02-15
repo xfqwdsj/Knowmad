@@ -62,6 +62,7 @@ import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -727,53 +728,60 @@ fun ToolMessage(
         message.tool,
     )
 
-    val content = remember(message.content) {
-        try {
+    val prettyJson = remember(message.content) {
+        runCatching {
             val element = Json.decodeFromString<JsonElement>(message.content)
             val newJson = Json {
                 prettyPrint = true
-                prettyPrintIndent = "  "
+                prettyPrintIndent = " "
             }
-            "```json\n${newJson.encodeToString(element)}\n```"
-        } catch (e: Throwable) {
-            "```\n${message.content.trim()}\n```"
-        }
+            newJson.encodeToString(element)
+        }.getOrNull()
     }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+    val content = prettyJson?.let {
+        "``json\n$it\n```"
+    } ?: "```\n${message.content.trim()}\n```"
+
+    CompositionLocalProvider(
+        LocalMarkdownCodeEnableHeader provides (prettyJson != null),
+        LocalMarkdownCodeMaxHeight provides 400.dp,
     ) {
-        Column {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ExpandOrCollapseIconButton(
-                    expanded = visible,
-                    onExpandedChange = {
-                        visible = it
-                        onVisibilityChange(it)
-                    },
-                )
-                Text(label)
-            }
-            AnimatedVisibility(
-                visible = visible,
-                modifier = Modifier.fillMaxWidth(),
-                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
-            ) {
-                MarkdownView(
-                    rememberSavedMarkdownState(content),
-                    mathJaxRendererState = mathJaxRendererState,
-                    modifier = Modifier.padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp,
-                    ),
-                )
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+            Column {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ExpandOrCollapseIconButton(
+                        expanded = visible,
+                        onExpandedChange = {
+                            visible = it
+                            onVisibilityChange(it)
+                        },
+                    )
+                    Text(label)
+                }
+                AnimatedVisibility(
+                    visible = visible,
+                    modifier = Modifier.fillMaxWidth(),
+                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+                ) {
+                    MarkdownView(
+                        rememberSavedMarkdownState(content),
+                        mathJaxRendererState = mathJaxRendererState,
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp,
+                        ),
+                    )
+                }
             }
         }
     }
