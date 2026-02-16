@@ -1267,6 +1267,7 @@ sealed interface AssistantMessageState {
                 id = entity.id,
                 conversationId = entity.conversationId,
                 parentId = entity.parentId,
+                depth = entity.depth,
                 createdAt = entity.createdAt,
             )
         }
