@@ -26,6 +26,11 @@ interface SystemPromptInjectorTool {
     val additionalSystemPrompt: String
 }
 
+interface CodeRunnerTool {
+    val components: List<String>
+    suspend fun runCode(components: List<String>, code: String): String
+}
+
 interface ChatAgentContextualInitializationTool {
     suspend fun initializeWithChatAgentContext(
         llm: AIAgentLLMContext,

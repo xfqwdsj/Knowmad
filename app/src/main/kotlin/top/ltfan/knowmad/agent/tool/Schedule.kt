@@ -30,9 +30,9 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.encodeToJsonElement
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.CodeRunnerTool
 import top.ltfan.knowmad.data.schedule.CombinedCourse
 import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.Event
@@ -43,10 +43,12 @@ import top.ltfan.knowmad.data.schedule.Reminder
 import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
+import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
 import top.ltfan.knowmad.data.schedule.importFromICalendar
 import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toReminders
+import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
@@ -63,9 +65,9 @@ fun ToolRegistry.Builder.scheduleTools(
 }
 
 fun ToolRegistry.Builder.scheduleToolsExtended(
-    resources: Resources, dao: ScheduleDao,
+    resources: Resources, dao: ScheduleDao, registerCodeRunner: (CodeRunnerTool) -> Unit,
 ) {
-    tool(ScheduleTools.ImportFromICalendarTool(resources, dao))
+    tool(ScheduleTools.ImportFromICalendarTool(resources, dao).also(registerCodeRunner))
     tool(ScheduleTools.SearchSemestersTool(resources, dao))
     tool(ScheduleTools.CreateSemesterTool(resources, dao))
     tool(ScheduleTools.UpdateSemesterTool(resources, dao))
@@ -89,122 +91,62 @@ object ScheduleTools {
         descriptor = ToolDescriptor(
             name = "import_from_icalendar",
             description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_description),
-            optionalParameters = listOf(
-                ToolParameterDescriptor(
-                    name = "acknowledgement",
-                    description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description),
-                    type = ToolParameterType.String,
-                ),
-                ToolParameterDescriptor(
-                    name = "icsContent",
-                    description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_arg_ics_content_description),
-                    type = ToolParameterType.String,
-                ),
-            ),
         ),
-    ), MessageWhenGatheringTool {
-        override suspend fun execute(args: Args): Result {
-            if (args.acknowledgement != ACKNOWLEDGEMENT) {
-                return Result.RuleWithAcknowledgement(resources)
-            }
-            if (args.icsContent.isNullOrBlank()) {
-                return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content))
-            }
-
-            val errors = mutableListOf<String>()
-
-            val iCal = readCustomizedICalendar(args.icsContent) ?: run {
-                return Result.Failure(resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content))
-            }
-
-            val events = dao.importFromICalendar(
-                iCalendar = iCal,
-                resources = resources,
-                onQueryFailed = {
-                    return Result.Failure(
-                        reason = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error),
-                        errors = errors.takeIf { it.isNotEmpty() },
-                    )
-                },
-                errors = errors,
-            ) ?: return Result.Failure(errors = errors.takeIf { it.isNotEmpty() })
-
-            return Result.Success(
-                events = events,
-                errors = errors.takeIf { it.isNotEmpty() },
-            )
-        }
+    ), CodeRunnerTool, MessageWhenGatheringTool {
+        override suspend fun execute(args: Args) = Result(resources)
 
         @Serializable
         @SerialName("Args")
-        data class Args(
-            val acknowledgement: String?,
-            val icsContent: String?,
-        )
+        data object Args
 
         @Serializable
         @SerialName("Result")
-        sealed interface Result {
-            @Serializable
-            @SerialName("Success")
-            data class Success(
-                val semesters: List<SemesterEntity>? = null,
-                val courses: List<CourseEntity>? = null,
-                val eventCount: Int? = null,
-                val errors: List<String>? = null,
-            ) : Result {
-                constructor(
-                    events: List<Event>,
-                    errors: List<String>? = null,
-                ) : this(
-                    semesters = events.asSequence()
-                        .distinctBy { it.semester.id }
-                        .map { it.semester }
-                        .toList(),
-                    courses = events.asSequence()
-                        .filterIsInstance<Event.Course>()
-                        .distinctBy { it.course.id }
-                        .map { it.course }
-                        .toList(),
-                    eventCount = events.size,
-                    errors = errors,
-                )
-            }
-
-            @Serializable
-            @SerialName("Failure")
-            data class Failure(
-                val reason: String? = null,
-                val errors: List<String>? = null,
-                val rule: String? = null,
-                val acknowledgement: String? = null,
-            ) : Result
-
-            @Serializable
-            @SerialName("RuleWithAcknowledgement")
-            data class RuleWithAcknowledgement(
-                val rule: String,
-                val acknowledgement: String,
-            ) : Result {
-                constructor(resources: Resources) : this(
-                    rule = resources.getString(R.string.icalendar_rule)
-                        .trimIndent().format(*ICalendarRuleArguments),
-                    acknowledgement = ACKNOWLEDGEMENT,
-                )
-            }
-        }
-
-        override val messageWhenGathering = buildJsonObject {
-            put(
-                "rule",
-                resources.getString(R.string.icalendar_rule)
+        data class Result(
+            val iCalendarRule: String,
+            val contentRule: String,
+        ) {
+            constructor(resources: Resources) : this(
+                iCalendarRule = resources.getString(R.string.icalendar_rule)
                     .trimIndent().format(*ICalendarRuleArguments),
+                contentRule = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_creation_rule)
+                    .trimIndent().format(LANGUAGE_TAG),
             )
-            put("acknowledgement", ACKNOWLEDGEMENT)
         }
+
+        override suspend fun runCode(components: List<String>, code: String): String {
+            val errors = mutableListOf<String>()
+
+            val result = runCatching {
+                val iCal = readCustomizedICalendar(code)
+                    ?: error("There wasn't any iCalendar data in the content")
+
+                val events = dao.importFromICalendar(
+                    iCalendar = iCal,
+                    resources = resources,
+                    errors = errors,
+                ) ?: error("Failed to import events from the iCalendar data")
+
+                if (events.isEmpty()) {
+                    error("No valid events found in the iCalendar data")
+                }
+
+                events.size
+            }
+
+            return iCalendarImportResultMessage(
+                successCount = result.getOrNull(),
+                throwable = result.exceptionOrNull(),
+                errors = errors.ifEmpty { null },
+            )
+        }
+
+        override val components by lazy { LanguageComponents }
+
+        override val messageWhenGathering = Json.encodeToJsonElement(Result(resources))
 
         companion object {
-            const val ACKNOWLEDGEMENT = "icalendar-acknowledgement"
+            const val LANGUAGE_TAG = "ics icalendar-import"
+            val LanguageComponents by lazy { LANGUAGE_TAG.split(" ") }
         }
     }
 

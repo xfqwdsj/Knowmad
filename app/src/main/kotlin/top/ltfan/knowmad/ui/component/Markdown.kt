@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,8 +88,6 @@ import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.MarkdownSuccess
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
-import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.compose.elements.MarkdownDivider
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.m3.Markdown
@@ -114,7 +113,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.ast.findChildOfType
+import org.intellij.markdown.ast.getTextInNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import top.ltfan.knowmad.ui.util.rememberEx
 
@@ -187,14 +190,10 @@ fun MarkdownView(
         },
         components = markdownComponents(
             codeFence = { (content, node, typography) ->
-                MarkdownCodeFence(content, node, typography.code) { code, language, style ->
-                    MarkdownCode(code, language, style)
-                }
+                MarkdownCodeFence(content, node, typography.code)
             },
             codeBlock = { (content, node, typography) ->
-                MarkdownCodeBlock(content, node, typography.code) { code, language, style ->
-                    MarkdownCode(code, language, style)
-                }
+                MarkdownCodeBlock(content, node, typography.code)
             },
             paragraph = { (content, node, typography) ->
                 MarkdownParagraph(
@@ -278,7 +277,83 @@ fun MarkdownView(
 }
 
 @Composable
+fun MarkdownCodeFence(
+    content: String,
+    node: ASTNode,
+    style: TextStyle = LocalMarkdownTypography.current.code,
+    block: @Composable (ASTNode, String, String?, TextStyle) -> Unit = { node, code, language, style ->
+        MarkdownCode(node = node, code = code, language = language, style = style)
+    },
+) {
+    val (code, language) = node.codeBlockOrNull(content) ?: return
+    block(node, code, language, style)
+}
+
+@Composable
+fun MarkdownCodeBlock(
+    content: String,
+    node: ASTNode,
+    style: TextStyle = LocalMarkdownTypography.current.code,
+    block: @Composable (ASTNode, String, String?, TextStyle) -> Unit = { node, code, language, style ->
+        MarkdownCode(node = node, code = code, language = language, style = style)
+    },
+) {
+    val (code, language) = node.codeBlockOrNull(content) ?: return
+    block(node, code, language, style)
+}
+
+fun ASTNode.codeBlockOrNull(content: String) = when (type) {
+    MarkdownElementTypes.CODE_FENCE -> {
+        // CODE_FENCE_START, FENCE_LANG, EOL, {content // CODE_FENCE_CONTENT // x-times}, CODE_FENCE_END
+        // CODE_FENCE_START, EOL, {content // CODE_FENCE_CONTENT // x-times}, EOL
+        // CODE_FENCE_START, EOL, {content // CODE_FENCE_CONTENT // x-times}
+        // CODE_FENCE_START, FENCE_LANG, EOL, {content // CODE_FENCE_CONTENT // x-times}
+
+        if (children.size >= 3) {
+            val language = findChildOfType(MarkdownTokenTypes.FENCE_LANG)?.getTextInNode(content)
+                ?.toString()
+            val start = children[2].startOffset
+            val minCodeFenceCount = if (language != null && children.size > 3) 3 else 2
+            val end = children[(children.size - 2).coerceAtLeast(minCodeFenceCount)].endOffset
+            MarkdownCodeBlockData(
+                code = content.subSequence(start, end).toString().replaceIndent(),
+                language = language,
+                codeStartOffset = start,
+                codeEndOffset = end,
+            )
+        } else {
+            // invalid code block, skipping
+            null
+        }
+    }
+
+    MarkdownElementTypes.CODE_BLOCK -> {
+        val language =
+            findChildOfType(MarkdownTokenTypes.FENCE_LANG)?.getTextInNode(content)?.toString()
+        val start = children[0].startOffset
+        val end = children[children.size - 1].endOffset
+        MarkdownCodeBlockData(
+            code = content.subSequence(start, end).toString().replaceIndent(),
+            language = language,
+            codeStartOffset = start,
+            codeEndOffset = end,
+        )
+    }
+
+    else -> null
+}
+
+@Immutable
+data class MarkdownCodeBlockData(
+    val code: String,
+    val language: String?,
+    val codeStartOffset: Int,
+    val codeEndOffset: Int,
+)
+
+@Composable
 fun MarkdownCode(
+    node: ASTNode,
     code: String,
     language: String? = null,
     style: TextStyle = LocalMarkdownTypography.current.code,
@@ -290,6 +365,7 @@ fun MarkdownCode(
     val codeBlockReversedScroll = LocalMarkdownReversedVerticalScroll.current
     val codeBlockPadding = LocalMarkdownPadding.current.codeBlock
     MarkdownCodeBackground(
+        node = node,
         color = backgroundCodeColor,
         shape = ContinuousRoundedRectangle(codeBackgroundCornerSize),
         modifier = Modifier
@@ -322,6 +398,7 @@ fun MarkdownCode(
 
 @Composable
 fun MarkdownCodeBackground(
+    node: ASTNode,
     color: Color,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
@@ -347,6 +424,7 @@ fun MarkdownCodeBackground(
         if (showHeader) {
             Column {
                 MarkdownCodeTopBar(
+                    node = node,
                     language = language,
                     code = code,
                 )
@@ -364,11 +442,20 @@ fun MarkdownCodeBackground(
 
 @Composable
 fun MarkdownCodeTopBar(
+    node: ASTNode,
     language: String?,
     code: String,
     modifier: Modifier = Modifier,
 ) {
     val textColor = LocalMarkdownColors.current.text
+    val languageComponents = language?.split("\\s+".toRegex())
+    val runner = languageComponents?.let { components ->
+        LocalMarkdownCodeFenceRunners.current[
+            components.dropWhile {
+                it.startsWith("{") && it.endsWith("}")
+            }
+        ]
+    }
 
     CompositionLocalProvider(LocalContentColor provides textColor.copy(alpha = .6f)) {
         Row(
@@ -378,6 +465,7 @@ fun MarkdownCodeTopBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+
             Text(
                 text = language?.uppercase() ?: "CODE",
                 modifier = Modifier
@@ -390,6 +478,15 @@ fun MarkdownCodeTopBar(
                 softWrap = false,
                 maxLines = 1,
             )
+
+            if (languageComponents != null && runner != null) {
+                val runEnabled = LocalMarkdownRunCodeEnabled.current
+                RunIconButton(
+                    onRun = { runner.run(node, languageComponents, code) },
+                    modifier = Modifier.size(18.dp),
+                    enabled = runEnabled,
+                )
+            }
 
             CopyIconButton(
                 onCopy = { null to code },
@@ -736,8 +833,16 @@ fun SavedMarkdownState(
     mathResults,
 )
 
+fun interface MarkdownCodeFenceRunner {
+    fun run(node: ASTNode, components: List<String>, code: String)
+}
+
 val LocalMarkdownViewBlockParsing = staticCompositionLocalOf { false }
 
 val LocalMarkdownCodeEnableHeader = staticCompositionLocalOf { true }
 val LocalMarkdownCodeMaxHeight = staticCompositionLocalOf { Dp.Unspecified }
 val LocalMarkdownReversedVerticalScroll = staticCompositionLocalOf { false }
+
+val LocalMarkdownRunCodeEnabled = compositionLocalOf { false }
+val LocalMarkdownCodeFenceRunners =
+    compositionLocalOf { emptyMap<List<String>, MarkdownCodeFenceRunner>() }

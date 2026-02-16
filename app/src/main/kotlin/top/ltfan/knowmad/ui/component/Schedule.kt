@@ -136,6 +136,7 @@ import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.compose
 import top.ltfan.knowmad.data.schedule.getString
+import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
 import top.ltfan.knowmad.data.schedule.reversedValueInType
 import top.ltfan.knowmad.data.schedule.type
 import top.ltfan.knowmad.ui.page.EventDetailsSubPageKey
@@ -319,32 +320,11 @@ private fun ICalendarImportResultDialog(
                     return@let
                 }
                 val agentViewModel = LocalAgentViewModel.current
-                val message = buildString {
-                    appendLine("## ${stringResource(R.string.schedule_import_label)}")
-                    e?.let {
-                        appendLine()
-                        appendLine("### Exception")
-                        appendLine()
-                        appendLine(e.stackTraceToString())
-                    } ?: run {
-                        appendLine()
-                        appendLine("## Result")
-                        appendLine()
-                        appendLine("Success fully imported event count: ${result.getOrNull() ?: 0}.")
-                        if (!errors.isNullOrEmpty()) {
-                            appendLine()
-                            appendLine("However, there were some issues during import.")
-                        }
-                    }
-                    errors?.let {
-                        appendLine()
-                        appendLine("### Error messages")
-                        appendLine()
-                        it.forEach { error ->
-                            appendLine("- $error")
-                        }
-                    }
-                }
+                val message = iCalendarImportResultMessage(
+                    successCount = result.getOrNull(),
+                    throwable = e,
+                    errors = errors,
+                )
 
                 var explanation by remember { mutableStateOf("") }
 

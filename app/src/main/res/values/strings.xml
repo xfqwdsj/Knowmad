@@ -44,6 +44,7 @@
     <string name="label_edit">Edit</string>
     <string name="label_delete">Delete</string>
     <string name="label_deleted">Deleted</string>
+    <string name="label_run">Run</string>
     <string name="label_need_attention">Needs Attention</string>
     <string name="label_not_changed">Not Changed</string>
     <string name="label_just_clicked">Just Clicked</string>

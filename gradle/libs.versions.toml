@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.3.10"
+kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.10.0"
 kotlinx-datetime = "0.7.1-0.6.x-compat" # TODO: remove when possible
 ksp = "2.3.5"
@@ -23,7 +24,7 @@ capsule = "1.1.1"
 reorderable = "3.0.0"
 coil = "3.3.0"
 markdown = "0.39.2"
-omnical = "0.1.0-alpha02"
+omnical = "0.1.0-alpha03"
 calendar = "2.10.0"
 tyme = "1.4.2"
 webview = "2.0.3"
@@ -33,6 +34,7 @@ quickjs = "1.0.3"
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
@@ -140,6 +142,8 @@ test = [
     # kotlin
     "kotlin-test",
     "kotlin-test-junit",
+    # coroutines
+    "kotlinx-coroutines-test",
 ]
 
 [plugins]

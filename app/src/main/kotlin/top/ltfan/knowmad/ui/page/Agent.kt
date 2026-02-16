@@ -87,6 +87,7 @@ import top.ltfan.knowmad.ui.component.LLMProviderSelectionDialog
 import top.ltfan.knowmad.ui.component.LocalAgentScreenIsStandalone
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
+import top.ltfan.knowmad.ui.component.LocalMarkdownRunCodeEnabled
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
@@ -334,23 +335,27 @@ class AgentMainPage : AgentSubPage() {
                             return@subcompose
                         }
 
-                        ChatMessageList(
-                            getMessageCount = { messages.itemCount },
-                            getMessageKey = messages.itemKey { it.key },
-                            getMessageAt = { viewModel.getMessage(messages[it]) },
-                            mathJaxRendererState = appViewModel.mathJaxRendererState,
-                            modifier = Modifier.fillMaxSize(),
-                            onPrevious = viewModel::messageOnPrevious,
-                            onNext = viewModel::messageOnNext,
-                            onRegenerate = viewModel::messageOnRegenerate,
-                            initialReasoningVisibility = viewModel.defaultReasoningVisibility,
-                            onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
-                            initialToolVisibility = viewModel.defaultToolVisibility,
-                            onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
-                            contentPadding = padding,
-                            lazyListState = viewModel.messagesListState,
-                            assistantMessageStates = viewModel.assistantMessageStates,
-                        )
+                        CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
+                            ChatMessageList(
+                                getMessageCount = { messages.itemCount },
+                                getMessageKey = messages.itemKey { it.key },
+                                getMessageAt = { viewModel.getMessage(messages[it]) },
+                                mathJaxRendererState = appViewModel.mathJaxRendererState,
+                                modifier = Modifier.fillMaxSize(),
+                                onPrevious = viewModel::messageOnPrevious,
+                                onNext = viewModel::messageOnNext,
+                                onRegenerate = viewModel::messageOnRegenerate,
+                                initialReasoningVisibility = viewModel.defaultReasoningVisibility,
+                                onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
+                                initialToolVisibility = viewModel.defaultToolVisibility,
+                                onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
+                                contentPadding = padding,
+                                lazyListState = viewModel.messagesListState,
+                                assistantMessageStates = viewModel.assistantMessageStates,
+                                runnableCodeComponents = viewModel.runnableCodeComponents,
+                                runCode = viewModel::runAssistantCode,
+                            )
+                        }
 
                         var isAtBottom by remember { mutableStateOf(true) }
 

@@ -17,12 +17,14 @@
   -->
 
 <resources>
-    <string name="llm_tool_schedule_import_from_icalendar_description">从iCalendar数据导入学期、课程和事件，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式。用户一般不会提供iCalendar内容，若使用场景合适，请自行编写</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">口令，输入iCalendar前请用空参数调用工具以获取iCalendar规则和acknowledgement口令</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar内容，请自行编写，必须与acknowledgement一起提供，否则请求将被拒绝</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar内容不能为空</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content">iCalendar内容无效</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">导入iCalendar时发生内部错误</string>
+    <string name="llm_tool_schedule_import_from_icalendar_description">获取从iCalendar数据导入学期、课程和事件的方法，支持重复事件，安排有大量重复事件的学期、创建课程表时首选该方式；建议与`create_semester`一起获取</string>
+    <string name="llm_tool_schedule_import_from_icalendar_creation_rule">"
+        创建iCalendar的方法
+
+        - 你需要将iCalendar内容放入Markdown Code Fence中；
+        - Code Fence的语言标签必须设置为`%1$s`；
+        - 如果你按要求正确使用了Code Fence来提供iCalendar内容，用户会看到一个导入按钮，如果用户点击了该按钮，你会得到本次导入的结果。
+    "</string>
 
     <string name="llm_tool_schedule_query_semesters_description">查询与给定日期范围存在交集的学期或所有已存在的学期</string>
     <string name="llm_tool_schedule_query_semesters_arg_start_date_description">查询起始日期（yyyy-MM-dd），若无要求一般指定为当天日期；当用户明确要求查询所有学期时，留空两个字段</string>

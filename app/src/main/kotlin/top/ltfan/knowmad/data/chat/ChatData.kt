@@ -44,15 +44,20 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
+import org.intellij.markdown.MarkdownTokenTypes
+import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.MathJaxRenderResult
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
+import top.ltfan.knowmad.ui.component.codeBlockOrNull
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
+import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.RemendProcessor
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -285,6 +290,110 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
             coroutineScope,
         )
 
+        private val codeResultJson = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+
+        suspend fun appendedCodeResults(
+            vararg results: Triple<ASTNode, String, Instant>,
+        ): Completed {
+            if (uiMessage !is Koog || uiMessage.message !is Assistant || results.isEmpty()) return this
+
+            val originalContent = uiMessage.content
+
+            data class Modification(
+                val startOffset: Int,
+                val endOffset: Int,
+                val insertText: String,
+            )
+
+            val modifications = results.mapNotNull { (codeNode, result, createdAt) ->
+                val parent = codeNode.parent ?: return@mapNotNull null
+                val nodeIndex = parent.children.indexOf(codeNode)
+
+                val nextElement = parent.children.subList(nodeIndex + 1, parent.children.size)
+                    .find { it.type != MarkdownTokenTypes.EOL && it.type != MarkdownTokenTypes.WHITE_SPACE }
+
+                var replaceEnd = codeNode.endOffset
+
+                val resultContent = runCatching {
+                    nextElement?.updateCodeResult(result, createdAt)?.also {
+                        replaceEnd = nextElement.endOffset
+                    }
+                }.onFailure {
+                    nextElement?.let {
+                        replaceEnd = nextElement.endOffset
+                    }
+                }.getOrNull() ?: codeResultJson.encodeToString(
+                    listOf(AssistantMessageCodeResult(result, createdAt)),
+                )
+
+                val start = codeNode.startOffset
+                val indent = originalContent.lastIndexOf('\n', start - 1)
+                    .takeIf { it >= 0 }?.let { start - it - 1 } ?: start
+
+                // TODO: this will cause the llm trying to generate a fake result block after several rounds of conversation, need a better way to handle this
+                val block = "```result\n$resultContent\n```".prependIndent(" ".repeat(indent))
+
+                val textToInsert = "\n$block"
+
+                Modification(
+                    startOffset = codeNode.endOffset,
+                    endOffset = replaceEnd,
+                    insertText = textToInsert,
+                )
+            }.sortedBy { it.startOffset }
+
+            if (modifications.isEmpty()) return this
+
+            val newContent = buildString {
+                var lastIndex = 0
+                for (mod in modifications) {
+                    if (mod.startOffset > lastIndex) {
+                        append(originalContent.substring(lastIndex, mod.startOffset))
+                    }
+
+                    append(mod.insertText)
+
+                    lastIndex = mod.endOffset
+                }
+                if (lastIndex < originalContent.length) {
+                    append(originalContent.substring(lastIndex))
+                }
+            }
+
+            val parts = listOf(ContentPart.Text(newContent)) +
+                    uiMessage.message.parts.filter { it !is Text }
+
+            return Completed(
+                uiMessage = uiMessage.copy(
+                    message = Message.Assistant(
+                        parts = parts,
+                        metaInfo = uiMessage.message.metaInfo,
+                        finishReason = uiMessage.message.finishReason,
+                    ),
+                ),
+            )
+        }
+
+        private fun ASTNode.updateCodeResult(
+            appendResult: String,
+            createdAt: Instant = Clock.System.now(),
+        ): String? {
+            val (result, language) = codeBlockOrNull(content) ?: return null
+            if (language == null || language != "result") return null
+
+            val results = codeResultJson.decodeFromString<List<AssistantMessageCodeResult>>(result)
+                .toMutableList()
+
+            results.removeAll { !it.isVerified }
+
+            results.add(AssistantMessageCodeResult(appendResult, createdAt))
+
+            return codeResultJson.encodeToString(results)
+        }
+
         companion object {
             suspend fun fromStreaming(
                 streaming: Streaming,
@@ -335,6 +444,32 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
 
     abstract val uiMessage: UiMessage
     abstract val content: String
+}
+
+@Serializable
+private data class AssistantMessageCodeResult(
+    val result: String,
+    val signature: String,
+    val createdAt: Instant = Clock.System.now(),
+) {
+    constructor(
+        result: String,
+        createdAt: Instant = Clock.System.now(),
+    ) : this(
+        result = result,
+        signature = calculateSignature(result, createdAt),
+        createdAt = createdAt,
+    )
+
+    @Transient
+    val isVerified = signature == calculateSignature(result, createdAt)
+
+    companion object {
+        fun calculateSignature(result: String, createdAt: Instant): String {
+            val input = "$result|$createdAt"
+            return input.toByteArray().toByteString().md5().hex()
+        }
+    }
 }
 
 enum class AssistantStreamingMessageType {

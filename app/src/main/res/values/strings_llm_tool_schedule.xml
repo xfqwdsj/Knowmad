@@ -17,12 +17,14 @@
   -->
 
 <resources>
-    <string name="llm_tool_schedule_import_from_icalendar_description">Import semesters, courses, and events from iCalendar data, supporting recurring events; preferred method when scheduling semesters with many recurring events or creating course schedules. Users typically do not provide iCalendar content; if the use case is appropriate, please compose it yourself.</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_acknowledgement_description">Passphrase, call this tool with no arguments to get iCalendar rules and acknowledgement passphrase before inputting iCalendar</string>
-    <string name="llm_tool_schedule_import_from_icalendar_arg_ics_content_description">iCalendar content, must be provided together with correct iCalendar acknowledgment, or the request will be rejected</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_empty_ics_content">iCalendar content cannot be empty</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_invalid_ics_content">iCalendar content is invalid</string>
-    <string name="llm_tool_schedule_import_from_icalendar_result_failure_reason_internal_error">Internal error while importing iCalendar</string>
+    <string name="llm_tool_schedule_import_from_icalendar_description">Get the method for importing semesters, courses, and events from iCalendar data, supporting recurring events. This method is preferred when there are a large number of recurring events in the schedule or when creating a course schedule; it is recommended to obtain it together with `create_semester`.</string>
+    <string name="llm_tool_schedule_import_from_icalendar_creation_rule">"
+        Method for creating iCalendar content
+
+        - You need to put the iCalendar content in a Markdown Code Fence;
+        - The language tag of the Code Fence must be set to `%1$s`;
+        - If you correctly use the Code Fence as required to provide the iCalendar content, the user will see an import button, and if the user clicks that button, you will receive the result of this import.
+    "</string>
 
     <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>
     <string name="llm_tool_schedule_query_semesters_arg_start_date_description">Start date for the query (yyyy-MM-dd), set to today if not specified; leave both two fields blank when user explicitly requests to query all semesters</string>

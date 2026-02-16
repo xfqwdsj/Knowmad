@@ -46,6 +46,33 @@ import kotlin.uuid.Uuid
 
 val ICalendarVersion = ICalVersion.V2_0
 
+fun iCalendarImportResultMessage(
+    successCount: Int? = null,
+    throwable: Throwable? = null,
+    errors: List<String>? = null,
+) = buildString {
+    appendLine("## Result for importing iCalendar data")
+    appendLine()
+    appendLine("Success fully imported event count: ${successCount ?: 0}.")
+    if (throwable != null) {
+        appendLine()
+        appendLine("### Exception")
+        appendLine()
+        appendLine(throwable.stackTraceToString())
+    } else if (!errors.isNullOrEmpty()) {
+        appendLine()
+        appendLine("However, there were some issues during import.")
+    }
+    if (!errors.isNullOrEmpty()) {
+        appendLine()
+        appendLine("### Error messages")
+        appendLine()
+        errors.forEach { error ->
+            appendLine("- $error")
+        }
+    }
+}
+
 fun readCustomizedICalendar(content: String): ICalendar? = Biweekly.parse(content).apply {
     register(SemesterProperty)
     register(CourseProperty)

@@ -58,10 +58,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
+import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.ChatAgentRerun
+import top.ltfan.knowmad.agent.CodeRunnerTool
 import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
@@ -369,6 +372,71 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
+    private val codeRunnerTools = mutableStateMapOf<List<String>, CodeRunnerTool>()
+    var runCodeEnabled by mutableStateOf(true)
+        private set
+    val runnableCodeComponents get() = codeRunnerTools.keys.toSet()
+
+    private val runCodeMutex = Mutex()
+    fun runAssistantCode(
+        state: AssistantMessageState,
+        contentIndex: Int,
+        node: ASTNode,
+        components: List<String>,
+        code: String,
+    ) {
+        viewModelScope.launch {
+            runCodeEnabled = false
+            runCodeMutex.lock()
+            val tool = codeRunnerTools[components] ?: run {
+                logger.warn { "No code runner tool found for components $components" }
+                return@launch
+            }
+            if (state !is Completed) {
+                logger.warn { "Message state is not completed when running code, skipping." }
+                return@launch
+            }
+            val content = state.contents.getOrNull(contentIndex) ?: run {
+                logger.warn { "Content index $contentIndex out of bounds for message ${state.id}" }
+                return@launch
+            }
+            val result = runCatching { tool.runCode(components, code) }
+                .onFailure {
+                    logger.error(it) { "Error running code with tool for components $components" }
+                }
+                .getOrNull()
+            if (result != null) {
+                val newContent = content.appendedCodeResults(
+                    Triple(node, result, Clock.System.now()),
+                )
+                val newContents =
+                    state.contents.toMutableList().also { it[contentIndex] = newContent }
+                val newState = state.copy(
+                    contents = newContents,
+                )
+                val newEntity = newState.toEntity()
+                withContext(Dispatchers.IO) {
+                    runCatching { chatDao.updateMessage(newEntity) }
+                }.onFailure {
+                    logger.error(it) { "Failed to update message with new code result." }
+                }.onSuccess {
+                    assistantMessageStates[state.id] = newState
+                }
+            }
+            runCodeMutex.unlock()
+            runCodeEnabled = true
+        }
+    }
+
+    private val chatAgentToolRegistry = ToolRegistry {
+        scheduleTools(application.resources, scheduleDao)
+        gatherToolsTool(application.resources) {
+            scheduleToolsExtended(application.resources, scheduleDao) {
+                codeRunnerTools[it.components] = it
+            }
+        }
+    }
+
     val canSendMessage
         get() = !isRunning &&
                 selectedModelEntity != null &&
@@ -542,12 +610,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     userParts = parts,
                     eventFlow = eventFlow,
                     state = state,
-                    tools = ToolRegistry {
+                    tools = chatAgentToolRegistry + ToolRegistry {
                         conversationTools(application.resources, conversation, chatDao)
-                        scheduleTools(application.resources, scheduleDao)
-                        gatherToolsTool(application.resources) {
-                            scheduleToolsExtended(application.resources, scheduleDao)
-                        }
                     },
                     buildPrompt = {
                         system?.let { message(it) } ?: messages(messages)

@@ -146,6 +146,38 @@ fun ImportIconButton(
 }
 
 @Composable
+fun RunIconButton(
+    onRun: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes contentDescriptionRes: Int? = R.string.label_run,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onRun,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                painterResource(R.drawable.play_arrow_24px),
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
+            )
+        }
+    }
+}
+
+@Composable
 fun CopyIconButton(
     onCopy: () -> Pair<CharSequence?, CharSequence>,
     modifier: Modifier = Modifier,

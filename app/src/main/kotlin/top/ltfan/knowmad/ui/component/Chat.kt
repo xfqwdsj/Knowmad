@@ -74,6 +74,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,6 +105,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
@@ -362,6 +364,14 @@ fun ChatMessageList(
     topToBottom: Boolean = false,
     reverseIndexing: Boolean = false,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    runnableCodeComponents: Set<List<String>>? = null,
+    runCode: ((
+        state: AssistantMessageState,
+        contentIndex: Int,
+        node: ASTNode,
+        components: List<String>,
+        code: String,
+    ) -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -415,6 +425,8 @@ fun ChatMessageList(
                                 }
                                 previousHeight = height
                             },
+                        runnableCodeComponents = runnableCodeComponents,
+                        runCode = { _, _, _, _ -> },
                     )
                 }
 
@@ -450,6 +462,12 @@ fun ChatMessageList(
                                     onAnyToolVisibilityChange(visible)
                                 },
                                 modifier = Modifier.fillParentMaxWidth(),
+                                runnableCodeComponents = runnableCodeComponents,
+                                runCode = runCode?.let { runCode ->
+                                    { contentIndex: Int, node: ASTNode, components: List<String>, code: String ->
+                                        runCode(state, contentIndex, node, components, code)
+                                    }
+                                },
                             )
                         }
 
@@ -494,75 +512,98 @@ fun AssistantMessage(
     initialToolVisibility: Boolean,
     onAnyToolVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    runnableCodeComponents: Set<List<String>>? = null,
+    runCode: ((contentIndex: Int, node: ASTNode, components: List<String>, code: String) -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier) { // TODO: add menu
-        for (content in state.contents) {
+        for ((index, content) in state.contents.withIndex()) {
+            val runners = LocalMarkdownCodeFenceRunners.current
+            val updatedIndex by rememberUpdatedState(index)
+            val runnersToAppend = remember(runnableCodeComponents, runCode) {
+                if (runnableCodeComponents == null || runCode == null) return@remember null
+                runnableCodeComponents.associateWith {
+                    MarkdownCodeFenceRunner { node, components, code ->
+                        runCode(updatedIndex, node, components, code)
+                    }
+                }
+            }
+            val providedRunners = runnersToAppend?.plus(runners) ?: runners
+
             when (content) {
                 is Streaming -> {
-                    val trailing by content.trailing.collectAsState(null)
-                    when (content.type) {
-                        Reasoning -> ReasoningMessage(
-                            savedMarkdownState = content.markdownState,
-                            mathJaxRendererState = mathJaxRendererState,
-                            startedAt = content.startedAt,
-                            endedAt = content.metaInfo?.timestamp?.toStdlibInstant(),
-                            initialVisibility = initialReasoningVisibility,
-                            onVisibilityChange = onAnyReasoningVisibilityChange,
-                            modifier = Modifier.padding(8.dp),
-                            trailing = trailing,
-                        )
+                    CompositionLocalProvider(
+                        LocalMarkdownCodeFenceRunners provides providedRunners,
+                        LocalMarkdownRunCodeEnabled provides false,
+                    ) {
+                        val trailing by content.trailing.collectAsState(null)
+                        when (content.type) {
+                            Reasoning -> ReasoningMessage(
+                                savedMarkdownState = content.markdownState,
+                                mathJaxRendererState = mathJaxRendererState,
+                                startedAt = content.startedAt,
+                                endedAt = content.metaInfo?.timestamp?.toStdlibInstant(),
+                                initialVisibility = initialReasoningVisibility,
+                                onVisibilityChange = onAnyReasoningVisibilityChange,
+                                modifier = Modifier.padding(8.dp),
+                                trailing = trailing,
+                            )
 
-                        Content -> AssistantMessageContent(
-                            savedMarkdownState = content.markdownState,
-                            mathJaxRendererState = mathJaxRendererState,
-                            modifier = Modifier.padding(8.dp),
-                            trailing = trailing,
-                        )
+                            Content -> AssistantMessageContent(
+                                savedMarkdownState = content.markdownState,
+                                mathJaxRendererState = mathJaxRendererState,
+                                modifier = Modifier.padding(8.dp),
+                                trailing = trailing,
+                            )
+                        }
                     }
                 }
 
                 is Completed -> {
                     val uiMessage = content.uiMessage
                     if (!uiMessage.display) continue
-                    when (uiMessage) {
-                        is Koog -> when (val message = uiMessage.message) {
-                            is Reasoning -> ReasoningMessage(
-                                savedMarkdownState = content.markdownState,
-                                mathJaxRendererState = mathJaxRendererState,
-                                startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
-                                    Instant.parseOrNull(it)
-                                } ?: message.metaInfo.timestamp.toStdlibInstant(),
-                                endedAt = message.metaInfo.timestamp.toStdlibInstant(),
-                                initialVisibility = initialReasoningVisibility,
-                                onVisibilityChange = onAnyReasoningVisibilityChange,
+                    CompositionLocalProvider(
+                        LocalMarkdownCodeFenceRunners provides providedRunners,
+                    ) {
+                        when (uiMessage) {
+                            is Koog -> when (val message = uiMessage.message) {
+                                is Reasoning -> ReasoningMessage(
+                                    savedMarkdownState = content.markdownState,
+                                    mathJaxRendererState = mathJaxRendererState,
+                                    startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
+                                        Instant.parseOrNull(it)
+                                    } ?: message.metaInfo.timestamp.toStdlibInstant(),
+                                    endedAt = message.metaInfo.timestamp.toStdlibInstant(),
+                                    initialVisibility = initialReasoningVisibility,
+                                    onVisibilityChange = onAnyReasoningVisibilityChange,
+                                    modifier = Modifier.padding(8.dp),
+                                )
+
+                                is Assistant -> AssistantMessageContent(
+                                    savedMarkdownState = content.markdownState,
+                                    mathJaxRendererState = mathJaxRendererState,
+                                    modifier = Modifier.padding(8.dp),
+                                )
+
+                                is Tool -> ToolMessage(
+                                    message = message,
+                                    mathJaxRendererState = mathJaxRendererState,
+                                    modifier = Modifier.padding(8.dp),
+                                    initialVisibility = initialToolVisibility,
+                                    onVisibilityChange = onAnyToolVisibilityChange,
+                                )
+
+                                else -> {}
+                            }
+
+                            is UiMessage.Error -> ErrorMessage(
+                                uiMessage.content,
                                 modifier = Modifier.padding(8.dp),
                             )
 
-                            is Assistant -> AssistantMessageContent(
-                                savedMarkdownState = content.markdownState,
-                                mathJaxRendererState = mathJaxRendererState,
-                                modifier = Modifier.padding(8.dp),
-                            )
-
-                            is Tool -> ToolMessage(
-                                message = message,
-                                mathJaxRendererState = mathJaxRendererState,
-                                modifier = Modifier.padding(8.dp),
-                                initialVisibility = initialToolVisibility,
-                                onVisibilityChange = onAnyToolVisibilityChange,
-                            )
-
-                            else -> {}
+                            is NotDisplayed -> {}
                         }
-
-                        is UiMessage.Error -> ErrorMessage(
-                            uiMessage.content,
-                            modifier = Modifier.padding(8.dp),
-                        )
-
-                        is NotDisplayed -> {}
                     }
                 }
             }
