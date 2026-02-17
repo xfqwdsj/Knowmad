@@ -164,6 +164,116 @@ sealed interface UiMessage {
         override val display: Boolean = true,
     ) : UiMessage {
         override val content get() = message.content
+
+        inline fun modifiedContent(
+            block: (
+                content: String,
+                modify: (start: Int, end: Int, text: String) -> Unit,
+            ) -> Unit,
+        ): Koog {
+            @Suppress("UNCHECKED_CAST")
+            val textPartEntries = message.parts.withIndex()
+                .mapNotNull {
+                    if (it.value is ContentPart.Text) it as IndexedValue<ContentPart.Text>
+                    else null
+                }
+
+            if (textPartEntries.isEmpty()) return this
+
+            val originalSeparatorIndices = mutableListOf<Int>()
+
+            val originalString = buildString {
+                for (i in textPartEntries.indices) {
+                    val part = textPartEntries[i].value
+                    append(part.text)
+                    if (i < textPartEntries.size - 1) {
+                        originalSeparatorIndices.add(length)
+                        append('\n')
+                    }
+                }
+            }
+
+            val modifications = mutableListOf<Triple<Int, Int, String>>()
+            block(originalString) { start, end, text ->
+                modifications.add(Triple(start, end, text))
+            }
+            modifications.sortBy { it.first }
+
+            val newSeparatorIndices = mutableListOf<Int>()
+            var currentOriginalIndex = 0
+            var accumulatedShift = 0
+
+            val finalString = buildString {
+                for ((start, end, text) in modifications) {
+                    if (start > currentOriginalIndex) {
+                        append(originalString.substring(currentOriginalIndex, start))
+                    }
+                    while (newSeparatorIndices.size < originalSeparatorIndices.size) {
+                        val nextSepIndex = originalSeparatorIndices[newSeparatorIndices.size]
+                        if (nextSepIndex < start) {
+                            newSeparatorIndices.add(nextSepIndex + accumulatedShift)
+                        } else break
+                    }
+                    append(text)
+                    val currentShift = text.length - (end - start)
+                    while (newSeparatorIndices.size < originalSeparatorIndices.size) {
+                        val nextSepIndex = originalSeparatorIndices[newSeparatorIndices.size]
+                        if (nextSepIndex < end) {
+                            newSeparatorIndices.add(length)
+                        } else break
+                    }
+                    accumulatedShift += currentShift
+                    currentOriginalIndex = end
+                }
+                if (currentOriginalIndex < originalString.length) {
+                    append(originalString.substring(currentOriginalIndex))
+                }
+            }
+
+            while (newSeparatorIndices.size < originalSeparatorIndices.size) {
+                val nextSepIndex = originalSeparatorIndices[newSeparatorIndices.size]
+                newSeparatorIndices.add(nextSepIndex + accumulatedShift)
+            }
+
+            val resultParts = message.parts.toMutableList()
+            var lastSliceEnd = 0
+
+            for (i in textPartEntries.indices) {
+                val originalPartIndex = textPartEntries[i].index
+                val newTextValue: String
+
+                if (i < newSeparatorIndices.size) {
+                    val splitPoint = newSeparatorIndices[i]
+
+                    val originalSepIndex = originalSeparatorIndices[i]
+                    val isConsumed = modifications.any { mod ->
+                        originalSepIndex >= mod.first && originalSepIndex < mod.second
+                    }
+                    val gap = if (isConsumed) 0 else 1
+
+                    val safeEnd = splitPoint.coerceAtMost(finalString.length)
+                    newTextValue = finalString.substring(lastSliceEnd, safeEnd)
+                    lastSliceEnd = (safeEnd + gap).coerceAtMost(finalString.length)
+                } else {
+                    newTextValue = if (lastSliceEnd <= finalString.length) {
+                        finalString.substring(lastSliceEnd)
+                    } else ""
+                }
+
+                resultParts[originalPartIndex] = ContentPart.Text(newTextValue)
+            }
+
+            return copy(
+                message = when (message) {
+                    is Message.System -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
+                    is Message.Tool.Result -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
+                    is Message.User -> message.copy(parts = resultParts)
+                    is Message.Assistant -> message.copy(parts = resultParts)
+                    is Message.Reasoning -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
+                    is Message.Tool.Call -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
+                },
+            )
+        }
     }
 
     @Serializable
@@ -300,81 +410,42 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         ): Completed {
             if (uiMessage !is Koog || uiMessage.message !is Assistant || results.isEmpty()) return this
 
-            val originalContent = uiMessage.content
+            val newUiMessage = uiMessage.modifiedContent { originalContent, modify ->
+                for ((codeNode, result, createdAt) in results) {
+                    val parent = codeNode.parent ?: continue
+                    val nodeIndex = parent.children.indexOf(codeNode)
 
-            data class Modification(
-                val startOffset: Int,
-                val endOffset: Int,
-                val insertText: String,
-            )
+                    val nextElement = parent.children.subList(nodeIndex + 1, parent.children.size)
+                        .find { it.type != MarkdownTokenTypes.EOL && it.type != MarkdownTokenTypes.WHITE_SPACE }
 
-            val modifications = results.mapNotNull { (codeNode, result, createdAt) ->
-                val parent = codeNode.parent ?: return@mapNotNull null
-                val nodeIndex = parent.children.indexOf(codeNode)
+                    var replaceEnd = codeNode.endOffset
 
-                val nextElement = parent.children.subList(nodeIndex + 1, parent.children.size)
-                    .find { it.type != MarkdownTokenTypes.EOL && it.type != MarkdownTokenTypes.WHITE_SPACE }
+                    val resultContent = runCatching {
+                        nextElement?.updateCodeResult(result, createdAt)?.also {
+                            replaceEnd = nextElement.endOffset
+                        }
+                    }.onFailure {
+                        nextElement?.let {
+                            replaceEnd = nextElement.endOffset
+                        }
+                    }.getOrNull() ?: codeResultJson.encodeToString(
+                        listOf(AssistantMessageCodeResult(result, createdAt)),
+                    )
 
-                var replaceEnd = codeNode.endOffset
+                    val start = codeNode.startOffset
+                    val indent = originalContent.lastIndexOf('\n', start - 1)
+                        .takeIf { it >= 0 }?.let { start - it - 1 } ?: start
 
-                val resultContent = runCatching {
-                    nextElement?.updateCodeResult(result, createdAt)?.also {
-                        replaceEnd = nextElement.endOffset
-                    }
-                }.onFailure {
-                    nextElement?.let {
-                        replaceEnd = nextElement.endOffset
-                    }
-                }.getOrNull() ?: codeResultJson.encodeToString(
-                    listOf(AssistantMessageCodeResult(result, createdAt)),
-                )
+                    // TODO: this will cause the llm trying to generate a fake result block after several rounds of conversation, need a better way to handle this
+                    val block = "```result\n$resultContent\n```".prependIndent(" ".repeat(indent))
 
-                val start = codeNode.startOffset
-                val indent = originalContent.lastIndexOf('\n', start - 1)
-                    .takeIf { it >= 0 }?.let { start - it - 1 } ?: start
+                    val textToInsert = "\n$block"
 
-                // TODO: this will cause the llm trying to generate a fake result block after several rounds of conversation, need a better way to handle this
-                val block = "```result\n$resultContent\n```".prependIndent(" ".repeat(indent))
-
-                val textToInsert = "\n$block"
-
-                Modification(
-                    startOffset = codeNode.endOffset,
-                    endOffset = replaceEnd,
-                    insertText = textToInsert,
-                )
-            }.sortedBy { it.startOffset }
-
-            if (modifications.isEmpty()) return this
-
-            val newContent = buildString {
-                var lastIndex = 0
-                for (mod in modifications) {
-                    if (mod.startOffset > lastIndex) {
-                        append(originalContent.substring(lastIndex, mod.startOffset))
-                    }
-
-                    append(mod.insertText)
-
-                    lastIndex = mod.endOffset
-                }
-                if (lastIndex < originalContent.length) {
-                    append(originalContent.substring(lastIndex))
+                    modify(codeNode.endOffset, replaceEnd, textToInsert)
                 }
             }
 
-            val parts = listOf(ContentPart.Text(newContent)) +
-                    uiMessage.message.parts.filter { it !is Text }
-
-            return Completed(
-                uiMessage = uiMessage.copy(
-                    message = Message.Assistant(
-                        parts = parts,
-                        metaInfo = uiMessage.message.metaInfo,
-                        finishReason = uiMessage.message.finishReason,
-                    ),
-                ),
-            )
+            return Completed(uiMessage = newUiMessage)
         }
 
         private fun ASTNode.updateCodeResult(
@@ -476,4 +547,4 @@ enum class AssistantStreamingMessageType {
     Reasoning, Content
 }
 
-fun Message.toUiMessage(display: Boolean = true): UiMessage = UiMessage.Koog(this, display)
+fun Message.toUiMessage(display: Boolean = true) = UiMessage.Koog(this, display)
