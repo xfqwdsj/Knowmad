@@ -24,8 +24,6 @@ import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.SerialName
@@ -174,9 +172,8 @@ object ScheduleTools {
     ) {
         override suspend fun execute(args: Args): Result {
             if (args.startDate == null && args.endDate == null) {
-                val semesters = withContext(Dispatchers.IO) {
-                    runCatching { dao.getAllSemesters() }
-                }.onFailure { logger.error(it) { "Failed to query all semesters from database" } }
+                val semesters = runCatching { dao.getAllSemesters() }
+                    .onFailure { logger.error(it) { "Failed to query all semesters from database" } }
                     .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_semesters_result_failure_reason_internal_error)) }
                 return Result.Success(semesters)
             }
@@ -194,9 +191,8 @@ object ScheduleTools {
             }
 
             val (startDate, endDate) = if (date1 <= date2) date1 to date2 else date2 to date1
-            val semesters = withContext(Dispatchers.IO) {
-                runCatching { dao.getSemestersInRange(startDate, endDate) }
-            }.onFailure { logger.error(it) { "Failed to query semesters from database" } }
+            val semesters = runCatching { dao.getSemestersInRange(startDate, endDate) }
+                .onFailure { logger.error(it) { "Failed to query semesters from database" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_semesters_result_failure_reason_internal_error)) }
             return Result.Success(semesters)
         }
@@ -240,9 +236,8 @@ object ScheduleTools {
     ) {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_semesters_result_failure_reason_empty_query)) }
-            val semesters = withContext(Dispatchers.IO) {
-                runCatching { dao.searchSemesters(args.query) }
-            }.onFailure { logger.error(it) { "Failed to search semesters" } }
+            val semesters = runCatching { dao.searchSemesters(args.query) }
+                .onFailure { logger.error(it) { "Failed to search semesters" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_semesters_result_failure_reason_internal_error)) }
             return Result.Success(semesters)
         }
@@ -314,9 +309,8 @@ object ScheduleTools {
                 endDate = endDate,
                 timeZone = timeZone,
             )
-            val inserted = withContext(Dispatchers.IO) {
-                runCatching { dao.insertSemester(semester) }
-            }.onFailure { logger.error(it) { "Failed to insert semester" } }
+            val inserted = runCatching { dao.insertSemester(semester) }
+                .onFailure { logger.error(it) { "Failed to insert semester" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_semester_result_failure_reason_internal_error)) }
             return if (inserted >= 0L) Result.Success(semester)
             else Result.Failure(resources.getString(R.string.llm_tool_schedule_create_semester_result_failure_reason_insert_failed))
@@ -386,9 +380,8 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             val semesterId = Uuid.parseOrNull(args.semesterId)
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_semester_result_failure_reason_invalid_semester_id))
-            val existingSemester = withContext(Dispatchers.IO) {
-                runCatching { dao.getSemesterById(semesterId) }
-            }.onFailure { logger.error(it) { "Failed to fetch existing semester" } }
+            val existingSemester = runCatching { dao.getSemesterById(semesterId) }
+                .onFailure { logger.error(it) { "Failed to fetch existing semester" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_semester_result_failure_reason_internal_error)) }
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_semester_result_failure_reason_not_found))
             val name = args.name ?: existingSemester.name
@@ -414,9 +407,8 @@ object ScheduleTools {
             if (newSemester == existingSemester) {
                 return Result.Success(existingSemester)
             }
-            val updated = withContext(Dispatchers.IO) {
-                runCatching { dao.updateSemester(newSemester) }
-            }.onFailure { logger.error(it) { "Failed to update semester" } }
+            val updated = runCatching { dao.updateSemester(newSemester) }
+                .onFailure { logger.error(it) { "Failed to update semester" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_semester_result_failure_reason_internal_error)) }
             return if (updated > 0) Result.Success(newSemester)
             else Result.Failure(resources.getString(R.string.llm_tool_schedule_update_semester_result_failure_reason_update_failed))
@@ -464,9 +456,8 @@ object ScheduleTools {
     ) {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { Result.Failure(resources.getString(R.string.llm_tool_schedule_search_courses_result_failure_reason_empty_query)) }
-            val courses = withContext(Dispatchers.IO) {
-                runCatching { dao.searchCourses(args.query) }
-            }.onFailure { logger.error(it) { "Failed to search courses" } }
+            val courses = runCatching { dao.searchCourses(args.query) }
+                .onFailure { logger.error(it) { "Failed to search courses" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_courses_result_failure_reason_internal_error)) }
             return Result.Success(courses)
         }
@@ -542,9 +533,8 @@ object ScheduleTools {
                         location = data.location,
                     )
                 }
-                val insertResults = withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllCourses(list) }
-                }.onFailure { logger.error(it) { "Failed to insert courses" } }
+                val insertResults = runCatching { dao.insertAllCourses(list) }
+                    .onFailure { logger.error(it) { "Failed to insert courses" } }
                     .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
                 val insertedList = (list.asSequence() zip insertResults.asSequence())
                     .filter {
@@ -581,9 +571,8 @@ object ScheduleTools {
                 instructor = instructor,
                 location = location,
             )
-            val inserted = withContext(Dispatchers.IO) {
-                runCatching { dao.insertCourse(course) }
-            }.onFailure { logger.error(it) { "Failed to insert course" } }
+            val inserted = runCatching { dao.insertCourse(course) }
+                .onFailure { logger.error(it) { "Failed to insert course" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_course_result_failure_reason_internal_error)) }
             return if (inserted >= 0L) Result.Success(
                 course = course,
@@ -713,9 +702,8 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             val courseId = Uuid.parseOrNull(args.courseId)
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_invalid_course_id))
-            val existingCourse = withContext(Dispatchers.IO) {
-                runCatching { dao.getCourseEntityById(courseId) }
-            }.onFailure { logger.error(it) { "Failed to fetch existing course" } }
+            val existingCourse = runCatching { dao.getCourseEntityById(courseId) }
+                .onFailure { logger.error(it) { "Failed to fetch existing course" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_internal_error)) }
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_not_found))
             val name = args.name ?: existingCourse.name
@@ -729,9 +717,8 @@ object ScheduleTools {
             if (newCourse == existingCourse) {
                 return Result.Success(existingCourse)
             }
-            val updated = withContext(Dispatchers.IO) {
-                runCatching { dao.updateCourse(newCourse) }
-            }.onFailure { logger.error(it) { "Failed to update course" } }
+            val updated = runCatching { dao.updateCourse(newCourse) }
+                .onFailure { logger.error(it) { "Failed to update course" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_internal_error)) }
             return if (updated > 0) Result.Success(newCourse)
             else Result.Failure(resources.getString(R.string.llm_tool_schedule_update_course_result_failure_reason_update_failed))
@@ -787,9 +774,8 @@ object ScheduleTools {
             val instant2 = runCatching { Instant.parse(args.endTime) }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_invalid_end_time)) }
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
-            val events = withContext(Dispatchers.IO) {
-                runCatching { dao.getEventsInRange(start, end) }
-            }.onFailure { logger.error(it) { "Failed to query events in range" } }
+            val events = runCatching { dao.getEventsInRange(start, end) }
+                .onFailure { logger.error(it) { "Failed to query events in range" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_query_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
         }
@@ -854,9 +840,8 @@ object ScheduleTools {
     ) {
         override suspend fun execute(args: Args): Result {
             args.query.ifBlank { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_empty_query)) }
-            val events = withContext(Dispatchers.IO) {
-                runCatching { dao.searchEventsJoinedCourses(args.query) }
-            }.onFailure { logger.error(it) { "Failed to search events" } }
+            val events = runCatching { dao.searchEventsJoinedCourses(args.query) }
+                .onFailure { logger.error(it) { "Failed to search events" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_search_events_result_failure_reason_internal_error)) }
             return Result.Success(events)
         }
@@ -971,9 +956,8 @@ object ScheduleTools {
                         priority = data.priority,
                     )
                 }
-                val insertResults = withContext(Dispatchers.IO) {
-                    runCatching { dao.insertAllEvents(list) }
-                }.onFailure { logger.error(it) { "Failed to insert events" } }
+                val insertResults = runCatching { dao.insertAllEvents(list) }
+                    .onFailure { logger.error(it) { "Failed to insert events" } }
                     .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
                 val insertedList = (list.asSequence() zip insertResults.asSequence())
                     .filter {
@@ -1028,9 +1012,8 @@ object ScheduleTools {
                 notes = args.notes,
                 priority = args.priority,
             )
-            val inserted = withContext(Dispatchers.IO) {
-                runCatching { dao.insertEvent(event) }
-            }.onFailure { logger.error(it) { "Failed to insert event" } }
+            val inserted = runCatching { dao.insertEvent(event) }
+                .onFailure { logger.error(it) { "Failed to insert event" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
             return if (inserted >= 0L) Result.Success(
                 event = event,
@@ -1402,9 +1385,8 @@ object ScheduleTools {
             val errors = mutableListOf<String>()
             val eventId = Uuid.parseOrNull(args.eventId)
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_event_id))
-            val existingEvent = withContext(Dispatchers.IO) {
-                runCatching { dao.getEventEntityById(eventId) }
-            }.onFailure { logger.error(it) { "Failed to fetch existing event" } }
+            val existingEvent = runCatching { dao.getEventEntityById(eventId) }
+                .onFailure { logger.error(it) { "Failed to fetch existing event" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
                 ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_not_found))
             val name = args.name ?: existingEvent.name
@@ -1438,9 +1420,8 @@ object ScheduleTools {
             if (newEvent == existingEvent) {
                 return Result.Success(existingEvent)
             }
-            val updated = withContext(Dispatchers.IO) {
-                runCatching { dao.updateEvent(newEvent) }
-            }.onFailure { logger.error(it) { "Failed to update event" } }
+            val updated = runCatching { dao.updateEvent(newEvent) }
+                .onFailure { logger.error(it) { "Failed to update event" } }
                 .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
             return if (updated > 0) Result.Success(
                 event = newEvent,

@@ -23,11 +23,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import com.kizitonwose.calendar.core.plusDays
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -75,7 +73,7 @@ class EventsDialogPageViewModel(
 
     fun onEdit(result: EventEditResult) {
         viewModelScope.launch {
-            val event = withContext(Dispatchers.IO) { result.applyWith(dao) }
+            val event = result.applyWith(dao)
             val iterator = backStack.listIterator()
             while (iterator.hasNext()) {
                 val entry = iterator.next()

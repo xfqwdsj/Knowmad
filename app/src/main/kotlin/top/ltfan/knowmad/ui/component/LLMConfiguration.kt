@@ -86,12 +86,10 @@ import androidx.paging.PagingSource
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
@@ -406,13 +404,11 @@ fun LLMConfigEditingDialog(
             provider.decryptedApiKey, provider.baseUrl,
         )
 
-        val apiModelIds = withContext(Dispatchers.IO) {
-            try {
-                client.models()
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                emptyList()
-            }
+        val apiModelIds = try {
+            client.models()
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            emptyList()
         }
 
         knownModelsMap.putAll(

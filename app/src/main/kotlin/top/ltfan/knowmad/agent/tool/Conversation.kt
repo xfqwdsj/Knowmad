@@ -24,8 +24,6 @@ import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 import top.ltfan.knowmad.R
@@ -71,12 +69,11 @@ object ConversationTools {
     ) {
         override suspend fun execute(args: Args): Boolean {
             val updatedConversation = conversation.copy(name = args.name)
-            runCatching {
-                withContext(Dispatchers.IO) { chatDao.updateConversation(updatedConversation) }
-            }.onFailure {
-                logger.error(it) { "Failed to update conversation name." }
-                return false
-            }
+            runCatching { chatDao.updateConversation(updatedConversation) }
+                .onFailure {
+                    logger.error(it) { "Failed to update conversation name." }
+                    return false
+                }
             return true
         }
 

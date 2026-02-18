@@ -34,12 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -171,16 +169,14 @@ class WizardPageViewModel(
             return
         }
 
-        val apiModelIds = withContext(Dispatchers.IO) {
-            try {
-                client.models().also {
-                    apiConfigurationError = false
-                }
-            } catch (e: Throwable) {
-                apiConfigurationError = true
-                e.printStackTrace()
-                emptyList()
+        val apiModelIds = try {
+            client.models().also {
+                apiConfigurationError = false
             }
+        } catch (e: Throwable) {
+            apiConfigurationError = true
+            e.printStackTrace()
+            emptyList()
         }
 
         knownModelsMap.clear()
@@ -264,45 +260,43 @@ class WizardPageViewModel(
         }
         firstMessageGenerationStarted = true
 
-        withContext(Dispatchers.IO) {
-            try {
-                val instant = Clock.System.now()
-                firstJoinedTime = instant
-                val datetime = instant.formatAgentTime()
-                val head = resources.getString(R.string.llm_prompt_head)
-                val intro = resources.getString(R.string.llm_prompt_intro_long)
-                val body = resources.getString(R.string.llm_prompt_setup_wizard_finish, datetime)
-                val prompt = resources.getString(R.string.llm_prompt_concat, head, intro, body)
-                val response = client.executeStreaming(
-                    prompt = prompt("first-message") {
-                        system(prompt)
-                    },
-                    model = model,
-                )
-                firstMessageGenerated = false
-                firstMessageFlow.value = ""
-                response.collect {
-                    when (it) {
-                        is StreamFrame.Append -> {
-                            firstMessageFlow.value += it.text
-                        }
-
-                        is StreamFrame.End -> {
-                            firstMessageGenerated = true
-                        }
-
-                        is StreamFrame.ToolCall -> {}
+        try {
+            val instant = Clock.System.now()
+            firstJoinedTime = instant
+            val datetime = instant.formatAgentTime()
+            val head = resources.getString(R.string.llm_prompt_head)
+            val intro = resources.getString(R.string.llm_prompt_intro_long)
+            val body = resources.getString(R.string.llm_prompt_setup_wizard_finish, datetime)
+            val prompt = resources.getString(R.string.llm_prompt_concat, head, intro, body)
+            val response = client.executeStreaming(
+                prompt = prompt("first-message") {
+                    system(prompt)
+                },
+                model = model,
+            )
+            firstMessageGenerated = false
+            firstMessageFlow.value = ""
+            response.collect {
+                when (it) {
+                    is StreamFrame.Append -> {
+                        firstMessageFlow.value += it.text
                     }
-                    apiConfigurationError = false
+
+                    is StreamFrame.End -> {
+                        firstMessageGenerated = true
+                    }
+
+                    is StreamFrame.ToolCall -> {}
                 }
-                firstMessageGenerated = true
                 apiConfigurationError = false
-            } catch (e: Throwable) {
-                apiConfigurationError = true
-                e.printStackTrace()
-            } finally {
-                firstMessageGenerationStarted = false
             }
+            firstMessageGenerated = true
+            apiConfigurationError = false
+        } catch (e: Throwable) {
+            apiConfigurationError = true
+            e.printStackTrace()
+        } finally {
+            firstMessageGenerationStarted = false
         }
     }
 

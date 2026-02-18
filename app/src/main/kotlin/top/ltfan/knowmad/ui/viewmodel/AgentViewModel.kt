@@ -59,7 +59,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
@@ -151,9 +150,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     init {
         viewModelScope.launch {
             val id = currentConversationIdFlow.filterNotNull().first()
-            withContext(Dispatchers.IO) {
-                chatDao.getConversationById(id)
-            } ?: run { currentConversationId = null }
+            chatDao.getConversationById(id) ?: run { currentConversationId = null }
         }
     }
 
@@ -247,9 +244,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     }
 
     suspend fun autoGenerateConversationName(conversation: ConversationEntity): String? {
-        val chatMessages = withContext(Dispatchers.IO) {
-            chatDao.getAllMessagesByConversationOnce(conversation.id)
-        }.asSequence()
+        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversation.id)
+            .asSequence()
             .flatMap { it.message.parts }
             .filterIsInstance<UiMessage.Koog>()
             .map { it.message }
@@ -325,9 +321,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val selectedModelEntity by selectedModelEntityFlow.collectAsState()
     private val currentAgentService = selectedModelEntityFlow
         .map { model ->
-            val client = model?.let {
-                withContext(Dispatchers.IO) { llmConfigDao.getProviderById(it.providerConfigId) }
-            }?.toClient() ?: return@map null
+            val client = model?.let { llmConfigDao.getProviderById(it.providerConfigId) }
+                ?.toClient() ?: return@map null
             getChatAgentService(
                 promptExecutor = SingleLLMPromptExecutor(client),
                 model = model.model,
@@ -415,13 +410,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     contents = newContents,
                 )
                 val newEntity = newState.toEntity()
-                withContext(Dispatchers.IO) {
-                    runCatching { chatDao.updateMessage(newEntity) }
-                }.onFailure {
-                    logger.error(it) { "Failed to update message with new code result." }
-                }.onSuccess {
-                    assistantMessageStates[state.id] = newState
-                }
+                runCatching { chatDao.updateMessage(newEntity) }
+                    .onFailure {
+                        logger.error(it) { "Failed to update message with new code result." }
+                    }.onSuccess {
+                        assistantMessageStates[state.id] = newState
+                    }
             }
             runCodeMutex.unlock()
             runCodeEnabled = true
@@ -451,15 +445,11 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 createNewConversation()
             }
             val conversationId = currentConversationId ?: return@launch
-            var conversation = withContext(Dispatchers.IO) {
-                chatDao.getConversationById(conversationId)
-            } ?: return@launch
+            var conversation = chatDao.getConversationById(conversationId) ?: return@launch
             val eventFlow =
                 MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
             val service = currentAgentService.filterNotNull().first()
-            val databaseMessages = withContext(Dispatchers.IO) {
-                chatDao.getAllMessagesByConversationOnce(conversationId)
-            }
+            val databaseMessages = chatDao.getAllMessagesByConversationOnce(conversationId)
             val messages = databaseMessages.flatMap { entity ->
                 entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
             }
@@ -478,43 +468,39 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
             )
             var firstMessageId = databaseMessages.firstOrNull()?.message?.id
-            withContext(Dispatchers.IO) {
-                system?.let {
-                    chatDao.insertMessage(
-                        message = MessageEntity(
-                            conversationId = conversationId,
-                            parts = listOf(it.toUiMessage()),
-                            role = MessageEntityRole.System,
-                            generatedBy = null,
-                        ).also { newMessage ->
-                            firstMessageId = newMessage.id
-                        },
-                        fileIds = emptyList(),
-                    )
-                }
+            system?.let {
                 chatDao.insertMessage(
                     message = MessageEntity(
                         conversationId = conversationId,
-                        parts = listOf(
-                            environmentMessage.toUiMessage(display = false),
-                            Message.User(
-                                parts = parts,
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ).toUiMessage(),
-                        ),
-                        role = MessageEntityRole.User,
+                        parts = listOf(it.toUiMessage()),
+                        role = MessageEntityRole.System,
                         generatedBy = null,
-                    ),
+                    ).also { newMessage ->
+                        firstMessageId = newMessage.id
+                    },
                     fileIds = emptyList(),
                 )
             }
+            chatDao.insertMessage(
+                message = MessageEntity(
+                    conversationId = conversationId,
+                    parts = listOf(
+                        environmentMessage.toUiMessage(display = false),
+                        Message.User(
+                            parts = parts,
+                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                        ).toUiMessage(),
+                    ),
+                    role = MessageEntityRole.User,
+                    generatedBy = null,
+                ),
+                fileIds = emptyList(),
+            )
             if (databaseMessages.isEmpty()) {
                 viewModelScope.launch {
                     val title = autoGenerateConversationName(conversation) ?: return@launch
                     val newConversation = conversation.copy(name = title)
-                    withContext(Dispatchers.IO) {
-                        chatDao.updateConversation(newConversation)
-                    }
+                    chatDao.updateConversation(newConversation)
                     conversation = newConversation
                 }
             }
@@ -527,9 +513,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 remend = remend,
                 onQueryConversationMetaInfo = {
                     firstMessageId?.let { firstMessageId ->
-                        withContext(Dispatchers.IO) {
-                            chatDao.getMessageById(firstMessageId)
-                        }
+                        chatDao.getMessageById(firstMessageId)
                     }?.parts?.firstOrNull { it is MetaInfo } as MetaInfo?
                 },
                 onUpdateConversationMetaInfo = { newMetaInfo ->
@@ -538,23 +522,19 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             logger.warn { "First message id is null when updating conversation meta info." }
                             return@launch
                         }
-                        val oldMessage = withContext(Dispatchers.IO) {
-                            chatDao.getMessageById(firstMessageId)
-                        } ?: run {
+                        val oldMessage = chatDao.getMessageById(firstMessageId) ?: run {
                             logger.warn { "Old message not found when updating conversation meta info." }
                             return@launch
                         }
                         val oldUiMessages = oldMessage.parts.filterNot { it is MetaInfo }
-                        withContext(Dispatchers.IO) {
-                            chatDao.updateMessage(
-                                oldMessage.copy(
-                                    parts = buildList {
-                                        newMetaInfo?.let { add(it) }
-                                        addAll(oldUiMessages)
-                                    },
-                                ),
-                            )
-                        }
+                        chatDao.updateMessage(
+                            oldMessage.copy(
+                                parts = buildList {
+                                    newMetaInfo?.let { add(it) }
+                                    addAll(oldUiMessages)
+                                },
+                            ),
+                        )
                     }
                 },
                 onUpdate = {
@@ -566,34 +546,28 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         while (updateChannel.receiveCatching().isSuccess) {
                             logger.trace { "Dropping update event before completing message." }
                         }
-                        withContext(Dispatchers.IO) {
-                            chatDao.updateMessage(it.toEntity())
-                        }
+                        chatDao.updateMessage(it.toEntity())
                         logger.debug { "Message completed." }
                     }
                 },
             ).apply {
-                withContext(Dispatchers.IO) {
-                    chatDao.insertMessageAndGet(
-                        message = toEntity(),
-                        fileIds = emptyList(),
-                    ) {
-                        it ?: return@insertMessageAndGet
-                        parentId = it.message.parentId
-                        depth = it.message.depth
-                        streamingMessages[it.message.id] = AssistantStreamingMessage(
-                            state = this@apply,
-                            branchIndex = it.branchIndex,
-                            branchCount = it.branchCount,
-                        )
-                    }
+                chatDao.insertMessageAndGet(
+                    message = toEntity(),
+                    fileIds = emptyList(),
+                ) {
+                    it ?: return@insertMessageAndGet
+                    parentId = it.message.parentId
+                    depth = it.message.depth
+                    streamingMessages[it.message.id] = AssistantStreamingMessage(
+                        state = this@apply,
+                        branchIndex = it.branchIndex,
+                        branchCount = it.branchCount,
+                    )
                 }
             }
             launch {
                 while (updateChannel.receiveCatching().isSuccess) {
-                    val result = withContext(Dispatchers.IO) {
-                        chatDao.updateMessage(state.toEntity())
-                    }
+                    val result = chatDao.updateMessage(state.toEntity())
                     if (result < 1) {
                         logger.warn { "Failed to update message with id ${state.id} on streaming update." }
                         cancellationEvent.send(Unit)
@@ -723,9 +697,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         val conversation = ConversationEntity(
             name = application.getString(R.string.agent_conversation_label_new),
         )
-        withContext(Dispatchers.IO) {
-            application.appDatabase.chatDao().insertConversation(conversation)
-        }
+        application.appDatabase.chatDao().insertConversation(conversation)
         currentConversationId = conversation.id
     }
 

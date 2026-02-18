@@ -117,9 +117,7 @@ class DataStoreMutableStateProperty<T>(
     private val writeRequest = Channel<T>(Channel.CONFLATED)
 
     private suspend fun write(value: T) {
-        withContext(Dispatchers.IO) {
-            dataStore.updateData { value }
-        }
+        dataStore.updateData { value }
     }
 
     init {
