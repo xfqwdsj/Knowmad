@@ -115,12 +115,7 @@ suspend fun ContentPart.load(): ContentPart = when (this) {
         val url = URLBuilder(content.url).build()
         if (url.protocol.name != ATTACHMENT_STORAGE_SCHEME) return this
 
-        val uuid = try {
-            Uuid.parse(url.host)
-        } catch (e: IllegalArgumentException) {
-            e.printStackTrace()
-            return this
-        }
+        val uuid = Uuid.parseOrNull(url.host) ?: return this
 
         val entity = viewModel.application.appDatabase.fileDao()
             .getFileById(uuid) ?: return this
