@@ -180,4 +180,5 @@
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
     <string name="schedule_import_from_icalendar_error_course_insertion_failed">Error occurred while inserting course %s into database</string>
     <string name="schedule_import_from_icalendar_error_event_insertion_failed">Error occurred while inserting event %s into database</string>
+    <string name="schedule_sync_account_name">Knowmad Schedule Sync</string>
 </resources>
