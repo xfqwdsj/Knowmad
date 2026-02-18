@@ -285,6 +285,10 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         // TODO: UI feedback for that
     }
 
+    fun calendarBackToToday() {
+        calendarState.selectedDate = calendarState.today
+    }
+
     var mathJaxRendererState by mutableStateOf<MathJaxRendererState>(Initializing)
 
     init {

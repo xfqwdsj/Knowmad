@@ -20,7 +20,7 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -195,9 +195,10 @@ class MainPage : Page() {
                                         .getDisplayName(FULL, configuration.locales[0]),
                                 )
                             },
-                            modifier = Modifier.clickable(
+                            modifier = Modifier.combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
+                                onDoubleClick = viewModel::calendarBackToToday,
                                 onClick = { viewModel.showMonthBottomSheet = true },
                             ),
                         )
