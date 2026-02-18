@@ -20,8 +20,10 @@ package top.ltfan.knowmad.util
 
 import android.content.res.AssetManager
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 @Immutable
 class RemendProcessor(
@@ -32,7 +34,9 @@ class RemendProcessor(
     private val initialized = MutableStateFlow(false)
 
     suspend fun initialize() {
-        val code = assets.open("remend/index.js").bufferedReader().use { it.readText() }
+        val code = withContext(Dispatchers.IO) {
+            assets.open("remend/index.js").bufferedReader().use { it.readText() }
+        }
         quickJs.addModule(name = "remend", code)
         quickJs.evaluate<Unit>(
             "import remend from 'remend'; globalThis.remend = remend; void 0;",

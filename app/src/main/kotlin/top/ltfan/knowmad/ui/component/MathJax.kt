@@ -57,11 +57,13 @@ import com.dokar.quickjs.converter.JsObjectConverter
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -252,8 +254,9 @@ class MathJaxRenderer(
 
     suspend fun loadScripts(scripts: List<String>) {
         scripts.forEach { file ->
-            val code = assets.open("mathjax/$file").bufferedReader().use { it.readText() } +
-                    ";void 0;"
+            val code = withContext(Dispatchers.IO) {
+                assets.open("mathjax/$file").bufferedReader().use { it.readText() }
+            } + ";void 0;"
             quickJs.evaluate<Unit>(code, filename = file)
         }
     }
@@ -273,8 +276,10 @@ class MathJaxRenderer(
         extensions?.forEach { extension ->
             if (extension in deferred) return@forEach
             try {
-                val content = assets.open("mathjax/input/tex/extensions/$extension")
-                    .bufferedReader().use { it.readText() } + ";void 0;"
+                val content = withContext(Dispatchers.IO) {
+                    assets.open("mathjax/input/tex/extensions/$extension")
+                        .bufferedReader().use { it.readText() }
+                } + ";void 0;"
                 quickJs.evaluate<Unit>(content, "mathjax/input/tex/extensions/$extension")
                 successful.add(extension)
             } catch (e: Exception) {
@@ -284,8 +289,10 @@ class MathJaxRenderer(
         extensions?.forEach { extension ->
             if (extension !in deferred) return@forEach
             try {
-                val content = assets.open("mathjax/input/tex/extensions/$extension")
-                    .bufferedReader().use { reader -> reader.readText() } + ";void 0;"
+                val content = withContext(Dispatchers.IO) {
+                    assets.open("mathjax/input/tex/extensions/$extension")
+                        .bufferedReader().use { reader -> reader.readText() }
+                } + ";void 0;"
                 quickJs.evaluate<Unit>(content, "mathjax/input/tex/extensions/$extension")
             } catch (e: Exception) {
                 logger.warn(e) { "Failed to load deferred MathJax extension: $extension" }
@@ -415,8 +422,9 @@ fun jsDelivrMathJaxLoadExternal(
         segments.first() to segments.drop(1).joinToString("/")
     }
     logger?.debug { "Resolved to name=$name, file=$file" }
-    val version = assets.open("mathjax/version").bufferedReader()
-        .use { it.readText().trim() }
+    val version = withContext(Dispatchers.IO) {
+        assets.open("mathjax/version").bufferedReader().use { it.readText() }
+    }.trim()
     logger?.debug { "Using MathJax version: $version" }
     client.get("$baseUrl/$name@$version/$file").bodyAsText()
         .also { logger?.debug { "Fetched ${it.take(30)}" } }
