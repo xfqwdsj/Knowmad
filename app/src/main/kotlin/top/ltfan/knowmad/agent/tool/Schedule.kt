@@ -44,7 +44,6 @@ import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
-import top.ltfan.knowmad.data.schedule.importFromICalendar
 import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toReminders
@@ -124,7 +123,7 @@ object ScheduleTools {
                     iCalendar = iCal,
                     resources = resources,
                     errors = errors,
-                ) ?: error("Failed to import events from the iCalendar data")
+                ).getOrThrow()
 
                 if (events.isEmpty()) {
                     error("No valid events found in the iCalendar data")

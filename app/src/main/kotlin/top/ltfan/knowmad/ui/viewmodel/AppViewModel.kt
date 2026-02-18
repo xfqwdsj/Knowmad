@@ -46,7 +46,6 @@ import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.exportICalendar
-import top.ltfan.knowmad.data.schedule.importFromICalendar
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toICalendar
 import top.ltfan.knowmad.data.schedule.writeCustomized
@@ -230,9 +229,10 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         val events = scheduleDao.importFromICalendar(
             iCalendar = iCal,
             resources = application.resources,
-            onQueryFailed = { return Result.failure(it) },
             errors = errors,
-        ) ?: return Result.failure(Throwable("Failed to import events from the iCalendar data"))
+        ).getOrElse {
+            return Result.failure(it)
+        }
 
         if (events.isEmpty()) {
             return Result.failure(Throwable("No valid events found in the iCalendar data"))

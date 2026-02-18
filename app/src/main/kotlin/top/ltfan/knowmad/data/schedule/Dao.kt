@@ -26,10 +26,14 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import biweekly.ICalendar
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
+import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.FtsDao
+import top.ltfan.knowmad.util.Logger
+import top.ltfan.omnical.icalendar.biweekly.format
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -367,5 +371,329 @@ interface ScheduleDao : FtsDao {
         return searchOriginalEventsJoinedCourses(query).map {
             it.toEvent(getRecurrenceRuleByCombinedEvent(it))
         }
+    }
+
+    @Transaction
+    suspend fun importFromICalendar(
+        iCalendar: ICalendar,
+        resources: Resources,
+        onSemesterShadowed: (existing: SemesterEntity, new: SemesterEntity) -> SemesterEntity = { _, new -> new },
+        onSemesterConflict: (existing: SemesterEntity, new: SemesterEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+        onRecurrenceRuleShadowed: (existing: RecurrenceRuleEntity, new: RecurrenceRuleEntity) -> RecurrenceRuleEntity = { _, new -> new },
+        onRecurrenceRuleConflict: (existing: RecurrenceRuleEntity, new: RecurrenceRuleEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+        onCourseShadowed: (existing: CourseEntity, new: CourseEntity) -> CourseEntity = { _, new -> new },
+        onCourseConflict: (existing: CourseEntity, new: CourseEntity) -> ScheduleImportOnConflict = { _, _ -> Skip },
+        errors: MutableList<String>? = null,
+    ): Result<List<Event>> {
+        val logger = Logger("ImportICalendar")
+
+        val events = iCalendar.parse(
+            onNewRecurrenceRule = { rule, course -> course?.copy(recurrenceRuleId = rule.id) },
+            errors = errors,
+        ).toMutableList()
+
+        if (events.isEmpty()) return Result.failure(Throwable("No valid events found in the provided iCalendar data"))
+
+        run {
+            val semestersToInsert = mutableMapOf<Uuid, SemesterEntity>()
+            val semesterIds = hashSetOf<Uuid>()
+            val eventsSemesterIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+            events.asSequence()
+                .onEachIndexed { index, event ->
+                    eventsSemesterIndex
+                        .getOrPut(event.semester.id) { mutableListOf() }
+                        .add(index)
+                }
+                .map { it.semester }
+                .forEach { semester ->
+                    semestersToInsert[semester.id]?.let { existing ->
+                        if (existing == semester) return@let
+                        semestersToInsert[semester.id] = onSemesterShadowed(existing, semester)
+                    } ?: run {
+                        semestersToInsert[semester.id] = semester
+                        semesterIds += semester.id
+                    }
+                }
+
+            runCatching { getAllSemestersByIds(semesterIds.toList()) }
+                .onFailure { logger.error(it) { "Failed to query existing semesters from database" } }
+                .getOrElse {
+                    return Result.failure(
+                        Throwable(
+                            "Failed to query existing semesters from database",
+                            it,
+                        ),
+                    )
+                }
+                .forEach { existing ->
+                    errors?.removeAll { it.contains(existing.id.toString()) }
+                    val semester = semestersToInsert[existing.id]?.let { new ->
+                        when (onSemesterConflict(existing, new)) {
+                            Replace -> {
+                                runCatching { updateSemester(new) }
+                                    .onFailure {
+                                        logger.error(it) { "Failed to update semester ${new.name}" }
+                                        return Result.failure(
+                                            Throwable(
+                                                "Failed to update semester ${new.name}",
+                                                it,
+                                            ),
+                                        )
+                                    }
+                                new
+                            }
+
+                            Skip -> null
+                        }
+                    } ?: existing
+                    semestersToInsert -= semester.id
+                    eventsSemesterIndex[semester.id]?.forEach { index ->
+                        events[index] = when (val event = events[index]) {
+                            is Course -> event.copy(semester = semester)
+                            is Normal -> event.copy(semester = semester)
+                        }
+                    }
+                }
+
+            runCatching { insertAllSemesters(semestersToInsert.values.toList()) }
+                .onFailure { logger.error(it) { "Failed to insert semesters" } }
+                .getOrElse { return Result.failure(Throwable("Failed to insert semesters", it)) }
+                .asSequence()
+                .zip(semestersToInsert.asSequence())
+                .forEach { (result, entry) ->
+                    val (_, semester) = entry
+                    if (result < 0L) {
+                        errors?.add(
+                            resources.getString(
+                                R.string.schedule_import_from_icalendar_error_semester_insertion_failed,
+                                semester.name,
+                            ),
+                        )
+                        semesterIds -= semester.id
+                    }
+                }
+
+            events.retainAll { it.semester.id in semesterIds }
+        }
+
+        if (events.isEmpty()) return Result.failure(Throwable("All events have invalid or conflicting semesters"))
+
+        run {
+            val recurrenceRulesToInsert = mutableMapOf<Uuid, RecurrenceRuleEntity>()
+            val recurrenceRuleIds = mutableSetOf<Uuid>()
+            val eventsRecurrenceRuleIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+            events.asSequence()
+                .onEachIndexed { index, event ->
+                    val ruleId = event.recurrenceRule?.id ?: return@onEachIndexed
+                    eventsRecurrenceRuleIndex
+                        .getOrPut(ruleId) { mutableListOf() }
+                        .add(index)
+                }
+                .mapNotNull { it.recurrenceRule }
+                .forEach { rule ->
+                    recurrenceRulesToInsert[rule.id]?.let { existing ->
+                        if (existing == rule) return@let
+                        recurrenceRulesToInsert[rule.id] = onRecurrenceRuleShadowed(existing, rule)
+                    } ?: run {
+                        recurrenceRulesToInsert[rule.id] = rule
+                        recurrenceRuleIds += rule.id
+                    }
+                }
+
+            runCatching { getAllRecurrenceRulesByIds(recurrenceRuleIds.toList()) }
+                .onFailure { logger.error(it) { "Failed to query existing recurrence rules from database" } }
+                .getOrElse {
+                    return Result.failure(
+                        Throwable(
+                            "Failed to query existing recurrence rules from database",
+                            it,
+                        ),
+                    )
+                }
+                .forEach { existing ->
+                    errors?.removeAll { it.contains(existing.id.toString()) }
+                    val rule = recurrenceRulesToInsert[existing.id]?.let { new ->
+                        when (onRecurrenceRuleConflict(existing, new)) {
+                            Replace -> {
+                                runCatching { updateRecurrenceRule(new) }
+                                    .onFailure {
+                                        logger.error(it) { "Failed to update recurrence rule ${new.rule.format()}" }
+                                        return Result.failure(
+                                            Throwable(
+                                                "Failed to update recurrence rule ${new.rule.format()}",
+                                                it,
+                                            ),
+                                        )
+                                    }
+                                new
+                            }
+
+                            Skip -> null
+                        }
+                    } ?: existing
+                    recurrenceRulesToInsert -= rule.id
+                    eventsRecurrenceRuleIndex[rule.id]?.forEach { index ->
+                        events[index] = when (val event = events[index]) {
+                            is Course -> event.copy(recurrenceRule = rule)
+                            is Normal -> event.copy(recurrenceRule = rule)
+                        }
+                    }
+                }
+
+            runCatching { insertAllRecurrenceRules(recurrenceRulesToInsert.values.toList()) }
+                .onFailure { logger.error(it) { "Failed to insert recurrence rules" } }
+                .getOrElse {
+                    return Result.failure(
+                        Throwable(
+                            "Failed to insert recurrence rules",
+                            it,
+                        ),
+                    )
+                }
+                .asSequence()
+                .zip(recurrenceRulesToInsert.asSequence())
+                .forEach { (result, entry) ->
+                    val (_, rule) = entry
+                    if (result < 0L) {
+                        errors?.add(
+                            resources.getString(
+                                R.string.schedule_import_from_icalendar_error_recurrence_rule_insertion_failed,
+                                rule.rule.format(),
+                            ),
+                        )
+                        recurrenceRuleIds -= rule.id
+                    }
+                }
+
+            events.retainAll { event ->
+                val ruleId = event.recurrenceRule?.id ?: return@retainAll true
+                ruleId in recurrenceRuleIds
+            }
+        }
+
+        if (events.isEmpty()) return Result.failure(Throwable("All events have invalid or conflicting recurrence rules"))
+
+        run {
+            val coursesToInsert = mutableMapOf<Uuid, CourseEntity>()
+            val courseIds = hashSetOf<Uuid>()
+            val eventsCourseIndex = mutableMapOf<Uuid, MutableList<Int>>()
+
+            events.asSequence()
+                .onEachIndexed { index, event ->
+                    if (event !is Course) return@onEachIndexed
+                    eventsCourseIndex
+                        .getOrPut(event.course.id) { mutableListOf() }
+                        .add(index)
+                }
+                .filterIsInstance<Event.Course>()
+                .map { it.course }
+                .forEach { course ->
+                    coursesToInsert[course.id]?.let { existing ->
+                        if (existing == course) return@let
+                        coursesToInsert[course.id] = onCourseShadowed(existing, course)
+                    } ?: run {
+                        coursesToInsert[course.id] = course
+                        courseIds += course.id
+                    }
+                }
+
+            runCatching { getAllCoursesByIds(courseIds.toList()) }
+                .onFailure { logger.error(it) { "Failed to query existing courses from database" } }
+                .getOrElse {
+                    return Result.failure(
+                        Throwable(
+                            "Failed to query existing courses from database",
+                            it,
+                        ),
+                    )
+                }
+                .forEach { (existingCourse, existingSemester) ->
+                    errors?.removeAll { it.contains(existingCourse.id.toString()) }
+                    val courseToInsert = coursesToInsert[existingCourse.id] ?: return@forEach
+                    coursesToInsert -= existingCourse.id
+                    if (courseToInsert.semesterId != existingSemester.id) {
+                        errors?.add(
+                            resources.getString(
+                                R.string.schedule_import_from_icalendar_error_course_semester_mismatch,
+                                existingCourse.name,
+                            ),
+                        )
+                        courseIds -= existingCourse.id
+                        return@forEach
+                    }
+                    val course = courseToInsert.let { new ->
+                        when (onCourseConflict(existingCourse, new)) {
+                            Replace -> {
+                                runCatching { updateCourse(new) }
+                                    .onFailure {
+                                        logger.error(it) { "Failed to update course ${new.name}" }
+                                        return Result.failure(
+                                            Throwable(
+                                                "Failed to update course ${new.name}",
+                                                it,
+                                            ),
+                                        )
+                                    }
+                                new
+                            }
+
+                            Skip -> null
+                        }
+                    } ?: existingCourse
+                    eventsCourseIndex[course.id]?.forEach { index ->
+                        events[index] = when (val event = events[index]) {
+                            is Course -> event.copy(course = course)
+                            else -> event
+                        }
+                    }
+                }
+
+            runCatching { insertAllCourses(coursesToInsert.values.toList()) }
+                .onFailure { logger.error(it) { "Failed to insert courses" } }
+                .getOrElse { return Result.failure(Throwable("Failed to insert courses", it)) }
+                .asSequence()
+                .zip(coursesToInsert.asSequence())
+                .forEach { (result, entry) ->
+                    val (_, course) = entry
+                    if (result < 0L) {
+                        errors?.add(
+                            resources.getString(
+                                R.string.schedule_import_from_icalendar_error_course_insertion_failed,
+                                course.name,
+                            ),
+                        )
+                        courseIds -= course.id
+                    }
+                }
+
+            events.retainAll { event ->
+                if (event !is Course) return@retainAll true
+                event.course.id in courseIds
+            }
+        }
+
+        if (events.isEmpty()) return Result.failure(Throwable("All events have invalid or conflicting courses"))
+
+        val eventsInsertionResults = runCatching { insertAllEvents(events.map { it.toEntity() }) }
+            .onFailure { logger.error(it) { "Failed to insert events" } }
+            .getOrElse { return Result.failure(Throwable("Failed to insert events", it)) }
+
+        for (i in eventsInsertionResults.indices.reversed()) {
+            if (eventsInsertionResults[i] < 0L) {
+                errors?.add(
+                    resources.getString(
+                        R.string.schedule_import_from_icalendar_error_event_insertion_failed,
+                        events[i].name,
+                    ),
+                )
+                events.removeAt(i)
+            }
+        }
+
+        if (events.isEmpty()) return Result.failure(Throwable("All events failed to be inserted into the database"))
+
+        return Result.success(events)
     }
 }
