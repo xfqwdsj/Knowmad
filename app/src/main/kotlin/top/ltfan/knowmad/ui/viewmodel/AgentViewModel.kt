@@ -38,6 +38,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -446,137 +447,142 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 createNewConversation()
             }
             val conversationId = currentConversationId ?: return@launch
-            var conversation = chatDao.getConversationById(conversationId) ?: return@launch
-            val eventFlow =
-                MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
-            val service = currentAgentService.filterNotNull().first()
-            val databaseMessages = chatDao.getAllMessagesByConversationOnce(conversationId)
-            val messages = databaseMessages.flatMap { entity ->
-                entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
-            }
-            val system = if (messages.isEmpty()) {
-                Message.System(
-                    content = application.resources.chatSystemPrompt,
+            application.appDatabase.withTransaction {
+                var conversation =
+                    chatDao.getConversationById(conversationId) ?: return@withTransaction null
+                val eventFlow =
+                    MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
+                val service = currentAgentService.filterNotNull().first()
+                val databaseMessages = chatDao.getAllMessagesByConversationOnce(conversationId)
+                val messages = databaseMessages.flatMap { entity ->
+                    entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
+                }
+                val system = if (messages.isEmpty()) {
+                    Message.System(
+                        content = application.resources.chatSystemPrompt,
+                        metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    )
+                } else null
+                val environmentMessage = Message.User(
+                    content = application.getString(
+                        R.string.llm_prompt_environment,
+                        Clock.System.now().formatAgentTime(),
+                        conversation.name,
+                    ),
                     metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
                 )
-            } else null
-            val environmentMessage = Message.User(
-                content = application.getString(
-                    R.string.llm_prompt_environment,
-                    Clock.System.now().formatAgentTime(),
-                    conversation.name,
-                ),
-                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-            )
-            system?.let {
+                system?.let {
+                    chatDao.insertMessage(
+                        message = MessageEntity(
+                            conversationId = conversationId,
+                            parts = listOf(it.toUiMessage()),
+                            role = MessageEntityRole.System,
+                            generatedBy = null,
+                        ),
+                        fileIds = emptyList(),
+                    )
+                }
                 chatDao.insertMessage(
                     message = MessageEntity(
                         conversationId = conversationId,
-                        parts = listOf(it.toUiMessage()),
-                        role = MessageEntityRole.System,
+                        parts = listOf(
+                            environmentMessage.toUiMessage(display = false),
+                            Message.User(
+                                parts = parts,
+                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            ).toUiMessage(),
+                        ),
+                        role = MessageEntityRole.User,
                         generatedBy = null,
                     ),
                     fileIds = emptyList(),
                 )
-            }
-            chatDao.insertMessage(
-                message = MessageEntity(
-                    conversationId = conversationId,
-                    parts = listOf(
-                        environmentMessage.toUiMessage(display = false),
-                        Message.User(
-                            parts = parts,
-                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                        ).toUiMessage(),
-                    ),
-                    role = MessageEntityRole.User,
-                    generatedBy = null,
-                ),
-                fileIds = emptyList(),
-            )
-            if (databaseMessages.isEmpty()) {
-                viewModelScope.launch {
-                    val title = autoGenerateConversationName(conversation) ?: return@launch
-                    val newConversation = conversation.copy(name = title)
-                    chatDao.updateConversation(newConversation)
-                    conversation = newConversation
-                }
-            }
-            val updateChannel = Channel<Unit>(Channel.CONFLATED)
-            val state = AssistantMessageState.Streaming(
-                eventFlow = eventFlow,
-                model = service.agentConfig.model,
-                coroutineScope = viewModelScope,
-                conversationId = conversationId,
-                remend = remend,
-                onQueryConversationMeta = {
-                    chatDao.getConversationById(conversationId)?.also {
-                        conversation = it
-                    }?.meta ?: ConversationMeta()
-                },
-                onUpdateConversationMeta = { newMeta ->
-                    launch {
-                        val newConversation = conversation.copy(meta = newMeta)
+                if (databaseMessages.isEmpty()) {
+                    viewModelScope.launch {
+                        val title = autoGenerateConversationName(conversation) ?: return@launch
+                        val newConversation = conversation.copy(name = title)
                         chatDao.updateConversation(newConversation)
                         conversation = newConversation
                     }
-                },
-                onUpdate = {
-                    updateChannel.trySend(Unit)
-                },
-                onCompleted = {
-                    viewModelScope.launch {
-                        updateChannel.close()
-                        while (updateChannel.receiveCatching().isSuccess) {
-                            logger.trace { "Dropping update event before completing message." }
-                        }
-                        chatDao.updateMessage(it.toEntity())
-                        logger.debug { "Message completed." }
-                    }
-                },
-            ).apply {
-                chatDao.insertMessageAndGet(
-                    message = toEntity(),
-                    fileIds = emptyList(),
-                ) {
-                    it ?: return@insertMessageAndGet
-                    parentId = it.message.parentId
-                    depth = it.message.depth
-                    streamingMessages[it.message.id] = AssistantStreamingMessage(
-                        state = this@apply,
-                        branchIndex = it.branchIndex,
-                        branchCount = it.branchCount,
-                    )
                 }
-            }
-            launch {
-                while (updateChannel.receiveCatching().isSuccess) {
-                    val result = chatDao.updateMessage(state.toEntity())
-                    if (result < 1) {
-                        logger.warn { "Failed to update message with id ${state.id} on streaming update." }
-                        cancellationEvent.send(Unit)
-                    }
-                }
-            }
-            logger.debug { "Running agent..." }
-            chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
-            runAgent(
-                state = state,
-                eventFlow = eventFlow,
-            ) {
-                service.run(
-                    userParts = parts,
+                val updateChannel = Channel<Unit>(Channel.CONFLATED)
+                val state = AssistantMessageState.Streaming(
                     eventFlow = eventFlow,
-                    state = state,
-                    tools = chatAgentToolRegistry + ToolRegistry {
-                        conversationTools(application.resources, conversation, chatDao)
+                    model = service.agentConfig.model,
+                    coroutineScope = viewModelScope,
+                    conversationId = conversationId,
+                    remend = remend,
+                    onQueryConversationMeta = {
+                        chatDao.getConversationById(conversationId)?.also {
+                            conversation = it
+                        }?.meta ?: ConversationMeta()
                     },
-                    buildPrompt = {
-                        system?.let { message(it) } ?: messages(messages)
-                        message(environmentMessage)
+                    onUpdateConversationMeta = { newMeta ->
+                        launch {
+                            val newConversation = conversation.copy(meta = newMeta)
+                            chatDao.updateConversation(newConversation)
+                            conversation = newConversation
+                        }
                     },
-                )
-            }
+                    onUpdate = {
+                        updateChannel.trySend(Unit)
+                    },
+                    onCompleted = {
+                        viewModelScope.launch {
+                            updateChannel.close()
+                            while (updateChannel.receiveCatching().isSuccess) {
+                                logger.trace { "Dropping update event before completing message." }
+                            }
+                            chatDao.updateMessage(it.toEntity())
+                            logger.debug { "Message completed." }
+                        }
+                    },
+                ).apply {
+                    chatDao.insertMessageAndGet(
+                        message = toEntity(),
+                        fileIds = emptyList(),
+                    ) {
+                        it ?: return@insertMessageAndGet
+                        parentId = it.message.parentId
+                        depth = it.message.depth
+                        streamingMessages[it.message.id] = AssistantStreamingMessage(
+                            state = this@apply,
+                            branchIndex = it.branchIndex,
+                            branchCount = it.branchCount,
+                        )
+                    }
+                }
+                launch {
+                    while (updateChannel.receiveCatching().isSuccess) {
+                        val result = chatDao.updateMessage(state.toEntity())
+                        if (result < 1) {
+                            logger.warn { "Failed to update message with id ${state.id} on streaming update." }
+                            cancellationEvent.send(Unit)
+                        }
+                    }
+                }
+                logger.debug { "Running agent..." }
+                chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
+                suspend {
+                    runAgent(
+                        state = state,
+                        eventFlow = eventFlow,
+                    ) {
+                        service.run(
+                            userParts = parts,
+                            eventFlow = eventFlow,
+                            state = state,
+                            tools = chatAgentToolRegistry + ToolRegistry {
+                                conversationTools(application.resources, conversation, chatDao)
+                            },
+                            buildPrompt = {
+                                system?.let { message(it) } ?: messages(messages)
+                                message(environmentMessage)
+                            },
+                        )
+                    }
+                }
+            }?.invoke()
         }
     }
 
