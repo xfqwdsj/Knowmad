@@ -47,8 +47,9 @@ data class ConversationEntity(
     val name: String,
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
+    val meta: ConversationMeta = ConversationMeta(),
     val createdAt: Instant = Clock.System.now(),
-    val updatedAt: Instant = Clock.System.now(),
+    val updatedAt: Instant = createdAt,
 )
 
 @Entity(

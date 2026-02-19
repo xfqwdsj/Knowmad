@@ -1,0 +1,1716 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 260200,
+    "identityHash": "91ad4244a29febef225744cb7d8d1601",
+    "entities": [
+      {
+        "tableName": "LLMProviderConfigEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `provider` BLOB NOT NULL, `name` TEXT NOT NULL, `apiKey` BLOB NOT NULL, `iv` BLOB, `rank` BLOB NOT NULL, `baseUrl` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "provider",
+            "columnName": "provider",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "apiKey",
+            "columnName": "apiKey",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iv",
+            "columnName": "iv",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "rank",
+            "columnName": "rank",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrl",
+            "columnName": "baseUrl",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_LLMProviderConfigEntity_rank",
+            "unique": true,
+            "columnNames": [
+              "rank"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_LLMProviderConfigEntity_rank` ON `${TABLE_NAME}` (`rank`)"
+          }
+        ]
+      },
+      {
+        "tableName": "LLMConfigEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `providerConfigId` BLOB NOT NULL, `model` BLOB NOT NULL, `name` TEXT NOT NULL, `rank` BLOB NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`providerConfigId`) REFERENCES `LLMProviderConfigEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerConfigId",
+            "columnName": "providerConfigId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "model",
+            "columnName": "model",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rank",
+            "columnName": "rank",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_LLMConfigEntity_providerConfigId_rank",
+            "unique": true,
+            "columnNames": [
+              "providerConfigId",
+              "rank"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_LLMConfigEntity_providerConfigId_rank` ON `${TABLE_NAME}` (`providerConfigId`, `rank`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "LLMProviderConfigEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "providerConfigId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "SemesterEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `startDate` INTEGER NOT NULL, `endDate` INTEGER NOT NULL, `timeZone` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDate",
+            "columnName": "startDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDate",
+            "columnName": "endDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeZone",
+            "columnName": "timeZone",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_SemesterEntity_startDate",
+            "unique": false,
+            "columnNames": [
+              "startDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_SemesterEntity_startDate` ON `${TABLE_NAME}` (`startDate`)"
+          },
+          {
+            "name": "index_SemesterEntity_startDate_endDate",
+            "unique": false,
+            "columnNames": [
+              "startDate",
+              "endDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_SemesterEntity_startDate_endDate` ON `${TABLE_NAME}` (`startDate`, `endDate`)"
+          }
+        ]
+      },
+      {
+        "tableName": "SemesterFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, tokenize=icu, content=`SemesterEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "SemesterEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_SemesterFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `SemesterEntity` BEGIN DELETE FROM `SemesterFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_SemesterFtsEntity_BEFORE_DELETE BEFORE DELETE ON `SemesterEntity` BEGIN DELETE FROM `SemesterFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_SemesterFtsEntity_AFTER_UPDATE AFTER UPDATE ON `SemesterEntity` BEGIN INSERT INTO `SemesterFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_SemesterFtsEntity_AFTER_INSERT AFTER INSERT ON `SemesterEntity` BEGIN INSERT INTO `SemesterFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      },
+      {
+        "tableName": "RecurrenceRuleEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `rule` BLOB NOT NULL, `startTime` INTEGER NOT NULL, `duration` INTEGER NOT NULL, `exceptions` BLOB NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rule",
+            "columnName": "rule",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startTime",
+            "columnName": "startTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duration",
+            "columnName": "duration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exceptions",
+            "columnName": "exceptions",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "CourseEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `semesterId` BLOB NOT NULL, `recurrenceRuleId` BLOB, `name` TEXT NOT NULL, `instructor` TEXT NOT NULL, `location` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`semesterId`) REFERENCES `SemesterEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`recurrenceRuleId`) REFERENCES `RecurrenceRuleEntity`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "semesterId",
+            "columnName": "semesterId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceRuleId",
+            "columnName": "recurrenceRuleId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructor",
+            "columnName": "instructor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_CourseEntity_semesterId",
+            "unique": false,
+            "columnNames": [
+              "semesterId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_CourseEntity_semesterId` ON `${TABLE_NAME}` (`semesterId`)"
+          },
+          {
+            "name": "index_CourseEntity_recurrenceRuleId",
+            "unique": false,
+            "columnNames": [
+              "recurrenceRuleId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_CourseEntity_recurrenceRuleId` ON `${TABLE_NAME}` (`recurrenceRuleId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "SemesterEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "semesterId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "RecurrenceRuleEntity",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "recurrenceRuleId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "CourseFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `instructor` TEXT NOT NULL, `location` TEXT NOT NULL, tokenize=icu, content=`CourseEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructor",
+            "columnName": "instructor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "CourseEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_CourseFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `CourseEntity` BEGIN DELETE FROM `CourseFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_CourseFtsEntity_BEFORE_DELETE BEFORE DELETE ON `CourseEntity` BEGIN DELETE FROM `CourseFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_CourseFtsEntity_AFTER_UPDATE AFTER UPDATE ON `CourseEntity` BEGIN INSERT INTO `CourseFtsEntity`(`docid`, `name`, `instructor`, `location`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`instructor`, NEW.`location`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_CourseFtsEntity_AFTER_INSERT AFTER INSERT ON `CourseEntity` BEGIN INSERT INTO `CourseFtsEntity`(`docid`, `name`, `instructor`, `location`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`instructor`, NEW.`location`); END"
+        ]
+      },
+      {
+        "tableName": "EventEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `semesterId` BLOB NOT NULL, `courseId` BLOB, `recurrenceRuleId` BLOB, `name` TEXT, `instructor` TEXT, `location` TEXT, `color` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `reminders` BLOB NOT NULL, `notes` TEXT, `priority` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`semesterId`) REFERENCES `SemesterEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`courseId`) REFERENCES `CourseEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`recurrenceRuleId`) REFERENCES `RecurrenceRuleEntity`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "semesterId",
+            "columnName": "semesterId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "courseId",
+            "columnName": "courseId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "recurrenceRuleId",
+            "columnName": "recurrenceRuleId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "instructor",
+            "columnName": "instructor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startTime",
+            "columnName": "startTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endTime",
+            "columnName": "endTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reminders",
+            "columnName": "reminders",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "priority",
+            "columnName": "priority",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_EventEntity_semesterId",
+            "unique": false,
+            "columnNames": [
+              "semesterId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_semesterId` ON `${TABLE_NAME}` (`semesterId`)"
+          },
+          {
+            "name": "index_EventEntity_courseId",
+            "unique": false,
+            "columnNames": [
+              "courseId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_courseId` ON `${TABLE_NAME}` (`courseId`)"
+          },
+          {
+            "name": "index_EventEntity_recurrenceRuleId",
+            "unique": false,
+            "columnNames": [
+              "recurrenceRuleId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_recurrenceRuleId` ON `${TABLE_NAME}` (`recurrenceRuleId`)"
+          },
+          {
+            "name": "index_EventEntity_endTime",
+            "unique": false,
+            "columnNames": [
+              "endTime"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_endTime` ON `${TABLE_NAME}` (`endTime`)"
+          },
+          {
+            "name": "index_EventEntity_startTime_priority_endTime_createdAt",
+            "unique": false,
+            "columnNames": [
+              "startTime",
+              "priority",
+              "endTime",
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_startTime_priority_endTime_createdAt` ON `${TABLE_NAME}` (`startTime`, `priority`, `endTime`, `createdAt`)"
+          },
+          {
+            "name": "index_EventEntity_startTime_priority_endTime_createdAt_endTime",
+            "unique": false,
+            "columnNames": [
+              "startTime",
+              "priority",
+              "endTime",
+              "createdAt",
+              "endTime"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_startTime_priority_endTime_createdAt_endTime` ON `${TABLE_NAME}` (`startTime`, `priority`, `endTime`, `createdAt`, `endTime`)"
+          },
+          {
+            "name": "index_EventEntity_semesterId_startTime_priority_endTime_createdAt",
+            "unique": false,
+            "columnNames": [
+              "semesterId",
+              "startTime",
+              "priority",
+              "endTime",
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventEntity_semesterId_startTime_priority_endTime_createdAt` ON `${TABLE_NAME}` (`semesterId`, `startTime`, `priority`, `endTime`, `createdAt`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "SemesterEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "semesterId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "CourseEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "courseId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "RecurrenceRuleEntity",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "recurrenceRuleId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "EventFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT, `instructor` TEXT, `location` TEXT, `notes` TEXT, tokenize=icu, content=`EventEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "instructor",
+            "columnName": "instructor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "EventEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_EventFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `EventEntity` BEGIN DELETE FROM `EventFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_EventFtsEntity_BEFORE_DELETE BEFORE DELETE ON `EventEntity` BEGIN DELETE FROM `EventFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_EventFtsEntity_AFTER_UPDATE AFTER UPDATE ON `EventEntity` BEGIN INSERT INTO `EventFtsEntity`(`docid`, `name`, `instructor`, `location`, `notes`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`instructor`, NEW.`location`, NEW.`notes`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_EventFtsEntity_AFTER_INSERT AFTER INSERT ON `EventEntity` BEGIN INSERT INTO `EventFtsEntity`(`docid`, `name`, `instructor`, `location`, `notes`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`instructor`, NEW.`location`, NEW.`notes`); END"
+        ]
+      },
+      {
+        "tableName": "FileEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `type` TEXT NOT NULL, `hash` BLOB NOT NULL, `name` TEXT, `path` TEXT NOT NULL, `format` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `size` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hash",
+            "columnName": "hash",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "path",
+            "columnName": "path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mimeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "size",
+            "columnName": "size",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_FileEntity_type_hash",
+            "unique": true,
+            "columnNames": [
+              "type",
+              "hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_FileEntity_type_hash` ON `${TABLE_NAME}` (`type`, `hash`)"
+          },
+          {
+            "name": "index_FileEntity_path",
+            "unique": true,
+            "columnNames": [
+              "path"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_FileEntity_path` ON `${TABLE_NAME}` (`path`)"
+          },
+          {
+            "name": "index_FileEntity_type_size",
+            "unique": false,
+            "columnNames": [
+              "type",
+              "size"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_FileEntity_type_size` ON `${TABLE_NAME}` (`type`, `size`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ConversationEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `isPinned` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `meta` BLOB NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPinned",
+            "columnName": "isPinned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "meta",
+            "columnName": "meta",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ConversationEntity_isArchived_isPinned_updatedAt",
+            "unique": false,
+            "columnNames": [
+              "isArchived",
+              "isPinned",
+              "updatedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ConversationEntity_isArchived_isPinned_updatedAt` ON `${TABLE_NAME}` (`isArchived`, `isPinned`, `updatedAt`)"
+          },
+          {
+            "name": "index_ConversationEntity_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ConversationEntity_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "MessageEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `conversationId` BLOB NOT NULL, `parentId` BLOB, `depth` INTEGER NOT NULL, `parts` TEXT NOT NULL, `role` TEXT NOT NULL, `searchableContent` TEXT NOT NULL, `generatedBy` BLOB, `completed` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `ConversationEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentId`) REFERENCES `MessageEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationId",
+            "columnName": "conversationId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentId",
+            "columnName": "parentId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "depth",
+            "columnName": "depth",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parts",
+            "columnName": "parts",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchableContent",
+            "columnName": "searchableContent",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatedBy",
+            "columnName": "generatedBy",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "completed",
+            "columnName": "completed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_MessageEntity_conversationId_parentId_depth",
+            "unique": false,
+            "columnNames": [
+              "conversationId",
+              "parentId",
+              "depth"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageEntity_conversationId_parentId_depth` ON `${TABLE_NAME}` (`conversationId`, `parentId`, `depth`)"
+          },
+          {
+            "name": "index_MessageEntity_conversationId_createdAt",
+            "unique": false,
+            "columnNames": [
+              "conversationId",
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageEntity_conversationId_createdAt` ON `${TABLE_NAME}` (`conversationId`, `createdAt`)"
+          },
+          {
+            "name": "index_MessageEntity_parentId_createdAt_id",
+            "unique": false,
+            "columnNames": [
+              "parentId",
+              "createdAt",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageEntity_parentId_createdAt_id` ON `${TABLE_NAME}` (`parentId`, `createdAt`, `id`)"
+          },
+          {
+            "name": "index_MessageEntity_conversationId_id_parentId_depth",
+            "unique": false,
+            "columnNames": [
+              "conversationId",
+              "id",
+              "parentId",
+              "depth"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageEntity_conversationId_id_parentId_depth` ON `${TABLE_NAME}` (`conversationId`, `id`, `parentId`, `depth`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ConversationEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "conversationId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "MessageEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "MessageBranchSelectionEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `conversationId` BLOB NOT NULL, `parentId` BLOB NOT NULL, `selectedChildId` BLOB NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `ConversationEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentId`) REFERENCES `MessageEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`selectedChildId`) REFERENCES `MessageEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationId",
+            "columnName": "conversationId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentId",
+            "columnName": "parentId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selectedChildId",
+            "columnName": "selectedChildId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_MessageBranchSelectionEntity_parentId",
+            "unique": false,
+            "columnNames": [
+              "parentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageBranchSelectionEntity_parentId` ON `${TABLE_NAME}` (`parentId`)"
+          },
+          {
+            "name": "index_MessageBranchSelectionEntity_selectedChildId",
+            "unique": false,
+            "columnNames": [
+              "selectedChildId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageBranchSelectionEntity_selectedChildId` ON `${TABLE_NAME}` (`selectedChildId`)"
+          },
+          {
+            "name": "index_MessageBranchSelectionEntity_parentId_selectedChildId",
+            "unique": false,
+            "columnNames": [
+              "parentId",
+              "selectedChildId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageBranchSelectionEntity_parentId_selectedChildId` ON `${TABLE_NAME}` (`parentId`, `selectedChildId`)"
+          },
+          {
+            "name": "index_MessageBranchSelectionEntity_conversationId_selectedChildId_parentId",
+            "unique": false,
+            "columnNames": [
+              "conversationId",
+              "selectedChildId",
+              "parentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageBranchSelectionEntity_conversationId_selectedChildId_parentId` ON `${TABLE_NAME}` (`conversationId`, `selectedChildId`, `parentId`)"
+          },
+          {
+            "name": "index_MessageBranchSelectionEntity_conversationId_parentId",
+            "unique": true,
+            "columnNames": [
+              "conversationId",
+              "parentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_MessageBranchSelectionEntity_conversationId_parentId` ON `${TABLE_NAME}` (`conversationId`, `parentId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ConversationEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "conversationId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "MessageEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "MessageEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "selectedChildId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "MessageFileCrossRef",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageId` BLOB NOT NULL, `fileId` BLOB NOT NULL, PRIMARY KEY(`messageId`, `fileId`), FOREIGN KEY(`messageId`) REFERENCES `MessageEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`fileId`) REFERENCES `FileEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "messageId",
+            "columnName": "messageId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileId",
+            "columnName": "fileId",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "messageId",
+            "fileId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_MessageFileCrossRef_messageId",
+            "unique": false,
+            "columnNames": [
+              "messageId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageFileCrossRef_messageId` ON `${TABLE_NAME}` (`messageId`)"
+          },
+          {
+            "name": "index_MessageFileCrossRef_fileId",
+            "unique": false,
+            "columnNames": [
+              "fileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_MessageFileCrossRef_fileId` ON `${TABLE_NAME}` (`fileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "MessageEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "messageId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "FileEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "fileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "MessageFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`searchableContent` TEXT NOT NULL, tokenize=icu, content=`MessageEntity`)",
+        "fields": [
+          {
+            "fieldPath": "searchableContent",
+            "columnName": "searchableContent",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "MessageEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_MessageFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `MessageEntity` BEGIN DELETE FROM `MessageFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_MessageFtsEntity_BEFORE_DELETE BEFORE DELETE ON `MessageEntity` BEGIN DELETE FROM `MessageFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_MessageFtsEntity_AFTER_UPDATE AFTER UPDATE ON `MessageEntity` BEGIN INSERT INTO `MessageFtsEntity`(`docid`, `searchableContent`) VALUES (NEW.`rowid`, NEW.`searchableContent`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_MessageFtsEntity_AFTER_INSERT AFTER INSERT ON `MessageEntity` BEGIN INSERT INTO `MessageFtsEntity`(`docid`, `searchableContent`) VALUES (NEW.`rowid`, NEW.`searchableContent`); END"
+        ]
+      },
+      {
+        "tableName": "PlaceEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `points` BLOB NOT NULL, `westernLongitude` REAL NOT NULL, `easternLongitude` REAL NOT NULL, `northernLatitude` REAL NOT NULL, `southernLatitude` REAL NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "points",
+            "columnName": "points",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "westernLongitude",
+            "columnName": "westernLongitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "easternLongitude",
+            "columnName": "easternLongitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "northernLatitude",
+            "columnName": "northernLatitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "southernLatitude",
+            "columnName": "southernLatitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_PlaceEntity_westernLongitude",
+            "unique": false,
+            "columnNames": [
+              "westernLongitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceEntity_westernLongitude` ON `${TABLE_NAME}` (`westernLongitude`)"
+          },
+          {
+            "name": "index_PlaceEntity_easternLongitude",
+            "unique": false,
+            "columnNames": [
+              "easternLongitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceEntity_easternLongitude` ON `${TABLE_NAME}` (`easternLongitude`)"
+          },
+          {
+            "name": "index_PlaceEntity_northernLatitude",
+            "unique": false,
+            "columnNames": [
+              "northernLatitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceEntity_northernLatitude` ON `${TABLE_NAME}` (`northernLatitude`)"
+          },
+          {
+            "name": "index_PlaceEntity_southernLatitude",
+            "unique": false,
+            "columnNames": [
+              "southernLatitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceEntity_southernLatitude` ON `${TABLE_NAME}` (`southernLatitude`)"
+          }
+        ]
+      },
+      {
+        "tableName": "PlaceFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, tokenize=icu, content=`PlaceEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "PlaceEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_PlaceFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `PlaceEntity` BEGIN DELETE FROM `PlaceFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_PlaceFtsEntity_BEFORE_DELETE BEFORE DELETE ON `PlaceEntity` BEGIN DELETE FROM `PlaceFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_PlaceFtsEntity_AFTER_UPDATE AFTER UPDATE ON `PlaceEntity` BEGIN INSERT INTO `PlaceFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_PlaceFtsEntity_AFTER_INSERT AFTER INSERT ON `PlaceEntity` BEGIN INSERT INTO `PlaceFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      },
+      {
+        "tableName": "NodeEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT, `type` TEXT NOT NULL, `longitude` REAL NOT NULL, `latitude` REAL NOT NULL, `altitude` REAL, `zOrder` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "altitude",
+            "columnName": "altitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "zOrder",
+            "columnName": "zOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_NodeEntity_type",
+            "unique": false,
+            "columnNames": [
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_NodeEntity_type` ON `${TABLE_NAME}` (`type`)"
+          },
+          {
+            "name": "index_NodeEntity_longitude",
+            "unique": false,
+            "columnNames": [
+              "longitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_NodeEntity_longitude` ON `${TABLE_NAME}` (`longitude`)"
+          },
+          {
+            "name": "index_NodeEntity_latitude",
+            "unique": false,
+            "columnNames": [
+              "latitude"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_NodeEntity_latitude` ON `${TABLE_NAME}` (`latitude`)"
+          },
+          {
+            "name": "index_NodeEntity_zOrder",
+            "unique": false,
+            "columnNames": [
+              "zOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_NodeEntity_zOrder` ON `${TABLE_NAME}` (`zOrder`)"
+          }
+        ]
+      },
+      {
+        "tableName": "NodeFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT, tokenize=icu, content=`NodeEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "NodeEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_NodeFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `NodeEntity` BEGIN DELETE FROM `NodeFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_NodeFtsEntity_BEFORE_DELETE BEFORE DELETE ON `NodeEntity` BEGIN DELETE FROM `NodeFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_NodeFtsEntity_AFTER_UPDATE AFTER UPDATE ON `NodeEntity` BEGIN INSERT INTO `NodeFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_NodeFtsEntity_AFTER_INSERT AFTER INSERT ON `NodeEntity` BEGIN INSERT INTO `NodeFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      },
+      {
+        "tableName": "PlaceNodeCrossRef",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`placeId` BLOB NOT NULL, `nodeId` BLOB NOT NULL, PRIMARY KEY(`placeId`, `nodeId`), FOREIGN KEY(`placeId`) REFERENCES `PlaceEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`nodeId`) REFERENCES `NodeEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "placeId",
+            "columnName": "placeId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nodeId",
+            "columnName": "nodeId",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "placeId",
+            "nodeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_PlaceNodeCrossRef_placeId",
+            "unique": false,
+            "columnNames": [
+              "placeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceNodeCrossRef_placeId` ON `${TABLE_NAME}` (`placeId`)"
+          },
+          {
+            "name": "index_PlaceNodeCrossRef_nodeId",
+            "unique": false,
+            "columnNames": [
+              "nodeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_PlaceNodeCrossRef_nodeId` ON `${TABLE_NAME}` (`nodeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "PlaceEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "placeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "NodeEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "nodeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "RoadEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `fromNodeId` BLOB NOT NULL, `toNodeId` BLOB NOT NULL, `length` REAL NOT NULL, `maxSpeed` REAL NOT NULL, `width` REAL NOT NULL, `isOneWay` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`fromNodeId`) REFERENCES `NodeEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`toNodeId`) REFERENCES `NodeEntity`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromNodeId",
+            "columnName": "fromNodeId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toNodeId",
+            "columnName": "toNodeId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "length",
+            "columnName": "length",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxSpeed",
+            "columnName": "maxSpeed",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isOneWay",
+            "columnName": "isOneWay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_RoadEntity_fromNodeId",
+            "unique": false,
+            "columnNames": [
+              "fromNodeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_RoadEntity_fromNodeId` ON `${TABLE_NAME}` (`fromNodeId`)"
+          },
+          {
+            "name": "index_RoadEntity_toNodeId",
+            "unique": false,
+            "columnNames": [
+              "toNodeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_RoadEntity_toNodeId` ON `${TABLE_NAME}` (`toNodeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "NodeEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "fromNodeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "NodeEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "toNodeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "RoadFtsEntity",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, tokenize=icu, content=`RoadEntity`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "icu",
+          "tokenizerArgs": [],
+          "contentTable": "RoadEntity",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_RoadFtsEntity_BEFORE_UPDATE BEFORE UPDATE ON `RoadEntity` BEGIN DELETE FROM `RoadFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_RoadFtsEntity_BEFORE_DELETE BEFORE DELETE ON `RoadEntity` BEGIN DELETE FROM `RoadFtsEntity` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_RoadFtsEntity_AFTER_UPDATE AFTER UPDATE ON `RoadEntity` BEGIN INSERT INTO `RoadFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_RoadFtsEntity_AFTER_INSERT AFTER INSERT ON `RoadEntity` BEGIN INSERT INTO `RoadFtsEntity`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '91ad4244a29febef225744cb7d8d1601')"
+    ]
+  }
+}

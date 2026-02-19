@@ -141,6 +141,12 @@ fun ContentPart.Attachment.updateContent(newContent: AttachmentContent) = when (
     is Video -> copy(content = newContent)
 }
 
+@Serializable
+@Immutable
+data class ConversationMeta(
+    val gatheredTools: Set<String> = emptySet(),
+)
+
 sealed interface MessageWithBranchInfo {
     /** 1-based */
     val branchIndex: Int

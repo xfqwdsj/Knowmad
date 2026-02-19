@@ -22,14 +22,14 @@ import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import androidx.room.TypeConverter
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
+import top.ltfan.knowmad.data.chat.ConversationMeta
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.geo.Wgs84Point
 import top.ltfan.knowmad.data.schedule.Reminders
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Json
@@ -59,16 +59,6 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toLocalDate(data: Long): LocalDate {
         return LocalDate.fromEpochDays(data)
-    }
-
-    @TypeConverter
-    fun fromLocalDateTime(data: LocalDateTime): String {
-        return data.format(LocalDateTime.Formats.ISO)
-    }
-
-    @TypeConverter
-    fun toLocalDateTime(data: String): LocalDateTime {
-        return LocalDateTime.parse(data, LocalDateTime.Formats.ISO)
     }
 
     @TypeConverter
@@ -109,6 +99,16 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toDuration(data: Long): Duration {
         return data.milliseconds
+    }
+
+    @TypeConverter
+    fun fromWgs84PointList(data: List<Wgs84Point>): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toWgs84PointList(data: ByteArray): List<Wgs84Point> {
+        return Cbor.decodeFromByteArray(data)
     }
 
     @TypeConverter
@@ -168,6 +168,16 @@ object AppDatabaseConverters {
 
     @TypeConverter
     fun toLLModel(data: ByteArray): LLModel {
+        return Cbor.decodeFromByteArray(data)
+    }
+
+    @TypeConverter
+    fun fromConversationMeta(data: ConversationMeta): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toConversationMeta(data: ByteArray): ConversationMeta {
         return Cbor.decodeFromByteArray(data)
     }
 

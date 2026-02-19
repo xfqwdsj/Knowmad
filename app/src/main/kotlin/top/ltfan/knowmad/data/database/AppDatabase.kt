@@ -34,6 +34,14 @@ import top.ltfan.knowmad.data.chat.MessageFileCrossRef
 import top.ltfan.knowmad.data.chat.MessageFtsEntity
 import top.ltfan.knowmad.data.file.FileDao
 import top.ltfan.knowmad.data.file.FileEntity
+import top.ltfan.knowmad.data.geo.GeoDao
+import top.ltfan.knowmad.data.geo.NodeEntity
+import top.ltfan.knowmad.data.geo.NodeFtsEntity
+import top.ltfan.knowmad.data.geo.PlaceEntity
+import top.ltfan.knowmad.data.geo.PlaceFtsEntity
+import top.ltfan.knowmad.data.geo.PlaceNodeCrossRef
+import top.ltfan.knowmad.data.geo.RoadEntity
+import top.ltfan.knowmad.data.geo.RoadFtsEntity
 import top.ltfan.knowmad.data.llm.LLMConfigDao
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
@@ -63,8 +71,15 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         MessageBranchSelectionEntity::class,
         MessageFileCrossRef::class,
         MessageFtsEntity::class,
+        PlaceEntity::class,
+        PlaceFtsEntity::class,
+        NodeEntity::class,
+        NodeFtsEntity::class,
+        PlaceNodeCrossRef::class,
+        RoadEntity::class,
+        RoadFtsEntity::class,
     ],
-    version = 1,
+    version = 260200,
 )
 @TypeConverters(AppDatabaseConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -72,6 +87,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun scheduleDao(): ScheduleDao
     abstract fun fileDao(): FileDao
     abstract fun chatDao(): ChatDao
+    abstract fun geoDao(): GeoDao
 
     companion object : DatabaseCompanion<AppDatabase> {
         override val databaseName = "db"
