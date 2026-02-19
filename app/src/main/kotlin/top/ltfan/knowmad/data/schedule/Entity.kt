@@ -159,8 +159,16 @@ data class CourseFtsEntity(
         Index("courseId"),
         Index("recurrenceRuleId"),
         Index(
+            "endTime",
+            orders = [DESC],
+        ),
+        Index(
             "startTime", "priority", "endTime", "createdAt",
             orders = [ASC, ASC, DESC, ASC],
+        ),
+        Index(
+            "startTime", "priority", "endTime", "createdAt", "endTime",
+            orders = [ASC, ASC, DESC, ASC, DESC],
         ),
         Index(
             "semesterId", "startTime", "priority", "endTime", "createdAt",

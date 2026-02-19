@@ -213,6 +213,25 @@ interface ScheduleDao : FtsDao {
         }
     }
 
+    @Transaction
+    @Query(
+        """
+            SELECT * FROM EventEntity
+            WHERE updatedAt > :lastUpdate
+            ORDER BY
+                startTime ASC,
+                priority ASC,
+                endTime DESC,
+                createdAt ASC
+    """,
+    )
+    suspend fun getAllCombinedEventsAfter(lastUpdate: Instant): List<CombinedEvent>
+
+    @Transaction
+    suspend fun getAllEventsWithoutRecurrenceRulesAfter(lastUpdate: Instant): List<Event> {
+        return getAllCombinedEventsAfter(lastUpdate).map { it.toEvent() }
+    }
+
     @Query("SELECT * FROM EventEntity WHERE id = :id")
     suspend fun getEventEntityById(id: Uuid): EventEntity?
 
