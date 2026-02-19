@@ -98,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 +"AFTER $trigger ON `$currentEntity`"
                                 +"WHEN OLD.recurrenceRuleId IS NOT NULL"
                                 if (trigger.startsWith("UPDATE")) {
-                                    +"AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)"
+                                    +"AND (NEW.recurrenceRuleId IS NOT OLD.recurrenceRuleId)"
                                 }
 
                                 +"BEGIN"
