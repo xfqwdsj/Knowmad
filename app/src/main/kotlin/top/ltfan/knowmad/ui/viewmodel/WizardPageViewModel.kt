@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.systemPrompt
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
@@ -264,10 +265,10 @@ class WizardPageViewModel(
             val instant = Clock.System.now()
             firstJoinedTime = instant
             val datetime = instant.formatAgentTime()
-            val head = resources.getString(R.string.llm_prompt_head)
-            val intro = resources.getString(R.string.llm_prompt_intro_long)
-            val body = resources.getString(R.string.llm_prompt_setup_wizard_finish, datetime)
-            val prompt = resources.getString(R.string.llm_prompt_concat, head, intro, body)
+            val prompt = resources.systemPrompt(
+                taskId = R.string.llm_prompt_setup_wizard_finish,
+                taskFormatArgs = arrayOf(datetime),
+            )
             val response = client.executeStreaming(
                 prompt = prompt("first-message") {
                     system(prompt)

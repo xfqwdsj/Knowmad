@@ -20,15 +20,37 @@ package top.ltfan.knowmad.agent
 
 import android.content.res.Resources
 import androidx.annotation.StringRes
+import kotlinx.datetime.TimeZone
 import top.ltfan.knowmad.R
+import java.util.Locale
 
-fun Resources.systemPrompt(
-    @StringRes headId: Int,
-    @StringRes introId: Int,
+@Suppress("NOTHING_TO_INLINE")
+inline fun Resources.systemPrompt(
     @StringRes taskId: Int,
-) = getString(
-    R.string.llm_prompt_concat,
-    getString(headId),
-    getString(introId),
-    getString(taskId),
-)
+    taskFormatArgs: Array<Any> = emptyArray(),
+    @StringRes headId: Int = R.string.llm_prompt_head,
+    headFormatArgs: Array<Any> = emptyArray(),
+    @StringRes introId: Int = R.string.llm_prompt_intro_short,
+    introFormatArgs: Array<Any> = emptyArray(),
+    environment: String? = environmentSystemPrompt(),
+) = buildString {
+    if (environment != null) {
+        appendLine(environment)
+        appendLine()
+    }
+    appendLine(getString(headId).trimIndent().format(*headFormatArgs))
+    appendLine()
+    appendLine(getString(introId).trimIndent().format(*introFormatArgs))
+    appendLine()
+    appendLine(getString(taskId).trimIndent().format(*taskFormatArgs))
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Resources.environmentSystemPrompt(
+    locale: Locale = Locale.getDefault(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+) = getString(R.string.llm_prompt_environment_system).trimIndent()
+    .format(
+        locale.toLanguageTag(),
+        timeZone.id,
+    )

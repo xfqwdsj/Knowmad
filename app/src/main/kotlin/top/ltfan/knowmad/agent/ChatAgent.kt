@@ -234,9 +234,8 @@ fun getChatAgentService(
 
 val Resources.chatSystemPrompt
     inline get() = systemPrompt(
-        R.string.llm_prompt_head,
-        R.string.llm_prompt_intro_medium,
-        R.string.llm_agent_chat_prompt,
+        taskId = R.string.llm_agent_chat_prompt,
+        environment = null,
     )
 
 suspend fun ChatAgentService.create(

@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,12 +53,7 @@ fun updateScheduleFromWebAgentService(
     promptExecutor = promptExecutor,
     llmModel = llmModel,
     strategy = updateScheduleFromWebStrategy(resources),
-    systemPrompt = run {
-        val head = resources.getString(R.string.llm_prompt_head)
-        val intro = resources.getString(R.string.llm_prompt_intro_short)
-        val task = resources.getString(R.string.llm_agent_update_schedule_from_web_prompt)
-        resources.getString(R.string.llm_prompt_concat, head, intro, task)
-    },
+    systemPrompt = resources.systemPrompt(R.string.llm_agent_update_schedule_from_web_prompt),
     toolRegistry = ToolRegistry {
 
     },

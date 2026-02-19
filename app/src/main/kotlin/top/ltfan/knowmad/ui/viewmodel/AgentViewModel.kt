@@ -66,6 +66,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.ChatAgentRerun
 import top.ltfan.knowmad.agent.CodeRunnerTool
 import top.ltfan.knowmad.agent.chatSystemPrompt
+import top.ltfan.knowmad.agent.environmentSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
 import top.ltfan.knowmad.agent.runPromptForSimpleResult
@@ -246,16 +247,19 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     }
 
     suspend fun autoGenerateConversationName(conversation: ConversationEntity): String? {
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversation.id)
+        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversation.id).reversed()
             .asSequence()
             .flatMap { it.message.parts }
             .filterIsInstance<UiMessage.Koog>()
+            .filter { it.display }
             .map { it.message }
             .filterNot { message -> message is Message.System }
-            .joinToString("\n\n") { it.content }
+            .fold("") { acc, message ->
+                if (acc.length >= 2000) return@fold acc
+                val content = message.content.replace("\\s+".toRegex(), " ")
+                "[${message.role}] $content\n" + acc
+            }
             .trim()
-            .replace("\\s+".toRegex(), " ")
-            .takeLast(2000)
             .ifBlank { return null }
 
         val service = currentAgentService.value ?: return null // TODO: use custom executor
@@ -263,6 +267,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         val model = service.agentConfig.model
 
         val prompt = prompt("conversation-title") {
+            system(application.resources.environmentSystemPrompt())
             system(
                 application.getString(R.string.llm_prompt_generate_conversation_title)
                     .trimIndent().format(chatMessages),
@@ -465,7 +470,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 } else null
                 val environmentMessage = Message.User(
                     content = application.getString(
-                        R.string.llm_prompt_environment,
+                        R.string.llm_prompt_environment_context,
                         Clock.System.now().formatAgentTime(),
                         conversation.name,
                     ),
@@ -576,6 +581,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                                 conversationTools(application.resources, conversation, chatDao)
                             },
                             buildPrompt = {
+                                system(application.resources.environmentSystemPrompt())
                                 system?.let { message(it) } ?: messages(messages)
                                 message(environmentMessage)
                             },
@@ -763,6 +769,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         val model = service.agentConfig.model
 
         val prompt = prompt("error-explanation") {
+            system(application.resources.environmentSystemPrompt())
             system(
                 application.getString(R.string.llm_prompt_generate_error_explanation)
                     .trimIndent().format(message.trim()),
