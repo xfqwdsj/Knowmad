@@ -94,30 +94,34 @@ abstract class AppDatabase : RoomDatabase() {
                             buildString {
                                 val suffix = trigger.replace(" ", "_")
                                 val name = "trg_${currentEntity}_recurrence_rule_cleanup_$suffix"
-                                appendLine("CREATE TRIGGER IF NOT EXISTS `$name`")
-                                appendLine("AFTER $trigger ON `$currentEntity`")
-                                appendLine("WHEN OLD.recurrenceRuleId IS NOT NULL")
+                                +"CREATE TRIGGER IF NOT EXISTS `$name`"
+                                +"AFTER $trigger ON `$currentEntity`"
+                                +"WHEN OLD.recurrenceRuleId IS NOT NULL"
                                 if (trigger.startsWith("UPDATE")) {
-                                    appendLine("AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)")
+                                    +"AND (NEW.recurrenceRuleId IS NULL OR NEW.recurrenceRuleId != OLD.recurrenceRuleId)"
                                 }
 
-                                appendLine("BEGIN")
-                                appendLine("DELETE FROM RecurrenceRuleEntity")
-                                appendLine("WHERE id = OLD.recurrenceRuleId")
+                                +"BEGIN"
+                                +"DELETE FROM RecurrenceRuleEntity"
+                                +"WHERE id = OLD.recurrenceRuleId"
                                 for (entity in ReferencedEntities) {
-                                    appendLine("AND NOT EXISTS (")
-                                    appendLine("SELECT 1 FROM `$entity`")
-                                    appendLine("WHERE recurrenceRuleId = OLD.recurrenceRuleId")
-                                    appendLine(")")
+                                    +"AND NOT EXISTS ("
+                                    +"SELECT 1 FROM `$entity`"
+                                    +"WHERE recurrenceRuleId = OLD.recurrenceRuleId"
+                                    +")"
                                 }
-                                appendLine(";")
-                                appendLine("END;")
+                                +";"
+                                +"END;"
                             },
                         )
                     }
                 }
             }
         }
+
+        @Suppress("NOTHING_TO_INLINE")
+        context(stringBuilder: StringBuilder)
+        private inline operator fun String.unaryPlus() = stringBuilder.appendLine(this)
 
         context(application: Application)
         override fun buildDatabase() =
