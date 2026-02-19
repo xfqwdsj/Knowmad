@@ -129,8 +129,8 @@ abstract class AppDatabase : RoomDatabase() {
                 application,
                 AppDatabase::class.java,
                 databaseName,
-            )
-                .addCallback(RecurrenceRuleCleanup)
-                .build()
+            ).apply {
+                addCallback(RecurrenceRuleCleanup)
+            }.build()
     }
 }
