@@ -32,6 +32,7 @@ import top.ltfan.omnical.icalendar.ICalendarTrigger
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle.MEDIUM
 import java.util.Locale
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import androidx.compose.ui.graphics.Color as ComposeColor
 import biweekly.property.Color as BiweeklyColor
@@ -109,6 +110,18 @@ fun BiweeklyColor?.convertOrDefault(vararg ids: Uuid?, defaultId: Uuid): ICalend
 }
 
 val ICalendarColor.compose inline get() = ComposeColor(argb)
+
+fun ICalendarTrigger.getTriggerTime(event: Event): Instant = when (this) {
+    is Relative -> {
+        val relatedTime = when (related) {
+            Start -> event.startTime
+            End -> event.endTime
+        }
+        relatedTime + offset
+    }
+
+    is Absolute -> time
+}
 
 fun ICalendarTrigger.getString(
     resources: Resources,

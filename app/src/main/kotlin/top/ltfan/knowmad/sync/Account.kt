@@ -20,13 +20,16 @@ package top.ltfan.knowmad.sync
 
 import android.accounts.Account
 import android.accounts.AccountManager
+import android.content.ContentResolver
 import android.content.Context
-import top.ltfan.knowmad.R
+import android.provider.CalendarContract
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-fun Context.getOrCreateSyncAccount(): Account {
-    val accountManager = AccountManager.get(this)
+suspend fun Context.getOrCreateSyncAccount(): Account = withContext(Dispatchers.IO) {
+    val accountManager = AccountManager.get(this@getOrCreateSyncAccount)
     val accounts = accountManager.getAccountsByType(SyncAccount.ACCOUNT_TYPE)
-    return if (accounts.isNotEmpty()) {
+    if (accounts.isNotEmpty()) {
         if (accounts.size > 1) {
             for (i in 1 until accounts.size) {
                 accountManager.removeAccountExplicitly(accounts[i])
@@ -34,17 +37,23 @@ fun Context.getOrCreateSyncAccount(): Account {
         }
         accounts[0]
     } else {
-        val newAccount = SyncAccount(this)
+        val newAccount = SyncAccount()
         accountManager.addAccountExplicitly(newAccount, null, null)
+        ContentResolver.setIsSyncable(newAccount, CalendarContract.AUTHORITY, 1)
+        ContentResolver.setSyncAutomatically(newAccount, CalendarContract.AUTHORITY, true)
+        ContentResolver.addPeriodicSync(
+            newAccount,
+            CalendarContract.AUTHORITY,
+            EMPTY,
+            60 * 60L,
+        )
         newAccount
     }
 }
 
-class SyncAccount(context: Context) : Account(
-    context.getString(R.string.schedule_sync_account_name),
-    ACCOUNT_TYPE,
-) {
+class SyncAccount : Account(ACCOUNT_NAME, ACCOUNT_TYPE) {
     companion object {
+        const val ACCOUNT_NAME = "Knowmad Sync Account"
         const val ACCOUNT_TYPE = "top.ltfan.knowmad.account"
     }
 }

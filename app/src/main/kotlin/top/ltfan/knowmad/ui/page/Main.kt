@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.MediumFloatingActionButton
@@ -38,13 +39,16 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -54,15 +58,19 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.R
+import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
@@ -90,6 +98,12 @@ class MainPage : Page() {
         val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
 
+        val calendarPermissionsState = rememberMultiplePermissionsState(
+            permissions = listOf(
+                android.Manifest.permission.READ_CALENDAR,
+                android.Manifest.permission.WRITE_CALENDAR,
+            ),
+        )
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
                 initialValue = Hidden,
@@ -97,6 +111,8 @@ class MainPage : Page() {
             ),
             snackbarHostState = viewModel.snackbarHostState,
         )
+
+        var showCalendarPermissionRationale by remember { mutableStateOf(false) }
 
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val screenWidth = constraints.maxWidth
@@ -249,6 +265,22 @@ class MainPage : Page() {
             }
         }
 
+        if (calendarPermissionsState.allPermissionsGranted) {
+            LaunchedEffect(Unit) {
+                viewModel.application.requestCalendarSync()
+            }
+        } else {
+            if (calendarPermissionsState.shouldShowRationale) {
+                SideEffect {
+                    showCalendarPermissionRationale = true
+                }
+            } else {
+                SideEffect {
+                    calendarPermissionsState.launchMultiplePermissionRequest()
+                }
+            }
+        }
+
         if (viewModel.showMonthBottomSheet) {
             ModalBottomSheet(onDismissRequest = { viewModel.showMonthBottomSheet = false }) {
                 MonthBottomSheetContent(
@@ -263,6 +295,22 @@ class MainPage : Page() {
                 )
             }
         }
-    }
 
+        if (showCalendarPermissionRationale) {
+            AlertDialog(
+                onDismissRequest = { showCalendarPermissionRationale = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showCalendarPermissionRationale = false
+                            calendarPermissionsState.launchMultiplePermissionRequest()
+                        },
+                        content = { Text(stringResource(R.string.schedule_sync_rationale_dialog_confirm_label)) },
+                    )
+                },
+                title = { Text(stringResource(R.string.schedule_sync_rationale_dialog_title)) },
+                text = { Text(stringResource(R.string.schedule_sync_rationale_dialog_message)) },
+            )
+        }
+    }
 }

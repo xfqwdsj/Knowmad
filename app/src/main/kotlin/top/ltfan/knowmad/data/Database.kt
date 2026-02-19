@@ -18,14 +18,14 @@
 
 package top.ltfan.knowmad.data
 
-import android.app.Application
+import android.content.Context
 import androidx.room.RoomDatabase
 
 interface DatabaseCompanion<T : RoomDatabase> {
     val databaseName: String
 
-    context(application: Application)
-    fun buildDatabase(): T
+    context(context: Context)
+    fun get(): T
 }
 
 interface FtsDao {

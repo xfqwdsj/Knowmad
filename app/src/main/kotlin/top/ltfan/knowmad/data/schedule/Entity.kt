@@ -217,6 +217,22 @@ data class EventEntity(
     val vAlarms inline get() = reminders.toVAlarms { name }
 }
 
+@Entity(
+    indices = [
+        Index("target"),
+    ],
+)
+data class EventTombstoneEntity(
+    @PrimaryKey
+    val id: Uuid,
+    val target: EventDeletionTarget,
+    val deletedAt: Instant = Clock.System.now(),
+)
+
+enum class EventDeletionTarget {
+    SystemSync,
+}
+
 @Serializable
 data class CombinedEvent(
     @Embedded val event: EventEntity,

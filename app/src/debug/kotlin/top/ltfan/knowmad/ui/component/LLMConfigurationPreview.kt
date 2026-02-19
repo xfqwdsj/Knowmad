@@ -51,7 +51,7 @@ import top.ltfan.knowmad.ui.util.plus
 fun LLMProviderConfigLazyColumnPreview() {
     ApplicationPreview {
         val coroutineScope = rememberCoroutineScope()
-        val dao = remember { AppDatabase.buildDatabase().llmConfigDao() }
+        val dao = remember { AppDatabase.get().llmConfigDao() }
 
         Column(Modifier.fillMaxSize()) {
             Row(

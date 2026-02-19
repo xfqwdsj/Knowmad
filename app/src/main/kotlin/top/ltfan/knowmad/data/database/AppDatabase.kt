@@ -18,12 +18,12 @@
 
 package top.ltfan.knowmad.data.database
 
-import android.app.Application
+import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
 import top.ltfan.knowmad.data.AppDatabaseConverters
 import top.ltfan.knowmad.data.DatabaseCompanion
 import top.ltfan.knowmad.data.chat.ChatDao
@@ -32,6 +32,7 @@ import top.ltfan.knowmad.data.chat.MessageBranchSelectionEntity
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageFileCrossRef
 import top.ltfan.knowmad.data.chat.MessageFtsEntity
+import top.ltfan.knowmad.data.database.callback.RecurrenceRuleCleanup
 import top.ltfan.knowmad.data.file.FileDao
 import top.ltfan.knowmad.data.file.FileEntity
 import top.ltfan.knowmad.data.geo.GeoDao
@@ -49,6 +50,7 @@ import top.ltfan.knowmad.data.schedule.CourseEntity
 import top.ltfan.knowmad.data.schedule.CourseFtsEntity
 import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.EventFtsEntity
+import top.ltfan.knowmad.data.schedule.EventTombstoneEntity
 import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
@@ -64,6 +66,7 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         CourseEntity::class,
         CourseFtsEntity::class,
         EventEntity::class,
+        EventTombstoneEntity::class,
         EventFtsEntity::class,
         FileEntity::class,
         ConversationEntity::class,
@@ -79,7 +82,10 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         RoadEntity::class,
         RoadFtsEntity::class,
     ],
-    version = 260200,
+    version = 260201,
+    autoMigrations = [
+        AutoMigration(from = 260200, to = 260201),
+    ],
 )
 @TypeConverters(AppDatabaseConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -92,61 +98,17 @@ abstract class AppDatabase : RoomDatabase() {
     companion object : DatabaseCompanion<AppDatabase> {
         override val databaseName = "db"
 
-        private val RecurrenceRuleCleanup = object : Callback() {
-            val ReferencedEntities = listOf(
-                "CourseEntity",
-                "EventEntity",
-            )
+        private var instance: AppDatabase? = null
 
-            val Triggers = listOf(
-                "DELETE",
-                "UPDATE OF recurrenceRuleId",
-            )
-
-            override fun onOpen(db: SupportSQLiteDatabase) {
-                for (currentEntity in ReferencedEntities) {
-                    for (trigger in Triggers) {
-                        db.execSQL(
-                            buildString {
-                                val suffix = trigger.replace(" ", "_")
-                                val name = "trg_${currentEntity}_recurrence_rule_cleanup_$suffix"
-                                +"CREATE TRIGGER IF NOT EXISTS `$name`"
-                                +"AFTER $trigger ON `$currentEntity`"
-                                +"WHEN OLD.recurrenceRuleId IS NOT NULL"
-                                if (trigger.startsWith("UPDATE")) {
-                                    +"AND (NEW.recurrenceRuleId IS NOT OLD.recurrenceRuleId)"
-                                }
-
-                                +"BEGIN"
-                                +"DELETE FROM RecurrenceRuleEntity"
-                                +"WHERE id = OLD.recurrenceRuleId"
-                                for (entity in ReferencedEntities) {
-                                    +"AND NOT EXISTS ("
-                                    +"SELECT 1 FROM `$entity`"
-                                    +"WHERE recurrenceRuleId = OLD.recurrenceRuleId"
-                                    +")"
-                                }
-                                +";"
-                                +"END;"
-                            },
-                        )
-                    }
-                }
-            }
+        context(context: Context)
+        override fun get() = instance ?: databaseBuilder(
+            context = context,
+            klass = AppDatabase::class.java,
+            name = databaseName,
+        ).apply {
+            addCallback(RecurrenceRuleCleanup)
+        }.build().also {
+            instance = it
         }
-
-        @Suppress("NOTHING_TO_INLINE")
-        context(stringBuilder: StringBuilder)
-        private inline operator fun String.unaryPlus() = stringBuilder.appendLine(this)
-
-        context(application: Application)
-        override fun buildDatabase() =
-            databaseBuilder(
-                application,
-                AppDatabase::class.java,
-                databaseName,
-            ).apply {
-                addCallback(RecurrenceRuleCleanup)
-            }.build()
     }
 }

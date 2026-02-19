@@ -73,17 +73,90 @@ interface ScheduleDao : FtsDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAllEvents(events: List<EventEntity>): List<Long>
 
-    @Delete
-    suspend fun deleteSemester(semester: SemesterEntity): Int
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllEventTombstones(tombstones: List<EventTombstoneEntity>): List<Long>
 
     @Delete
-    suspend fun deleteRecurrenceRule(rule: RecurrenceRuleEntity): Int
+    suspend fun deleteSemesterInternal(semester: SemesterEntity): Int
+
+    @Transaction
+    suspend fun deleteSemester(semester: SemesterEntity): Int {
+        val eventIds = getAllEventIdsBySemester(semester.id)
+        val tombstones = eventIds.flatMap { eventId ->
+            EventDeletionTarget.entries.map { target ->
+                EventTombstoneEntity(
+                    id = eventId,
+                    target = target,
+                )
+            }
+        }
+        insertAllEventTombstones(tombstones)
+        return deleteSemesterInternal(semester)
+    }
 
     @Delete
-    suspend fun deleteCourse(course: CourseEntity): Int
+    suspend fun deleteRecurrenceRuleInternal(rule: RecurrenceRuleEntity): Int
+
+    @Transaction
+    suspend fun deleteRecurrenceRule(rule: RecurrenceRuleEntity): Int {
+        val courseIds = getAllCourseIdsByRecurrenceRule(rule.id)
+        val eventIds = getAllEventIdsByRecurrenceRule(rule.id) +
+                getAllEventIdsByCourses(courseIds)
+        val tombstones = eventIds.flatMap { eventId ->
+            EventDeletionTarget.entries.map { target ->
+                EventTombstoneEntity(
+                    id = eventId,
+                    target = target,
+                )
+            }
+        }
+        insertAllEventTombstones(tombstones)
+        return deleteRecurrenceRuleInternal(rule)
+    }
 
     @Delete
-    suspend fun deleteEvent(event: EventEntity): Int
+    suspend fun deleteCourseInternal(course: CourseEntity): Int
+
+    @Transaction
+    suspend fun deleteCourse(course: CourseEntity): Int {
+        val eventIds = getAllEventIdsByCourse(course.id)
+        val tombstones = eventIds.flatMap { eventId ->
+            EventDeletionTarget.entries.map { target ->
+                EventTombstoneEntity(
+                    id = eventId,
+                    target = target,
+                )
+            }
+        }
+        insertAllEventTombstones(tombstones)
+        return deleteCourseInternal(course)
+    }
+
+    @Delete
+    suspend fun deleteEventInternal(event: EventEntity): Int
+
+    @Transaction
+    suspend fun deleteEvent(event: EventEntity): Int {
+        val tombstones = EventDeletionTarget.entries.map { target ->
+            EventTombstoneEntity(
+                id = event.id,
+                target = target,
+            )
+        }
+        insertAllEventTombstones(tombstones)
+        return deleteEventInternal(event)
+    }
+
+    @Query(
+        """
+            DELETE FROM EventTombstoneEntity
+            WHERE id IN (:ids) AND target = :target
+        """,
+    )
+    suspend fun deleteEventTombstonesForTarget(
+        ids: List<Uuid>,
+        target: EventDeletionTarget,
+    )
 
     @Update
     suspend fun updateSemester(semester: SemesterEntity): Int
@@ -166,6 +239,14 @@ interface ScheduleDao : FtsDao {
     @Query("SELECT * FROM CourseEntity WHERE id IN (:ids)")
     suspend fun getAllCoursesByIds(ids: List<Uuid>): List<CombinedCourse>
 
+    @Query(
+        """
+            SELECT id FROM CourseEntity
+            WHERE recurrenceRuleId = :recurrenceRuleId
+        """,
+    )
+    suspend fun getAllCourseIdsByRecurrenceRule(recurrenceRuleId: Uuid): List<Uuid>
+
     @Query("SELECT * FROM CourseEntity WHERE id = :id")
     suspend fun getCourseEntityById(id: Uuid): CourseEntity?
 
@@ -228,8 +309,12 @@ interface ScheduleDao : FtsDao {
     suspend fun getAllCombinedEventsAfter(lastUpdate: Instant): List<CombinedEvent>
 
     @Transaction
-    suspend fun getAllEventsWithoutRecurrenceRulesAfter(lastUpdate: Instant): List<Event> {
-        return getAllCombinedEventsAfter(lastUpdate).map { it.toEvent() }
+    suspend fun getAllEventsForSyncAfter(
+        lastUpdate: Instant,
+        target: EventDeletionTarget,
+    ): Pair<List<Event>, List<EventTombstoneEntity>> {
+        return getAllCombinedEventsAfter(lastUpdate).map { it.toEvent() } to
+                getAllEventTombstonesByTarget(target)
     }
 
     @Query("SELECT * FROM EventEntity WHERE id = :id")
@@ -281,6 +366,38 @@ interface ScheduleDao : FtsDao {
             list.map { it.toEvent(getRecurrenceRuleByCombinedEvent(it)) }
         }
     }
+
+    @Query(
+        """
+            SELECT id FROM EventEntity
+            WHERE semesterId = :semesterId
+        """,
+    )
+    suspend fun getAllEventIdsBySemester(semesterId: Uuid): List<Uuid>
+
+    @Query(
+        """
+            SELECT id FROM EventEntity
+            WHERE recurrenceRuleId = :recurrenceRuleId
+        """,
+    )
+    suspend fun getAllEventIdsByRecurrenceRule(recurrenceRuleId: Uuid): List<Uuid>
+
+    @Query(
+        """
+            SELECT id FROM EventEntity
+            WHERE courseId = :courseId
+        """,
+    )
+    suspend fun getAllEventIdsByCourse(courseId: Uuid): List<Uuid>
+
+    @Query(
+        """
+            SELECT id FROM EventEntity
+            WHERE courseId IN (:courseIds)
+        """,
+    )
+    suspend fun getAllEventIdsByCourses(courseIds: List<Uuid>): List<Uuid>
 
     @Transaction
     @Query(
@@ -391,6 +508,14 @@ interface ScheduleDao : FtsDao {
             it.toEvent(getRecurrenceRuleByCombinedEvent(it))
         }
     }
+
+    @Query(
+        """
+            SELECT * FROM EventTombstoneEntity
+            WHERE target = :target
+        """,
+    )
+    suspend fun getAllEventTombstonesByTarget(target: EventDeletionTarget): List<EventTombstoneEntity>
 
     @Transaction
     suspend fun importFromICalendar(

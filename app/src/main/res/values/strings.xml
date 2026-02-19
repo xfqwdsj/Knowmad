@@ -180,5 +180,7 @@
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
     <string name="schedule_import_from_icalendar_error_course_insertion_failed">Error occurred while inserting course %s into database</string>
     <string name="schedule_import_from_icalendar_error_event_insertion_failed">Error occurred while inserting event %s into database</string>
-    <string name="schedule_sync_account_name">Knowmad Schedule Sync</string>
+    <string name="schedule_sync_rationale_dialog_title">Calendar Permission Required</string>
+    <string name="schedule_sync_rationale_dialog_message">To sync your schedule with your calendar, we need permission to access your calendar. We will only read and write events related to your schedule and will not access any other calendar data</string>
+    <string name="schedule_sync_rationale_dialog_confirm_label">Grant Permission</string>
 </resources>

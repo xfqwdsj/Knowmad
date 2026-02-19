@@ -574,6 +574,12 @@ data class Reminder(
         displayText = displayText,
     )
 
+    fun getPriorMinutes(event: Event): Int {
+        val triggerTime = trigger.getTriggerTime(event)
+        val eventStart = event.startTime
+        return (eventStart - triggerTime).inWholeMinutes.toInt()
+    }
+
     fun toVAlarm(defaultDisplayText: String? = null): VAlarm = VAlarm.display(
         trigger.toBiweeklyValue(),
         displayText ?: defaultDisplayText,
