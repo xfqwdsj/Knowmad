@@ -111,6 +111,7 @@ import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.data.chat.ChatListMessage
+import top.ltfan.knowmad.data.chat.ConversationMeta
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
@@ -1048,8 +1049,8 @@ sealed interface AssistantMessageState {
         override var depth: Int = 0,
         override val createdAt: Instant = Clock.System.now(),
         remend: RemendProcessor? = null,
-        onQueryConversationMetaInfo: suspend () -> UiMessage.MetaInfo? = { null },
-        onUpdateConversationMetaInfo: (UiMessage.MetaInfo?) -> Unit = {},
+        onQueryConversationMeta: suspend () -> ConversationMeta = { ConversationMeta() },
+        onUpdateConversationMeta: (ConversationMeta) -> Unit = {},
         onUpdate: Streaming.() -> Unit = {},
         onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
@@ -1138,9 +1139,9 @@ sealed interface AssistantMessageState {
                             onUpdate()
                         }
 
-                        is QueryConversationMetaInfo -> event.onResult(onQueryConversationMetaInfo())
-                        is UpdateConversationMetaInfo -> onUpdateConversationMetaInfo(
-                            event.updateMetaInfo(onQueryConversationMetaInfo()),
+                        is QueryConversationMeta -> event.onResult(onQueryConversationMeta())
+                        is UpdateConversationMeta -> onUpdateConversationMeta(
+                            event.updateMeta(onQueryConversationMeta()),
                         )
 
                         is Finish -> cancel()
@@ -1343,13 +1344,13 @@ sealed interface AssistantMessageStreamingEvent {
     }
 
     @Immutable
-    data class QueryConversationMetaInfo(
-        val onResult: (UiMessage.MetaInfo?) -> Unit,
+    data class QueryConversationMeta(
+        val onResult: (ConversationMeta) -> Unit,
     ) : AssistantMessageStreamingEvent
 
     @Immutable
-    data class UpdateConversationMetaInfo(
-        val updateMetaInfo: (UiMessage.MetaInfo?) -> UiMessage.MetaInfo?,
+    data class UpdateConversationMeta(
+        val updateMeta: (ConversationMeta) -> ConversationMeta,
     ) : AssistantMessageStreamingEvent
 
     data object Finish : AssistantMessageStreamingEvent

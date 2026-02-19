@@ -79,6 +79,7 @@ import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.ConversationMeta
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
@@ -467,7 +468,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 ),
                 metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
             )
-            var firstMessageId = databaseMessages.firstOrNull()?.message?.id
             system?.let {
                 chatDao.insertMessage(
                     message = MessageEntity(
@@ -475,9 +475,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         parts = listOf(it.toUiMessage()),
                         role = MessageEntityRole.System,
                         generatedBy = null,
-                    ).also { newMessage ->
-                        firstMessageId = newMessage.id
-                    },
+                    ),
                     fileIds = emptyList(),
                 )
             }
@@ -511,30 +509,16 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 coroutineScope = viewModelScope,
                 conversationId = conversationId,
                 remend = remend,
-                onQueryConversationMetaInfo = {
-                    firstMessageId?.let { firstMessageId ->
-                        chatDao.getMessageById(firstMessageId)
-                    }?.parts?.firstOrNull { it is MetaInfo } as MetaInfo?
+                onQueryConversationMeta = {
+                    chatDao.getConversationById(conversationId)?.also {
+                        conversation = it
+                    }?.meta ?: ConversationMeta()
                 },
-                onUpdateConversationMetaInfo = { newMetaInfo ->
+                onUpdateConversationMeta = { newMeta ->
                     launch {
-                        if (firstMessageId == null) {
-                            logger.warn { "First message id is null when updating conversation meta info." }
-                            return@launch
-                        }
-                        val oldMessage = chatDao.getMessageById(firstMessageId) ?: run {
-                            logger.warn { "Old message not found when updating conversation meta info." }
-                            return@launch
-                        }
-                        val oldUiMessages = oldMessage.parts.filterNot { it is MetaInfo }
-                        chatDao.updateMessage(
-                            oldMessage.copy(
-                                parts = buildList {
-                                    newMetaInfo?.let { add(it) }
-                                    addAll(oldUiMessages)
-                                },
-                            ),
-                        )
+                        val newConversation = conversation.copy(meta = newMeta)
+                        chatDao.updateConversation(newConversation)
+                        conversation = newConversation
                     }
                 },
                 onUpdate = {

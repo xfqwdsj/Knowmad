@@ -288,12 +288,6 @@ sealed interface UiMessage {
         override val content: String = ""
         override val display = false
     }
-
-    @Serializable
-    @Immutable
-    data class MetaInfo(
-        val gatheredTools: Set<String> = emptySet(),
-    ) : NotDisplayed()
 }
 
 sealed interface ChatListMessage {

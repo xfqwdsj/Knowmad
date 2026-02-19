@@ -166,7 +166,15 @@ interface ChatDao : FtsDao {
     }
 
     @Update
-    suspend fun updateMessage(message: MessageEntity): Int
+    suspend fun updateMessageInternal(message: MessageEntity): Int
+
+    @Transaction
+    suspend fun updateMessage(message: MessageEntity): Int {
+        val updatedMessage = message.copy(
+            searchableContent = MessageEntity.getSearchableContent(message.parts),
+        )
+        return updateMessageInternal(updatedMessage)
+    }
 
     @Query("SELECT * FROM ConversationEntity WHERE isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllConversations(): PagingSource<Int, ConversationEntity>

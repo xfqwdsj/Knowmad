@@ -36,7 +36,6 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.ChatAgentContextualInitializationTool
 import top.ltfan.knowmad.agent.ChatAgentToolCallContext
 import top.ltfan.knowmad.agent.SystemPromptInjectorTool
-import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
 import kotlin.coroutines.resume
@@ -121,10 +120,8 @@ class GatherMoreToolsTool(
         }
 
         eventFlow.emit(
-            AssistantMessageStreamingEvent.UpdateConversationMetaInfo {
-                it?.copy(gatheredTools = gatheredNames) ?: UiMessage.MetaInfo(
-                    gatheredTools = gatheredNames,
-                )
+            AssistantMessageStreamingEvent.UpdateConversationMeta {
+                it.copy(gatheredTools = gatheredNames)
             },
         )
 
@@ -153,8 +150,8 @@ class GatherMoreToolsTool(
             suspendCancellableCoroutine { continuation ->
                 launch {
                     eventFlow.emit(
-                        AssistantMessageStreamingEvent.QueryConversationMetaInfo {
-                            it?.let { metaInfo -> gatheredNames += metaInfo.gatheredTools }
+                        AssistantMessageStreamingEvent.QueryConversationMeta {
+                            gatheredNames += it.gatheredTools
                             continuation.resume(Unit)
                         },
                     )
