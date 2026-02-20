@@ -26,6 +26,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -109,6 +110,7 @@ class EventsDialogPage(
 
         EventsDialogContent(
             date = viewModel.date,
+            modifier = Modifier.fillMaxWidth(),
             contentPadding = contentPadding,
             locale = viewModel.locale,
         ) {
