@@ -74,37 +74,32 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
 
         runBlocking(Dispatchers.IO) {
             try {
-                val isManual = extras.getBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, false)
+                val isFullSync = extras.getBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, false)
                 val lastSyncTime =
-                    if (isManual) Instant.DISTANT_PAST else provider.getLastSyncTime(account)
+                    if (isFullSync) Instant.DISTANT_PAST else provider.getLastSyncTime(account)
                 val dao = context(context) { AppDatabase.get() }.scheduleDao()
                 val (events, tombstones) = dao.getAllEventsForSyncAfter(lastSyncTime, SystemSync)
                 val map = events.groupBy { it.semester }
 
-                if (isManual) {
-                    provider.clearAllCalendars(account)
-                }
-
-                val deleted = mutableListOf<Uuid>()
                 val ops = mutableListOf<ContentProviderOperation>()
 
-                val systemEventIdMap = if (isManual) {
-                    emptyMap()
-                } else {
-                    provider.getSystemEventIdMap(account, ops)
-                }
+                val systemEventIdMap = provider.getSystemEventIdMap(account, ops)
 
-                for (tombstone in tombstones) {
-                    if (ops.size >= 100) {
-                        provider.executeBatch(ops, syncResult)
+                if (!isFullSync) {
+                    val deleted = mutableListOf<Uuid>()
+                    for (tombstone in tombstones) {
+                        if (ops.size >= 100) {
+                            provider.executeBatch(ops, syncResult)
+                        }
+                        deleted.add(tombstone.id)
+                        val systemId = systemEventIdMap[tombstone.id] ?: continue
+                        ops.add(buildDeleteOp(systemId, account))
+                        syncResult.stats.numDeletes++
                     }
-                    deleted.add(tombstone.id)
-                    val systemId = systemEventIdMap[tombstone.id] ?: continue
-                    ops.add(buildDeleteOp(systemId, account))
-                    syncResult.stats.numDeletes++
-                }
 
-                provider.executeBatch(ops, syncResult)
+                    provider.executeBatch(ops, syncResult)
+                    dao.deleteEventTombstonesForTarget(deleted, SystemSync)
+                }
 
                 for ((semester, events) in map) {
                     val calendarId = provider.getOrCreateCalendar(semester, account)
@@ -129,7 +124,17 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
 
                 provider.executeBatch(ops, syncResult)
 
-                dao.deleteEventTombstonesForTarget(deleted, SystemSync)
+                if (isFullSync) {
+                    val localEventIds = events.map { it.id }.toSet()
+                    for ((uuid, systemId) in systemEventIdMap) {
+                        if (uuid !in localEventIds) {
+                            ops.add(buildDeleteOp(systemId, account))
+                            syncResult.stats.numDeletes++
+                        }
+                    }
+                    provider.executeBatch(ops, syncResult)
+                    dao.deleteAllEventTombstonesForTarget(SystemSync)
+                }
 
                 provider.saveLastSyncTime(account)
             } catch (e: RemoteException) {
@@ -145,15 +150,6 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
         }
     }
 
-    private fun ContentProviderClient.clearAllCalendars(account: Account) {
-        val uri = CalendarContract.Calendars.CONTENT_URI.addSyncParams(account)
-
-        val selection =
-            "${CalendarContract.Calendars.ACCOUNT_NAME} = ? AND ${CalendarContract.Calendars.ACCOUNT_TYPE} = ?"
-        val selectionArgs = arrayOf(account.name, account.type)
-
-        delete(uri, selection, selectionArgs)
-    }
 
     private fun ContentProviderClient.executeBatch(
         ops: MutableList<ContentProviderOperation>,

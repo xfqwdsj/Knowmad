@@ -158,6 +158,14 @@ interface ScheduleDao : FtsDao {
         target: EventDeletionTarget,
     )
 
+    @Query(
+        """
+            DELETE FROM EventTombstoneEntity
+            WHERE target = :target
+        """,
+    )
+    suspend fun deleteAllEventTombstonesForTarget(target: EventDeletionTarget)
+
     @Update
     suspend fun updateSemester(semester: SemesterEntity): Int
 
