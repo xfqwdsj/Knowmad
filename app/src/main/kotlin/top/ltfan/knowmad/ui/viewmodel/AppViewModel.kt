@@ -217,27 +217,41 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         scheduleDao.deleteSemester(semester)
     }
 
-    suspend fun importFromICalendar(
-        content: String,
-        errors: MutableList<String>? = null,
-    ): Result<Int> {
+    var iCalendarImportResult by mutableStateOf<Pair<Result<Int>, List<String>?>?>(null)
+
+    fun importFromICalendar(content: String) = viewModelScope.launch {
+        doImportFromICalendar(content)
+    }
+
+    private suspend fun doImportFromICalendar(content: String) {
+        val errors = mutableListOf<String>()
+
+        fun success(count: Int) {
+            iCalendarImportResult = Result.success(count) to errors.takeIf { it.isNotEmpty() }
+        }
+
+        fun failure(throwable: Throwable) {
+            iCalendarImportResult =
+                Result.failure<Int>(throwable) to errors.takeIf { it.isNotEmpty() }
+        }
+
         val iCal = runCatching { readCustomizedICalendar(content) }
-            .getOrElse { return Result.failure(it) }
-            ?: return Result.failure(Throwable("There wasn't any iCalendar data in the content"))
+            .getOrElse { return failure(it) }
+            ?: return failure(Throwable("There wasn't any iCalendar data in the content"))
 
         val events = scheduleDao.importFromICalendar(
             iCalendar = iCal,
             resources = application.resources,
             errors = errors,
         ).getOrElse {
-            return Result.failure(it)
+            return failure(it)
         }
 
         if (events.isEmpty()) {
-            return Result.failure(Throwable("No valid events found in the iCalendar data"))
+            return failure(Throwable("No valid events found in the iCalendar data"))
         }
 
-        return Result.success(events.size)
+        return success(events.size)
     }
 
     private val eventsCache =

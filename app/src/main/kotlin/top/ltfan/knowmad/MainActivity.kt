@@ -18,27 +18,26 @@
 
 package top.ltfan.knowmad
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.ui.page.Page
-import top.ltfan.knowmad.ui.page.expanded
-import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
+import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.theme.AppTheme
-import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.Logger
 
 class MainActivity : KnowmadActivity() {
     private val viewModel: AppViewModel by viewModels {
@@ -61,32 +60,53 @@ class MainActivity : KnowmadActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        intent.handle()
         splashScreen.setKeepOnScreenCondition { !viewModel.appReady }
 
         setContent {
             AppTheme {
-                val overlayContentStrategy = remember { OverlayContentSceneStrategy<Page>() }
+                CompositionLocalProvider(
+                    LocalAppViewModel provides viewModel,
+                    LocalAgentViewModel provides agentViewModel,
+                    content = ::AppContent,
+                )
+            }
+        }
+    }
 
-                localSharedTransitionScope {
-                    CompositionLocalProvider(
-                        LocalAppViewModel provides viewModel,
-                        LocalAgentViewModel provides agentViewModel,
-                    ) {
-                        if (viewModel.appReady) {
-                            NavDisplay(
-                                backStack = viewModel.backStack.expanded,
-                                onBack = viewModel::onBack,
-                                entryDecorators = listOf(
-                                    rememberSaveableStateHolderNavEntryDecorator(),
-                                    rememberViewModelStoreNavEntryDecorator(),
-                                ),
-                                sceneStrategy = overlayContentStrategy,
-                                sharedTransitionScope = this,
-                                entryProvider = { it.navEntry() },
-                            )
-                        }
-                    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.handle()
+    }
+
+    private fun Intent?.handle() {
+        val isViewAction = this?.action == Intent.ACTION_VIEW
+        val data = this?.data
+        val mimeType = this?.type
+
+        if (isViewAction && data != null) {
+            val isIcsFile = mimeType == "text/calendar" ||
+                    mimeType == "application/ics" ||
+                    data.path?.endsWith(".ics", ignoreCase = true) == true
+            if (isIcsFile) {
+                data.handleIcsFile()
+            }
+        }
+    }
+
+    private fun Uri.handleIcsFile() {
+        val logger = Logger("handleIcsFile")
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val content = runCatching {
+                contentResolver.openInputStream(this@handleIcsFile)?.use {
+                    it.bufferedReader().use { reader -> reader.readText() }
                 }
+            }.onFailure { logger.error(it) { "Failed to read ICS file content" } }
+                .getOrNull()
+
+            if (content != null) {
+                viewModel.importFromICalendar(content)
             }
         }
     }

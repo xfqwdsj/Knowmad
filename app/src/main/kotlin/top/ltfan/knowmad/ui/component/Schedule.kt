@@ -171,10 +171,8 @@ fun MonthBottomSheetContent(
     onExport: (suspend (SemesterEntity) -> String)? = null,
     onBackup: (suspend (SemesterEntity) -> String)? = null,
     onDelete: (suspend (SemesterEntity) -> Unit)? = null,
-    onImport: (suspend (String, MutableList<String>?) -> Result<Int>)? = null,
+    onImport: ((String) -> Unit)? = null,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     val currentSemesters = remember(month, semesters) {
         semesters.filter {
             it.startDate < month.lastDay.plusDays(1) && it.endDate > month.firstDay
@@ -187,8 +185,6 @@ fun MonthBottomSheetContent(
     }
 
     var showImportDialog by remember { mutableStateOf(false) }
-    var importResult by remember { mutableStateOf<Result<Int>?>(null) }
-    var importErrors by remember { mutableStateOf<List<String>?>(null) }
 
     Column(
         modifier = Modifier.padding(16.dp),
@@ -232,31 +228,13 @@ fun MonthBottomSheetContent(
         }
     }
 
-    if (showImportDialog) {
+    if (onImport != null && showImportDialog) {
         ICalendarImportDialog(
             onDismissRequest = { showImportDialog = false },
             onImport = { content ->
                 showImportDialog = false
-                val errors = mutableListOf<String>()
-                onImport?.let {
-                    coroutineScope.launch {
-                        importResult = it(content, errors)
-                        importErrors = errors
-                    }
-                }
+                onImport(content)
             },
-        )
-    }
-
-    (importResult to importErrors).let { (result, errors) ->
-        if (result == null || errors == null) return@let
-        ICalendarImportResultDialog(
-            onDismissRequest = {
-                importResult = null
-                importErrors = null
-            },
-            result = result,
-            errors = errors.takeIf { it.isNotEmpty() },
         )
     }
 }
@@ -296,7 +274,7 @@ private fun ICalendarImportDialog(
 }
 
 @Composable
-private fun ICalendarImportResultDialog(
+fun ICalendarImportResultDialog(
     onDismissRequest: () -> Unit,
     result: Result<Int>,
     errors: List<String>? = null,
