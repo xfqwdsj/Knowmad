@@ -448,6 +448,7 @@ fun Events(
                         rememberSharedContentState(CalendarSharedKey.Dot(date)),
                         animatedVisibilityScope = this@AnimatedVisibility,
                         resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                        renderInOverlayDuringTransition = false,
                     )
                     else Modifier.onGloballyPositioned { positioned = true },
                     shape = ContinuousRoundedRectangle(radius),
@@ -492,6 +493,7 @@ fun Events(
                                             rememberSharedContentState(CalendarSharedKey.Dot(date)),
                                             animatedVisibilityScope = this@AnimatedVisibility,
                                             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                                            renderInOverlayDuringTransition = false,
                                         )
 
                                     0 -> Modifier.onGloballyPositioned {
