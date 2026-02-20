@@ -33,7 +33,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle.MEDIUM
 import java.util.Locale
 import kotlin.time.Instant
-import kotlin.uuid.Uuid
 import androidx.compose.ui.graphics.Color as ComposeColor
 import biweekly.property.Color as BiweeklyColor
 import kotlinx.datetime.TimeZone as KotlinTimeZone
@@ -98,15 +97,28 @@ fun ICalendar.parse(
 
 fun RecurrenceRuleEntity.toProperty() = KnowmadRecurrenceRuleProperty(this)
 
-fun ICalendarColor.Companion.pickFromPalette(id: Uuid): ICalendarColor =
-    pickFromPalette(id.hashCode().toUInt())
+fun ICalendarColor.Companion.pickFromPalette(hashedObject: PrimaryFieldsHashed): ICalendarColor =
+    pickFromPalette(hashedObject.primaryFieldsHash.toUInt())
 
-fun BiweeklyColor?.convertOrDefault(vararg ids: Uuid?, defaultId: Uuid): ICalendarColor {
-    this?.value?.let { ICalendarColor.fromValue(it) }?.let { return it }
-    for (id in ids) {
-        id?.let { return ICalendarColor.pickFromPalette(it) }
+fun BiweeklyColor?.convertOrDefault(
+    vararg hashedObjects: PrimaryFieldsHashed?,
+    defaultHashedObject: PrimaryFieldsHashed,
+) = parseColorOrDefault(
+    colorStr = this?.value,
+    hashedObjects = hashedObjects,
+    defaultHashedObject = defaultHashedObject,
+)
+
+fun parseColorOrDefault(
+    colorStr: String?,
+    vararg hashedObjects: PrimaryFieldsHashed?,
+    defaultHashedObject: PrimaryFieldsHashed,
+): ICalendarColor {
+    colorStr?.let { ICalendarColor.fromValue(it) }?.let { return it }
+    for (hashedObject in hashedObjects) {
+        hashedObject?.let { return ICalendarColor.pickFromPalette(it) }
     }
-    return ICalendarColor.pickFromPalette(defaultId)
+    return ICalendarColor.pickFromPalette(defaultHashedObject)
 }
 
 val ICalendarColor.compose inline get() = ComposeColor(argb)

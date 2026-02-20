@@ -305,7 +305,7 @@ sealed interface Event : TimeRange {
 
             val instructor = vEvent.getProperty(InstructorProperty::class.java)?.value
             val location = vEvent.location?.value
-            val color = vEvent.color.convertOrDefault(course?.id, defaultId = semester.id)
+            val color = vEvent.color.convertOrDefault(course, defaultHashedObject = semester)
             val startDate = vEvent.dateStart?.value ?: run {
                 errors?.add("Start date not found in event: $identifier")
                 return emptyList()
@@ -643,6 +643,10 @@ fun VAlarm.toReminder(
 
 enum class ScheduleImportOnConflict {
     Skip, Replace,
+}
+
+interface PrimaryFieldsHashed {
+    val primaryFieldsHash: Int
 }
 
 interface TimeRange {

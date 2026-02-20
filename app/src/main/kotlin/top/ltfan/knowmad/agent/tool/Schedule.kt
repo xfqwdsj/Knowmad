@@ -42,7 +42,6 @@ import top.ltfan.knowmad.data.schedule.Reminders.Companion.Empty
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
-import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toFormattedAgentTimeList
 import top.ltfan.knowmad.data.schedule.toReminders
@@ -938,13 +937,12 @@ object ScheduleTools {
                     }
                     val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
                     val courseId = parseCourseId(
-                        data.courseId,
-                        data.name,
-                        data.location,
-                        errors,
-                    ) {
-                        return@mapNotNull null
-                    }
+                        courseIdStr = data.courseId,
+                        name = data.name,
+                        location = data.location,
+                        errors = errors,
+                        onError = { return@mapNotNull null },
+                    )
                     val color = parseColor(data.color, courseId, semesterId)
                     val reminders = parseReminders(data.reminders, errors)
                     EventEntity(
@@ -995,13 +993,12 @@ object ScheduleTools {
             }
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val courseId = parseCourseId(
-                args.courseId,
-                args.name,
-                args.location,
-                errors,
-            ) {
-                return Result.Failure(it)
-            }
+                courseIdStr = args.courseId,
+                name = args.name,
+                location = args.location,
+                errors = errors,
+                onError = { return Result.Failure(it) },
+            )
             val color = parseColor(args.color, courseId, semesterId)
             val reminders = parseReminders(args.reminders, errors)
             val event = EventEntity(
@@ -1118,11 +1115,8 @@ object ScheduleTools {
             colorStr: String?,
             courseId: Uuid?,
             semesterId: Uuid,
-        ): ICalendarColor {
-            return colorStr?.let {
-                ICalendarColor.fromValue(it)
-            } ?: ICalendarColor.pickFromPalette(courseId ?: semesterId)
-        }
+        ) = colorStr?.let { ICalendarColor.fromValue(it) }
+            ?: ICalendarColor.pickFromPalette((courseId ?: semesterId).hashCode().toUInt())
 
         private fun parseReminders(
             reminders: List<Args.ReminderData>?,

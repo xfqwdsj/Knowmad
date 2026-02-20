@@ -55,7 +55,15 @@ data class SemesterEntity(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val timeZone: TimeZone,
-) {
+) : PrimaryFieldsHashed {
+    override val primaryFieldsHash by lazy {
+        var result = name.hashCode()
+        result = 31 * result + startDate.hashCode()
+        result = 31 * result + endDate.hashCode()
+        result = 31 * result + timeZone.hashCode()
+        result
+    }
+
     companion object {
         const val DEFAULT_SEMESTER_ID = "019c0c33-1400-7225-a55f-906660045bdc"
         val DefaultSemesterId by lazy { Uuid.parse(DEFAULT_SEMESTER_ID) }
@@ -126,7 +134,14 @@ data class CourseEntity(
     val name: String,
     val instructor: String,
     val location: String,
-)
+) : PrimaryFieldsHashed {
+    override val primaryFieldsHash by lazy {
+        var result = name.hashCode()
+        result = 31 * result + instructor.hashCode()
+        result = 31 * result + location.hashCode()
+        result
+    }
+}
 
 @Serializable
 data class CombinedCourse(
@@ -213,8 +228,17 @@ data class EventEntity(
     val priority: ICalendarPriority = None,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
-) : TimeRange {
+) : TimeRange, PrimaryFieldsHashed {
     val vAlarms inline get() = reminders.toVAlarms { name }
+
+    override val primaryFieldsHash by lazy {
+        var result = name?.hashCode() ?: 0
+        result = 31 * result + (instructor?.hashCode() ?: 0)
+        result = 31 * result + (location?.hashCode() ?: 0)
+        result = 31 * result + startTime.hashCode()
+        result = 31 * result + endTime.hashCode()
+        result
+    }
 }
 
 @Entity(
