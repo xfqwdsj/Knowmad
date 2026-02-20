@@ -136,7 +136,12 @@
     <string name="llm_tool_gather_more_tools_description">将需要使用的工具添加到工具列表，如果工具列表中已有你想使用的工具，则该工具将永远返回“Not found”</string>
     <string name="llm_tool_gather_more_tools_arg_tools_description">需要使用的工具名称列表</string>
     <string name="llm_tool_gather_more_tools_prompt">以下是尚未添加到工具列表，但是你可以通过`gather_more_tools`工具获取的工具的名称和描述。请根据当前对话的上下文和用户的需求，当你需要使用它们前，将它们添加到工具列表。</string>
-    <string name="llm_tool_time_description">获取当前的日期和时间</string>
+    <string name="llm_tool_time_description">获取日期或时间信息，不提供参数则查询此刻</string>
+    <string name="llm_tool_time_description_chat_agent">获取日期或时间信息（不包括日程信息）。禁止查询当前日期或时间，请参考用户消息前的系统提示获取当前日期和时间。</string>
+    <string name="llm_tool_time_arg_day_description">需要获取的日期（yyyy-MM-dd）</string>
+    <string name="llm_tool_time_arg_days_description">需要获取的日期列表（yyyy-MM-dd）</string>
+    <string name="llm_tool_time_result_failure_reason_invalid_format">日期格式错误，期望yyyy-MM-dd</string>
+    <string name="llm_tool_time_result_failure_reason_current_prohibited">禁止查询当前日期或时间</string>
     <string name="llm_tool_exit_description">服务工具，供Agent在用户请求或Agent决定时结束对话使用</string>
     <string name="llm_tool_exit_arg_message_description">结束对话时向用户显示的简短消息</string>
 </resources>

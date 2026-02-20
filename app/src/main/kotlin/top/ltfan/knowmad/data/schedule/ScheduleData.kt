@@ -26,6 +26,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.agent.tool.toFormattedAgentTimeList
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import top.ltfan.omnical.icalendar.ICalendarTrigger
@@ -34,6 +35,7 @@ import top.ltfan.omnical.icalendar.biweekly.toKotlinDuration
 import top.ltfan.omnical.icalendar.biweekly.toOmnicalValue
 import java.time.temporal.ChronoUnit
 import java.util.Date
+import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -42,15 +44,15 @@ import kotlin.time.toKotlinInstant
 import kotlin.uuid.Uuid
 
 @Serializable
-sealed interface Event {
+sealed interface Event : TimeRange {
     val id: Uuid
     val semester: SemesterEntity
     val recurrenceRule: RecurrenceRuleEntity?
     val name: String
     val location: String
     val color: ICalendarColor
-    val startTime: Instant
-    val endTime: Instant
+    override val startTime: Instant
+    override val endTime: Instant
     val reminders: Reminders
     val notes: String?
     val priority: ICalendarPriority
@@ -532,6 +534,30 @@ fun VEvent.parse(
     errors = errors,
 )
 
+fun TimeRange.toFormattedAgentTimeList(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+) = (startTime..endTime).toFormattedAgentTimeList(timeZone, locale)
+
+fun Collection<TimeRange>.toFormattedAgentTimeList(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+): List<String> {
+    var startTime = Instant.DISTANT_FUTURE
+    var endTime = Instant.DISTANT_PAST
+
+    for (range in this) {
+        if (range.startTime < startTime) {
+            startTime = range.startTime
+        }
+        if (range.endTime > endTime) {
+            endTime = range.endTime
+        }
+    }
+
+    return (startTime..endTime).toFormattedAgentTimeList(timeZone, locale)
+}
+
 @JvmInline
 @Serializable
 value class Reminders(
@@ -617,4 +643,9 @@ fun VAlarm.toReminder(
 
 enum class ScheduleImportOnConflict {
     Skip, Replace,
+}
+
+interface TimeRange {
+    val startTime: Instant
+    val endTime: Instant
 }

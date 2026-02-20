@@ -18,36 +18,122 @@
 
 package top.ltfan.knowmad.agent.tool
 
-import ai.koog.agents.core.tools.SimpleTool
+import ai.koog.agents.core.tools.Tool
+import ai.koog.agents.core.tools.ToolDescriptor
+import ai.koog.agents.core.tools.ToolParameterDescriptor
+import ai.koog.agents.core.tools.ToolParameterType
+import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
 import com.tyme.solar.SolarDay
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateRange
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.number
 import kotlinx.datetime.offsetAt
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-class TimeTool(resources: Resources) : SimpleTool<TimeTool.Args>(
+fun ToolRegistry.Builder.timeTool(
+    resources: Resources,
+    chatAgentStyle: Boolean = false,
+) = tool(TimeTool(resources, chatAgentStyle))
+
+class TimeTool(
+    private val resources: Resources,
+    val chatAgentStyle: Boolean = false,
+) : Tool<TimeTool.Args, TimeTool.Result>(
     argsSerializer = Args.serializer(),
-    name = "time",
-    description = resources.getString(R.string.llm_tool_time_description),
+    resultSerializer = Result.serializer(),
+    descriptor = ToolDescriptor(
+        name = "time",
+        description = if (!chatAgentStyle) {
+            resources.getString(R.string.llm_tool_time_description)
+        } else {
+            resources.getString(R.string.llm_tool_time_description_chat_agent)
+        },
+        optionalParameters = listOf(
+            ToolParameterDescriptor(
+                name = "day",
+                description = resources.getString(R.string.llm_tool_time_arg_day_description),
+                type = ToolParameterType.String,
+            ),
+            ToolParameterDescriptor(
+                name = "days",
+                description = resources.getString(R.string.llm_tool_time_arg_days_description),
+                type = ToolParameterType.List(ToolParameterType.String),
+            ),
+        ),
+    ),
 ) {
-    override suspend fun execute(args: Args) = Clock.System.now().formatAgentTime()
+    override suspend fun execute(args: Args): Result = if (args.days != null) {
+        args.days.map {
+            runCatching { LocalDate.parse(it) }.getOrNull()?.formatAgentTime()
+                ?: return Result.Failure(resources.getString(R.string.llm_tool_time_result_failure_reason_invalid_format))
+        }.let { Result.Success(list = it) }
+    } else if (args.day != null) {
+        runCatching { LocalDate.parse(args.day) }.getOrNull()?.formatAgentTime()
+            ?.let { Result.Success(it) }
+            ?: Result.Failure(resources.getString(R.string.llm_tool_time_result_failure_reason_invalid_format))
+    } else if (chatAgentStyle) {
+        Result.Failure(resources.getString(R.string.llm_tool_time_result_failure_reason_current_prohibited))
+    } else {
+        Result.Success(Clock.System.now().formatAgentTime())
+    }
 
     @Serializable
-    data object Args
+    @SerialName("Args")
+    data class Args(
+        val day: String? = null,
+        val days: Set<String>? = null,
+    )
+
+    @Serializable
+    @SerialName("Result")
+    sealed interface Result {
+        @Serializable
+        @SerialName("Success")
+        data class Success(
+            val formatted: String? = null,
+            val list: List<String>? = null,
+        ) : Result
+
+        @Serializable
+        @SerialName("Failure")
+        data class Failure(
+            val message: String,
+        ) : Result
+    }
 }
 
-fun Instant.formatAgentTime(): String = buildString {
-    val timeZone = TimeZone.currentSystemDefault()
-    val date = toLocalDateTime(timeZone)
+fun Instant.formatAgentTime(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String {
+    val dateTime = toLocalDateTime(timeZone)
+    return formatAgentTime(dateTime.date, dateTime.time, timeZone, locale)
+}
+
+fun LocalDate.formatAgentTime(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+) = formatAgentTime(this, null, timeZone, locale)
+
+fun formatAgentTime(
+    date: LocalDate,
+    time: LocalTime? = null,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+) = buildString {
     val tymeSolarDay = SolarDay.fromYmd(date.year, date.month.number, date.day)
     val tymeTermDay = tymeSolarDay.getTermDay()
     val tymeLunarDay = tymeSolarDay.getLunarDay()
@@ -59,10 +145,17 @@ fun Instant.formatAgentTime(): String = buildString {
     val tymeSolarFestival = tymeSolarDay.getFestival()
     val tymeLunarFestival = tymeLunarDay.getFestival()
 
-    append(date.format(LocalDateTime.Formats.ISO))
-    append(timeZone.offsetAt(this@formatAgentTime))
+    if (time != null) {
+        val dateTime = LocalDateTime(date, time)
+        val instant = dateTime.toInstant(timeZone)
+
+        append(dateTime.format(LocalDateTime.Formats.ISO))
+        append(timeZone.offsetAt(instant))
+    } else {
+        append(date.format(LocalDate.Formats.ISO))
+    }
     append(" ")
-    append(date.dayOfWeek.toJavaDayOfWeek().getDisplayName(FULL, Locale.getDefault()))
+    append(date.dayOfWeek.toJavaDayOfWeek().getDisplayName(FULL, locale))
     append(" ")
     append(tymeTermDay.getName())
     append("第")
@@ -84,3 +177,18 @@ fun Instant.formatAgentTime(): String = buildString {
         append(tymeLunarFestival.getName())
     }
 }
+
+fun ClosedRange<Instant>.toFormattedAgentTimeList(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+): List<String> {
+    val startDate = start.toLocalDateTime(timeZone).date
+    val endDate = endInclusive.toLocalDateTime(timeZone).date
+
+    return (startDate..endDate).toFormattedAgentTimeList(timeZone, locale)
+}
+
+fun LocalDateRange.toFormattedAgentTimeList(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    locale: Locale = Locale.getDefault(),
+) = map { it.formatAgentTime(timeZone, locale) }

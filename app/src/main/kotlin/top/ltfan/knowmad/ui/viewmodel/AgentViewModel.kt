@@ -75,6 +75,7 @@ import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.gatherToolsTool
 import top.ltfan.knowmad.agent.tool.scheduleTools
 import top.ltfan.knowmad.agent.tool.scheduleToolsExtended
+import top.ltfan.knowmad.agent.tool.timeTool
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
@@ -430,6 +431,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     }
 
     private val chatAgentToolRegistry = ToolRegistry {
+        timeTool(application.resources, chatAgentStyle = true)
         scheduleTools(application.resources, scheduleDao)
         gatherToolsTool(application.resources) {
             scheduleToolsExtended(application.resources, scheduleDao) {

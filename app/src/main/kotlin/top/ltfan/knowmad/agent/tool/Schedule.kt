@@ -44,6 +44,7 @@ import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
 import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
+import top.ltfan.knowmad.data.schedule.toFormattedAgentTimeList
 import top.ltfan.knowmad.data.schedule.toReminders
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
@@ -789,12 +790,14 @@ object ScheduleTools {
             @Serializable
             @SerialName("Success")
             data class Success(
+                val days: List<String>,
                 val semesters: List<SemesterEntity>,
                 val courses: List<CourseEntity>?,
                 val recurrenceRules: List<RecurrenceRuleEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
                 constructor(events: List<Event>) : this(
+                    days = events.toFormattedAgentTimeList(),
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
@@ -855,12 +858,14 @@ object ScheduleTools {
             @Serializable
             @SerialName("Success")
             data class Success(
+                val days: List<String>,
                 val semesters: List<SemesterEntity>,
                 val courses: List<CourseEntity>?,
                 val recurrenceRules: List<RecurrenceRuleEntity>?,
                 val events: List<EventEntity>,
             ) : Result {
                 constructor(events: List<Event>) : this(
+                    days = events.toFormattedAgentTimeList(),
                     semesters = events.asSequence()
                         .map { it.semester }
                         .distinctBy { it.id }
@@ -1197,6 +1202,8 @@ object ScheduleTools {
             data class Success(
                 val event: EventEntity? = null,
                 val events: List<EventEntity>? = null,
+                val days: List<String>? = event?.toFormattedAgentTimeList()
+                    ?: events?.toFormattedAgentTimeList(),
                 val errors: List<String>? = null,
             ) : Result
 

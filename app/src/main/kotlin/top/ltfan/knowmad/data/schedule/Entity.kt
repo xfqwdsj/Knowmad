@@ -206,14 +206,14 @@ data class EventEntity(
     val instructor: String?,
     val location: String?,
     val color: ICalendarColor,
-    val startTime: Instant,
-    val endTime: Instant,
+    override val startTime: Instant,
+    override val endTime: Instant,
     val reminders: Reminders = Empty,
     val notes: String? = null,
     val priority: ICalendarPriority = None,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
-) {
+) : TimeRange {
     val vAlarms inline get() = reminders.toVAlarms { name }
 }
 
