@@ -1884,16 +1884,23 @@ private fun calculateIndicator(
         )
     }
 
-    val templateId = if (isNear) {
-        R.string.schedule_event_list_indicator_label_close_to_end
+    val indicatorText = if (isNear) {
+        resources.getString(
+            R.string.schedule_event_list_indicator_label_close_to_end,
+            offset.format(locale),
+        )
     } else {
-        R.string.schedule_event_list_indicator_label_started
+        val timeSinceStart = now - event.startTime
+        resources.getString(
+            R.string.schedule_event_list_indicator_label_started,
+            timeSinceStart.format(locale),
+        )
     }
 
     return IndicatorData(
         index = candidateIndex,
         isIn = true,
-        text = resources.getString(templateId, offset.format(locale)),
+        text = indicatorText,
     )
 }
 
