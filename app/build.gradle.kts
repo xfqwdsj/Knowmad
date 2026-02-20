@@ -101,6 +101,7 @@ kotlin {
         freeCompilerArgs.add("-Xcontext-parameters")
         freeCompilerArgs.add("-Xcontext-sensitive-resolution")
         optIn.add("kotlin.ExperimentalUnsignedTypes")
+        optIn.add("kotlin.concurrent.atomics.ExperimentalAtomicApi")
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
         optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
         optIn.add("kotlinx.coroutines.FlowPreview")

@@ -88,5 +88,19 @@
                 android:name="android.content.SyncAdapter"
                 android:resource="@xml/calendar_sync_adapter" />
         </service>
+
+        <service
+            android:name=".accessibility.semantic.SemanticAnalysisService"
+            android:exported="true"
+            android:label="@string/service_semantic_analysis_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            tools:ignore="AccessibilityPolicy">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/semantic_analysis_service" />
+        </service>
     </application>
 </manifest>
