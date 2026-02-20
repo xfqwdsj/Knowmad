@@ -235,7 +235,11 @@ class MainPage : Page() {
                             modifier = Modifier.combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onDoubleClick = viewModel::calendarBackToToday,
+                                onDoubleClick = {
+                                    coroutineScope.launch {
+                                        viewModel.calendarState.animateScrollToDate()
+                                    }
+                                },
                                 onClick = {},
                             ),
                         )
@@ -255,8 +259,13 @@ class MainPage : Page() {
                         modifier = Modifier.padding(contentPadding),
                         headerModifier = Modifier.padding(vertical = 4.dp),
                         state = viewModel.calendarState,
-                        onSystemDateChanged = viewModel::onSystemDateChanged,
+                        onSystemDateChanged = { lastDay, newDay ->
+                            coroutineScope.launch {
+                                viewModel.onSystemDateChanged(lastDay, newDay)
+                            }
+                        },
                         getEvents = viewModel::getEvents,
+                        onDayClick = viewModel::onCalendarDayClick,
                         onEventClick = viewModel::onCalendarEventClick,
                     )
                 }

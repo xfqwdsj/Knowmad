@@ -256,6 +256,17 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
             events.filter { event -> event.semester !in invisibleSemesters }
         }
 
+    fun onCalendarDayClick(date: LocalDate, initialEvents: List<Event>?) {
+        backStack.add(
+            EventsDialogPage(
+                date = date,
+                timeZone = calendarState.timeZone,
+                localeLanguageTag = application.resources.configuration.locales[0].toLanguageTag(),
+                initialEvents = initialEvents ?: emptyList(),
+            ),
+        )
+    }
+
     fun onCalendarEventClick(date: LocalDate, clickedEvent: Event, initialEvents: List<Event>) {
         val highlight = Channel<Event>(capacity = 1).apply {
             trySend(clickedEvent)
@@ -276,17 +287,13 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
         backStack.removeIf { it == page }
     }
 
-    fun onSystemDateChanged(lastDay: LocalDate, newDay: LocalDate) {
-        if (lastDay == calendarState.selectedDate) {
-            calendarState.selectedDate = newDay
+    suspend fun onSystemDateChanged(lastDay: LocalDate, newDay: LocalDate) {
+        if (lastDay.month == calendarState.currentMonth.month) {
+            calendarState.animateScrollToDate(newDay)
             return
         }
 
         // TODO: UI feedback for that
-    }
-
-    fun calendarBackToToday() {
-        calendarState.selectedDate = calendarState.today
     }
 
     var mathJaxRendererState by mutableStateOf<MathJaxRendererState>(Initializing)

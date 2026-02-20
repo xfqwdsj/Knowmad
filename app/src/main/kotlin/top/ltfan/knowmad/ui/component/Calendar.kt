@@ -70,7 +70,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -122,7 +121,6 @@ import kotlinx.datetime.minusMonth
 import kotlinx.datetime.number
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toJavaDayOfWeek
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.schedule.Event
@@ -143,23 +141,22 @@ fun Calendar(
     modifier: Modifier = Modifier,
     headerModifier: Modifier = Modifier.padding(vertical = 4.dp),
     state: CalendarState = rememberCalendarState(),
-    onSystemDateChanged: (
+    onSystemDateChanged: ((
         lastDay: LocalDate,
         newDay: LocalDate,
-    ) -> Unit = { _, it -> state.selectedDate = it },
-    onSystemTimeZoneChanged: (
+    ) -> Unit)? = null,
+    onSystemTimeZoneChanged: ((
         lastTimeZone: TimeZone,
         newTimeZone: TimeZone,
-    ) -> Unit = { _, it -> state.timeZone = it },
+    ) -> Unit)? = { _, it -> state.timeZone = it },
     locale: Locale = LocalConfiguration.current.locales[0],
     headerTextStyle: TextStyle = MaterialTheme.typography.bodyMediumEmphasized,
     getEvents: (startTime: Instant, endTime: Instant) -> Flow<List<Event>> = { _, _ ->
         flowOf(emptyList())
     },
+    onDayClick: ((date: LocalDate, events: List<Event>?) -> Unit)? = null,
     onEventClick: ((date: LocalDate, clickedEvent: Event, events: List<Event>) -> Unit)? = null,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     val today = rememberSystemDate(timeZone = state.timeZone)
 
     val transition = rememberTransition(state.transitionState)
@@ -182,8 +179,6 @@ fun Calendar(
                 state = state.monthCalendarState,
                 contentHeightMode = Fill,
                 dayContent = { day ->
-                    val selected = day.date == state.selectedDate
-
                     val events = remember(day, state.timeZone, allEvents) {
                         if (day.position != MonthDate) return@remember null
                         val startTime = day.date.atStartOfDayIn(state.timeZone)
@@ -193,15 +188,8 @@ fun Calendar(
 
                     Day(
                         date = day.date,
-                        selected = selected && day.position == MonthDate,
-                        onClick = {
-                            if (state.selectedDate != day.date) {
-                                state.selectedDate = day.date
-                            } else {
-                                coroutineScope.launch {
-                                    state.animateScrollToDate(day.date)
-                                }
-                            }
+                        onClick = onDayClick?.let { callback ->
+                            { callback(day.date, events) }
                         },
                         events = events,
                         onEventClick = onEventClick?.let { callback ->
@@ -230,19 +218,18 @@ fun Calendar(
                 modifier = Modifier.fillMaxSize(),
                 state = state.weekCalendarState,
                 dayContent = { day ->
-                    val selected = day.date == state.selectedDate
-
-                    val hasEvents = remember(day, state.timeZone, allEvents) {
+                    val events = remember(day, state.timeZone, allEvents) {
                         val startTime = day.date.atStartOfDayIn(state.timeZone)
                         val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
-                        allEvents.any { it.startTime <= endTime && it.endTime >= startTime }
+                        allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
                     }
 
                     Day(
                         date = day.date,
-                        selected = selected,
-                        onClick = { state.selectedDate = day.date },
-                        hasEvents = hasEvents,
+                        onClick = onDayClick?.let { callback ->
+                            { callback(day.date, events) }
+                        },
+                        hasEvents = events.isNotEmpty(),
                         onEventClick = onEventClick?.let { callback ->
                             { clicked, events ->
                                 callback(day.date, clicked, events)
@@ -266,18 +253,9 @@ fun Calendar(
         }
     }
 
-    var isFirstTimeScroll by remember { mutableStateOf(true) }
-    LaunchedEffect(state.selectedDate) {
-        if (isFirstTimeScroll) {
-            isFirstTimeScroll = false
-            return@LaunchedEffect
-        }
-        state.animateScrollToDate()
-    }
-
     LaunchedEffect(today) {
         if (state.today != today) {
-            onSystemDateChanged(state.today, today)
+            onSystemDateChanged?.invoke(state.today, today)
             state.today = today
         }
     }
@@ -286,7 +264,7 @@ fun Calendar(
     var lastTimeZone by remember { mutableStateOf(currentTimeZone) }
     LaunchedEffect(currentTimeZone) {
         if (lastTimeZone != currentTimeZone) {
-            onSystemTimeZoneChanged(lastTimeZone, currentTimeZone)
+            onSystemTimeZoneChanged?.invoke(lastTimeZone, currentTimeZone)
             lastTimeZone = currentTimeZone
         }
     }
@@ -295,9 +273,9 @@ fun Calendar(
 @Composable
 fun Day(
     date: LocalDate,
-    selected: Boolean,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
     events: List<Event>? = null,
     hasEvents: Boolean? = null,
     onEventClick: ((clicked: Event, events: List<Event>) -> Unit)? = null,
@@ -315,21 +293,19 @@ fun Day(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier
-                .sizeIn(
-                    maxWidth = 64.dp,
-                    maxHeight = 64.dp,
-                )
-                .padding(2.dp)
-                .matchParentShortestSide(),
-            shape = MaterialTheme.shapes.small,
-            color = if (!selected && !outOfMonth) MaterialTheme.colorScheme.surfaceContainer
-            else if (selected) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surface,
-            border = border,
-        ) {
+        val modifier = Modifier
+            .sizeIn(
+                maxWidth = 64.dp,
+                maxHeight = 64.dp,
+            )
+            .padding(2.dp)
+            .matchParentShortestSide()
+        val shape = MaterialTheme.shapes.small
+        val color = if (!selected && !outOfMonth) MaterialTheme.colorScheme.surfaceContainer
+        else if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface
+
+        (@Composable {
             Column(
                 modifier = Modifier.autoScale(maxWidth = 48.dp),
                 verticalArrangement = Arrangement.Center,
@@ -357,6 +333,25 @@ fun Day(
                     color = if (!outOfMonth) MaterialTheme.colorScheme.onSurface
                     else LocalContentColor.current,
                     style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }).let { content ->
+            if (onClick != null) {
+                Surface(
+                    onClick = onClick,
+                    modifier = modifier,
+                    shape = shape,
+                    color = color,
+                    border = border,
+                    content = content,
+                )
+            } else {
+                Surface(
+                    modifier = modifier,
+                    shape = shape,
+                    color = color,
+                    border = border,
+                    content = content,
                 )
             }
         }
@@ -704,20 +699,10 @@ class CalendarState(
         transitionState.animateTo(mode)
     }
 
-    private var _timeZone by mutableStateOf(initialTimeZone)
-    var timeZone: TimeZone
-        get() = _timeZone
-        set(value) {
-            if (_timeZone != value) {
-                selectedDate = selectedDate.atStartOfDayIn(_timeZone).toLocalDateTime(value).date
-                _timeZone = value
-            }
-        }
-
+    var timeZone by mutableStateOf(initialTimeZone)
     var today by mutableStateOf(LocalDate.now(timeZone = timeZone))
-    var selectedDate by mutableStateOf(initialDate)
 
-    suspend fun animateScrollToDate(date: LocalDate = selectedDate) {
+    suspend fun animateScrollToDate(date: LocalDate = today) {
         coroutineScope {
             launch {
                 monthCalendarState.animateScrollToMonth(date.yearMonth)
