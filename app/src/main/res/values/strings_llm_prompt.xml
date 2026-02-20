@@ -135,6 +135,7 @@
 
         - Ensure you fully understand the user\'s request, and ask the user questions to clarify details if necessary;
         - Ensure the schedule is correct, and if the user does not provide a schedule, ask the user for details of the schedule;
+        - Confirm the details of the event reminders with the user;
         - If the current information is insufficient to complete the import, refuse to generate the schedule, explain to the user what information is missing, and request that they provide this information;
         - When you are ready to generate the schedule, finally summarize your understanding of the user\'s request, list the details of the schedule entries you are going to generate, and seek the user\'s confirmation before generating the schedule.
 
