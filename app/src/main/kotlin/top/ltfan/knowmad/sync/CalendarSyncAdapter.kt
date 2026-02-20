@@ -260,7 +260,7 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
         when (this@toContentValues) {
             is Normal -> {
                 if (!notes.isNullOrBlank()) {
-                    put(CalendarContract.Events.DESCRIPTION, notes)
+                    put(CalendarContract.Events.DESCRIPTION, notes.trim())
                 }
             }
 
@@ -274,9 +274,9 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
                         appendLine()
                     }
                     if (!notes.isNullOrBlank()) {
-                        appendLine(notes)
+                        append(notes)
                     }
-                },
+                }.trim(),
             )
         }
         put(CalendarContract.Events.EVENT_LOCATION, location)
