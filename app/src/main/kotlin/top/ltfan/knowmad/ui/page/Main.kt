@@ -20,26 +20,31 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MediumFloatingActionButton
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -52,12 +57,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -66,6 +74,7 @@ import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
@@ -78,9 +87,7 @@ import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
 import top.ltfan.knowmad.ui.component.SnackbarHost
-import top.ltfan.knowmad.ui.component.rememberWeekHeaderTextMeasuredHeight
 import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -204,18 +211,32 @@ class MainPage : Page() {
             ) {
                 Scaffold(
                     topBar = {
-                        MediumTopAppBar(
+                        TopAppBar(
                             title = {
-                                Text(
-                                    viewModel.calendarState.currentMonth.month.toJavaMonth()
-                                        .getDisplayName(FULL, configuration.locales[0]),
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .clip(ContinuousCapsule)
+                                        .clickable { viewModel.showMonthBottomSheet = true }
+                                        .padding(ButtonDefaults.TextButtonWithIconContentPadding),
+                                    horizontalArrangement = Arrangement.spacedBy(ButtonDefaults.IconSpacing),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        viewModel.calendarState.currentMonth.month.toJavaMonth()
+                                            .getDisplayName(FULL, configuration.locales[0]),
+                                    )
+                                    Icon(
+                                        painterResource(R.drawable.arrow_drop_down_24px),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                                    )
+                                }
                             },
                             modifier = Modifier.combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onDoubleClick = viewModel::calendarBackToToday,
-                                onClick = { viewModel.showMonthBottomSheet = true },
+                                onClick = {},
                             ),
                         )
                     },
@@ -224,43 +245,20 @@ class MainPage : Page() {
                             onClick = {
                                 coroutineScope.launch { scaffoldState.bottomSheetState.expand() }
                             },
-                        ) {
-                            AgentChatIcon()
-                        }
+                            content = { AgentChatIcon() },
+                        )
                     },
                     contentWindowInsets = AppWindowInsets,
                 ) {
                     val contentPadding = it + contentPadding
-                    Column(Modifier.fillMaxSize()) {
-                        BoxWithConstraints(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    contentPadding.copy(
-                                        layoutDirection,
-                                        bottom = 0.dp,
-                                    ),
-                                ),
-                        ) {
-                            val width = maxWidth
-
-                            val headerVerticalPadding = 4.dp
-                            val headerTextHeight = rememberWeekHeaderTextMeasuredHeight()
-                            val headerHeight = headerTextHeight + headerVerticalPadding * 2
-
-                            val eventDotSize = 4.dp
-                            val weekHeight = (width / 7f) + eventDotSize
-
-                            // TODO: switch mode by gesture
-                            Calendar(
-                                headerModifier = Modifier.padding(vertical = headerVerticalPadding),
-                                state = viewModel.calendarState,
-                                onSystemDateChanged = viewModel::onSystemDateChanged,
-                                getEvents = viewModel::getEvents,
-                                onEventClick = viewModel::onCalendarEventClick,
-                            )
-                        }
-                    }
+                    Calendar(
+                        modifier = Modifier.padding(contentPadding),
+                        headerModifier = Modifier.padding(vertical = 4.dp),
+                        state = viewModel.calendarState,
+                        onSystemDateChanged = viewModel::onSystemDateChanged,
+                        getEvents = viewModel::getEvents,
+                        onEventClick = viewModel::onCalendarEventClick,
+                    )
                 }
             }
         }
