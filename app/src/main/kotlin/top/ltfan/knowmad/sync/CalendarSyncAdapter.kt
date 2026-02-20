@@ -78,6 +78,10 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
                 val lastSyncTime =
                     if (isFullSync) Instant.DISTANT_PAST else provider.getLastSyncTime(account)
                 val dao = context(context) { AppDatabase.get() }.scheduleDao()
+
+                val semesterIds = dao.getAllSemesterIds().toSet()
+                provider.retainCalendars(semesterIds, account)
+
                 val (events, tombstones) = dao.getAllEventsForSyncAfter(lastSyncTime, SystemSync)
                 val map = events.groupBy { it.semester }
 
@@ -352,6 +356,49 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
 
         val result = insert(uri, values)
         return ContentUris.parseId(result!!)
+    }
+
+    private fun ContentProviderClient.retainCalendars(
+        semestersIds: Set<Uuid>,
+        account: Account,
+    ) {
+        val projection =
+            arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars._SYNC_ID)
+        val selection =
+            "${CalendarContract.Calendars.ACCOUNT_NAME} = ? AND ${CalendarContract.Calendars.ACCOUNT_TYPE} = ?"
+        val selectionArgs = arrayOf(account.name, account.type)
+
+        val calendarsToDelete = mutableListOf<Long>()
+
+        query(
+            CalendarContract.Calendars.CONTENT_URI.addSyncParams(account),
+            projection,
+            selection,
+            selectionArgs,
+            null,
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val calendarId = cursor.getLong(0)
+                val sId = cursor.getString(1)
+                val uuid = sId?.let { Uuid.parseOrNull(it) }
+
+                if (uuid == null || uuid !in semestersIds) {
+                    calendarsToDelete.add(calendarId)
+                }
+            }
+        }
+
+        if (calendarsToDelete.isNotEmpty()) {
+            val ops = calendarsToDelete.map { calendarId ->
+                ContentProviderOperation.newDelete(
+                    ContentUris.withAppendedId(
+                        CalendarContract.Calendars.CONTENT_URI,
+                        calendarId,
+                    ).addSyncParams(account),
+                ).build()
+            }
+            applyBatch(ArrayList(ops))
+        }
     }
 
     private fun ContentProviderClient.saveLastSyncTime(

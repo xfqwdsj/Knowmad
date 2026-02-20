@@ -187,6 +187,9 @@ interface ScheduleDao : FtsDao {
     @Query("SELECT * FROM SemesterEntity ORDER BY startDate ASC")
     suspend fun getAllSemesters(): List<SemesterEntity>
 
+    @Query("SELECT id FROM SemesterEntity ORDER BY startDate ASC")
+    suspend fun getAllSemesterIds(): List<Uuid>
+
     @Query("SELECT * FROM SemesterEntity ORDER BY startDate ASC")
     fun getAllSemestersFlow(): Flow<List<SemesterEntity>>
 
