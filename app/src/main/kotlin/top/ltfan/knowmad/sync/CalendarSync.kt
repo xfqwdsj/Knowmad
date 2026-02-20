@@ -26,12 +26,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 suspend fun Context.requestCalendarSync(
-    isManual: Boolean = true,
+    fullSync: Boolean = true,
 ) {
     withContext(Dispatchers.IO) {
         val account = getOrCreateSyncAccount()
         val bundle = Bundle().apply {
-            putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, isManual)
+            putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, fullSync)
             putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true)
         }
         ContentResolver.requestSync(account, CalendarContract.AUTHORITY, bundle)
