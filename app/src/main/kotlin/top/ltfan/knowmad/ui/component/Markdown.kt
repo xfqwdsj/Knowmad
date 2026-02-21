@@ -483,14 +483,16 @@ fun MarkdownCodeTopBar(
                 val runEnabled = LocalMarkdownRunCodeEnabled.current
                 RunIconButton(
                     onRun = { runner.run(node, languageComponents, code) },
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(24.dp),
+                    iconModifier = Modifier.size(16.dp),
                     enabled = runEnabled,
                 )
             }
 
             CopyIconButton(
                 onCopy = { null to code },
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(24.dp),
+                iconModifier = Modifier.size(16.dp),
             )
         }
     }
