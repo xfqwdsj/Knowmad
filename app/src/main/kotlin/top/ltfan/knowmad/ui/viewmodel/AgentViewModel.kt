@@ -25,12 +25,12 @@ import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -120,7 +120,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val chatData = chatDataStore.asMutableState(chatDataStateFlow.value)
 
     val drawerState = DrawerState(DrawerValue.Closed)
-    val messagesListState = LazyListState()
+    var savedMessagesFirstVisibleItemIndex by mutableIntStateOf(0)
+    var savedMessagesFirstVisibleItemScrollOffset by mutableIntStateOf(0)
     val assistantMessageStates = SnapshotLruCache<Any, AssistantMessageState>(
         snapshotStateMap = mutableStateMapOf(),
         maxSize = 100,
@@ -146,7 +147,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         transformIn = { conversation },
         transformOut = {
             messageListLoading = true
-            messagesListState.requestScrollToItem(0)
             copy(conversation = it)
         },
     )

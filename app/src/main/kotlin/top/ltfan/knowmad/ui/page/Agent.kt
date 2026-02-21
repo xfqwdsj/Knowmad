@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.Icon
@@ -55,6 +56,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -335,6 +337,11 @@ class AgentMainPage : AgentSubPage() {
                             return@subcompose
                         }
 
+                        val lazyListState = rememberLazyListState(
+                            initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
+                            initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
+                        )
+
                         CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
                             ChatMessageList(
                                 getMessageCount = { messages.itemCount },
@@ -350,29 +357,48 @@ class AgentMainPage : AgentSubPage() {
                                 initialToolVisibility = viewModel.defaultToolVisibility,
                                 onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
                                 contentPadding = padding,
-                                lazyListState = viewModel.messagesListState,
+                                lazyListState = lazyListState,
                                 assistantMessageStates = viewModel.assistantMessageStates,
                                 runnableCodeComponents = viewModel.runnableCodeComponents,
                                 runCode = viewModel::runAssistantCode,
                             )
                         }
 
+                        LaunchedEffect(lazyListState) {
+                            snapshotFlow {
+                                lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
+                            }
+                                .collect { (index, offset) ->
+                                    viewModel.savedMessagesFirstVisibleItemIndex = index
+                                    viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
+                                }
+                        }
+
                         var isAtBottom by remember { mutableStateOf(true) }
 
-                        val isScrolling = viewModel.messagesListState.isScrollInProgress
+                        val isScrolling = lazyListState.isScrollInProgress
                         LaunchedEffect(isScrolling) {
                             if (!isScrolling) {
                                 isAtBottom =
-                                    viewModel.messagesListState.firstVisibleItemIndex == 0 &&
-                                            viewModel.messagesListState.firstVisibleItemScrollOffset == 0
+                                    lazyListState.firstVisibleItemIndex == 0 &&
+                                            lazyListState.firstVisibleItemScrollOffset == 0
                             }
                         }
 
                         val currentFirstMessageKey = messages.itemSnapshotList.firstOrNull()?.key
                         LaunchedEffect(currentFirstMessageKey) {
                             if (isAtBottom) {
-                                viewModel.messagesListState.animateScrollToItem(0)
+                                lazyListState.animateScrollToItem(0)
                             }
+                        }
+
+                        var isFirstTimeScroll by remember { mutableStateOf(true) }
+                        LaunchedEffect(viewModel.currentConversationId) {
+                            if (isFirstTimeScroll) {
+                                isFirstTimeScroll = false
+                                return@LaunchedEffect
+                            }
+                            lazyListState.requestScrollToItem(0)
                         }
                     }.fastMap { it.measure(constraints) }
 
