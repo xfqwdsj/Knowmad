@@ -362,6 +362,7 @@ fun ChatMessageList(
     contentPadding: PaddingValues = PaddingValues(),
     lazyListState: LazyListState = rememberLazyListState(),
     assistantMessageStates: MutableMap<Any, AssistantMessageState> = remember { mutableStateMapOf() },
+    allowAssistantMessageActions: Boolean = true,
     topToBottom: Boolean = false,
     reverseIndexing: Boolean = false,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
@@ -426,6 +427,7 @@ fun ChatMessageList(
                                 }
                                 previousHeight = height
                             },
+                        allowActions = allowAssistantMessageActions,
                         runnableCodeComponents = runnableCodeComponents,
                         runCode = { _, _, _, _ -> },
                     )
@@ -463,6 +465,7 @@ fun ChatMessageList(
                                     onAnyToolVisibilityChange(visible)
                                 },
                                 modifier = Modifier.fillParentMaxWidth(),
+                                allowActions = allowAssistantMessageActions,
                                 runnableCodeComponents = runnableCodeComponents,
                                 runCode = runCode?.let { runCode ->
                                     { contentIndex: Int, node: ASTNode, components: List<String>, code: String ->
@@ -513,6 +516,7 @@ fun AssistantMessage(
     initialToolVisibility: Boolean,
     onAnyToolVisibilityChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    allowActions: Boolean = true,
     runnableCodeComponents: Set<List<String>>? = null,
     runCode: ((contentIndex: Int, node: ASTNode, components: List<String>, code: String) -> Unit)? = null,
 ) {
@@ -610,7 +614,7 @@ fun AssistantMessage(
             }
         }
         AnimatedVisibility(
-            visible = total > 1 || state.completed,
+            visible = allowActions && (total > 1 || state.completed),
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
