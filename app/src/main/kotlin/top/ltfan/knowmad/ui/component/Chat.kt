@@ -486,7 +486,7 @@ fun ChatMessageList(
                                     .map { uiMessage -> uiMessage.message }
                                     .filterIsInstance<Message.User>()
                                     .singleOrNull()?.content
-                                    ?: error("User message must contain one User part."),
+                                    ?: return@items,
                                 current = data.branchIndex,
                                 total = data.branchCount,
                                 onPrevious = { onPrevious(data) },

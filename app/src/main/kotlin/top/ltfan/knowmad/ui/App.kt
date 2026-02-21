@@ -18,12 +18,18 @@
 
 package top.ltfan.knowmad.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import top.ltfan.knowmad.ui.component.ICalendarImportResultDialog
+import top.ltfan.knowmad.ui.component.PictureInPicture
+import top.ltfan.knowmad.ui.component.rememberIsInPictureInPictureMode
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
@@ -34,27 +40,38 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 fun AppContent() {
     val appViewModel = LocalAppViewModel.current
 
-    if (appViewModel.appReady) {
-        val overlayContentStrategy = remember { OverlayContentSceneStrategy<Page>() }
+    val isInPictureInPictureMode = rememberIsInPictureInPictureMode()
 
-        NavDisplay(
-            backStack = appViewModel.backStack.expanded,
-            onBack = appViewModel::onBack,
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            sceneStrategy = overlayContentStrategy,
-            sharedTransitionScope = localSharedTransitionScope { this },
-            entryProvider = { it.navEntry() },
-        )
-    }
+    AnimatedContent(
+        targetState = isInPictureInPictureMode,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+    ) { isInPictureInPictureMode ->
+        if (!isInPictureInPictureMode) {
+            if (appViewModel.appReady) {
+                val overlayContentStrategy = remember { OverlayContentSceneStrategy<Page>() }
 
-    appViewModel.iCalendarImportResult?.let { (result, errors) ->
-        ICalendarImportResultDialog(
-            onDismissRequest = { appViewModel.iCalendarImportResult = null },
-            result = result,
-            errors = errors,
-        )
+                NavDisplay(
+                    backStack = appViewModel.backStack.expanded,
+                    onBack = appViewModel::onBack,
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                    sceneStrategy = overlayContentStrategy,
+                    sharedTransitionScope = localSharedTransitionScope { this },
+                    entryProvider = { it.navEntry() },
+                )
+            }
+
+            appViewModel.iCalendarImportResult?.let { (result, errors) ->
+                ICalendarImportResultDialog(
+                    onDismissRequest = { appViewModel.iCalendarImportResult = null },
+                    result = result,
+                    errors = errors,
+                )
+            }
+        } else {
+            PictureInPicture()
+        }
     }
 }

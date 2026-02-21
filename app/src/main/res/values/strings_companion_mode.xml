@@ -19,4 +19,9 @@
 <resources>
     <string name="service_semantic_analysis_label">Knowmad Semantic Analysis Service</string>
     <string name="service_semantic_analysis_description">An accessibility service that provides intelligent perception capabilities</string>
+    <string name="service_semantic_analysis_capture_label">Capture</string>
+    <string name="service_semantic_analysis_capture_description">Capture Semantic Information</string>
+    <string name="companion_mode_label_enter">Companion Mode</string>
+    <string name="companion_mode_label_capturing">Capturing screen content, this process may take up to 1 minute, the foreground application may temporarily become unresponsive, please wait patiently…</string>
+    <string name="llm_prompt_companion_mode_context">[System] The user is in companion mode, only can send screen content to you, but cannot manually edit messages. Please analyze the user\'s intentions and needs, and provide relevant suggestions</string>
 </resources>

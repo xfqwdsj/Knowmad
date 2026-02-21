@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.ui.page
 
+import android.app.PictureInPictureParams
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
@@ -83,6 +85,7 @@ import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
+import top.ltfan.knowmad.ui.component.CloseFullscreenIconButton
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
@@ -242,6 +245,19 @@ class MainPage : Page() {
                                 },
                                 onClick = {},
                             ),
+                            actions = {
+                                val activity = LocalActivity.current
+                                if (activity != null) {
+                                    CloseFullscreenIconButton(
+                                        onClick = {
+                                            activity.enterPictureInPictureMode(
+                                                PictureInPictureParams.Builder().build(),
+                                            )
+                                        },
+                                        contentDescriptionRes = R.string.companion_mode_label_enter,
+                                    )
+                                }
+                            },
                         )
                     },
                     floatingActionButton = {

@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.accessibility.semantic
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
@@ -28,15 +29,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import top.ltfan.knowmad.util.Logger
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 @SuppressLint("AccessibilityPolicy")
 class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
+    private val logger = Logger("SemanticAnalysisService")
+
     private val job = Job()
     override val coroutineContext = Dispatchers.Default + job
 
@@ -46,124 +54,55 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
             flow.collect { event ->
                 when (event) {
                     is Heartbeat -> event(true)
-                    is GetUiTree -> {
-                        val root = rootInActiveWindow
-                        event(rootInActiveWindow?.parse())
-                        @Suppress("DEPRECATION")
-                        root?.recycle()
-                    }
-                }
-            }
-        }
-    }
+                    is GetUiTree -> launch {
+                        val originalInfo = serviceInfo ?: return@launch event(null)
 
-    private fun AccessibilityNodeInfo.parse(): Node? {
-        if (!isVisibleToUser) return null
+                        val elevatedInfo = AccessibilityServiceInfo().apply {
+                            eventTypes = originalInfo.eventTypes
+                            notificationTimeout = originalInfo.notificationTimeout
+                            flags = originalInfo.flags
 
-        data class TraversalPair(
-            val info: AccessibilityNodeInfo,
-            val node: Node,
-            val parent: Node? = null,
-            var processedChildren: Boolean = false,
-        )
-
-        val stack = ArrayDeque<TraversalPair>()
-        val rootNode = toNode()
-
-        var finalRoot: Node? = rootNode
-        stack.addFirst(TraversalPair(this, rootNode, null))
-
-        while (stack.isNotEmpty()) {
-            val current = stack.first()
-
-            if (!current.processedChildren) {
-                val childCount = current.info.childCount
-                val tempChildren = mutableListOf<Node>()
-
-                for (i in 0 until childCount) {
-                    val childInfo = current.info.getChild(i) ?: continue
-
-                    if (childInfo.shouldSkip) {
-                        @Suppress("DEPRECATION")
-                        childInfo.recycle()
-                        continue
-                    }
-
-                    val childNode = childInfo.toNode()
-                    tempChildren.add(childNode)
-                    stack.addFirst(TraversalPair(childInfo, childNode, current.node))
-                }
-
-                (current.node.children as? MutableList)?.addAll(tempChildren)
-                current.processedChildren = true
-            } else {
-                val completed = stack.removeFirst()
-
-                if (completed.info.shouldSimplify) {
-                    val currentList = completed.node.children as? MutableList
-                    if (currentList?.size == 1) {
-                        val onlyChild = currentList[0]
-
-                        if (onlyChild.id.isNullOrBlank() && !completed.node.id.isNullOrBlank()) {
-                            currentList[0] = onlyChild.copy(id = completed.node.id)
+                            feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN
+                            flags =
+                                flags or AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE
                         }
 
-                        val promotedChild = currentList[0]
-                        val parentNode = completed.parent
+                        serviceInfo = elevatedInfo
 
-                        if (parentNode != null) {
-                            val siblings = parentNode.children as MutableList
-                            val index = siblings.indexOf(completed.node)
-                            if (index != -1) {
-                                siblings[index] = promotedChild
+                        withTimeoutOrNull(1.minutes) {
+                            var tries = 1
+
+                            while (true) {
+                                val root = rootInActiveWindow
+                                val node = root?.parse()
+                                if (node != null) {
+                                    logger.debug { "Successfully retrieved UI tree after $tries tries" }
+                                    val title = root.window?.title?.toString()
+                                        ?: root.packageName?.toString()
+                                        ?: "Unknown App"
+                                    val rootNode = Node(
+                                        name = title,
+                                        children = listOf(node),
+                                    )
+                                    event(rootNode)
+                                    @Suppress("DEPRECATION")
+                                    root.recycle()
+                                    break
+                                }
+                                @Suppress("DEPRECATION")
+                                root?.recycle()
+                                tries++
+                                delay(100.milliseconds)
                             }
-                        } else {
-                            finalRoot = promotedChild
                         }
-                    }
-                }
 
-                if (completed.info != this) {
-                    @Suppress("DEPRECATION")
-                    completed.info.recycle()
+                        serviceInfo = originalInfo
+                        event(null)
+                    }
                 }
             }
         }
-
-        return finalRoot
     }
-
-    private fun AccessibilityNodeInfo.toNode() = Node(
-        id = viewIdResourceName,
-        className = className?.toString(),
-        contentDescription = contentDescription?.toString(),
-        text = text?.toString(),
-        isClickable = isClickable,
-        isFocusable = isFocusable,
-        isVisibleToUser = isVisibleToUser,
-        children = mutableListOf(),
-    )
-
-    private val AccessibilityNodeInfo.shouldSkip: Boolean
-        get() {
-            if (!isVisibleToUser) return true
-
-            val rect = Rect()
-            getBoundsInScreen(rect)
-            if (rect.isEmpty) return true
-            if (childCount > 0) return false
-            if (text.isNullOrBlank() && contentDescription.isNullOrBlank() && !isClickable) return true
-            return false
-        }
-
-    private val AccessibilityNodeInfo.shouldSimplify: Boolean
-        get() {
-            if (childCount != 1) return false
-            if (!text.isNullOrBlank()) return false
-            if (!contentDescription.isNullOrBlank()) return false
-            if (isClickable || isFocusable) return false
-            return true
-        }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
@@ -223,4 +162,96 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
             }
         }
     }
+
+    private fun AccessibilityNodeInfo.parse(): Node? {
+        data class NodeSnapshot(
+            val info: AccessibilityNodeInfo,
+            val node: Node,
+            val parent: NodeSnapshot? = null,
+        )
+
+        val traversalOrder = mutableListOf<NodeSnapshot>()
+        val queue = ArrayDeque<NodeSnapshot>()
+
+        if (!isVisibleToUser) return null
+        val rootSnapshot = NodeSnapshot(this, this.toNode(), null)
+        queue.add(rootSnapshot)
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            traversalOrder.add(current)
+
+            for (i in 0 until current.info.childCount) {
+                val childInfo = current.info.getChild(i) ?: continue
+
+                val rect = Rect()
+                childInfo.getBoundsInScreen(rect)
+                if (!childInfo.isVisibleToUser || rect.isEmpty) {
+                    @Suppress("DEPRECATION")
+                    childInfo.recycle()
+                    continue
+                }
+
+                val childSnapshot = NodeSnapshot(childInfo, childInfo.toNode(), current)
+                queue.add(childSnapshot)
+            }
+        }
+
+        var finalRoot: Node? = rootSnapshot.node
+
+        for (i in traversalOrder.indices.reversed()) {
+            val current = traversalOrder[i]
+            val currentNode = current.node
+            val info = current.info
+
+            val isMeaningless = currentNode.text.isNullOrBlank() &&
+                    currentNode.contentDescription.isNullOrBlank() &&
+                    !currentNode.isClickable &&
+                    !currentNode.isFocusable
+
+            val children = currentNode.children as MutableList<Node>
+            var replacement: Node? = currentNode
+
+            if (isMeaningless) {
+                if (children.isEmpty()) {
+                    replacement = null
+                } else if (children.size == 1) {
+                    val onlyChild = children[0]
+                    replacement =
+                        if (!currentNode.id.isNullOrBlank() && onlyChild.id.isNullOrBlank()) {
+                            onlyChild.copy(id = currentNode.id)
+                        } else {
+                            onlyChild
+                        }
+                }
+            }
+
+            val parentSnapshot = current.parent
+            if (parentSnapshot != null) {
+                if (replacement != null) {
+                    (parentSnapshot.node.children as MutableList<Node>).add(replacement)
+                }
+            } else {
+                finalRoot = replacement
+            }
+
+            if (info != this) {
+                @Suppress("DEPRECATION")
+                info.recycle()
+            }
+        }
+
+        return finalRoot
+    }
+
+    private fun AccessibilityNodeInfo.toNode() = Node(
+        id = viewIdResourceName,
+        name = className?.toString(),
+        contentDescription = contentDescription?.toString(),
+        text = text?.toString(),
+        isClickable = isClickable,
+        isFocusable = isFocusable,
+        isVisibleToUser = isVisibleToUser,
+        children = mutableListOf(),
+    )
 }

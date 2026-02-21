@@ -240,7 +240,7 @@ class AgentMainPage : AgentSubPage() {
                                     showDialog = false
                                 },
                                 onAutoGenerateName = {
-                                    viewModel.autoGenerateConversationName(currentConversation)
+                                    viewModel.autoGenerateConversationName(currentConversation.id)
                                 },
                             )
                         }
@@ -264,7 +264,7 @@ class AgentMainPage : AgentSubPage() {
                     val inputPlaceables = subcompose("input") {
                         ChatInput(
                             textState = viewModel.chatMessageTextInputState,
-                            sendEnabled = viewModel.canSendMessage,
+                            sendEnabled = viewModel.canSendMessageUi,
                             onSend = viewModel::sendMessage,
                             isRunning = viewModel.isRunning,
                             onCancel = viewModel::cancelGeneration,

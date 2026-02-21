@@ -127,6 +127,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         maxSize = 100,
     )
 
+    var capturingScreen by mutableStateOf(false)
+
     suspend fun toggleDrawer() {
         if (drawerState.isClosed) {
             drawerState.open()
@@ -247,8 +249,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    suspend fun autoGenerateConversationName(conversation: ConversationEntity): String? {
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversation.id).reversed()
+    suspend fun autoGenerateConversationName(conversationId: Uuid): String? {
+        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
             .asSequence()
             .flatMap { it.message.parts }
             .filterIsInstance<UiMessage.Koog>()
@@ -443,14 +445,25 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val canSendMessage
         get() = !isRunning &&
                 selectedModelEntity != null &&
-                !messageListLoading &&
+                !messageListLoading
+
+    val canSendMessageUi
+        inline get() = canSendMessage &&
                 chatMessageTextInputState.text.isNotEmpty()
 
-    fun sendMessage() {
-        if (!canSendMessage) return
-        val parts = listOf(ContentPart.Text(chatMessageTextInputState.text.toString()))
+    fun sendMessage(
+        allowEmptyUserInput: Boolean = false,
+        includeEnvironmentContext: Boolean = true,
+        contextMessages: List<UiMessage>? = null,
+        parts: List<ContentPart> = listOf(ContentPart.Text(chatMessageTextInputState.text.toString())),
+        beforeStart: (() -> Unit)? = { chatMessageTextInputState.setTextAndPlaceCursorAtEnd("") },
+        onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
+    ) {
+        if (!canSendMessage || (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() }))
+            return
         viewModelScope.launch {
-            if (currentConversationId == null) {
+            val isNewConversation = currentConversationId == null
+            if (isNewConversation) {
                 createNewConversation()
             }
             val conversationId = currentConversationId ?: return@launch
@@ -478,6 +491,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     ),
                     metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
                 )
+
                 system?.let {
                     chatDao.insertMessage(
                         message = MessageEntity(
@@ -492,13 +506,20 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 chatDao.insertMessage(
                     message = MessageEntity(
                         conversationId = conversationId,
-                        parts = listOf(
-                            environmentMessage.toUiMessage(display = false),
-                            Message.User(
-                                parts = parts,
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ).toUiMessage(),
-                        ),
+                        parts = buildList {
+                            if (includeEnvironmentContext) {
+                                add(environmentMessage.toUiMessage(display = false))
+                            }
+                            contextMessages?.let { addAll(it) }
+                            parts.takeIf { it.isNotEmpty() }?.let { parts ->
+                                add(
+                                    Message.User(
+                                        parts = parts,
+                                        metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                                    ).toUiMessage(),
+                                )
+                            }
+                        },
                         role = MessageEntityRole.User,
                         generatedBy = null,
                     ),
@@ -506,7 +527,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 )
                 if (databaseMessages.isEmpty()) {
                     viewModelScope.launch {
-                        val title = autoGenerateConversationName(conversation) ?: return@launch
+                        val title = autoGenerateConversationName(conversation.id) ?: return@launch
                         val newConversation = conversation.copy(name = title)
                         chatDao.updateConversation(newConversation)
                         conversation = newConversation
@@ -542,6 +563,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             }
                             chatDao.updateMessage(it.toEntity())
                             logger.debug { "Message completed." }
+                            onEnd?.invoke(isNewConversation)
                         }
                     },
                 ).apply {
@@ -569,7 +591,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                     }
                 }
                 logger.debug { "Running agent..." }
-                chatMessageTextInputState.setTextAndPlaceCursorAtEnd("")
+                beforeStart?.invoke()
                 suspend {
                     runAgent(
                         state = state,
@@ -586,6 +608,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                                 system(application.resources.environmentSystemPrompt())
                                 system?.let { message(it) } ?: messages(messages)
                                 message(environmentMessage)
+                                contextMessages?.forEach {
+                                    if (it !is Koog) return@forEach
+                                    message(it.message)
+                                }
                             },
                         )
                     }

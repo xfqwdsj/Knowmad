@@ -113,7 +113,7 @@ fun ConversationList(
     onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
-    onAutoGenerateName: (suspend (conversation: ConversationEntity) -> String?)? = null,
+    onAutoGenerateName: (suspend (conversationId: Uuid) -> String?)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -326,7 +326,7 @@ fun ConversationList(
                             showDialog = false
                         },
                         onAutoGenerateName = onAutoGenerateName?.let {
-                            { onAutoGenerateName(conversation) }
+                            { onAutoGenerateName(conversation.id) }
                         },
                     )
                 }

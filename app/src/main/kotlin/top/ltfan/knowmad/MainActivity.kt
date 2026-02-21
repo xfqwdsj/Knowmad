@@ -18,26 +18,42 @@
 
 package top.ltfan.knowmad
 
+import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.RequestMetaInfo
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toDeprecatedClock
+import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
+import kotlin.time.Clock
 
 class MainActivity : KnowmadActivity() {
     private val viewModel: AppViewModel by viewModels {
@@ -61,6 +77,13 @@ class MainActivity : KnowmadActivity() {
         super.onCreate(savedInstanceState)
 
         intent.handle()
+        ContextCompat.registerReceiver(
+            this,
+            pipReceiver,
+            IntentFilter(ACTION_PIP),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        setPictureInPictureParams(pipParams)
         splashScreen.setKeepOnScreenCondition { !viewModel.appReady }
 
         setContent {
@@ -109,5 +132,104 @@ class MainActivity : KnowmadActivity() {
                 viewModel.importFromICalendar(content)
             }
         }
+    }
+
+    private val pipActions by lazy {
+        listOf(
+            RemoteAction(
+                Icon.createWithResource(this, R.drawable.capture_24px),
+                getString(R.string.service_semantic_analysis_capture_label),
+                getString(R.string.service_semantic_analysis_capture_description),
+                PendingIntent.getBroadcast(
+                    this,
+                    CODE_CAPTURE_UI,
+                    Intent(ACTION_PIP).apply {
+                        putExtra(EXTRA_ACTION, CODE_CAPTURE_UI)
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            ),
+            RemoteAction(
+                Icon.createWithResource(this, R.drawable.edit_square_24px),
+                getString(R.string.agent_conversation_label_new),
+                getString(R.string.agent_conversation_label_new),
+                PendingIntent.getBroadcast(
+                    this,
+                    CODE_NEW_CONVERSATION,
+                    Intent(ACTION_PIP).apply {
+                        putExtra(EXTRA_ACTION, CODE_NEW_CONVERSATION)
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            ),
+        )
+    }
+
+    private val pipReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != ACTION_PIP) return
+            when (intent.extras?.getInt(EXTRA_ACTION)) {
+                CODE_CAPTURE_UI -> lifecycleScope.launch {
+                    if (agentViewModel.capturingScreen) return@launch
+                    agentViewModel.capturingScreen = true
+                    val node = SemanticAnalysisService.getUiTree().also {
+                        agentViewModel.capturingScreen = false
+                    } ?: return@launch
+                    val json = Json.encodeToString(node)
+                    agentViewModel.sendMessage(
+                        allowEmptyUserInput = true,
+                        contextMessages = listOf(
+                            Message.User(
+                                content = getString(R.string.llm_prompt_companion_mode_context),
+                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            ).toUiMessage(display = false),
+                            Message.User(
+                                content = json,
+                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            ).toUiMessage(display = false),
+                        ),
+                        parts = listOf(),
+                        beforeStart = null,
+                        onEnd = { isNewConversation ->
+                            if (!isNewConversation) return@sendMessage
+                            val conversationId =
+                                agentViewModel.currentConversationId ?: return@sendMessage
+                            lifecycleScope.launch {
+                                val newTitle =
+                                    agentViewModel.autoGenerateConversationName(conversationId)
+                                        ?: return@launch
+                                val conversation =
+                                    agentViewModel.chatDao.getConversationById(conversationId)
+                                        ?: return@launch
+                                agentViewModel.chatDao.updateConversation(
+                                    conversation.copy(name = newTitle),
+                                )
+                            }
+                        },
+                    )
+                }
+
+                CODE_NEW_CONVERSATION -> agentViewModel.newConversation()
+            }
+        }
+    }
+
+    private val pipParams by lazy {
+        PictureInPictureParams.Builder().apply {
+            setAspectRatio(Rational(9, 14))
+            setActions(pipActions)
+        }.build()
+    }
+
+    companion object {
+        private const val ACTION_PIP = "top.ltfan.knowmad.action.PIP"
+        private const val EXTRA_ACTION = "top.ltfan.knowmad.extra.PIP_ACTION"
+        private const val CODE_CAPTURE_UI = 0
+        private const val CODE_NEW_CONVERSATION = 1
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(pipReceiver)
     }
 }
