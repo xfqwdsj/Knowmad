@@ -18,13 +18,17 @@
 
 package top.ltfan.knowmad.accessibility.semantic
 
-data class EventWithCallback<R>(
-    val event: Event<R>,
-    val onResult: (Any?) -> Unit,
-)
+sealed class Event<R> {
+    private lateinit var _onResult: (R?) -> Unit
 
-operator fun <R> Event<R>.invoke(onResult: (Any?) -> Unit) = EventWithCallback(this, onResult)
+    fun onResult(onResult: (R?) -> Unit) {
+        _onResult = onResult
+    }
 
-sealed interface Event<R>
+    operator fun invoke(result: R?) {
+        _onResult(result)
+    }
+}
 
-data object GetUiTree : Event<CloseableAccessibilityNodeInfo>
+class Heartbeat : Event<Boolean>()
+class GetUiTree : Event<Node>()

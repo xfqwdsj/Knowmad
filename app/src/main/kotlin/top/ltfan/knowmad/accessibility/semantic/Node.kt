@@ -18,22 +18,16 @@
 
 package top.ltfan.knowmad.accessibility.semantic
 
-import android.content.Context
-import android.content.Intent
-import android.os.Bundle
-import android.provider.Settings
+import kotlinx.serialization.Serializable
 
-fun Context.requestEnableAccessibilityService() {
-    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-
-    val serviceName = packageName + "/" + SemanticAnalysisService::class.java.name
-
-    val bundle = Bundle().apply {
-        putString(":settings:fragment_args_key", serviceName)
-    }
-
-    intent.putExtra("extra_fragment_arg_key", serviceName)
-    intent.putExtra(":settings:fragment_args_key", serviceName)
-    intent.putExtra(":settings:show_fragment_args", bundle)
-    startActivity(intent)
-}
+@Serializable
+data class Node(
+    val id: String? = null,
+    val className: String? = null,
+    val contentDescription: String? = null,
+    val text: String? = null,
+    val isClickable: Boolean,
+    val isFocusable: Boolean,
+    val isVisibleToUser: Boolean = true,
+    val children: List<Node> = emptyList(),
+)

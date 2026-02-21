@@ -20,7 +20,9 @@ package top.ltfan.knowmad.accessibility.semantic
 
 import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,16 +43,127 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     override fun onServiceConnected() {
         super.onServiceConnected()
         launch {
-            flow.collect { (event, onResult) ->
+            flow.collect { event ->
                 when (event) {
+                    is Heartbeat -> event(true)
                     is GetUiTree -> {
-                        val rootNode = CloseableAccessibilityNodeInfo(rootInActiveWindow)
-                        onResult(rootNode)
+                        val root = rootInActiveWindow
+                        event(rootInActiveWindow?.parse())
+                        @Suppress("DEPRECATION")
+                        root?.recycle()
                     }
                 }
             }
         }
     }
+
+    private fun AccessibilityNodeInfo.parse(): Node? {
+        if (!isVisibleToUser) return null
+
+        data class TraversalPair(
+            val info: AccessibilityNodeInfo,
+            val node: Node,
+            val parent: Node? = null,
+            var processedChildren: Boolean = false,
+        )
+
+        val stack = ArrayDeque<TraversalPair>()
+        val rootNode = toNode()
+
+        var finalRoot: Node? = rootNode
+        stack.addFirst(TraversalPair(this, rootNode, null))
+
+        while (stack.isNotEmpty()) {
+            val current = stack.first()
+
+            if (!current.processedChildren) {
+                val childCount = current.info.childCount
+                val tempChildren = mutableListOf<Node>()
+
+                for (i in 0 until childCount) {
+                    val childInfo = current.info.getChild(i) ?: continue
+
+                    if (childInfo.shouldSkip) {
+                        @Suppress("DEPRECATION")
+                        childInfo.recycle()
+                        continue
+                    }
+
+                    val childNode = childInfo.toNode()
+                    tempChildren.add(childNode)
+                    stack.addFirst(TraversalPair(childInfo, childNode, current.node))
+                }
+
+                (current.node.children as? MutableList)?.addAll(tempChildren)
+                current.processedChildren = true
+            } else {
+                val completed = stack.removeFirst()
+
+                if (completed.info.shouldSimplify) {
+                    val currentList = completed.node.children as? MutableList
+                    if (currentList?.size == 1) {
+                        val onlyChild = currentList[0]
+
+                        if (onlyChild.id.isNullOrBlank() && !completed.node.id.isNullOrBlank()) {
+                            currentList[0] = onlyChild.copy(id = completed.node.id)
+                        }
+
+                        val promotedChild = currentList[0]
+                        val parentNode = completed.parent
+
+                        if (parentNode != null) {
+                            val siblings = parentNode.children as MutableList
+                            val index = siblings.indexOf(completed.node)
+                            if (index != -1) {
+                                siblings[index] = promotedChild
+                            }
+                        } else {
+                            finalRoot = promotedChild
+                        }
+                    }
+                }
+
+                if (completed.info != this) {
+                    @Suppress("DEPRECATION")
+                    completed.info.recycle()
+                }
+            }
+        }
+
+        return finalRoot
+    }
+
+    private fun AccessibilityNodeInfo.toNode() = Node(
+        id = viewIdResourceName,
+        className = className?.toString(),
+        contentDescription = contentDescription?.toString(),
+        text = text?.toString(),
+        isClickable = isClickable,
+        isFocusable = isFocusable,
+        isVisibleToUser = isVisibleToUser,
+        children = mutableListOf(),
+    )
+
+    private val AccessibilityNodeInfo.shouldSkip: Boolean
+        get() {
+            if (!isVisibleToUser) return true
+
+            val rect = Rect()
+            getBoundsInScreen(rect)
+            if (rect.isEmpty) return true
+            if (childCount > 0) return false
+            if (text.isNullOrBlank() && contentDescription.isNullOrBlank() && !isClickable) return true
+            return false
+        }
+
+    private val AccessibilityNodeInfo.shouldSimplify: Boolean
+        get() {
+            if (childCount != 1) return false
+            if (!text.isNullOrBlank()) return false
+            if (!contentDescription.isNullOrBlank()) return false
+            if (isClickable || isFocusable) return false
+            return true
+        }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
@@ -61,10 +174,11 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     }
 
     companion object {
-        private val flow = MutableSharedFlow<EventWithCallback<*>>()
+        suspend fun heartbeat() = execute(Heartbeat()) == true
 
-        suspend fun getUiTree() = execute(GetUiTree)
+        suspend fun getUiTree() = execute(GetUiTree())
 
+        private val flow = MutableSharedFlow<Event<*>>()
         private suspend inline fun <reified R> execute(event: Event<R>): R? = coroutineScope {
             if (flow.subscriptionCount.value <= 0) return@coroutineScope null
 
@@ -87,17 +201,17 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                         }
                     }
 
+                    event.onResult { result ->
+                        if (result is R) {
+                            safeResume(result)
+                        } else {
+                            safeResume(null)
+                        }
+                        monitorJob.cancel()
+                    }
+
                     try {
-                        flow.emit(
-                            event { result ->
-                                if (result is R) {
-                                    safeResume(result)
-                                } else {
-                                    safeResume(null)
-                                }
-                                monitorJob.cancel()
-                            },
-                        )
+                        flow.emit(event)
                     } catch (e: CancellationException) {
                         safeResume(null)
                     }
