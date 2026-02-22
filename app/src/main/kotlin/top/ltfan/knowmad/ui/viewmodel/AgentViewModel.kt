@@ -771,6 +771,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         clearWaitingStatus()
                     }
                 }
+            } else if (pipWaitingStatus == Service) {
+                clearWaitingStatus()
             }
             return@launch
         }
