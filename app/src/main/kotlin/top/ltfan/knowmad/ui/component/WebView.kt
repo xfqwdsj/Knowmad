@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -349,7 +349,7 @@ fun WebViewBottomController(
     }
 
     LaunchedEffect(Unit) {
-        for (signal in urlEditingChannel) {
+        for (_ in urlEditingChannel) {
             delay(5.seconds)
             if (!expectedUrlActions) continue
             expectedUrlActions = false

@@ -140,7 +140,7 @@ fun PictureInPicture() {
                             val baseDuration = 1.seconds
                             val stepDuration = 0.5.seconds
                             val backThreshold = 5.seconds
-                            for (event in agentViewModel.companionModeScrollUpEvents) {
+                            for (_ in agentViewModel.companionModeScrollUpEvents) {
                                 backJob?.cancel()
                                 val now = Clock.System.now()
                                 val delta = if (lastTime == null) {

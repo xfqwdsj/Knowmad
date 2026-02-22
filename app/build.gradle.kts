@@ -100,6 +100,7 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-parameters")
         freeCompilerArgs.add("-Xcontext-sensitive-resolution")
+        freeCompilerArgs.add("-XXLanguage:+UnnamedLocalVariables")
         optIn.add("kotlin.ExperimentalUnsignedTypes")
         optIn.add("kotlin.concurrent.atomics.ExperimentalAtomicApi")
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
