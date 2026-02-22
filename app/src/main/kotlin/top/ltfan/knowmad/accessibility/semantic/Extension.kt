@@ -18,22 +18,56 @@
 
 package top.ltfan.knowmad.accessibility.semantic
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
+import top.ltfan.knowmad.util.Logger
 
-fun Context.requestEnableAccessibilityService() {
-    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+inline fun <reified T> Context.requestEnableAccessibilityService() {
+    val logger = Logger("requestEnableAccessibilityService")
 
-    val serviceName = packageName + "/" + SemanticAnalysisService::class.java.name
+    val serviceComponent = ComponentName(this, T::class.java)
+    val serviceName = serviceComponent.flattenToString()
 
     val bundle = Bundle().apply {
         putString(":settings:fragment_args_key", serviceName)
+        putString("preference_key", serviceName)
+        putParcelable("component_name", serviceComponent)
     }
 
-    intent.putExtra("extra_fragment_arg_key", serviceName)
-    intent.putExtra(":settings:fragment_args_key", serviceName)
-    intent.putExtra(":settings:show_fragment_args", bundle)
-    startActivity(intent)
+    val putExtras: Intent.() -> Intent = {
+        putExtra(
+            ":settings:show_fragment",
+            "com.android.settings.accessibility.ToggleAccessibilityServicePreferenceFragment",
+        )
+        putExtra("extra_fragment_arg_key", serviceName)
+        putExtra(":settings:fragment_args_key", serviceName)
+        putExtra(":settings:show_fragment_args", bundle)
+        putExtras(bundle)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    val subSettingsIntent = Intent().apply {
+        component = ComponentName("com.android.settings", "com.android.settings.SubSettings")
+        putExtras()
+    }
+
+    val pm = packageManager
+    val info = pm.resolveActivity(subSettingsIntent, PackageManager.MATCH_DEFAULT_ONLY)
+
+    if (info != null) {
+        try {
+            logger.debug { "Trying to open accessibility settings for exact service" }
+            startActivity(subSettingsIntent)
+            return
+        } catch (e: Throwable) {
+            logger.error(e) { "Failed to open accessibility settings for exact service, trying generic accessibility settings" }
+        }
+    }
+
+    val genericSettingsIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).putExtras()
+    startActivity(genericSettingsIntent)
 }

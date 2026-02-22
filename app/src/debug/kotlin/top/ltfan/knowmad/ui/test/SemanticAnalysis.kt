@@ -65,7 +65,7 @@ fun SemanticAnalysis() {
 
                 Row {
                     Button(
-                        onClick = { context.requestEnableAccessibilityService() },
+                        onClick = { context.requestEnableAccessibilityService<SemanticAnalysisService>() },
                         content = { Text("Enable Accessibility Service") },
                     )
                     Button(
