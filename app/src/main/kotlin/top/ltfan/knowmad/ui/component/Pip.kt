@@ -56,13 +56,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastCoerceAtLeast
+import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.theme.AppExtraSmallShape
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
@@ -135,13 +140,16 @@ fun PictureInPicture() {
                         LaunchedEffect(state) {
                             var lastTime: Instant? = null
 
-                            var backJob: Job? = null
+                            val backJob = SupervisorJob(coroutineContext.job)
+                            val backScope = this + backJob
 
                             val baseDuration = 1.seconds
                             val stepDuration = 0.5.seconds
+                            val resetTime = 2.seconds
                             val backThreshold = 5.seconds
+
                             for (_ in agentViewModel.companionModeScrollUpEvents) {
-                                backJob?.cancel()
+                                backJob.cancelChildren()
                                 val now = Clock.System.now()
                                 val delta = if (lastTime == null) {
                                     baseDuration - stepDuration
@@ -151,15 +159,25 @@ fun PictureInPicture() {
                                 lastTime = now
 
                                 val step = state.layoutInfo.viewportSize.height / 2
+
+                                val minimumValue = step * -1f
+                                val maximumValue = step * 3f
+
                                 val value = ((baseDuration - delta) / stepDuration * step).toFloat()
-                                    .coerceAtLeast(-step.toFloat())
+                                    .fastCoerceAtLeast(minimumValue)
+                                    .fastCoerceAtMost(maximumValue)
+
+                                backScope.launch {
+                                    delay(resetTime)
+                                    lastTime = null
+                                }
+
+                                backScope.launch {
+                                    delay(backThreshold)
+                                    state.animateScrollToItem(0)
+                                }
 
                                 launch {
-                                    backJob = launch {
-                                        delay(backThreshold)
-                                        lastTime = null
-                                        state.animateScrollToItem(0)
-                                    }
                                     state.animateScrollBy(value)
                                 }
                             }
