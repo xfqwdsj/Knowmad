@@ -127,6 +127,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         maxSize = 100,
     )
 
+    val companionModeScrollUpEvents = Channel<Unit>(Channel.CONFLATED)
     var capturingScreen by mutableStateOf(false)
 
     suspend fun toggleDrawer() {

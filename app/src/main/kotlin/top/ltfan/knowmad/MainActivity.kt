@@ -137,6 +137,19 @@ class MainActivity : KnowmadActivity() {
     private val pipActions by lazy {
         listOf(
             RemoteAction(
+                Icon.createWithResource(this, R.drawable.arrow_circle_up_24px),
+                getString(R.string.companion_mode_label_scroll_up),
+                getString(R.string.companion_mode_label_scroll_up_description),
+                PendingIntent.getBroadcast(
+                    this,
+                    CODE_SCROLL_UP,
+                    Intent(ACTION_PIP).apply {
+                        putExtra(EXTRA_ACTION, CODE_SCROLL_UP)
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            ),
+            RemoteAction(
                 Icon.createWithResource(this, R.drawable.capture_24px),
                 getString(R.string.service_semantic_analysis_capture_label),
                 getString(R.string.service_semantic_analysis_capture_description),
@@ -169,6 +182,7 @@ class MainActivity : KnowmadActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_PIP) return
             when (intent.extras?.getInt(EXTRA_ACTION)) {
+                CODE_SCROLL_UP -> agentViewModel.companionModeScrollUpEvents.trySend(Unit)
                 CODE_CAPTURE_UI -> lifecycleScope.launch {
                     if (agentViewModel.capturingScreen) return@launch
                     agentViewModel.capturingScreen = true
@@ -224,8 +238,9 @@ class MainActivity : KnowmadActivity() {
     companion object {
         private const val ACTION_PIP = "top.ltfan.knowmad.action.PIP"
         private const val EXTRA_ACTION = "top.ltfan.knowmad.extra.PIP_ACTION"
-        private const val CODE_CAPTURE_UI = 0
-        private const val CODE_NEW_CONVERSATION = 1
+        private const val CODE_SCROLL_UP = 0
+        private const val CODE_CAPTURE_UI = 1
+        private const val CODE_NEW_CONVERSATION = 2
     }
 
     override fun onDestroy() {

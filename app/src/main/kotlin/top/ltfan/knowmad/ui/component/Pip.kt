@@ -25,6 +25,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,10 +60,16 @@ import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.theme.AppExtraSmallShape
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @Composable
 fun PictureInPicture() {
@@ -118,9 +125,42 @@ fun PictureInPicture() {
                             allowAssistantMessageActions = false,
                         )
 
-                        LaunchedEffect(state) {
+                        LaunchedEffect(state, agentViewModel.canSendMessage) {
+                            if (agentViewModel.canSendMessage) return@LaunchedEffect
                             snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect {
                                 state.requestScrollToItem(0)
+                            }
+                        }
+
+                        LaunchedEffect(state) {
+                            var lastTime: Instant? = null
+
+                            var backJob: Job? = null
+
+                            val baseDuration = 1.seconds
+                            val stepDuration = 0.5.seconds
+                            val backThreshold = 5.seconds
+                            for (event in agentViewModel.companionModeScrollUpEvents) {
+                                backJob?.cancel()
+                                val now = Clock.System.now()
+                                if (lastTime == null) {
+                                    lastTime = now
+                                    continue
+                                }
+                                val delta = now - lastTime
+                                lastTime = now
+
+                                val step = state.layoutInfo.viewportSize.height / 2
+                                val value = (baseDuration - delta) / stepDuration * step
+
+                                launch {
+                                    backJob = launch {
+                                        delay(backThreshold)
+                                        lastTime = null
+                                        state.animateScrollToItem(0)
+                                    }
+                                    state.animateScrollBy(value.toFloat())
+                                }
                             }
                         }
 
