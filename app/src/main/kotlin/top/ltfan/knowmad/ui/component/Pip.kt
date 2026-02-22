@@ -115,7 +115,7 @@ fun PictureInPicture() {
                     maxLines = 1,
                 )
             }
-            if (messages != null && messages.itemCount > 0) {
+            if (messages != null) {
                 val newDensity = remember(density) {
                     Density(
                         density = density.density * .65f,
