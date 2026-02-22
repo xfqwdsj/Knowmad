@@ -153,7 +153,8 @@ fun PictureInPicture() {
                                 }
 
                                 val step = state.layoutInfo.viewportSize.height / 2
-                                val value = (baseDuration - delta) / stepDuration * step
+                                val value = ((baseDuration - delta) / stepDuration * step).toFloat()
+                                    .coerceAtLeast(-step.toFloat())
 
                                 launch {
                                     backJob = launch {
@@ -161,7 +162,7 @@ fun PictureInPicture() {
                                         lastTime = null
                                         state.animateScrollToItem(0)
                                     }
-                                    state.animateScrollBy(value.toFloat())
+                                    state.animateScrollBy(value)
                                 }
                             }
                         }
