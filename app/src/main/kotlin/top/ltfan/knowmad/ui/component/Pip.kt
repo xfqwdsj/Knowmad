@@ -118,8 +118,8 @@ fun PictureInPicture() {
             if (messages != null && messages.itemCount > 0) {
                 val newDensity = remember(density) {
                     Density(
-                        density = density.density,
-                        fontScale = density.fontScale * 0.8f,
+                        density = density.density * .65f,
+                        fontScale = density.fontScale,
                     )
                 }
                 CompositionLocalProvider(LocalDensity provides newDensity) {
@@ -263,7 +263,7 @@ private fun HintIcon(
         contentDescription = null,
         modifier = Modifier
             .padding(8.dp)
-            .size(16.dp),
+            .size(32.dp),
     )
 }
 
