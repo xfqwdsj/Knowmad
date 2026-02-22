@@ -144,13 +144,11 @@ fun PictureInPicture() {
                                 backJob?.cancel()
                                 val now = Clock.System.now()
                                 val delta = if (lastTime == null) {
-                                    lastTime = now - baseDuration + stepDuration
                                     baseDuration - stepDuration
                                 } else {
-                                    val result = now - lastTime
-                                    lastTime = now
-                                    result
+                                    now - lastTime
                                 }
+                                lastTime = now
 
                                 val step = state.layoutInfo.viewportSize.height / 2
                                 val value = ((baseDuration - delta) / stepDuration * step).toFloat()
