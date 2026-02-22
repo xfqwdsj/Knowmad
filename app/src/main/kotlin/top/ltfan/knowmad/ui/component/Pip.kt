@@ -143,12 +143,14 @@ fun PictureInPicture() {
                             for (event in agentViewModel.companionModeScrollUpEvents) {
                                 backJob?.cancel()
                                 val now = Clock.System.now()
-                                if (lastTime == null) {
+                                val delta = if (lastTime == null) {
+                                    lastTime = now - baseDuration + stepDuration
+                                    baseDuration - stepDuration
+                                } else {
+                                    val result = now - lastTime
                                     lastTime = now
-                                    continue
+                                    result
                                 }
-                                val delta = now - lastTime
-                                lastTime = now
 
                                 val step = state.layoutInfo.viewportSize.height / 2
                                 val value = (baseDuration - delta) / stepDuration * step
