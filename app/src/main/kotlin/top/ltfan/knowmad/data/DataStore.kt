@@ -108,9 +108,8 @@ class DataStoreMutableStateProperty<T>(
     coroutineScope: CoroutineScope,
     initialValue: T = dataStore.defaultValue,
 ) : ReadWriteProperty<Any?, T>, AutoCloseable {
-    private val job = coroutineScope.coroutineContext.job
-    private val coroutineScope =
-        CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(job))
+    private val job = SupervisorJob(coroutineScope.coroutineContext.job)
+    private val coroutineScope = coroutineScope + job
 
     private var state by mutableStateOf(initialValue)
 
