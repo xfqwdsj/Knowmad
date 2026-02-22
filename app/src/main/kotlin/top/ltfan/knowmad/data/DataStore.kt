@@ -42,7 +42,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerializationException
 import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.util.Cbor
 import java.io.File
@@ -209,7 +208,7 @@ class DatastoreSerializer<T>(
             val bytes = input.readBytes()
             if (bytes.isEmpty()) return defaultValue
             cbor.decodeFromByteArray(serializer, bytes)
-        } catch (e: SerializationException) {
+        } catch (e: Throwable) {
             e.printStackTrace()
             defaultValue
         }
