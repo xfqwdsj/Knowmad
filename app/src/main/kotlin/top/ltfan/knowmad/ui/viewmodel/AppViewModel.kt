@@ -62,12 +62,15 @@ import top.ltfan.knowmad.ui.page.MainPage
 import top.ltfan.knowmad.ui.page.Route
 import top.ltfan.knowmad.ui.page.WizardPage
 import top.ltfan.knowmad.ui.page.back
+import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+    private val logger = Logger("AppViewModel")
+
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
 
@@ -124,7 +127,7 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
                 val modelConfig = entry.getModelConfig(providerId)
                 dao.insertModelAtEnd(modelConfig)
             } catch (e: Throwable) {
-                e.printStackTrace()
+                logger.error(e) { "Failed to save LLM config from wizard" }
                 onFailed(e.localizedMessage ?: "Unknown error")
                 return@launch
             }

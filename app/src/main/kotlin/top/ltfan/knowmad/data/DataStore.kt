@@ -44,6 +44,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.util.Cbor
+import top.ltfan.knowmad.util.Logger
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -107,6 +108,8 @@ class DataStoreMutableStateProperty<T>(
     coroutineScope: CoroutineScope,
     initialValue: T = dataStore.defaultValue,
 ) : ReadWriteProperty<Any?, T>, AutoCloseable {
+    private val logger = Logger("DataStoreMutableStateProperty")
+
     private val job = SupervisorJob(coroutineScope.coroutineContext.job)
     private val coroutineScope = coroutineScope + job
 
@@ -141,7 +144,7 @@ class DataStoreMutableStateProperty<T>(
                     write(pendingWrite)
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
-                    e.printStackTrace()
+                    logger.error(e) { "Failed to write data store value" }
                 }
             }
         }
@@ -198,6 +201,8 @@ class DatastoreSerializer<T>(
     override val defaultValue: T,
     val serializer: KSerializer<T>,
 ) : Serializer<T> {
+    private val logger = Logger("DatastoreSerializer")
+
     private val cbor = Cbor {
         encodeDefaults = true
         ignoreUnknownKeys = true
@@ -209,7 +214,7 @@ class DatastoreSerializer<T>(
             if (bytes.isEmpty()) return defaultValue
             cbor.decodeFromByteArray(serializer, bytes)
         } catch (e: Throwable) {
-            e.printStackTrace()
+            logger.warn(e) { "Failed to read data store value, using default" }
             defaultValue
         }
     }

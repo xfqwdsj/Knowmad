@@ -31,6 +31,8 @@ open class CryptoManager private constructor(private val keyAlias: String) {
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
+
+        private val logger = Logger("CryptoManager")
     }
 
     object LLMApiKey : CryptoManager("knowmad_llm_api_key") {
@@ -40,7 +42,7 @@ open class CryptoManager private constructor(private val keyAlias: String) {
                     return encrypt(apiKey.toByteArray())
                 }
             } catch (e: Throwable) {
-                e.printStackTrace()
+                logger.error(e) { "Failed to encrypt API key, falling back to plain storage" }
             }
             return CryptoData.Plain(apiKey.toByteArray())
         }

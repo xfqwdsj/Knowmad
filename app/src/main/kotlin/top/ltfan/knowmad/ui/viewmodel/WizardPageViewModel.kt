@@ -52,6 +52,7 @@ import top.ltfan.knowmad.ui.page.WizardSubPage
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.util.CryptoData
 import top.ltfan.knowmad.util.CryptoManager
+import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.RemendProcessor
 import top.ltfan.knowmad.util.asResource
 import top.ltfan.knowmad.util.asStringRes
@@ -69,6 +70,8 @@ class WizardPageViewModel(
     ) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : AndroidViewModel<KnowmadApplication>(app) {
+    private val logger = Logger("WizardPageViewModel")
+
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
 
     private val wizardDataStore = WizardData.createDataStore()
@@ -176,7 +179,7 @@ class WizardPageViewModel(
             }
         } catch (e: Throwable) {
             apiConfigurationError = true
-            e.printStackTrace()
+            logger.error(e) { "Failed to fetch models from API" }
             emptyList()
         }
 
@@ -295,7 +298,7 @@ class WizardPageViewModel(
             apiConfigurationError = false
         } catch (e: Throwable) {
             apiConfigurationError = true
-            e.printStackTrace()
+            logger.warn(e) { "Failed to generate first message" }
         } finally {
             firstMessageGenerationStarted = false
         }

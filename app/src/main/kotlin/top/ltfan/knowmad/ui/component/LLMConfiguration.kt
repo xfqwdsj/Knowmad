@@ -102,6 +102,7 @@ import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.CryptoManager
+import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.asStringRes
 import kotlin.uuid.Uuid
 
@@ -407,7 +408,7 @@ fun LLMConfigEditingDialog(
         val apiModelIds = try {
             client.models()
         } catch (e: Throwable) {
-            e.printStackTrace()
+            Logger("LLMConfigEditingDialog").error(e) { "Failed to fetch models from API, known models list will be empty" }
             emptyList()
         }
 
