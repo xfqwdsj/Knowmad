@@ -41,11 +41,13 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -63,6 +65,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
+import top.ltfan.knowmad.accessibility.semantic.requestEnableAccessibilityService
 import top.ltfan.knowmad.agent.ChatAgentRerun
 import top.ltfan.knowmad.agent.CodeRunnerTool
 import top.ltfan.knowmad.agent.chatSystemPrompt
@@ -99,11 +103,13 @@ import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.ui.util.SnapshotLruCache
+import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.RemendProcessor
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
@@ -126,9 +132,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         snapshotStateMap = mutableStateMapOf(),
         maxSize = 100,
     )
-
-    val companionModeScrollUpEvents = Channel<Unit>(Channel.CONFLATED)
-    var capturingScreen by mutableStateOf(false)
 
     suspend fun toggleDrawer() {
         if (drawerState.isClosed) {
@@ -716,6 +719,94 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     fun cancelGeneration() {
         logger.debug { "UI requested to cancel generation." }
         cancellationEvent.trySend(Unit)
+    }
+
+    val pipScrollUpEvents = Channel<Unit>(Channel.CONFLATED)
+
+    private var pipWaitingJob: Job? = null
+    private val pipStatusMutex = Mutex()
+    var pipWaitingStatus by mutableStateOf<PipWaitingStatus?>(null)
+        private set
+
+    private val screenCapturingMutex = Mutex()
+    var capturingScreen by mutableStateOf(false)
+        private set
+
+    enum class PipWaitingStatus {
+        Click, Service
+    }
+
+    fun captureUi() = viewModelScope.launch {
+        fun clearWaitingStatus() {
+            if (pipStatusMutex.isLocked) {
+                pipStatusMutex.unlock()
+            }
+            pipWaitingStatus = null
+        }
+
+        if (!SemanticAnalysisService.heartbeat()) {
+            if (pipStatusMutex.tryLock()) {
+                try {
+                    pipWaitingStatus = Click
+                    pipWaitingJob = viewModelScope.launch {
+                        delay(5.seconds)
+                        clearWaitingStatus()
+                    }
+                } catch (e: Throwable) {
+                    logger.error(e) { "Error while waiting for pip click" }
+                    clearWaitingStatus()
+                }
+            } else if (pipWaitingStatus == Click) {
+                pipWaitingJob?.cancel()
+                application.requestEnableAccessibilityService<SemanticAnalysisService>()
+
+                pipWaitingStatus = Service
+
+                viewModelScope.launch {
+                    try {
+                        SemanticAnalysisService.waitAlive()
+                    } catch (e: Throwable) {
+                        logger.error(e) { "Error while waiting for SemanticAnalysisService to be alive" }
+                    } finally {
+                        clearWaitingStatus()
+                    }
+                }
+            }
+            return@launch
+        }
+
+        clearWaitingStatus()
+        if (!screenCapturingMutex.tryLock()) return@launch
+        capturingScreen = true
+        val node = SemanticAnalysisService.getUiTree().also {
+            capturingScreen = false
+            screenCapturingMutex.unlock()
+        } ?: return@launch
+        val json = Json.encodeToString(node)
+        sendMessage(
+            allowEmptyUserInput = true,
+            contextMessages = listOf(
+                Message.User(
+                    content = application.getString(R.string.llm_prompt_companion_mode_context),
+                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ).toUiMessage(display = false),
+                Message.User(
+                    content = json,
+                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                ).toUiMessage(display = false),
+            ),
+            parts = listOf(),
+            beforeStart = null,
+            onEnd = { isNewConversation ->
+                if (!isNewConversation) return@sendMessage
+                val conversationId = currentConversationId ?: return@sendMessage
+                viewModelScope.launch {
+                    val newTitle = autoGenerateConversationName(conversationId) ?: return@launch
+                    val conversation = chatDao.getConversationById(conversationId) ?: return@launch
+                    chatDao.updateConversation(conversation.copy(name = newTitle))
+                }
+            },
+        )
     }
 
     private suspend fun createNewConversation() {

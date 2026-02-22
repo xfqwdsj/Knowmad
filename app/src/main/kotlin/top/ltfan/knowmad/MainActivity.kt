@@ -18,8 +18,6 @@
 
 package top.ltfan.knowmad
 
-import ai.koog.prompt.message.Message
-import ai.koog.prompt.message.RequestMetaInfo
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -40,20 +38,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toDeprecatedClock
-import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
-import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
-import kotlin.time.Clock
 
 class MainActivity : KnowmadActivity() {
     private val viewModel: AppViewModel by viewModels {
@@ -182,47 +175,8 @@ class MainActivity : KnowmadActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_PIP) return
             when (intent.extras?.getInt(EXTRA_ACTION)) {
-                CODE_SCROLL_UP -> agentViewModel.companionModeScrollUpEvents.trySend(Unit)
-                CODE_CAPTURE_UI -> lifecycleScope.launch {
-                    if (agentViewModel.capturingScreen) return@launch
-                    agentViewModel.capturingScreen = true
-                    val node = SemanticAnalysisService.getUiTree().also {
-                        agentViewModel.capturingScreen = false
-                    } ?: return@launch
-                    val json = Json.encodeToString(node)
-                    agentViewModel.sendMessage(
-                        allowEmptyUserInput = true,
-                        contextMessages = listOf(
-                            Message.User(
-                                content = getString(R.string.llm_prompt_companion_mode_context),
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ).toUiMessage(display = false),
-                            Message.User(
-                                content = json,
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ).toUiMessage(display = false),
-                        ),
-                        parts = listOf(),
-                        beforeStart = null,
-                        onEnd = { isNewConversation ->
-                            if (!isNewConversation) return@sendMessage
-                            val conversationId =
-                                agentViewModel.currentConversationId ?: return@sendMessage
-                            lifecycleScope.launch {
-                                val newTitle =
-                                    agentViewModel.autoGenerateConversationName(conversationId)
-                                        ?: return@launch
-                                val conversation =
-                                    agentViewModel.chatDao.getConversationById(conversationId)
-                                        ?: return@launch
-                                agentViewModel.chatDao.updateConversation(
-                                    conversation.copy(name = newTitle),
-                                )
-                            }
-                        },
-                    )
-                }
-
+                CODE_SCROLL_UP -> agentViewModel.pipScrollUpEvents.trySend(Unit)
+                CODE_CAPTURE_UI -> agentViewModel.captureUi()
                 CODE_NEW_CONVERSATION -> agentViewModel.newConversation()
             }
         }

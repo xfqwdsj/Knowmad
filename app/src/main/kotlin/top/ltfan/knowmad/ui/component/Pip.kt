@@ -21,23 +21,31 @@ package top.ltfan.knowmad.ui.component
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.activity.ComponentActivity
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -53,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -148,7 +157,7 @@ fun PictureInPicture() {
                             val resetTime = 2.seconds
                             val backThreshold = 5.seconds
 
-                            for (_ in agentViewModel.companionModeScrollUpEvents) {
+                            for (_ in agentViewModel.pipScrollUpEvents) {
                                 backJob.cancelChildren()
                                 val now = Clock.System.now()
                                 val delta = if (lastTime == null) {
@@ -189,21 +198,27 @@ fun PictureInPicture() {
                             enter = fadeIn(),
                             exit = fadeOut(),
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
-                                    )
-                                    .padding(4.dp),
-                                verticalArrangement = Arrangement.spacedBy(
-                                    4.dp,
-                                    Alignment.CenterVertically,
-                                ),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
+                            HintColumn {
                                 LoadingIndicator()
                                 Text(stringResource(R.string.companion_mode_label_capturing))
+                            }
+                        }
+
+                        AnimatedContent(
+                            targetState = agentViewModel.pipWaitingStatus,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() using null },
+                        ) { pipWaitingStatus ->
+                            if (pipWaitingStatus == null) return@AnimatedContent
+                            when (pipWaitingStatus) {
+                                Click -> HintColumn {
+                                    HintIconBackground { HintIcon(R.drawable.error_24px) }
+                                    Text(stringResource(R.string.companion_mode_label_no_permission))
+                                }
+
+                                Service -> HintColumn {
+                                    HintIconBackground { HintIcon(R.drawable.info_24px) }
+                                    Text(stringResource(R.string.companion_mode_label_enable_service))
+                                }
                             }
                         }
                     }
@@ -211,6 +226,45 @@ fun PictureInPicture() {
             }
         }
     }
+}
+
+@Composable
+private fun HintColumn(
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f))
+            .padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
+    )
+}
+
+@Composable
+private fun HintIconBackground(
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        shape = MaterialShapes.Cookie9Sided.toShape(),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        content = content,
+    )
+}
+
+@Composable
+private fun HintIcon(
+    @DrawableRes drawable: Int,
+) {
+    Icon(
+        painterResource(drawable),
+        contentDescription = null,
+        modifier = Modifier
+            .padding(8.dp)
+            .size(16.dp),
+    )
 }
 
 @Composable

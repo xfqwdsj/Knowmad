@@ -31,6 +31,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -113,6 +114,8 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     }
 
     companion object {
+        suspend fun waitAlive() = flow.subscriptionCount.first { it > 0 }
+
         suspend fun heartbeat() = execute(Heartbeat()) == true
 
         suspend fun getUiTree() = execute(GetUiTree())

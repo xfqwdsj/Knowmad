@@ -24,6 +24,8 @@
     <string name="companion_mode_label_enter">陪伴模式</string>
     <string name="companion_mode_label_scroll_up">向上滚动</string>
     <string name="companion_mode_label_scroll_up_description">将消息列表向上滚动一点</string>
+    <string name="companion_mode_label_no_permission">无法捕获屏幕。再次点击以进入服务设置</string>
+    <string name="companion_mode_label_enable_service">请找到“知行语义分析服务”并启用它。请注意：启用任何辅助功能服务都可能会导致隐私泄露风险，请确保你信任这个应用</string>
     <string name="companion_mode_label_capturing">正在捕获屏幕内容，这个过程可能需要至多1分钟，前台应用可能暂时失去响应，请耐心等待……</string>
     <string name="llm_prompt_companion_mode_context">【系统】此消息从陪伴模式发出</string>
 </resources>
