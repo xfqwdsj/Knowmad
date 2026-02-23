@@ -75,6 +75,26 @@ enum class MessageEntityRole {
     System, User, Assistant
 }
 
+context(viewModel: AndroidViewModel<*>)
+suspend fun MessageEntity.allStored(
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+) = copy(parts = parts.allStored(fileIds, fs))
+
+@JvmName("uiMessageAllStored")
+context(viewModel: AndroidViewModel<*>)
+suspend fun Collection<UiMessage>.allStored(
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+) = coroutineScope {
+    map {
+        async {
+            if (it !is Koog) return@async it
+            it.copy(message = it.message.allStored(fileIds, fs))
+        }
+    }.awaitAll()
+}
+
 suspend fun Message.allStored(
     database: AppDatabase,
     filesDir: Path,
@@ -102,6 +122,7 @@ suspend fun Collection<ContentPart>.allStored(
     map { async { it.stored(database, filesDir, fileIds, fs) } }.awaitAll()
 }
 
+@JvmName("contentPartAllStored")
 context(viewModel: AndroidViewModel<*>)
 suspend fun Collection<ContentPart>.allStored(
     fileIds: MutableList<Uuid>,
@@ -147,6 +168,23 @@ suspend fun ContentPart.stored(
     ).buildString()
 
     return updatedContent(AttachmentContent.URL(url))
+}
+
+context(viewModel: AndroidViewModel<*>)
+suspend fun MessageEntity.allLoaded(
+    fs: FileSystem = FileSystem.SYSTEM,
+) = copy(parts = parts.allLoaded(fs))
+
+context(viewModel: AndroidViewModel<*>)
+suspend fun Collection<UiMessage>.allLoaded(
+    fs: FileSystem = FileSystem.SYSTEM,
+) = coroutineScope {
+    map {
+        async {
+            if (it !is UiMessage.Koog) return@async it
+            it.copy(message = it.message.allLoaded(fs))
+        }
+    }.awaitAll()
 }
 
 suspend fun Message.allLoaded(

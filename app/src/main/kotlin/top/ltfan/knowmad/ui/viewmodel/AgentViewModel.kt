@@ -38,6 +38,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
+import androidx.paging.PagingData
+import androidx.paging.map
 import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +93,8 @@ import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
+import top.ltfan.knowmad.data.chat.allLoaded
+import top.ltfan.knowmad.data.chat.allStored
 import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
@@ -173,10 +177,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 messageCountFlow = id?.let {
                     chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
                 } ?: flowOf(0),
-                messagesState = id?.let {
+                messagesFlow = id?.let { id ->
                     PagingLazyListState {
-                        chatDao.getMessagesPagingByConversationReversed(it)
-                    }
+                        chatDao.getMessagesPagingByConversationReversed(id)
+                    }.flow.map { data -> data.map { it.copy(message = it.message.allLoaded()) } }
                 },
             )
         }
@@ -189,14 +193,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             initialValue = ConversationAndChatData(
                 conversationFlow = flowOf(null),
                 messageCountFlow = flowOf(0),
-                messagesState = null,
+                messagesFlow = null,
             ),
         )
         .collectAsState()
 
     val currentConversationFlow get() = conversationAndChatData.conversationFlow
     val currentMessageCountFlow get() = conversationAndChatData.messageCountFlow
-    val currentMessagesState get() = conversationAndChatData.messagesState
+    val currentMessagesFlow get() = conversationAndChatData.messagesFlow
 
     val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
 
@@ -507,28 +511,31 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         fileIds = emptyList(),
                     )
                 }
-                chatDao.insertMessage(
-                    message = MessageEntity(
-                        conversationId = conversationId,
-                        parts = buildList {
-                            if (includeEnvironmentContext) {
-                                add(environmentMessage.toUiMessage(display = false))
-                            }
-                            contextMessages?.let { addAll(it) }
-                            parts.takeIf { it.isNotEmpty() }?.let { parts ->
-                                add(
-                                    Message.User(
-                                        parts = parts,
-                                        metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                                    ).toUiMessage(),
-                                )
-                            }
-                        },
-                        role = MessageEntityRole.User,
-                        generatedBy = null,
-                    ),
-                    fileIds = emptyList(),
-                )
+                run {
+                    val tempIds = mutableListOf<Uuid>()
+                    chatDao.insertMessage(
+                        message = MessageEntity(
+                            conversationId = conversationId,
+                            parts = buildList {
+                                if (includeEnvironmentContext) {
+                                    add(environmentMessage.toUiMessage(display = false))
+                                }
+                                contextMessages?.let { addAll(it.allStored(tempIds)) }
+                                parts.takeIf { it.isNotEmpty() }?.let { parts ->
+                                    add(
+                                        Message.User(
+                                            parts = parts.allStored(tempIds),
+                                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                                        ).toUiMessage(),
+                                    )
+                                }
+                            },
+                            role = MessageEntityRole.User,
+                            generatedBy = null,
+                        ),
+                        fileIds = tempIds,
+                    )
+                }
                 if (databaseMessages.isEmpty()) {
                     viewModelScope.launch {
                         val title = autoGenerateConversationName(conversation.id) ?: return@launch
@@ -571,9 +578,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         }
                     },
                 ).apply {
+                    val tempIds = mutableListOf<Uuid>()
                     chatDao.insertMessageAndGet(
-                        message = toEntity(),
-                        fileIds = emptyList(),
+                        message = toEntity().allStored(tempIds),
+                        fileIds = tempIds,
                     ) {
                         it ?: return@insertMessageAndGet
                         parentId = it.message.parentId
@@ -912,7 +920,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 data class ConversationAndChatData(
     val conversationFlow: Flow<ConversationEntity?>,
     val messageCountFlow: Flow<Int>,
-    val messagesState: PagingLazyListState<Int, MessageWithFilesAndBranchInfo>?,
+    val messagesFlow: Flow<PagingData<MessageWithFilesAndBranchInfo>>?,
 )
 
 val LocalAgentViewModel = staticCompositionLocalOf<AgentViewModel> {

@@ -93,7 +93,7 @@ fun PictureInPicture() {
     val density = LocalDensity.current
 
     val conversation by agentViewModel.currentConversationFlow.collectAsState(null)
-    val messages = agentViewModel.currentMessagesState?.flow?.collectAsLazyPagingItems()
+    val messages = agentViewModel.currentMessagesFlow?.collectAsLazyPagingItems()
 
     Surface {
         Column(Modifier.fillMaxSize()) {

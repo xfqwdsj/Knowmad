@@ -258,7 +258,7 @@ class AgentMainPage : AgentSubPage() {
                 val safeContentPadding = scaffoldPaddingValues + contentPadding
                 val contentPadding = safeContentPadding + PaddingValues(16.dp)
 
-                val messages = viewModel.currentMessagesState?.flow?.collectAsLazyPagingItems()
+                val messages = viewModel.currentMessagesFlow?.collectAsLazyPagingItems()
 
                 SubcomposeLayout { constraints ->
                     val inputPlaceables = subcompose("input") {
