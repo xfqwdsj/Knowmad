@@ -165,9 +165,11 @@ suspend fun getOrStoreFile(
     }
 }
 
+const val DbFileDir = "db_files"
+
 fun Path.normalizedDbBaseDir(hash: ByteString): Path {
     val hashHex = hash.hex()
-    var result = this
+    var result = resolve(DbFileDir)
     repeat(2) { index ->
         if (index * 2 + 2 > hashHex.length) return result.normalized()
         result = result.resolve(hashHex.substring(index * 2, index * 2 + 2))
