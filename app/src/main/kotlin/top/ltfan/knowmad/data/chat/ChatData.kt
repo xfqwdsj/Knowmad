@@ -48,14 +48,19 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okio.ByteString.Companion.toByteString
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toOkioPath
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
-import top.ltfan.knowmad.data.file.storeFileIfNotIndexed
+import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.data.file.FileDao
+import top.ltfan.knowmad.data.file.getOrStoreFile
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.MathJaxRenderResult
 import top.ltfan.knowmad.ui.component.SavedMarkdownState
 import top.ltfan.knowmad.ui.component.codeBlockOrNull
-import top.ltfan.knowmad.ui.viewmodel.AppViewModel
+import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.RemendProcessor
@@ -70,44 +75,102 @@ enum class MessageEntityRole {
     System, User, Assistant
 }
 
-context(viewModel: AppViewModel)
-suspend fun List<ContentPart>.storeAll(ref: MutableList<Uuid>) =
-    coroutineScope { map { async { it.stored(ref) } }.awaitAll() }
+suspend fun Message.allStored(
+    database: AppDatabase,
+    filesDir: Path,
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+): Message = updatedParts(parts.allStored(database, filesDir, fileIds, fs))
 
-context(viewModel: AppViewModel)
-suspend fun ContentPart.stored(ref: MutableList<Uuid>): ContentPart {
-    val part = this
-    if (part !is Attachment) return part
-    val content = part.content
-    if (content !is Binary) return part
+context(viewModel: AndroidViewModel<*>)
+suspend fun Message.allStored(
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+) = allStored(
+    database = context(viewModel.application) { AppDatabase.get() },
+    filesDir = viewModel.application.filesDir.toOkioPath(),
+    fileIds = fileIds,
+    fs = fs,
+)
+
+suspend fun Collection<ContentPart>.allStored(
+    database: AppDatabase,
+    filesDir: Path,
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+): List<ContentPart> = coroutineScope {
+    map { async { it.stored(database, filesDir, fileIds, fs) } }.awaitAll()
+}
+
+context(viewModel: AndroidViewModel<*>)
+suspend fun Collection<ContentPart>.allStored(
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+) = allStored(
+    database = context(viewModel.application) { AppDatabase.get() },
+    filesDir = viewModel.application.filesDir.toOkioPath(),
+    fileIds = fileIds,
+    fs = fs,
+)
+
+suspend fun ContentPart.stored(
+    database: AppDatabase,
+    filesDir: Path,
+    fileIds: MutableList<Uuid>,
+    fs: FileSystem = FileSystem.SYSTEM,
+): ContentPart {
+    if (this !is Attachment) return this
+    val content = content
+    if (content !is Binary) return this
 
     val bytes = content.asBytes()
 
-    val hash = withContext(HashComputationDispatcher) {
-        bytes.toByteString().sha256().toByteArray()
-    }
+    val hash = withContext(HashComputationDispatcher) { bytes.toByteString().sha256() }
 
-    val entity = storeFileIfNotIndexed(
+    val entity = getOrStoreFile(
+        database = database,
+        filesDir = filesDir,
         type = ATTACHMENT_STORAGE_PATH,
-        name = part.fileName,
-        format = part.format,
-        mimeType = part.mimeType,
+        name = fileName,
+        format = format,
+        mimeType = mimeType,
         content = bytes,
         precomputedHash = hash,
+        fs = fs,
     )
 
-    ref.add(entity.id)
+    fileIds.add(entity.id)
 
-    val url = URLBuilder().apply {
-        protocol = URLProtocol.createOrDefault(ATTACHMENT_STORAGE_SCHEME)
-        host = entity.id.toString()
-    }.build().toString()
+    val url = URLBuilder(
+        protocol = URLProtocol.createOrDefault(ATTACHMENT_STORAGE_SCHEME),
+        host = entity.id.toString(),
+    ).buildString()
 
-    return part.updateContent(AttachmentContent.URL(url))
+    return updatedContent(AttachmentContent.URL(url))
 }
 
-context(viewModel: AppViewModel)
-suspend fun ContentPart.load(): ContentPart = when (this) {
+suspend fun Message.allLoaded(
+    dao: FileDao,
+    fs: FileSystem = FileSystem.SYSTEM,
+): Message = updatedParts(parts.allLoaded(dao, fs))
+
+context(viewModel: AndroidViewModel<*>)
+suspend fun Message.allLoaded(fs: FileSystem = FileSystem.SYSTEM) = allLoaded(
+    dao = context(viewModel.application) { AppDatabase.get() }.fileDao(),
+    fs = fs,
+)
+
+suspend fun Collection<ContentPart>.allLoaded(
+    dao: FileDao,
+    fs: FileSystem = FileSystem.SYSTEM,
+): List<ContentPart> = coroutineScope {
+    map { async { it.loaded(dao, fs) } }.awaitAll()
+}
+
+suspend fun ContentPart.loaded(
+    dao: FileDao,
+    fs: FileSystem = FileSystem.SYSTEM,
+): ContentPart = when (this) {
     is Attachment -> {
         val content = this.content
         if (content !is URL) return this
@@ -117,24 +180,29 @@ suspend fun ContentPart.load(): ContentPart = when (this) {
 
         val uuid = Uuid.parseOrNull(url.host) ?: return this
 
-        val entity = viewModel.application.appDatabase.fileDao()
-            .getFileById(uuid) ?: return this
-
-        val fs = okio.FileSystem.SYSTEM
+        val entity = dao.getFileById(uuid) ?: return this
 
         val bytes = withContext(Dispatchers.IO) {
             if (!fs.exists(entity.path)) return@withContext null
-
             fs.read(entity.path) { readByteArray() }
         } ?: return this
 
-        this.updateContent(AttachmentContent.Binary.Bytes(bytes))
+        this.updatedContent(AttachmentContent.Binary.Bytes(bytes))
     }
 
     else -> this
 }
 
-fun ContentPart.Attachment.updateContent(newContent: AttachmentContent) = when (this) {
+fun Message.updatedParts(newParts: List<ContentPart>) = when (this) {
+    is Message.System -> copy(parts = newParts.filterIsInstance<ContentPart.Text>())
+    is Message.Tool.Result -> copy(parts = newParts.filterIsInstance<ContentPart.Text>())
+    is Message.User -> copy(parts = newParts)
+    is Message.Assistant -> copy(parts = newParts)
+    is Message.Reasoning -> copy(parts = newParts.filterIsInstance<ContentPart.Text>())
+    is Message.Tool.Call -> copy(parts = newParts.filterIsInstance<ContentPart.Text>())
+}
+
+fun ContentPart.Attachment.updatedContent(newContent: AttachmentContent) = when (this) {
     is Audio -> copy(content = newContent)
     is File -> copy(content = newContent)
     is Image -> copy(content = newContent)
@@ -264,16 +332,7 @@ sealed interface UiMessage {
                 resultParts[originalPartIndex] = ContentPart.Text(newTextValue)
             }
 
-            return copy(
-                message = when (message) {
-                    is Message.System -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
-                    is Message.Tool.Result -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
-                    is Message.User -> message.copy(parts = resultParts)
-                    is Message.Assistant -> message.copy(parts = resultParts)
-                    is Message.Reasoning -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
-                    is Message.Tool.Call -> message.copy(parts = resultParts.filterIsInstance<ContentPart.Text>())
-                },
-            )
+            return copy(message = message.updatedParts(resultParts))
         }
     }
 

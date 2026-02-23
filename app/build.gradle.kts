@@ -126,6 +126,7 @@ dependencies {
     ksp(libs.room.compiler)
     debugImplementation(libs.bundles.debug)
     testImplementation(libs.bundles.test)
+    androidTestImplementation(libs.bundles.androidTest)
 }
 
 abstract class DownloadMathJaxTask : DefaultTask() {

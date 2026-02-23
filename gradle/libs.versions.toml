@@ -5,7 +5,9 @@ kotlinx-serialization = "1.10.0"
 kotlinx-datetime = "0.7.1-0.6.x-compat" # TODO: remove when possible
 ksp = "2.3.5"
 agp = "9.2.0-alpha01"
+okio = "3.16.4"
 leakcanary = "2.14"
+androidx-test = "1.7.0"
 paging = "3.4.1"
 room = "2.8.4"
 datastore = "1.2.0"
@@ -41,7 +43,11 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
+androidx-test-core = { module = "androidx.test:core-ktx", version.ref = "androidx-test" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test" }
 paging = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
 paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -91,6 +97,8 @@ all = [
     "kotlinx-serialization-json",
     "kotlinx-serialization-cbor",
     "kotlinx-datetime",
+    # okio
+    "okio",
     # androidx
     "paging",
     "paging-compose",
@@ -155,6 +163,18 @@ test = [
     "kotlin-test-junit",
     # coroutines
     "kotlinx-coroutines-test",
+]
+androidTest = [
+    # kotlin
+    "kotlin-test",
+    "kotlin-test-junit",
+    # coroutines
+    "kotlinx-coroutines-test",
+    # okio
+    "okio-fakefilesystem",
+    # androidx-test
+    "androidx-test-core",
+    "androidx-test-runner",
 ]
 
 [plugins]

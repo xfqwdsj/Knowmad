@@ -21,7 +21,7 @@ package top.ltfan.knowmad.data.database
 import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
-import androidx.room.Room.databaseBuilder
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import top.ltfan.knowmad.data.AppDatabaseConverters
@@ -101,14 +101,17 @@ abstract class AppDatabase : RoomDatabase() {
         private var instance: AppDatabase? = null
 
         context(context: Context)
-        override fun get() = instance ?: databaseBuilder(
+        override fun get() = instance ?: Room.databaseBuilder(
             context = context,
             klass = AppDatabase::class.java,
             name = databaseName,
-        ).apply {
-            addCallback(RecurrenceRuleCleanup)
-        }.build().also {
+        ).buildAppDatabase().also {
             instance = it
         }
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun Builder<AppDatabase>.buildAppDatabase() = apply {
+            addCallback(RecurrenceRuleCleanup)
+        }.build()
     }
 }
