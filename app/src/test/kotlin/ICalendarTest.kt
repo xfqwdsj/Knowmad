@@ -38,7 +38,6 @@ import top.ltfan.knowmad.data.schedule.customICalReader
 import top.ltfan.knowmad.data.schedule.customICalWriter
 import top.ltfan.knowmad.data.schedule.exportICalendar
 import top.ltfan.knowmad.data.schedule.parse
-import top.ltfan.knowmad.data.schedule.pickFromPalette
 import top.ltfan.knowmad.data.schedule.toEvent
 import top.ltfan.knowmad.data.schedule.toICalendar
 import top.ltfan.omnical.icalendar.ICalendarColor
@@ -273,7 +272,7 @@ class ICalendarTest {
                 semester = testSemester,
                 name = event.name,
                 location = event.location,
-                color = ICalendarColor.pickFromPalette(event.id),
+                color = ICalendarColor.pickFromPalette(event.id.hashCode().toUInt()),
                 startTime = event.startTime,
                 endTime = event.endTime,
                 notes = event.notes,
@@ -286,7 +285,7 @@ class ICalendarTest {
                 course = testCourse,
                 eventName = event.name,
                 eventLocation = event.location,
-                color = ICalendarColor.pickFromPalette(event.id),
+                color = ICalendarColor.pickFromPalette(event.id.hashCode().toUInt()),
                 startTime = event.startTime,
                 endTime = event.endTime,
                 notes = event.notes,
