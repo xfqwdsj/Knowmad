@@ -39,8 +39,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.coroutines.launch
+import top.ltfan.knowmad.accessibility.requestEnableAccessibilityService
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
-import top.ltfan.knowmad.accessibility.semantic.requestEnableAccessibilityService
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.util.Json

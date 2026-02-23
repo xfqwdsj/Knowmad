@@ -67,8 +67,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.accessibility.requestEnableAccessibilityService
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
-import top.ltfan.knowmad.accessibility.semantic.requestEnableAccessibilityService
 import top.ltfan.knowmad.agent.ChatAgentRerun
 import top.ltfan.knowmad.agent.CodeRunnerTool
 import top.ltfan.knowmad.agent.chatSystemPrompt

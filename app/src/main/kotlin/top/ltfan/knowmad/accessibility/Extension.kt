@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.accessibility.semantic
+package top.ltfan.knowmad.accessibility
 
 import android.content.ComponentName
 import android.content.Context
@@ -24,7 +24,17 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
+import android.view.accessibility.AccessibilityNodeInfo
 import top.ltfan.knowmad.util.Logger
+
+inline fun <R> AccessibilityNodeInfo.use(block: (AccessibilityNodeInfo) -> R): R {
+    try {
+        return block(this)
+    } finally {
+        @Suppress("DEPRECATION")
+        recycle()
+    }
+}
 
 inline fun <reified T> Context.requestEnableAccessibilityService() {
     val logger = Logger("requestEnableAccessibilityService")

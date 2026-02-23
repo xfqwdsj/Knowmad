@@ -37,16 +37,22 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import top.ltfan.knowmad.accessibility.use
 import top.ltfan.knowmad.util.Logger
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @SuppressLint("AccessibilityPolicy")
 class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     private val logger = Logger("SemanticAnalysisService")
+
+    private var cacheTree: Triple<Int, Node, Instant>? = null
 
     private val serviceInfoMutex = Mutex()
 
@@ -83,34 +89,35 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
 
                             serviceInfo = elevatedInfo
 
-                            withTimeoutOrNull(1.minutes) {
-                                var tries = 1
+                            try {
+                                withTimeoutOrNull(1.minutes) {
+                                    var tries = 1
 
-                                while (true) {
-                                    val root = rootInActiveWindow
-                                    val node = root?.parse()
-                                    if (node != null) {
-                                        logger.debug { "Successfully retrieved UI tree after $tries tries" }
-                                        val title = root.window?.title?.toString()
-                                            ?: root.packageName?.toString()
-                                            ?: "Unknown App"
-                                        val rootNode = Node(
-                                            name = title,
-                                            children = listOf(node),
-                                        )
-                                        event(rootNode)
-                                        @Suppress("DEPRECATION")
-                                        root.recycle()
-                                        break
+                                    w@ while (true) {
+                                        rootInActiveWindow?.use { root ->
+                                            val node = root.parse()
+                                            if (node != null) {
+                                                logger.debug { "Successfully retrieved UI tree after $tries tries" }
+                                                event(node.withRoot(root))
+                                                break@w
+                                            } else {
+                                                val (id, cache, updated) = cacheTree ?: continue@w
+                                                val now = Clock.System.now()
+                                                if (now - updated > CacheUseThreshold) continue@w
+                                                if (root.windowId != id) continue@w
+                                                logger.debug { "Using cached UI tree, try #$tries" }
+                                                event(cache)
+                                                break@w
+                                            }
+                                        }
+                                            ?: logger.debug { "Failed to retrieve root window, try #$tries" }
+                                        tries++
+                                        delay(100.milliseconds)
                                     }
-                                    @Suppress("DEPRECATION")
-                                    root?.recycle()
-                                    tries++
-                                    delay(100.milliseconds)
                                 }
+                            } finally {
+                                serviceInfo = originalInfo
                             }
-
-                            serviceInfo = originalInfo
                         }
                         event(null)
                     }
@@ -119,7 +126,49 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         }
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        when (event?.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> updateCache(event)
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> updateCache(event)
+            else -> {}
+        }
+    }
+
+    private var updateCacheJob: Job? = null
+
+    private fun updateCache(event: AccessibilityEvent) {
+        val now = Clock.System.now()
+
+        val source = event.source?.use {
+            @Suppress("DEPRECATION")
+            AccessibilityNodeInfo.obtain(it)
+        } ?: return
+
+        launch {
+            try {
+                rootInActiveWindow?.use { root ->
+                    source.use { info ->
+                        if (info.windowId != root.windowId) return@launch
+                        val node = info.findAndParseWithRoot()
+                        if (node != null) {
+                            updateCacheJob?.cancel()
+                            updateCacheJob = this@SemanticAnalysisService.launch {
+                                val currentRootId = rootInActiveWindow?.use { it.windowId }
+                                    ?: return@launch
+                                if (currentRootId != info.windowId) return@launch
+                                val lastUpdate = cacheTree?.third
+                                if (lastUpdate != null && lastUpdate > now) return@launch
+                                cacheTree = Triple(info.windowId, node, now)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                logger.error(e) { "Failed to update UI tree cache" }
+            }
+        }
+    }
+
     override fun onInterrupt() {}
 
     private suspend fun suspend() {
@@ -202,7 +251,7 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
 
                     try {
                         flow.emit(event)
-                    } catch (e: CancellationException) {
+                    } catch (_: CancellationException) {
                         safeResume(null)
                     }
                 }
@@ -213,11 +262,46 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
             }
         }
 
+        val CacheUseThreshold = 1.seconds
         const val EVENT_TYPES = AccessibilityEvent.TYPES_ALL_MASK
         const val FEEDBACK_TYPE = AccessibilityServiceInfo.FEEDBACK_GENERIC
     }
 
-    private fun AccessibilityNodeInfo.parse(): Node? {
+    private fun AccessibilityNodeInfo.findAndParseWithRoot(): Node? {
+        var current: AccessibilityNodeInfo = this
+        var lastChild: AccessibilityNodeInfo? = null
+
+        while (true) {
+            val parent = current.parent ?: break
+            lastChild = current
+            current = parent
+        }
+
+        val childrenParam = if (current.childCount == 0 && lastChild != null) {
+            listOf(lastChild)
+        } else {
+            null
+        }
+
+        val parsedNode = current.parse(children = childrenParam)
+        return parsedNode?.withRoot(current)
+    }
+
+    private fun Node.withRoot(root: AccessibilityNodeInfo): Node {
+        val title = root.window?.title?.toString()
+            ?: root.packageName?.toString()
+            ?: "Unknown App"
+        return copy(
+            name = title,
+            children = listOf(this),
+        )
+    }
+
+    private fun AccessibilityNodeInfo.parse(
+        children: List<AccessibilityNodeInfo>? = null,
+    ): Node? {
+        if (!isVisibleToUser) return null
+
         data class NodeSnapshot(
             val info: AccessibilityNodeInfo,
             val node: Node,
@@ -227,27 +311,44 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         val traversalOrder = mutableListOf<NodeSnapshot>()
         val queue = ArrayDeque<NodeSnapshot>()
 
-        if (!isVisibleToUser) return null
+        fun addChildToQueue(
+            childInfo: AccessibilityNodeInfo,
+            parentSnapshot: NodeSnapshot,
+            queue: ArrayDeque<NodeSnapshot>,
+        ) {
+            val rect = Rect()
+            childInfo.getBoundsInScreen(rect)
+            if (!childInfo.isVisibleToUser || rect.isEmpty) {
+                @Suppress("DEPRECATION")
+                childInfo.recycle()
+                return
+            }
+
+            val childSnapshot = NodeSnapshot(childInfo, childInfo.toNode(), parentSnapshot)
+            queue += childSnapshot
+        }
+
         val rootSnapshot = NodeSnapshot(this, this.toNode(), null)
-        queue.add(rootSnapshot)
+        traversalOrder += rootSnapshot
+
+        if (!children.isNullOrEmpty()) {
+            for (childInfo in children) {
+                addChildToQueue(childInfo, rootSnapshot, queue)
+            }
+        } else {
+            for (i in 0 until childCount) {
+                val childInfo = getChild(i) ?: continue
+                addChildToQueue(childInfo, rootSnapshot, queue)
+            }
+        }
 
         while (queue.isNotEmpty()) {
             val current = queue.removeFirst()
-            traversalOrder.add(current)
+            traversalOrder += current
 
             for (i in 0 until current.info.childCount) {
                 val childInfo = current.info.getChild(i) ?: continue
-
-                val rect = Rect()
-                childInfo.getBoundsInScreen(rect)
-                if (!childInfo.isVisibleToUser || rect.isEmpty) {
-                    @Suppress("DEPRECATION")
-                    childInfo.recycle()
-                    continue
-                }
-
-                val childSnapshot = NodeSnapshot(childInfo, childInfo.toNode(), current)
-                queue.add(childSnapshot)
+                addChildToQueue(childInfo, current, queue)
             }
         }
 

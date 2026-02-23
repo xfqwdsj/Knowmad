@@ -21,6 +21,18 @@ package top.ltfan.knowmad.util
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+inline fun <R> Mutex.tryWithLock(action: () -> R): R? {
+    return if (tryLock()) {
+        try {
+            action()
+        } finally {
+            unlock()
+        }
+    } else {
+        null
+    }
+}
+
 suspend inline fun <R> List<Mutex>.withLock(input: Int, action: () -> R): R {
     val mutex = this[(input and 0x7FFFFFFF) % size]
     return mutex.withLock(action = action)
