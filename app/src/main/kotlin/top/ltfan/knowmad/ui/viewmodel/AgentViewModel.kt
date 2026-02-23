@@ -744,7 +744,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         Click, Service
     }
 
-    fun captureUi() = viewModelScope.launch {
+    fun pipCaptureUi() = viewModelScope.launch {
+        if (selectedModelId == null) {
+            logger.debug { "No model selected, skipping pip capture." }
+            return@launch
+        }
+
         fun clearWaitingStatus() {
             if (pipStatusMutex.isLocked) {
                 pipStatusMutex.unlock()
@@ -817,6 +822,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 }
             },
         )
+    }
+
+    fun pipScrollUp() {
+        if (selectedModelId == null) {
+            logger.debug { "No model selected, skipping pip scroll up." }
+            return
+        }
+        pipScrollUpEvents.trySend(Unit)
     }
 
     private suspend fun createNewConversation() {

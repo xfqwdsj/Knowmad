@@ -24,6 +24,7 @@
     <string name="companion_mode_label_enter">Companion Mode</string>
     <string name="companion_mode_label_scroll_up">Scroll up</string>
     <string name="companion_mode_label_scroll_up_description">Scroll the message list up a bit</string>
+    <string name="companion_mode_label_model_not_selected">No model is currently selected. Please select a model first before using Companion Mode</string>
     <string name="companion_mode_label_no_permission">Unable to capture the screen. Click again to enter the service settings</string>
     <string name="companion_mode_label_enable_service">Please find "Knowmad Semantic Analysis Service" and enable it. Please note: Enabling any accessibility service may pose a risk of privacy leakage, please make sure you trust this app</string>
     <string name="companion_mode_label_capturing">Capturing screen content, this process may take up to 1 minute, the foreground application may temporarily become unresponsive, please wait patiently…</string>

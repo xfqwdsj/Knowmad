@@ -122,103 +122,116 @@ fun PictureInPicture() {
                 )
             }
             CompositionLocalProvider(LocalDensity provides newDensity) {
-                Box(Modifier.weight(1f)) {
-                    if (messages != null) {
-                        val state = rememberLazyListState()
-
-                        ChatMessageList(
-                            getMessageCount = { messages.itemCount },
-                            getMessageKey = messages.itemKey { it.key },
-                            getMessageAt = { agentViewModel.getMessage(messages[it]) },
-                            mathJaxRendererState = appViewModel.mathJaxRendererState,
-                            modifier = Modifier.fillMaxSize(),
-                            initialReasoningVisibility = false,
-                            initialToolVisibility = false,
-                            lazyListState = state,
-                            assistantMessageStates = agentViewModel.assistantMessageStates,
-                            allowAssistantMessageActions = false,
-                        )
-
-                        LaunchedEffect(state, agentViewModel.canSendMessage) {
-                            if (agentViewModel.canSendMessage) return@LaunchedEffect
-                            snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect {
-                                state.requestScrollToItem(0)
-                            }
-                        }
-
-                        LaunchedEffect(state) {
-                            var lastTime: Instant? = null
-
-                            val backJob = SupervisorJob(coroutineContext.job)
-                            val backScope = this + backJob
-
-                            val baseDuration = 1.seconds
-                            val stepDuration = 0.5.seconds
-                            val resetTime = 2.seconds
-                            val backThreshold = 5.seconds
-
-                            for (_ in agentViewModel.pipScrollUpEvents) {
-                                backJob.cancelChildren()
-                                val now = Clock.System.now()
-                                val delta = if (lastTime == null) {
-                                    baseDuration - stepDuration
-                                } else {
-                                    now - lastTime
-                                }
-                                lastTime = now
-
-                                val step = state.layoutInfo.viewportSize.height / 2
-
-                                val minimumValue = step * -1f
-                                val maximumValue = step * 3f
-
-                                val value = ((baseDuration - delta) / stepDuration * step).toFloat()
-                                    .fastCoerceAtLeast(minimumValue)
-                                    .fastCoerceAtMost(maximumValue)
-
-                                backScope.launch {
-                                    delay(resetTime)
-                                    lastTime = null
-                                }
-
-                                backScope.launch {
-                                    delay(backThreshold)
-                                    state.animateScrollToItem(0)
-                                }
-
-                                launch {
-                                    state.animateScrollBy(value)
-                                }
-                            }
-                        }
-                    }
-
-                    this@Column.AnimatedVisibility(
-                        visible = agentViewModel.capturingScreen,
-                        modifier = Modifier.fillMaxSize(),
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
+                AnimatedContent(
+                    targetState = agentViewModel.selectedModelId == null,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() using null },
+                ) { modelNotSelected ->
+                    if (modelNotSelected) {
                         HintColumn {
-                            LoadingIndicator()
-                            Text(stringResource(R.string.companion_mode_label_capturing))
+                            HintIconBackground { HintIcon(R.drawable.error_24px) }
+                            Text(stringResource(R.string.companion_mode_label_model_not_selected))
                         }
+                        return@AnimatedContent
                     }
+                    Box(Modifier.weight(1f)) {
+                        if (messages != null) {
+                            val state = rememberLazyListState()
 
-                    AnimatedContent(
-                        targetState = agentViewModel.pipWaitingStatus,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() using null },
-                    ) { pipWaitingStatus ->
-                        if (pipWaitingStatus == null) return@AnimatedContent
-                        when (pipWaitingStatus) {
-                            Click -> HintColumn {
-                                HintIconBackground { HintIcon(R.drawable.error_24px) }
-                                Text(stringResource(R.string.companion_mode_label_no_permission))
+                            ChatMessageList(
+                                getMessageCount = { messages.itemCount },
+                                getMessageKey = messages.itemKey { it.key },
+                                getMessageAt = { agentViewModel.getMessage(messages[it]) },
+                                mathJaxRendererState = appViewModel.mathJaxRendererState,
+                                modifier = Modifier.fillMaxSize(),
+                                initialReasoningVisibility = false,
+                                initialToolVisibility = false,
+                                lazyListState = state,
+                                assistantMessageStates = agentViewModel.assistantMessageStates,
+                                allowAssistantMessageActions = false,
+                            )
+
+                            LaunchedEffect(state, agentViewModel.canSendMessage) {
+                                if (agentViewModel.canSendMessage) return@LaunchedEffect
+                                snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect {
+                                    state.requestScrollToItem(0)
+                                }
                             }
 
-                            Service -> HintColumn {
-                                HintIconBackground { HintIcon(R.drawable.info_24px) }
-                                Text(stringResource(R.string.companion_mode_label_enable_service))
+                            LaunchedEffect(state) {
+                                var lastTime: Instant? = null
+
+                                val backJob = SupervisorJob(coroutineContext.job)
+                                val backScope = this + backJob
+
+                                val baseDuration = 1.seconds
+                                val stepDuration = 0.5.seconds
+                                val resetTime = 2.seconds
+                                val backThreshold = 5.seconds
+
+                                for (_ in agentViewModel.pipScrollUpEvents) {
+                                    backJob.cancelChildren()
+                                    val now = Clock.System.now()
+                                    val delta = if (lastTime == null) {
+                                        baseDuration - stepDuration
+                                    } else {
+                                        now - lastTime
+                                    }
+                                    lastTime = now
+
+                                    val step = state.layoutInfo.viewportSize.height / 2
+
+                                    val minimumValue = step * -1f
+                                    val maximumValue = step * 3f
+
+                                    val value =
+                                        ((baseDuration - delta) / stepDuration * step).toFloat()
+                                            .fastCoerceAtLeast(minimumValue)
+                                            .fastCoerceAtMost(maximumValue)
+
+                                    backScope.launch {
+                                        delay(resetTime)
+                                        lastTime = null
+                                    }
+
+                                    backScope.launch {
+                                        delay(backThreshold)
+                                        state.animateScrollToItem(0)
+                                    }
+
+                                    launch {
+                                        state.animateScrollBy(value)
+                                    }
+                                }
+                            }
+                        }
+
+                        this@Column.AnimatedVisibility(
+                            visible = agentViewModel.capturingScreen,
+                            modifier = Modifier.fillMaxSize(),
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                        ) {
+                            HintColumn {
+                                LoadingIndicator()
+                                Text(stringResource(R.string.companion_mode_label_capturing))
+                            }
+                        }
+
+                        AnimatedContent(
+                            targetState = agentViewModel.pipWaitingStatus,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() using null },
+                        ) { pipWaitingStatus ->
+                            if (pipWaitingStatus == null) return@AnimatedContent
+                            when (pipWaitingStatus) {
+                                Click -> HintColumn {
+                                    HintIconBackground { HintIcon(R.drawable.error_24px) }
+                                    Text(stringResource(R.string.companion_mode_label_no_permission))
+                                }
+
+                                Service -> HintColumn {
+                                    HintIconBackground { HintIcon(R.drawable.info_24px) }
+                                    Text(stringResource(R.string.companion_mode_label_enable_service))
+                                }
                             }
                         }
                     }

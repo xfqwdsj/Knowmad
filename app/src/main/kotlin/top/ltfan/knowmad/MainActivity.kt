@@ -175,8 +175,8 @@ class MainActivity : KnowmadActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_PIP) return
             when (intent.extras?.getInt(EXTRA_ACTION)) {
-                CODE_SCROLL_UP -> agentViewModel.pipScrollUpEvents.trySend(Unit)
-                CODE_CAPTURE_UI -> agentViewModel.captureUi()
+                CODE_SCROLL_UP -> agentViewModel.pipScrollUp()
+                CODE_CAPTURE_UI -> agentViewModel.pipCaptureUi()
                 CODE_NEW_CONVERSATION -> agentViewModel.newConversation()
             }
         }
