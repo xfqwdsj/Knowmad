@@ -26,12 +26,6 @@ import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.data.chat.toUiMessage
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.time.Clock
-import kotlin.time.Instant
-
-val TestClock = object : Clock {
-    override fun now() = Instant.DISTANT_PAST
-}
 
 class UiMessageModificationTest {
     @Test
