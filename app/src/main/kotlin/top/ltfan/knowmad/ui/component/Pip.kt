@@ -115,15 +115,15 @@ fun PictureInPicture() {
                     maxLines = 1,
                 )
             }
-            if (messages != null) {
-                val newDensity = remember(density) {
-                    Density(
-                        density = density.density * .65f,
-                        fontScale = density.fontScale,
-                    )
-                }
-                CompositionLocalProvider(LocalDensity provides newDensity) {
-                    Box(Modifier.weight(1f)) {
+            val newDensity = remember(density) {
+                Density(
+                    density = density.density * .65f,
+                    fontScale = density.fontScale,
+                )
+            }
+            CompositionLocalProvider(LocalDensity provides newDensity) {
+                Box(Modifier.weight(1f)) {
+                    if (messages != null) {
                         val state = rememberLazyListState()
 
                         ChatMessageList(
@@ -191,34 +191,34 @@ fun PictureInPicture() {
                                 }
                             }
                         }
+                    }
 
-                        this@Column.AnimatedVisibility(
-                            visible = agentViewModel.capturingScreen,
-                            modifier = Modifier.fillMaxSize(),
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                        ) {
-                            HintColumn {
-                                LoadingIndicator()
-                                Text(stringResource(R.string.companion_mode_label_capturing))
-                            }
+                    this@Column.AnimatedVisibility(
+                        visible = agentViewModel.capturingScreen,
+                        modifier = Modifier.fillMaxSize(),
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        HintColumn {
+                            LoadingIndicator()
+                            Text(stringResource(R.string.companion_mode_label_capturing))
                         }
+                    }
 
-                        AnimatedContent(
-                            targetState = agentViewModel.pipWaitingStatus,
-                            transitionSpec = { fadeIn() togetherWith fadeOut() using null },
-                        ) { pipWaitingStatus ->
-                            if (pipWaitingStatus == null) return@AnimatedContent
-                            when (pipWaitingStatus) {
-                                Click -> HintColumn {
-                                    HintIconBackground { HintIcon(R.drawable.error_24px) }
-                                    Text(stringResource(R.string.companion_mode_label_no_permission))
-                                }
+                    AnimatedContent(
+                        targetState = agentViewModel.pipWaitingStatus,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() using null },
+                    ) { pipWaitingStatus ->
+                        if (pipWaitingStatus == null) return@AnimatedContent
+                        when (pipWaitingStatus) {
+                            Click -> HintColumn {
+                                HintIconBackground { HintIcon(R.drawable.error_24px) }
+                                Text(stringResource(R.string.companion_mode_label_no_permission))
+                            }
 
-                                Service -> HintColumn {
-                                    HintIconBackground { HintIcon(R.drawable.info_24px) }
-                                    Text(stringResource(R.string.companion_mode_label_enable_service))
-                                }
+                            Service -> HintColumn {
+                                HintIconBackground { HintIcon(R.drawable.info_24px) }
+                                Text(stringResource(R.string.companion_mode_label_enable_service))
                             }
                         }
                     }
