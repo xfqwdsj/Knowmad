@@ -38,6 +38,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.AppContent
@@ -195,6 +196,11 @@ class MainActivity : KnowmadActivity() {
         private const val CODE_SCROLL_UP = 0
         private const val CODE_CAPTURE_UI = 1
         private const val CODE_NEW_CONVERSATION = 2
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SemanticAnalysisService.notifySuspend()
     }
 
     override fun onDestroy() {

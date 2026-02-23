@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import top.ltfan.knowmad.util.Logger
 import kotlin.concurrent.atomics.AtomicBoolean
@@ -46,6 +48,8 @@ import kotlin.time.Duration.Companion.minutes
 class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     private val logger = Logger("SemanticAnalysisService")
 
+    private val serviceInfoMutex = Mutex()
+
     private val job = Job()
     override val coroutineContext = Dispatchers.Default + job
 
@@ -53,51 +57,61 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         super.onServiceConnected()
         launch {
             flow.collect { event ->
+                if (event is Suspend) {
+                    launch {
+                        suspend()
+                        event(Unit)
+                    }
+                    return@collect
+                }
                 when (event) {
                     is Heartbeat -> event(true)
                     is GetUiTree -> launch {
-                        val originalInfo = serviceInfo ?: return@launch event(null)
+                        resume()
+                        serviceInfoMutex.withLock {
+                            val originalInfo = serviceInfo ?: return@launch event(null)
 
-                        val elevatedInfo = AccessibilityServiceInfo().apply {
-                            eventTypes = originalInfo.eventTypes
-                            notificationTimeout = originalInfo.notificationTimeout
-                            flags = originalInfo.flags
+                            val elevatedInfo = AccessibilityServiceInfo().apply {
+                                eventTypes = originalInfo.eventTypes
+                                notificationTimeout = originalInfo.notificationTimeout
+                                flags = originalInfo.flags
 
-                            feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN
-                            flags =
-                                flags or AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE
-                        }
-
-                        serviceInfo = elevatedInfo
-
-                        withTimeoutOrNull(1.minutes) {
-                            var tries = 1
-
-                            while (true) {
-                                val root = rootInActiveWindow
-                                val node = root?.parse()
-                                if (node != null) {
-                                    logger.debug { "Successfully retrieved UI tree after $tries tries" }
-                                    val title = root.window?.title?.toString()
-                                        ?: root.packageName?.toString()
-                                        ?: "Unknown App"
-                                    val rootNode = Node(
-                                        name = title,
-                                        children = listOf(node),
-                                    )
-                                    event(rootNode)
-                                    @Suppress("DEPRECATION")
-                                    root.recycle()
-                                    break
-                                }
-                                @Suppress("DEPRECATION")
-                                root?.recycle()
-                                tries++
-                                delay(100.milliseconds)
+                                feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN
+                                flags =
+                                    flags or AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE
                             }
-                        }
 
-                        serviceInfo = originalInfo
+                            serviceInfo = elevatedInfo
+
+                            withTimeoutOrNull(1.minutes) {
+                                var tries = 1
+
+                                while (true) {
+                                    val root = rootInActiveWindow
+                                    val node = root?.parse()
+                                    if (node != null) {
+                                        logger.debug { "Successfully retrieved UI tree after $tries tries" }
+                                        val title = root.window?.title?.toString()
+                                            ?: root.packageName?.toString()
+                                            ?: "Unknown App"
+                                        val rootNode = Node(
+                                            name = title,
+                                            children = listOf(node),
+                                        )
+                                        event(rootNode)
+                                        @Suppress("DEPRECATION")
+                                        root.recycle()
+                                        break
+                                    }
+                                    @Suppress("DEPRECATION")
+                                    root?.recycle()
+                                    tries++
+                                    delay(100.milliseconds)
+                                }
+                            }
+
+                            serviceInfo = originalInfo
+                        }
                         event(null)
                     }
                 }
@@ -108,6 +122,36 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
+    private suspend fun suspend() {
+        serviceInfoMutex.withLock {
+            val originalInfo = serviceInfo ?: return
+
+            serviceInfo = AccessibilityServiceInfo().apply {
+                eventTypes = 0
+                notificationTimeout = originalInfo.notificationTimeout
+                flags = originalInfo.flags
+                feedbackType = 0
+            }
+
+            logger.debug { "Service suspended, waiting for resume signal..." }
+        }
+    }
+
+    private suspend fun resume() {
+        serviceInfoMutex.withLock {
+            val originalInfo = serviceInfo ?: return
+
+            serviceInfo = AccessibilityServiceInfo().apply {
+                eventTypes = EVENT_TYPES
+                notificationTimeout = originalInfo.notificationTimeout
+                flags = originalInfo.flags
+                feedbackType = FEEDBACK_TYPE
+            }
+
+            logger.debug { "Service resumed, waiting for events..." }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         job.cancel()
@@ -116,11 +160,15 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     companion object {
         suspend fun waitAlive() = flow.subscriptionCount.first { it > 0 }
 
+        fun notifySuspend() = flow.tryEmit(Suspend().onResult {})
+
+        suspend fun suspend() = execute(Suspend())
+
         suspend fun heartbeat() = execute(Heartbeat()) == true
 
         suspend fun getUiTree() = execute(GetUiTree())
 
-        private val flow = MutableSharedFlow<Event<*>>()
+        private val flow = MutableSharedFlow<Event<*>>(extraBufferCapacity = 5)
         private suspend inline fun <reified R> execute(event: Event<R>): R? = coroutineScope {
             if (flow.subscriptionCount.value <= 0) return@coroutineScope null
 
@@ -164,6 +212,9 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                 }
             }
         }
+
+        const val EVENT_TYPES = AccessibilityEvent.TYPES_ALL_MASK
+        const val FEEDBACK_TYPE = AccessibilityServiceInfo.FEEDBACK_GENERIC
     }
 
     private fun AccessibilityNodeInfo.parse(): Node? {

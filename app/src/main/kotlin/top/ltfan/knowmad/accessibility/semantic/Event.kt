@@ -21,8 +21,9 @@ package top.ltfan.knowmad.accessibility.semantic
 sealed class Event<R> {
     private lateinit var _onResult: (R?) -> Unit
 
-    fun onResult(onResult: (R?) -> Unit) {
+    fun onResult(onResult: (R?) -> Unit): Event<R> {
         _onResult = onResult
+        return this
     }
 
     operator fun invoke(result: R?) {
@@ -30,5 +31,6 @@ sealed class Event<R> {
     }
 }
 
+class Suspend : Event<Unit>()
 class Heartbeat : Event<Boolean>()
 class GetUiTree : Event<Node>()
