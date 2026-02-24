@@ -240,7 +240,7 @@ class AgentMainPage : AgentSubPage() {
                                     showDialog = false
                                 },
                                 onAutoGenerateName = {
-                                    viewModel.autoGenerateConversationName(currentConversation.id)
+                                    viewModel.generateConversationName(currentConversation.id)
                                 },
                             )
                         }

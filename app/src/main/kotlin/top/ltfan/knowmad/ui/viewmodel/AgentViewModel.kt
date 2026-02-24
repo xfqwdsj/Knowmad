@@ -261,7 +261,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    suspend fun autoGenerateConversationName(conversationId: Uuid): String? {
+    suspend fun generateConversationName(conversationId: Uuid): String? {
         val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
             .asSequence()
             .flatMap { it.message.parts }
@@ -542,7 +542,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 }
                 if (databaseMessages.isEmpty()) {
                     viewModelScope.launch {
-                        val title = autoGenerateConversationName(conversation.id) ?: return@launch
+                        val title = generateConversationName(conversation.id) ?: return@launch
                         val newConversation = conversation.copy(name = title)
                         chatDao.updateConversation(newConversation)
                         conversation = newConversation
@@ -824,7 +824,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 if (!isNewConversation) return@sendMessage
                 val conversationId = currentConversationId ?: return@sendMessage
                 viewModelScope.launch {
-                    val newTitle = autoGenerateConversationName(conversationId) ?: return@launch
+                    val newTitle = generateConversationName(conversationId) ?: return@launch
                     val conversation = chatDao.getConversationById(conversationId) ?: return@launch
                     chatDao.updateConversation(conversation.copy(name = newTitle))
                 }

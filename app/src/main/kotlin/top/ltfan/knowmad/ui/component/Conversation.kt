@@ -100,7 +100,7 @@ fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
         onEditConversation = viewModel::editConversation,
         onDeleteConversation = viewModel::deleteConversation,
         contentPadding = contentPadding,
-        onAutoGenerateName = viewModel::autoGenerateConversationName,
+        onAutoGenerateName = viewModel::generateConversationName,
     )
 }
 
