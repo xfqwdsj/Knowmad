@@ -18,8 +18,12 @@
 
 package top.ltfan.knowmad.ui.component
 
+import android.app.PendingIntent
+import android.app.RemoteAction
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.graphics.drawable.Icon
 import androidx.activity.ComponentActivity
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
@@ -79,6 +83,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.ui.theme.AppExtraSmallShape
+import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import kotlin.time.Clock
@@ -310,4 +315,120 @@ private fun Context.findComponentActivity(): ComponentActivity? {
         context = context.baseContext
     }
     return null
+}
+
+sealed interface PipEvent
+
+class SetActions(val actions: PipActionsDelta) : PipEvent
+
+sealed interface PipAction {
+    val icon: Int
+    val title: Int
+    val contentDescription: Int
+
+    fun onClick()
+
+    fun toRemoteAction(context: Context): RemoteAction {
+        val actionCode = hashCode()
+        return RemoteAction(
+            Icon.createWithResource(context, icon),
+            context.getString(title),
+            context.getString(contentDescription),
+            PendingIntent.getBroadcast(
+                context,
+                actionCode,
+                Intent(ACTION).apply {
+                    putExtra(EXTRA_ACTION, actionCode)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+    }
+
+    class ScrollUp(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.arrow_circle_up_24px
+        override val title = R.string.companion_mode_label_scroll_up
+        override val contentDescription = R.string.companion_mode_label_scroll_up_description
+
+        override fun onClick() {
+            viewModel.pipScrollUp()
+        }
+    }
+
+    class CaptureUI(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.capture_24px
+        override val title = R.string.service_semantic_analysis_capture_label
+        override val contentDescription = R.string.service_semantic_analysis_capture_description
+
+        override fun onClick() {
+            viewModel.pipCaptureUi()
+        }
+    }
+
+    class NewConversation(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.edit_square_24px
+        override val title = R.string.agent_conversation_label_new
+        override val contentDescription = R.string.agent_conversation_label_new
+
+        override fun onClick() {
+            viewModel.newConversation()
+        }
+    }
+
+    companion object {
+        const val ACTION = "top.ltfan.knowmad.pip.ACTION"
+        const val EXTRA_ACTION = "top.ltfan.knowmad.pip.EXTRA_ACTION"
+    }
+}
+
+data class PipActions(
+    val first: PipAction? = null,
+    val second: PipAction? = null,
+    val third: PipAction? = null,
+) {
+    companion object {
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun standard(viewModel: AgentViewModel) = PipActionsDelta.Set(
+            PipActions(
+                PipAction.ScrollUp(viewModel),
+                PipAction.CaptureUI(viewModel),
+                PipAction.NewConversation(viewModel),
+            ),
+        )
+    }
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun toActionsWithMap(context: Context) = buildList {
+        first?.let { add(it.toRemoteAction(context)) }
+        second?.let { add(it.toRemoteAction(context)) }
+        third?.let { add(it.toRemoteAction(context)) }
+    } to buildMap {
+        first?.let { put(it.hashCode(), it::onClick) }
+        second?.let { put(it.hashCode(), it::onClick) }
+        third?.let { put(it.hashCode(), it::onClick) }
+    }
+}
+
+sealed interface PipActionsDelta {
+    data class Update(val updateActions: PipActions) : PipActionsDelta {
+        override fun applyTo(current: PipActions) = PipActions(
+            first = updateActions.first ?: current.first,
+            second = updateActions.second ?: current.second,
+            third = updateActions.third ?: current.third,
+        )
+    }
+
+    data class Set(val setActions: PipActions) : PipActionsDelta {
+        override fun applyTo(current: PipActions) = setActions
+    }
+
+    fun applyTo(current: PipActions): PipActions
+}
+
+fun Intent.handlePipActions(actions: Map<Int, () -> Unit>): Boolean {
+    if (action != PipAction.ACTION) return false
+    val actionCode = getIntExtra(PipAction.EXTRA_ACTION, 0)
+    val func = actions[actionCode] ?: return false
+    func()
+    return true
 }

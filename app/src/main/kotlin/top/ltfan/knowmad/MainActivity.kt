@@ -18,14 +18,11 @@
 
 package top.ltfan.knowmad
 
-import android.app.PendingIntent
 import android.app.PictureInPictureParams
-import android.app.RemoteAction
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
 import android.util.Rational
@@ -37,11 +34,20 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.ui.AppContent
+import top.ltfan.knowmad.ui.component.PipAction
+import top.ltfan.knowmad.ui.component.PipActions
+import top.ltfan.knowmad.ui.component.PipActionsDelta
+import top.ltfan.knowmad.ui.component.PipEvent
+import top.ltfan.knowmad.ui.component.SetActions
+import top.ltfan.knowmad.ui.component.handlePipActions
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -70,14 +76,22 @@ class MainActivity : KnowmadActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        lifecycleScope.launch {
+            updatePipActions(PipActions.standard(agentViewModel))
+            pipEventFlow.collect { event ->
+                when (event) {
+                    is SetActions -> lifecycleScope.launch { updatePipActions(event.actions) }
+                }
+            }
+        }
+
         intent.handle()
         ContextCompat.registerReceiver(
             this,
             pipReceiver,
-            IntentFilter(ACTION_PIP),
+            IntentFilter(PipAction.ACTION),
             ContextCompat.RECEIVER_EXPORTED,
         )
-        setPictureInPictureParams(pipParams)
         splashScreen.setKeepOnScreenCondition { !viewModel.appReady }
 
         setContent {
@@ -128,74 +142,37 @@ class MainActivity : KnowmadActivity() {
         }
     }
 
-    private val pipActions by lazy {
-        listOf(
-            RemoteAction(
-                Icon.createWithResource(this, R.drawable.arrow_circle_up_24px),
-                getString(R.string.companion_mode_label_scroll_up),
-                getString(R.string.companion_mode_label_scroll_up_description),
-                PendingIntent.getBroadcast(
-                    this,
-                    CODE_SCROLL_UP,
-                    Intent(ACTION_PIP).apply {
-                        putExtra(EXTRA_ACTION, CODE_SCROLL_UP)
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                ),
-            ),
-            RemoteAction(
-                Icon.createWithResource(this, R.drawable.capture_24px),
-                getString(R.string.service_semantic_analysis_capture_label),
-                getString(R.string.service_semantic_analysis_capture_description),
-                PendingIntent.getBroadcast(
-                    this,
-                    CODE_CAPTURE_UI,
-                    Intent(ACTION_PIP).apply {
-                        putExtra(EXTRA_ACTION, CODE_CAPTURE_UI)
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                ),
-            ),
-            RemoteAction(
-                Icon.createWithResource(this, R.drawable.edit_square_24px),
-                getString(R.string.agent_conversation_label_new),
-                getString(R.string.agent_conversation_label_new),
-                PendingIntent.getBroadcast(
-                    this,
-                    CODE_NEW_CONVERSATION,
-                    Intent(ACTION_PIP).apply {
-                        putExtra(EXTRA_ACTION, CODE_NEW_CONVERSATION)
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                ),
-            ),
-        )
+    private val pipBuilder = PictureInPictureParams.Builder().apply {
+        setAspectRatio(Rational(9, 14))
     }
+
+    private val pipActionsMutex = Mutex()
+    private var currentPipActions = PipActions()
+    private var pipActionsMap = mapOf<Int, () -> Unit>()
 
     private val pipReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != ACTION_PIP) return
-            when (intent.extras?.getInt(EXTRA_ACTION)) {
-                CODE_SCROLL_UP -> agentViewModel.pipScrollUp()
-                CODE_CAPTURE_UI -> agentViewModel.pipCaptureUi()
-                CODE_NEW_CONVERSATION -> agentViewModel.newConversation()
+            if (intent == null) return
+            lifecycleScope.launch {
+                pipActionsMutex.withLock {
+                    intent.handlePipActions(pipActionsMap)
+                }
             }
         }
     }
 
-    private val pipParams by lazy {
-        PictureInPictureParams.Builder().apply {
-            setAspectRatio(Rational(9, 14))
-            setActions(pipActions)
-        }.build()
+    suspend fun updatePipActions(delta: PipActionsDelta) {
+        pipActionsMutex.withLock {
+            currentPipActions = delta.applyTo(currentPipActions)
+            val (actions, map) = currentPipActions.toActionsWithMap(this)
+            pipActionsMap = map
+            pipBuilder.setActions(actions)
+            setPictureInPictureParams(pipBuilder.build())
+        }
     }
 
     companion object {
-        private const val ACTION_PIP = "top.ltfan.knowmad.action.PIP"
-        private const val EXTRA_ACTION = "top.ltfan.knowmad.extra.PIP_ACTION"
-        private const val CODE_SCROLL_UP = 0
-        private const val CODE_CAPTURE_UI = 1
-        private const val CODE_NEW_CONVERSATION = 2
+        val pipEventFlow = MutableSharedFlow<PipEvent>()
     }
 
     override fun onStop() {
