@@ -188,7 +188,7 @@ fun ChatInput(
                     if (isRunning) {
                         Icon(
                             painterResource(R.drawable.stop_circle_24px),
-                            contentDescription = stringResource(android.R.string.cancel),
+                            contentDescription = stringResource(R.string.agent_label_stop_generation),
                         )
                         return@IconButton
                     }

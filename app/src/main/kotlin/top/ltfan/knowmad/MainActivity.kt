@@ -46,7 +46,6 @@ import top.ltfan.knowmad.ui.component.PipAction
 import top.ltfan.knowmad.ui.component.PipActions
 import top.ltfan.knowmad.ui.component.PipActionsDelta
 import top.ltfan.knowmad.ui.component.PipEvent
-import top.ltfan.knowmad.ui.component.SetActions
 import top.ltfan.knowmad.ui.component.handlePipActions
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
@@ -80,7 +79,7 @@ class MainActivity : KnowmadActivity() {
             updatePipActions(PipActions.standard(agentViewModel))
             pipEventFlow.collect { event ->
                 when (event) {
-                    is SetActions -> lifecycleScope.launch { updatePipActions(event.actions) }
+                    is SetActions -> lifecycleScope.launch { updatePipActions(event.delta) }
                 }
             }
         }

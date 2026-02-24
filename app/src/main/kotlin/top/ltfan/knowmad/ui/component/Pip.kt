@@ -28,6 +28,8 @@ import androidx.activity.ComponentActivity
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -87,6 +89,7 @@ import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -173,25 +176,53 @@ fun PictureInPicture() {
                                 val resetTime = 2.seconds
                                 val backThreshold = 5.seconds
 
-                                for (_ in agentViewModel.pipScrollUpEvents) {
-                                    backJob.cancelChildren()
+                                val minimumFactor = -1f
+                                val maximumFactor = 3f
+
+                                fun calcValue(
+                                    lastTime: Instant?,
+                                    setLastTime: ((Instant) -> Unit)? = null,
+                                ): Float {
                                     val now = Clock.System.now()
                                     val delta = if (lastTime == null) {
                                         baseDuration - stepDuration
                                     } else {
                                         now - lastTime
                                     }
-                                    lastTime = now
+                                    setLastTime?.invoke(now)
 
                                     val step = state.layoutInfo.viewportSize.height / 2
 
-                                    val minimumValue = step * -1f
-                                    val maximumValue = step * 3f
+                                    val minimumValue = step * minimumFactor
+                                    val maximumValue = step * maximumFactor
 
-                                    val value =
-                                        ((baseDuration - delta) / stepDuration * step).toFloat()
-                                            .fastCoerceAtLeast(minimumValue)
-                                            .fastCoerceAtMost(maximumValue)
+                                    return ((baseDuration - delta) / stepDuration * step).toFloat()
+                                        .fastCoerceAtLeast(minimumValue)
+                                        .fastCoerceAtMost(maximumValue)
+                                }
+
+                                launch {
+                                    while (true) {
+                                        val value = calcValue(lastTime)
+
+                                        if (value >= 0) {
+                                            agentViewModel.pipUpdateActions(
+                                                PipActions.scrollUp(agentViewModel),
+                                            )
+                                        } else {
+                                            agentViewModel.pipUpdateActions(
+                                                PipActions.scrollDown(agentViewModel),
+                                            )
+                                        }
+
+                                        delay(100.milliseconds)
+                                    }
+                                }
+
+                                for (_ in agentViewModel.pipScrollEvents) {
+                                    backJob.cancelChildren()
+
+                                    val value = calcValue(lastTime) { lastTime = it }
 
                                     backScope.launch {
                                         delay(resetTime)
@@ -204,7 +235,12 @@ fun PictureInPicture() {
                                     }
 
                                     launch {
-                                        state.animateScrollBy(value)
+                                        state.animateScrollBy(
+                                            value = value,
+                                            animationSpec = spring(
+                                                stiffness = Spring.StiffnessLow,
+                                            ),
+                                        )
                                     }
                                 }
                             }
@@ -242,6 +278,14 @@ fun PictureInPicture() {
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(agentViewModel.isRunning) {
+        if (agentViewModel.isRunning) {
+            agentViewModel.pipUpdateActions(PipActions.stopGeneration(agentViewModel))
+        } else {
+            agentViewModel.pipUpdateActions(PipActions.newConversation(agentViewModel))
         }
     }
 }
@@ -317,9 +361,9 @@ private fun Context.findComponentActivity(): ComponentActivity? {
     return null
 }
 
-sealed interface PipEvent
-
-class SetActions(val actions: PipActionsDelta) : PipEvent
+sealed interface PipEvent {
+    class SetActions(val delta: PipActionsDelta) : PipEvent
+}
 
 sealed interface PipAction {
     val icon: Int
@@ -351,7 +395,17 @@ sealed interface PipAction {
         override val contentDescription = R.string.companion_mode_label_scroll_up_description
 
         override fun onClick() {
-            viewModel.pipScrollUp()
+            viewModel.pipScroll()
+        }
+    }
+
+    class ScrollDown(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.arrow_circle_down_24px
+        override val title = R.string.companion_mode_label_scroll_down
+        override val contentDescription = R.string.companion_mode_label_scroll_down_description
+
+        override fun onClick() {
+            viewModel.pipScroll()
         }
     }
 
@@ -365,6 +419,16 @@ sealed interface PipAction {
         }
     }
 
+    class GrantPermission(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.arrow_circle_right_24px
+        override val title = R.string.companion_mode_label_grant_permission
+        override val contentDescription = R.string.companion_mode_label_grant_permission
+
+        override fun onClick() {
+            viewModel.pipCaptureUi()
+        }
+    }
+
     class NewConversation(val viewModel: AgentViewModel) : PipAction {
         override val icon = R.drawable.edit_square_24px
         override val title = R.string.agent_conversation_label_new
@@ -372,6 +436,16 @@ sealed interface PipAction {
 
         override fun onClick() {
             viewModel.newConversation()
+        }
+    }
+
+    class StopGeneration(val viewModel: AgentViewModel) : PipAction {
+        override val icon = R.drawable.stop_circle_24px
+        override val title = R.string.agent_label_stop_generation
+        override val contentDescription = R.string.agent_label_stop_generation
+
+        override fun onClick() {
+            viewModel.cancelGeneration()
         }
     }
 
@@ -393,6 +467,41 @@ data class PipActions(
                 PipAction.ScrollUp(viewModel),
                 PipAction.CaptureUI(viewModel),
                 PipAction.NewConversation(viewModel),
+            ),
+        )
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun scrollUp(viewModel: AgentViewModel) = PipActionsDelta.Update(
+            PipActions(
+                first = PipAction.ScrollUp(viewModel),
+            ),
+        )
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun scrollDown(viewModel: AgentViewModel) = PipActionsDelta.Update(
+            PipActions(
+                first = PipAction.ScrollDown(viewModel),
+            ),
+        )
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun grantPermission(viewModel: AgentViewModel) = PipActionsDelta.Update(
+            PipActions(
+                second = PipAction.GrantPermission(viewModel),
+            ),
+        )
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun newConversation(viewModel: AgentViewModel) = PipActionsDelta.Update(
+            PipActions(
+                third = PipAction.NewConversation(viewModel),
+            ),
+        )
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun stopGeneration(viewModel: AgentViewModel) = PipActionsDelta.Update(
+            PipActions(
+                third = PipAction.StopGeneration(viewModel),
             ),
         )
     }

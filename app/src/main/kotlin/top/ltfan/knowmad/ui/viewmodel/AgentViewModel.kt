@@ -66,6 +66,7 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
+import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.accessibility.requestEnableAccessibilityService
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
@@ -104,6 +105,9 @@ import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.Finish
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
+import top.ltfan.knowmad.ui.component.PipActions
+import top.ltfan.knowmad.ui.component.PipActionsDelta
+import top.ltfan.knowmad.ui.component.PipEvent
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.ui.util.SnapshotLruCache
@@ -729,7 +733,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         cancellationEvent.trySend(Unit)
     }
 
-    val pipScrollUpEvents = Channel<Unit>(Channel.CONFLATED)
+    val pipScrollEvents = Channel<Unit>(Channel.CONFLATED)
 
     private var pipWaitingJob: Job? = null
     private val pipStatusMutex = Mutex()
@@ -750,7 +754,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             return@launch
         }
 
-        fun clearWaitingStatus() {
+        suspend fun clearWaitingStatus() {
+            pipUpdateActions(PipActions.standard(this@AgentViewModel))
             if (pipStatusMutex.isLocked) {
                 pipStatusMutex.unlock()
             }
@@ -760,6 +765,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         if (!SemanticAnalysisService.heartbeat()) {
             if (pipStatusMutex.tryLock()) {
                 try {
+                    pipUpdateActions(PipActions.grantPermission(this@AgentViewModel))
                     pipWaitingStatus = Click
                     pipWaitingJob = viewModelScope.launch {
                         delay(5.seconds)
@@ -784,6 +790,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                         clearWaitingStatus()
                     }
                 }
+
+                pipUpdateActions(PipActions.standard(this@AgentViewModel))
             } else if (pipWaitingStatus == Service) {
                 clearWaitingStatus()
             }
@@ -824,12 +832,16 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         )
     }
 
-    fun pipScrollUp() {
+    fun pipScroll() {
         if (selectedModelId == null) {
             logger.debug { "No model selected, skipping pip scroll up." }
             return
         }
-        pipScrollUpEvents.trySend(Unit)
+        pipScrollEvents.trySend(Unit)
+    }
+
+    suspend fun pipUpdateActions(delta: PipActionsDelta) {
+        MainActivity.pipEventFlow.emit(PipEvent.SetActions(delta))
     }
 
     private suspend fun createNewConversation() {

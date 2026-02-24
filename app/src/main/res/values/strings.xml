@@ -49,6 +49,7 @@
     <string name="label_not_changed">Not Changed</string>
     <string name="label_just_clicked">Just Clicked</string>
     <string name="agent_label_chat">Chat with Noma</string>
+    <string name="agent_label_stop_generation">Stop Generation</string>
     <string name="agent_standalone_label_enter">Enter Standalone Page</string>
     <string name="agent_standalone_label_exit">Exit Standalone Page</string>
     <string name="agent_drawer_label_open">Open Conversation List</string>
