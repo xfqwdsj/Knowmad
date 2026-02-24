@@ -38,6 +38,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import top.ltfan.knowmad.accessibility.retake
 import top.ltfan.knowmad.accessibility.use
 import top.ltfan.knowmad.util.HandlerEvent
 import top.ltfan.knowmad.util.Logger
@@ -146,31 +147,35 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         }
     }
 
+    private val updateCacheJobMutex = Mutex()
     private var updateCacheJob: Job? = null
 
     private fun updateCache(event: AccessibilityEvent) {
         val now = Clock.System.now()
 
-        val source = event.source?.use {
-            @Suppress("DEPRECATION")
-            AccessibilityNodeInfo.obtain(it)
-        } ?: return
+        val info = event.source?.retake() ?: return
 
         launch {
             try {
                 rootInActiveWindow?.use { root ->
-                    source.use { info ->
+                    info.use { info ->
                         if (info.windowId != root.windowId) return@launch
+                        cacheTree?.third?.let { lastUpdate -> if (lastUpdate > now) return@launch }
                         val node = info.findAndParseWithRoot()
+                        cacheTree?.third?.let { lastUpdate -> if (lastUpdate > now) return@launch }
                         if (node != null) {
-                            updateCacheJob?.cancel()
-                            updateCacheJob = this@SemanticAnalysisService.launch {
-                                val currentRootId = rootInActiveWindow?.use { it.windowId }
-                                    ?: return@launch
-                                if (currentRootId != info.windowId) return@launch
-                                val lastUpdate = cacheTree?.third
-                                if (lastUpdate != null && lastUpdate > now) return@launch
-                                cacheTree = Triple(info.windowId, node, now)
+                            updateCacheJobMutex.withLock {
+                                val info = info.retake()
+                                updateCacheJob?.cancel()
+                                updateCacheJob = this@SemanticAnalysisService.launch {
+                                    info.use { info ->
+                                        val currentRootId = rootInActiveWindow?.use { it.windowId }
+                                            ?: return@launch
+                                        if (currentRootId != info.windowId) return@launch
+                                        cacheTree?.third?.let { lastUpdate -> if (lastUpdate > now) return@launch }
+                                        cacheTree = Triple(info.windowId, node, now)
+                                    }
+                                }
                             }
                         }
                     }

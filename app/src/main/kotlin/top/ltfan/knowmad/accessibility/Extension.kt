@@ -36,6 +36,12 @@ inline fun <R> AccessibilityNodeInfo.use(block: (AccessibilityNodeInfo) -> R): R
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun AccessibilityNodeInfo.retake(): AccessibilityNodeInfo = use {
+    @Suppress("DEPRECATION")
+    AccessibilityNodeInfo.obtain(it)
+}
+
 inline fun <reified T> Context.requestEnableAccessibilityService() {
     val logger = Logger("requestEnableAccessibilityService")
 
