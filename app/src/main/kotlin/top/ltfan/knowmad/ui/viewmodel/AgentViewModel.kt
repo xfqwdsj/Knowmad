@@ -165,7 +165,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
         transformOut = {
-            messageListLoading = true
+            if (conversation != it) {
+                messageListLoading = true
+            }
             copy(conversation = it)
         },
     )
