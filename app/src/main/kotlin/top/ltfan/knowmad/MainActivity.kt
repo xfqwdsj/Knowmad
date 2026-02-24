@@ -41,12 +41,14 @@ import kotlinx.coroutines.sync.withLock
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.chat.toConversationIdFromChatLink
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.component.PipAction
 import top.ltfan.knowmad.ui.component.PipActions
 import top.ltfan.knowmad.ui.component.PipActionsDelta
 import top.ltfan.knowmad.ui.component.PipEvent
 import top.ltfan.knowmad.ui.component.handlePipActions
+import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -115,6 +117,14 @@ class MainActivity : KnowmadActivity() {
         val mimeType = this?.type
 
         if (isViewAction && data != null) {
+            val conversationId = data.toConversationIdFromChatLink()
+            if (conversationId != null) {
+                agentViewModel.currentConversationId = conversationId
+                if (viewModel.backStack.lastOrNull() !is AgentPage) {
+                    viewModel.backStack.add(AgentPage())
+                }
+                return
+            }
             val isIcsFile = mimeType == "text/calendar" ||
                     mimeType == "application/ics" ||
                     data.path?.endsWith(".ics", ignoreCase = true) == true

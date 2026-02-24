@@ -81,7 +81,7 @@
     "</string>
     <string name="llm_prompt_generate_message_summary">"
         # Role
-        You are a content summarization expert. Your task is to generate a brief summary of a message based on the given context and target message.
+        You are a content summarization expert. Your task is to generate a brief summary of a message based on the given context and target message, and you can also generate brief quick replies for the user.
 
         # Requirements
         - Only summarize the content of the "target message", the context is only used to aid understanding;
@@ -90,10 +90,15 @@
         - Only allow outputting the summary text, prohibiting introductions such as "Summary:" or "Suggestion:";
         - Prohibit using Markdown formatting and unnecessary punctuation.
 
+        # Quick Reply Generation Rules
+        - If the target message is a request or instruction, the summary can include brief reply suggestions to that request or instruction;
+        - Place quick replies at the end of the entire summary content, marked using XML tags;
+        - Do not generate excessive quick replies; quick replies appearing later have lower priority.
+
         # Examples
         - Context: [User] Help me…
           Target Message: [Assistant] Let me help you…
-          Summary: I helped you with…
+          Summary: I helped you with… Would you like to…? &lt;quick_reply&gt;Yes&lt;/quick_reply&gt;&lt;quick_reply&gt;No thanks&lt;/quick_reply&gt;
 
         # Context
         &lt;&lt;&lt;

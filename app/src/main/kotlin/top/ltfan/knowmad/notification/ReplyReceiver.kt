@@ -21,7 +21,9 @@ package top.ltfan.knowmad.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
+import androidx.core.content.pm.ShortcutManagerCompat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -36,10 +38,16 @@ class ReplyReceiver : BroadcastReceiver() {
         val remoteInput = RemoteInput.getResultsFromIntent(intent) ?: return
         val text = remoteInput.getCharSequence(TEXT_KEY)?.toString() ?: return
         _channel.trySend(conversationId to text)
+
+        val notificationManager = NotificationManagerCompat.from(context)
+
+        notificationManager.cancel(conversationId.hashCode())
+        ShortcutManagerCompat.reportShortcutUsed(context, conversationIdStr)
     }
 
     companion object {
         const val EXTRA_CONVERSATION_ID = "notification.reply.CONVERSATION_ID"
+        const val EXTRA_CONVERSATION_NAME = "notification.reply.CONVERSATION_NAME"
         const val TEXT_KEY = "notification.reply.TEXT"
 
         private val _channel = Channel<Pair<Uuid, String>>(Channel.BUFFERED)

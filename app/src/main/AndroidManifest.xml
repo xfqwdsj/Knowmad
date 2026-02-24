@@ -41,6 +41,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:allowEmbedded="true"
             android:exported="true"
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"

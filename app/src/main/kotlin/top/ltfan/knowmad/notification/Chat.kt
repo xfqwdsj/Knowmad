@@ -33,7 +33,15 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.LocusIdCompat
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
+import kotlinx.datetime.toStdlibInstant
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.data.chat.getChatIntent
+import top.ltfan.knowmad.data.chat.getChatPendingIntent
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 const val UserPersonId = "user"
@@ -65,25 +73,43 @@ fun Resources.getAiNotificationChannel() = NotificationChannelCompat.Builder(
     setName(getString(R.string.notification_channel_ai_message_label))
 }.build()
 
-fun Resources.getChatRemoteInput() = RemoteInput.Builder(ReplyReceiver.TEXT_KEY).apply {
+fun Resources.getChatRemoteInput(
+    quickReplies: List<String>? = null,
+) = RemoteInput.Builder(ReplyReceiver.TEXT_KEY).apply {
     setLabel(getString(R.string.chat_input_placeholder))
+    quickReplies?.takeIf { it.isNotEmpty() }?.let {
+        setChoices(it.toTypedArray())
+        setEditChoicesBeforeSending(RemoteInput.EDIT_CHOICES_BEFORE_SENDING_ENABLED)
+    }
 }.build()
 
-fun Context.getChatPendingIntent(conversationId: Uuid) = PendingIntentCompat.getBroadcast(
+fun Context.getChatPendingIntent(
+    conversationId: Uuid,
+    conversationName: String,
+) = PendingIntentCompat.getBroadcast(
     this,
     conversationId.hashCode(),
     Intent(this, ReplyReceiver::class.java).apply {
         putExtra(ReplyReceiver.EXTRA_CONVERSATION_ID, conversationId.toString())
+        putExtra(ReplyReceiver.EXTRA_CONVERSATION_NAME, conversationName)
     },
     PendingIntent.FLAG_UPDATE_CURRENT,
     true,
 )
 
-fun Context.getReplyAction(conversationId: Uuid) = NotificationCompat.Action.Builder(
+fun Context.getReplyAction(
+    conversationId: Uuid,
+    conversationName: String,
+    quickReplies: List<String>? = null,
+) = NotificationCompat.Action.Builder(
     R.drawable.send_24px,
     getString(R.string.chat_input_label_send),
-    getChatPendingIntent(conversationId),
-).addRemoteInput(resources.getChatRemoteInput()).build()
+    getChatPendingIntent(conversationId, conversationName),
+).apply {
+    addRemoteInput(resources.getChatRemoteInput(quickReplies))
+    setAllowGeneratedReplies(quickReplies.isNullOrEmpty())
+    setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+}.build()
 
 private inline fun NotificationCompat.MessagingStyle.kotlinApply(
     block: NotificationCompat.MessagingStyle.() -> Unit,
@@ -93,39 +119,32 @@ private inline fun NotificationCompat.MessagingStyle.kotlinApply(
 }
 
 fun Resources.getMessagingStyle(
-    conversationName: String,
-    messages: List<Message>,
+    messages: List<NotificationMessage>,
 ) = NotificationCompat.MessagingStyle(getUserPerson()).kotlinApply {
-    setConversationTitle(conversationName)
-    messages.forEach {
-        when (it) {
-            is User -> addMessage(
-                it.content.trim(),
-                System.currentTimeMillis(),
-                getUserPerson(),
-            )
-
-            is Assistant -> addMessage(
-                it.content.trim(),
-                System.currentTimeMillis(),
-                getAssistantPerson(),
-            )
-
-            else -> {}
-        }
+    messages.forEach { (text, time, sender) ->
+        addMessage(text, time.toEpochMilliseconds(), sender)
     }
 }
 
 fun Context.showChatNotification(
     conversationId: Uuid,
     conversationName: String,
-    messages: List<Message>,
+    messages: List<NotificationMessage>,
+    quickReplies: List<String>? = null,
+    unreadCount: Int = 1,
 ) {
+    pushChatShortcut(conversationId, conversationName)
+
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.drawable.ic_launcher_foreground)
-        setStyle(resources.getMessagingStyle(conversationName, messages))
-        addAction(getReplyAction(conversationId))
+        setStyle(resources.getMessagingStyle(messages))
+        addAction(getReplyAction(conversationId, conversationName, quickReplies))
+        setShortcutId(conversationId.toString())
+        setLocusId(LocusIdCompat(conversationId.toString()))
         setAutoCancel(true)
+        setNumber(unreadCount)
+        setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        setContentIntent(getChatPendingIntent(conversationId))
     }.build()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -136,4 +155,56 @@ fun Context.showChatNotification(
     }
 
     NotificationManagerCompat.from(this).notify(conversationId.hashCode(), notification)
+}
+
+fun Context.getBubbleMetadata(
+    conversationId: Uuid,
+): NotificationCompat.BubbleMetadata? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    NotificationCompat.BubbleMetadata.Builder(
+        conversationId.toString(),
+    ).apply {
+        setDesiredHeight(600)
+        setAutoExpandBubble(true)
+        setSuppressNotification(true)
+    }.build()
+} else {
+    NotificationCompat.BubbleMetadata.Builder(
+        getChatPendingIntent(conversationId),
+        IconCompat.createWithResource(this, R.drawable.ic_launcher_foreground),
+    ).build()
+}
+
+fun Context.pushChatShortcut(conversationId: Uuid, conversationName: String) {
+    val shortcutId = conversationId.toString()
+
+    val intent = getChatIntent(conversationId)
+
+    val shortcut = ShortcutInfoCompat.Builder(this, shortcutId).apply {
+        setShortLabel(conversationName)
+        setLongLived(true)
+        setIntent(intent)
+        setPerson(resources.getAssistantPerson())
+    }.build()
+
+    ShortcutManagerCompat.pushDynamicShortcut(this, shortcut)
+}
+
+data class NotificationMessage(
+    val text: String,
+    val time: Instant,
+    val sender: Person,
+)
+
+fun Message.toNotificationMessage(resources: Resources): NotificationMessage? {
+    val (text, time) = when (this) {
+        is User -> content.trim() to metaInfo.timestamp.toStdlibInstant()
+        is Assistant -> content.trim() to metaInfo.timestamp.toStdlibInstant()
+        else -> return null
+    }
+    val sender = when (this) {
+        is User -> resources.getUserPerson()
+        is Assistant -> resources.getAssistantPerson()
+        else -> return null
+    }
+    return NotificationMessage(text, time, sender)
 }

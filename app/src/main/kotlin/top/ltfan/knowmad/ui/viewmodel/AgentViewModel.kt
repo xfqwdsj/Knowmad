@@ -102,9 +102,11 @@ import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.toClient
+import top.ltfan.knowmad.notification.NotificationMessage
 import top.ltfan.knowmad.notification.ReplyReceiver
 import top.ltfan.knowmad.notification.getAiNotificationChannel
 import top.ltfan.knowmad.notification.showChatNotification
+import top.ltfan.knowmad.notification.toNotificationMessage
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.Finish
@@ -306,7 +308,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         )
     }
 
-    suspend fun generateAssistantMessageSummary(conversationId: Uuid): List<Message.Assistant>? {
+    suspend fun generateAssistantMessageSummary(conversationId: Uuid): List<NotificationMessage>? {
         var assistantMessage: String? = null
 
         val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
@@ -353,7 +355,37 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             beforeStart = { logger.debug { "Generating assistant message summary with LLM..." } },
             onSuccess = { logger.debug { "Generated assistant message summary" } },
             onFailure = { logger.error(it) { "Error generating assistant message summary" } },
-        )
+        )?.mapNotNull {
+            it.toNotificationMessage(application.resources)
+        }
+    }
+
+    private fun MutableList<NotificationMessage>.parseQuickReplies(onlyLast: Boolean = true): List<String> {
+        val tagRegex = Regex("""(?s)<quick_reply>(.*?)</quick_reply>""")
+        val horizontalWhitespace = Regex("""[^\S\r\n]+""")
+        val lineEdgeWhitespace = Regex("""(?m)^[^\S\r\n]+|[^\S\r\n]+$""")
+        val multiNewlineRegex = Regex("""\n+""")
+
+        val allExtracted = mutableListOf<String>()
+
+        for (i in this.indices) {
+            var processed = this[i].text
+
+            if (!onlyLast || i == this.size - 1) {
+                tagRegex.findAll(processed).forEach {
+                    allExtracted.add(it.groupValues[1])
+                }
+            }
+
+            processed = processed.replace(tagRegex, "\n")
+            processed = processed.replace(horizontalWhitespace, " ")
+            processed = processed.replace(lineEdgeWhitespace, "")
+            processed = processed.replace(multiNewlineRegex, "\n")
+
+            this[i] = this[i].copy(text = processed.trim())
+        }
+
+        return allExtracted
     }
 
     fun deleteConversation(
@@ -808,7 +840,9 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     fun sendNotification(conversationId: Uuid) {
         viewModelScope.launch {
-            val summary = generateAssistantMessageSummary(conversationId) ?: return@launch
+            val summary =
+                generateAssistantMessageSummary(conversationId)?.toMutableList() ?: return@launch
+            val quickReplies = summary.parseQuickReplies().takeIf { it.isNotEmpty() }
             val conversation = chatDao.getConversationById(conversationId) ?: return@launch
             val manager = NotificationManagerCompat.from(application)
             manager.createNotificationChannel(application.resources.getAiNotificationChannel())
@@ -816,6 +850,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 conversationId = conversationId,
                 conversationName = conversation.name,
                 messages = summary,
+                quickReplies = quickReplies,
             )
         }
     }

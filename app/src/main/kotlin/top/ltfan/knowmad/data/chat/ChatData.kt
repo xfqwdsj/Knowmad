@@ -23,12 +23,17 @@ import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.PendingIntentCompat
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +58,7 @@ import okio.Path
 import okio.Path.Companion.toOkioPath
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
+import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.file.FileDao
 import top.ltfan.knowmad.data.file.getOrStoreFile
@@ -68,11 +74,46 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
+const val CHAT_LINK_SCHEME = "knowmad-chat"
+const val CHAT_LINK_DEFAULT_FLAGS = Intent.FLAG_ACTIVITY_CLEAR_TOP or
+        Intent.FLAG_ACTIVITY_SINGLE_TOP
+
 const val ATTACHMENT_STORAGE_PATH = "attachments"
 const val ATTACHMENT_STORAGE_SCHEME = "knowmad-attachment"
 
 enum class MessageEntityRole {
     System, User, Assistant
+}
+
+fun Uuid.toChatLink(): Uri = Uri.Builder().apply {
+    scheme(CHAT_LINK_SCHEME)
+    appendPath(this@toChatLink.toString())
+}.build()
+
+fun Context.getChatIntent(
+    conversationId: Uuid,
+    flags: Int = CHAT_LINK_DEFAULT_FLAGS,
+) = Intent(this, MainActivity::class.java).apply {
+    action = Intent.ACTION_VIEW
+    data = conversationId.toChatLink()
+    this.flags = flags
+}
+
+fun Context.getChatPendingIntent(
+    conversationId: Uuid,
+    flags: Int = CHAT_LINK_DEFAULT_FLAGS,
+): PendingIntent = PendingIntentCompat.getActivity(
+    this,
+    conversationId.hashCode(),
+    getChatIntent(conversationId, flags),
+    PendingIntent.FLAG_UPDATE_CURRENT,
+    true,
+) ?: error("Failed to create PendingIntent for conversation $conversationId")
+
+fun Uri.toConversationIdFromChatLink(): Uuid? {
+    if (scheme != CHAT_LINK_SCHEME) return null
+    val idStr = pathSegments.firstOrNull() ?: return null
+    return Uuid.parseOrNull(idStr)
 }
 
 context(viewModel: AndroidViewModel<*>)
