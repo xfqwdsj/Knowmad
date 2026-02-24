@@ -410,3 +410,20 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         children = mutableListOf(),
     )
 }
+
+private sealed class Event<R> {
+    private lateinit var _onResult: (R?) -> Unit
+
+    fun onResult(onResult: (R?) -> Unit): Event<R> {
+        _onResult = onResult
+        return this
+    }
+
+    operator fun invoke(result: R?) {
+        _onResult(result)
+    }
+}
+
+private class Suspend : Event<Unit>()
+private class Heartbeat : Event<Boolean>()
+private class GetUiTree : Event<Node>()
