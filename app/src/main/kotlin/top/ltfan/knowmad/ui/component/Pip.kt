@@ -39,6 +39,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.toShape
@@ -63,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -104,32 +108,40 @@ fun PictureInPicture() {
     val messages = agentViewModel.currentMessagesFlow?.collectAsLazyPagingItems()
 
     Surface {
-        Column(Modifier.fillMaxSize()) {
-            Surface(
-                shape = AppExtraSmallShape.copy(
-                    topStart = CornerSize(0.dp),
-                    topEnd = CornerSize(0.dp),
-                ),
-                tonalElevation = 4.dp,
-            ) {
-                Text(
-                    conversation?.name ?: stringResource(R.string.agent_conversation_label_new),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(4.dp),
-                    textAlign = Center,
-                    overflow = Ellipsis,
-                    softWrap = false,
-                    maxLines = 1,
-                )
-            }
+        Scaffold(
+            topBar = {
+                Surface(
+                    shape = AppExtraSmallShape.copy(
+                        topStart = CornerSize(0.dp),
+                        topEnd = CornerSize(0.dp),
+                    ),
+                    tonalElevation = 4.dp,
+                    shadowElevation = 2.dp,
+                ) {
+                    Text(
+                        conversation?.name ?: stringResource(R.string.agent_conversation_label_new),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        textAlign = Center,
+                        overflow = Ellipsis,
+                        softWrap = false,
+                        maxLines = 1,
+                    )
+                }
+            },
+            contentWindowInsets = WindowInsets(),
+        ) { padding ->
             val newDensity = remember(density) {
                 Density(
                     density = density.density * .65f,
                     fontScale = density.fontScale,
                 )
             }
-            CompositionLocalProvider(LocalDensity provides newDensity) {
+            CompositionLocalProvider(
+                LocalDensity provides newDensity,
+                LocalPadding provides padding,
+            ) {
                 AnimatedContent(
                     targetState = agentViewModel.selectedModelId == null,
                     transitionSpec = { fadeIn() togetherWith fadeOut() using null },
@@ -141,7 +153,7 @@ fun PictureInPicture() {
                         }
                         return@AnimatedContent
                     }
-                    Box(Modifier.weight(1f)) {
+                    Box(Modifier.fillMaxSize()) {
                         if (messages != null) {
                             val state = rememberLazyListState()
 
@@ -153,6 +165,7 @@ fun PictureInPicture() {
                                 modifier = Modifier.fillMaxSize(),
                                 initialReasoningVisibility = false,
                                 initialToolVisibility = false,
+                                contentPadding = padding,
                                 lazyListState = state,
                                 assistantMessageStates = agentViewModel.assistantMessageStates,
                                 allowAssistantMessageActions = false,
@@ -246,7 +259,7 @@ fun PictureInPicture() {
                             }
                         }
 
-                        this@Column.AnimatedVisibility(
+                        AnimatedVisibility(
                             visible = agentViewModel.capturingScreen,
                             modifier = Modifier.fillMaxSize(),
                             enter = fadeIn(),
@@ -292,13 +305,15 @@ fun PictureInPicture() {
 
 @Composable
 private fun HintColumn(
+    padding: PaddingValues = LocalPadding.current,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f))
-            .padding(4.dp),
+            .padding(4.dp)
+            .padding(padding),
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content,
@@ -541,3 +556,5 @@ fun Intent.handlePipActions(actions: Map<Int, () -> Unit>): Boolean {
     func()
     return true
 }
+
+private val LocalPadding = staticCompositionLocalOf { PaddingValues() }
