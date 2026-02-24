@@ -18,9 +18,11 @@
 
 package top.ltfan.knowmad.util
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.core.content.getSystemService
 
@@ -34,3 +36,12 @@ val Context.isMainProcess: Boolean
         }
         return packageName == processName
     }
+
+inline fun <reified T : Activity> Context.findActivity(): T? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is T) return context
+        context = context.baseContext
+    }
+    return null
+}

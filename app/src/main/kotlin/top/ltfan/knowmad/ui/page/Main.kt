@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.page
 
 import android.app.PictureInPictureParams
+import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.SharedTransitionScope
@@ -75,7 +76,10 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
@@ -108,12 +112,6 @@ class MainPage : Page() {
         val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
 
-        val calendarPermissionsState = rememberMultiplePermissionsState(
-            permissions = listOf(
-                android.Manifest.permission.READ_CALENDAR,
-                android.Manifest.permission.WRITE_CALENDAR,
-            ),
-        )
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
                 initialValue = Hidden,
@@ -121,8 +119,6 @@ class MainPage : Page() {
             ),
             snackbarHostState = viewModel.snackbarHostState,
         )
-
-        var showCalendarPermissionRationale by remember { mutableStateOf(false) }
 
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val screenWidth = constraints.maxWidth
@@ -288,6 +284,29 @@ class MainPage : Page() {
             }
         }
 
+        if (viewModel.showMonthBottomSheet) {
+            ModalBottomSheet(onDismissRequest = { viewModel.showMonthBottomSheet = false }) {
+                MonthBottomSheetContent(
+                    month = viewModel.calendarState.currentMonth,
+                    semesters = viewModel.allSemesters,
+                    notSelectedSemesters = viewModel.invisibleSemesters,
+                    onSemesterSelectionChange = viewModel::onSemesterSelectionChange,
+                    onExport = viewModel::exportSemester,
+                    onBackup = viewModel::backupSemester,
+                    onDelete = viewModel::deleteSemester,
+                    onImport = viewModel::importFromICalendar,
+                )
+            }
+        }
+
+        var showCalendarPermissionRationale by remember { mutableStateOf(false) }
+        val calendarPermissionsState = rememberMultiplePermissionsState(
+            permissions = listOf(
+                android.Manifest.permission.READ_CALENDAR,
+                android.Manifest.permission.WRITE_CALENDAR,
+            ),
+        )
+
         if (calendarPermissionsState.allPermissionsGranted) {
             LaunchedEffect(Unit) {
                 viewModel.application.requestCalendarSync()
@@ -301,21 +320,6 @@ class MainPage : Page() {
                 SideEffect {
                     calendarPermissionsState.launchMultiplePermissionRequest()
                 }
-            }
-        }
-
-        if (viewModel.showMonthBottomSheet) {
-            ModalBottomSheet(onDismissRequest = { viewModel.showMonthBottomSheet = false }) {
-                MonthBottomSheetContent(
-                    month = viewModel.calendarState.currentMonth,
-                    semesters = viewModel.allSemesters,
-                    notSelectedSemesters = viewModel.invisibleSemesters,
-                    onSemesterSelectionChange = viewModel::onSemesterSelectionChange,
-                    onExport = viewModel::exportSemester,
-                    onBackup = viewModel::backupSemester,
-                    onDelete = viewModel::deleteSemester,
-                    onImport = viewModel::importFromICalendar,
-                )
             }
         }
 
@@ -334,6 +338,41 @@ class MainPage : Page() {
                 title = { Text(stringResource(R.string.schedule_sync_rationale_dialog_title)) },
                 text = { Text(stringResource(R.string.schedule_sync_rationale_dialog_message)) },
             )
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            var showNotificationPermissionRationale by remember { mutableStateOf(false) }
+            val notificationPermissionState =
+                rememberPermissionState(android.Manifest.permission.POST_NOTIFICATIONS)
+
+            if (!notificationPermissionState.status.isGranted) {
+                if (notificationPermissionState.status.shouldShowRationale) {
+                    SideEffect {
+                        showNotificationPermissionRationale = true
+                    }
+                } else {
+                    SideEffect {
+                        notificationPermissionState.launchPermissionRequest()
+                    }
+                }
+            }
+
+            if (showNotificationPermissionRationale) {
+                AlertDialog(
+                    onDismissRequest = { showNotificationPermissionRationale = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showNotificationPermissionRationale = false
+                                notificationPermissionState.launchPermissionRequest()
+                            },
+                            content = { Text(stringResource(R.string.notification_rationale_dialog_confirm_label)) },
+                        )
+                    },
+                    title = { Text(stringResource(R.string.notification_rationale_dialog_title)) },
+                    text = { Text(stringResource(R.string.notification_rationale_dialog_message)) },
+                )
+            }
         }
     }
 }

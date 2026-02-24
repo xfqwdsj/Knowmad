@@ -55,7 +55,7 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.Logger
 
 class MainActivity : KnowmadActivity() {
-    private val viewModel: AppViewModel by viewModels {
+    val viewModel: AppViewModel by viewModels {
         viewModelFactory {
             addInitializer(AppViewModel::class) {
                 AppViewModel(application as KnowmadApplication)
@@ -63,7 +63,7 @@ class MainActivity : KnowmadActivity() {
         }
     }
 
-    private val agentViewModel: AgentViewModel by viewModels {
+    val agentViewModel: AgentViewModel by viewModels {
         viewModelFactory {
             addInitializer(AgentViewModel::class) {
                 AgentViewModel(application as KnowmadApplication)

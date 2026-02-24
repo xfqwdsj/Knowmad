@@ -21,7 +21,6 @@ package top.ltfan.knowmad.ui.component
 import android.app.PendingIntent
 import android.app.RemoteAction
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.drawable.Icon
 import androidx.activity.ComponentActivity
@@ -59,7 +58,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +90,7 @@ import top.ltfan.knowmad.ui.theme.AppSmallShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.findActivity
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -338,7 +337,7 @@ private fun HintIcon(
 @Composable
 fun rememberIsInPictureInPictureMode(): Boolean {
     val context = LocalContext.current
-    val activity = remember(context) { context.findComponentActivity() }
+    val activity = remember(context) { context.findActivity<ComponentActivity>() }
 
     var isInPipMode by remember { mutableStateOf(activity?.isInPictureInPictureMode == true) }
 
@@ -355,16 +354,6 @@ fun rememberIsInPictureInPictureMode(): Boolean {
     }
 
     return isInPipMode
-}
-
-@Stable
-private fun Context.findComponentActivity(): ComponentActivity? {
-    var context = this
-    while (context is ContextWrapper) {
-        if (context is ComponentActivity) return context
-        context = context.baseContext
-    }
-    return null
 }
 
 sealed interface PipEvent {

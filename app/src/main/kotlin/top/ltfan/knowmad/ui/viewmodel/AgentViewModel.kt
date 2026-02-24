@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import androidx.paging.PagingData
@@ -76,6 +77,7 @@ import top.ltfan.knowmad.agent.chatSystemPrompt
 import top.ltfan.knowmad.agent.environmentSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.run
+import top.ltfan.knowmad.agent.runPrompt
 import top.ltfan.knowmad.agent.runPromptForSimpleResult
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
@@ -100,6 +102,9 @@ import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.llm.toClient
+import top.ltfan.knowmad.notification.ReplyReceiver
+import top.ltfan.knowmad.notification.getAiNotificationChannel
+import top.ltfan.knowmad.notification.showChatNotification
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.Finish
@@ -299,6 +304,56 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         )
     }
 
+    suspend fun generateAssistantMessageSummary(conversationId: Uuid): List<Message.Assistant>? {
+        var assistantMessage: String? = null
+
+        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
+            .asSequence()
+            .flatMap { it.message.parts }
+            .filterIsInstance<UiMessage.Koog>()
+            .filter { it.display }
+            .map { it.message }
+            .filterNot { message -> message is Message.System }
+            .mapNotNull { message ->
+                if (assistantMessage != null) return@mapNotNull message
+                if (message !is Assistant) return@mapNotNull null
+                val content = message.content.trim()
+                assistantMessage = "[${message.role}] $content"
+                null
+            }
+            .fold("") { acc, message ->
+                if (acc.length >= 2000) return@fold acc
+                val content = message.content.replace("\\s+".toRegex(), " ")
+                "[${message.role}] $content\n" + acc
+            }
+            .trim()
+
+        if (assistantMessage == null) {
+            logger.warn { "No assistant message found for generating summary." }
+            return null
+        }
+
+        val service = currentAgentService.value ?: return null // TODO: use custom executor
+        val executor = service.promptExecutor
+        val model = service.agentConfig.model
+
+        val prompt = prompt("assistant-message-summary") {
+            system(application.resources.environmentSystemPrompt())
+            system(
+                application.getString(R.string.llm_prompt_generate_message_summary)
+                    .trimIndent().format(chatMessages, assistantMessage),
+            )
+        }
+
+        return executor.runPrompt(
+            model = model,
+            prompt = prompt,
+            beforeStart = { logger.debug { "Generating assistant message summary with LLM..." } },
+            onSuccess = { logger.debug { "Generated assistant message summary" } },
+            onFailure = { logger.error(it) { "Error generating assistant message summary" } },
+        )
+    }
+
     fun deleteConversation(
         conversation: ConversationEntity,
         onDeleted: (onUndo: () -> Unit) -> Unit,
@@ -464,6 +519,8 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 chatMessageTextInputState.text.isNotEmpty()
 
     fun sendMessage(
+        conversationId: Uuid? = currentConversationId,
+        setCurrentConversationIfNew: Boolean = true,
         allowEmptyUserInput: Boolean = false,
         includeEnvironmentContext: Boolean = true,
         contextMessages: List<UiMessage>? = null,
@@ -474,11 +531,12 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         if (!canSendMessage || (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() }))
             return
         viewModelScope.launch {
-            val isNewConversation = currentConversationId == null
-            if (isNewConversation) {
-                createNewConversation()
+            val isNewConversation = conversationId == null
+            val conversationId = if (isNewConversation) {
+                createNewConversation(setCurrent = setCurrentConversationIfNew)
+            } else {
+                conversationId
             }
-            val conversationId = currentConversationId ?: return@launch
             application.appDatabase.withTransaction {
                 var conversation =
                     chatDao.getConversationById(conversationId) ?: return@withTransaction null
@@ -579,6 +637,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                             chatDao.updateMessage(it.toEntity())
                             logger.debug { "Message completed." }
                             onEnd?.invoke(isNewConversation)
+                            sendNotification(conversationId)
                         }
                     },
                 ).apply {
@@ -733,6 +792,32 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         cancellationEvent.trySend(Unit)
     }
 
+    init {
+        viewModelScope.launch {
+            for ((conversationId, text) in ReplyReceiver.channel) {
+                sendMessage(
+                    conversationId = conversationId,
+                    parts = listOf(ContentPart.Text(text)),
+                    beforeStart = null,
+                )
+            }
+        }
+    }
+
+    fun sendNotification(conversationId: Uuid) {
+        viewModelScope.launch {
+            val summary = generateAssistantMessageSummary(conversationId) ?: return@launch
+            val conversation = chatDao.getConversationById(conversationId) ?: return@launch
+            val manager = NotificationManagerCompat.from(application)
+            manager.createNotificationChannel(application.resources.getAiNotificationChannel())
+            application.showChatNotification(
+                conversationId = conversationId,
+                conversationName = conversation.name,
+                messages = summary,
+            )
+        }
+    }
+
     val pipScrollEvents = Channel<Unit>(Channel.CONFLATED)
 
     private var pipWaitingJob: Job? = null
@@ -844,12 +929,15 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         MainActivity.pipEventFlow.emit(PipEvent.SetActions(delta))
     }
 
-    private suspend fun createNewConversation() {
+    private suspend fun createNewConversation(setCurrent: Boolean = true): Uuid {
         val conversation = ConversationEntity(
             name = application.getString(R.string.agent_conversation_label_new),
         )
         application.appDatabase.chatDao().insertConversation(conversation)
-        currentConversationId = conversation.id
+        if (setCurrent) {
+            currentConversationId = conversation.id
+        }
+        return conversation.id
     }
 
     fun editProviderConfig(

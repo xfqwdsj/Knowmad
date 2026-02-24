@@ -23,6 +23,25 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 
+suspend fun PromptExecutor.runPrompt(
+    model: LLModel,
+    prompt: Prompt,
+    beforeStart: (() -> Unit)? = null,
+    onSuccess: ((List<Message.Assistant>) -> Unit)? = null,
+    onFailure: ((Throwable) -> Unit)? = null,
+): List<Message.Assistant>? {
+    return runCatching {
+        beforeStart?.invoke()
+        execute(
+            prompt = prompt,
+            model = model,
+        ).filterIsInstance<Message.Assistant>()
+    }
+        .onSuccess { onSuccess?.invoke(it) }
+        .onFailure { onFailure?.invoke(it) }
+        .getOrNull()
+}
+
 suspend fun PromptExecutor.runPromptForSimpleResult(
     model: LLModel,
     prompt: Prompt,
