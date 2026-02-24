@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,6 +39,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import top.ltfan.knowmad.accessibility.use
+import top.ltfan.knowmad.util.HandlerEvent
 import top.ltfan.knowmad.util.Logger
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
@@ -62,6 +64,10 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     override fun onServiceConnected() {
         super.onServiceConnected()
         launch {
+            logger.debug { "SemanticAnalysisService connected, initializing..." }
+            suspend()
+        }
+        launch {
             flow.collect { event ->
                 if (event is Suspend) {
                     launch {
@@ -73,8 +79,9 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                 when (event) {
                     is Heartbeat -> event(true)
                     is GetUiTree -> launch {
-                        resume()
                         serviceInfoMutex.withLock {
+                            doResumeUnsafe()
+
                             val originalInfo = serviceInfo ?: return@launch event(null)
 
                             val elevatedInfo = AccessibilityServiceInfo().apply {
@@ -122,6 +129,11 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                         event(null)
                     }
                 }
+            }
+        }
+        launch {
+            suspendSignalFlow.collect {
+                suspend()
             }
         }
     }
@@ -187,18 +199,20 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     }
 
     private suspend fun resume() {
-        serviceInfoMutex.withLock {
-            val originalInfo = serviceInfo ?: return
+        serviceInfoMutex.withLock { doResumeUnsafe() }
+    }
 
-            serviceInfo = AccessibilityServiceInfo().apply {
-                eventTypes = EVENT_TYPES
-                notificationTimeout = originalInfo.notificationTimeout
-                flags = originalInfo.flags
-                feedbackType = FEEDBACK_TYPE
-            }
+    private fun doResumeUnsafe() {
+        val originalInfo = serviceInfo ?: return
 
-            logger.debug { "Service resumed, waiting for events..." }
+        serviceInfo = AccessibilityServiceInfo().apply {
+            eventTypes = EVENT_TYPES
+            notificationTimeout = originalInfo.notificationTimeout
+            flags = originalInfo.flags
+            feedbackType = FEEDBACK_TYPE
         }
+
+        logger.debug { "Service resumed, waiting for events..." }
     }
 
     override fun onDestroy() {
@@ -209,7 +223,10 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     companion object {
         suspend fun waitAlive() = flow.subscriptionCount.first { it > 0 }
 
-        fun notifySuspend() = flow.tryEmit(Suspend().onResult {})
+        fun notifySuspend(): Boolean {
+            if (suspendSignalFlow.subscriptionCount.value <= 0) return false
+            return suspendSignalFlow.tryEmit(Unit)
+        }
 
         suspend fun suspend() = execute(Suspend())
 
@@ -217,7 +234,12 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
 
         suspend fun getUiTree() = execute(GetUiTree())
 
-        private val flow = MutableSharedFlow<Event<*>>(extraBufferCapacity = 5)
+        private val flow = MutableSharedFlow<Event<*>>()
+        private val suspendSignalFlow = MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
         private suspend inline fun <reified R> execute(event: Event<R>): R? = coroutineScope {
             if (flow.subscriptionCount.value <= 0) return@coroutineScope null
 
@@ -241,11 +263,7 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                     }
 
                     event.onResult { result ->
-                        if (result is R) {
-                            safeResume(result)
-                        } else {
-                            safeResume(null)
-                        }
+                        safeResume(result)
                         monitorJob.cancel()
                     }
 
@@ -411,18 +429,7 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
     )
 }
 
-private sealed class Event<R> {
-    private lateinit var _onResult: (R?) -> Unit
-
-    fun onResult(onResult: (R?) -> Unit): Event<R> {
-        _onResult = onResult
-        return this
-    }
-
-    operator fun invoke(result: R?) {
-        _onResult(result)
-    }
-}
+private sealed class Event<R> : HandlerEvent<R, Event<R>>()
 
 private class Suspend : Event<Unit>()
 private class Heartbeat : Event<Boolean>()
