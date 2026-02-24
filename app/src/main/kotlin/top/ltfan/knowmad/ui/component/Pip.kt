@@ -88,7 +88,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.ui.theme.AppExtraSmallShape
+import top.ltfan.knowmad.ui.theme.AppSmallShape
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
@@ -102,46 +102,37 @@ fun PictureInPicture() {
     val appViewModel = LocalAppViewModel.current
     val agentViewModel = LocalAgentViewModel.current
 
-    val density = LocalDensity.current
-
-    val conversation by agentViewModel.currentConversationFlow.collectAsState(null)
-    val messages = agentViewModel.currentMessagesFlow?.collectAsLazyPagingItems()
-
-    Surface {
+    Container {
         Scaffold(
             topBar = {
+                val conversation by agentViewModel.currentConversationFlow.collectAsState(null)
+
                 Surface(
-                    shape = AppExtraSmallShape.copy(
+                    shape = AppSmallShape.copy(
                         topStart = CornerSize(0.dp),
                         topEnd = CornerSize(0.dp),
                     ),
                     tonalElevation = 4.dp,
-                    shadowElevation = 2.dp,
+                    shadowElevation = 4.dp,
                 ) {
                     Text(
                         conversation?.name ?: stringResource(R.string.agent_conversation_label_new),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(4.dp),
+                            .padding(8.dp),
                         textAlign = Center,
                         overflow = Ellipsis,
                         softWrap = false,
                         maxLines = 1,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                     )
                 }
             },
             contentWindowInsets = WindowInsets(),
         ) { padding ->
-            val newDensity = remember(density) {
-                Density(
-                    density = density.density * .65f,
-                    fontScale = density.fontScale,
-                )
-            }
-            CompositionLocalProvider(
-                LocalDensity provides newDensity,
-                LocalPadding provides padding,
-            ) {
+            val messages = agentViewModel.currentMessagesFlow?.collectAsLazyPagingItems()
+
+            CompositionLocalProvider(LocalPadding provides padding) {
                 AnimatedContent(
                     targetState = agentViewModel.selectedModelId == null,
                     transitionSpec = { fadeIn() togetherWith fadeOut() using null },
@@ -555,6 +546,23 @@ fun Intent.handlePipActions(actions: Map<Int, () -> Unit>): Boolean {
     val func = actions[actionCode] ?: return false
     func()
     return true
+}
+
+@Composable
+private fun Container(content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+
+    val scale = .65f
+    val newDensity = remember(density) {
+        Density(
+            density = density.density * scale,
+            fontScale = density.fontScale,
+        )
+    }
+
+    CompositionLocalProvider(LocalDensity provides newDensity) {
+        Surface(content = content)
+    }
 }
 
 private val LocalPadding = staticCompositionLocalOf { PaddingValues() }
