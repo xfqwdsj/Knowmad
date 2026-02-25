@@ -60,7 +60,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -166,12 +165,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         .distinctUntilChanged()
     var currentConversationId by chatData.transform(
         transformIn = { conversation },
-        transformOut = {
-            if (conversation != it) {
-                messageListLoading = true
-            }
-            copy(conversation = it)
-        },
+        transformOut = { copy(conversation = it) },
     )
 
     init {
@@ -183,31 +177,32 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     private val conversationAndChatData by currentConversationIdFlow
         .map { id ->
-            ConversationAndChatData(
-                conversationFlow = id?.let {
-                    chatDao.getConversationFlowById(it)
-                } ?: flowOf(null),
-                messageCountFlow = id?.let {
-                    chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
-                } ?: flowOf(0),
-                messagesFlow = id?.let { id ->
-                    PagingLazyListState {
-                        chatDao.getMessagesPagingByConversationReversed(id)
-                    }.flow.map { data -> data.map { it.copy(message = it.message.allLoaded()) } }
-                },
-            )
-        }
-        .onEach {
-            messageListLoading = false
+            messageListLoading = true
+            try {
+                ConversationAndChatData(
+                    conversationFlow = id?.let {
+                        chatDao.getConversationFlowById(it)
+                    } ?: flowOf(null),
+                    messageCountFlow = id?.let {
+                        chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
+                    } ?: flowOf(0),
+                    messagesFlow = id?.let { id ->
+                        PagingLazyListState {
+                            chatDao.getMessagesPagingByConversationReversed(id)
+                        }.flow.map { data -> data.map { it.copy(message = it.message.allLoaded()) } }
+                    },
+                )
+            } catch (e: Throwable) {
+                logger.error(e) { "Error loading conversation and chat data for conversation id $id" }
+                Empty
+            } finally {
+                messageListLoading = false
+            }
         }
         .stateIn(
             viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = ConversationAndChatData(
-                conversationFlow = flowOf(null),
-                messageCountFlow = flowOf(0),
-                messagesFlow = null,
-            ),
+            initialValue = Empty,
         )
         .collectAsState()
 
@@ -1071,7 +1066,15 @@ data class ConversationAndChatData(
     val conversationFlow: Flow<ConversationEntity?>,
     val messageCountFlow: Flow<Int>,
     val messagesFlow: Flow<PagingData<MessageWithFilesAndBranchInfo>>?,
-)
+) {
+    companion object {
+        val Empty = ConversationAndChatData(
+            conversationFlow = flowOf(null),
+            messageCountFlow = flowOf(0),
+            messagesFlow = null,
+        )
+    }
+}
 
 val LocalAgentViewModel = staticCompositionLocalOf<AgentViewModel> {
     error("No AgentViewModel provided")
