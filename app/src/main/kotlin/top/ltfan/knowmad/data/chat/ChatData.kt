@@ -117,14 +117,14 @@ fun Uri.toConversationIdFromChatLink(): Uuid? {
 }
 
 context(viewModel: AndroidViewModel<*>)
-suspend fun MessageEntity.allStored(
+suspend inline fun MessageEntity.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = copy(parts = parts.allStored(fileIds, fs))
 
 @JvmName("uiMessageAllStored")
 context(viewModel: AndroidViewModel<*>)
-suspend fun Collection<UiMessage>.allStored(
+suspend inline fun Collection<UiMessage>.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = coroutineScope {
@@ -136,7 +136,7 @@ suspend fun Collection<UiMessage>.allStored(
     }.awaitAll()
 }
 
-suspend fun Message.allStored(
+suspend inline fun Message.allStored(
     database: AppDatabase,
     filesDir: Path,
     fileIds: MutableList<Uuid>,
@@ -144,7 +144,7 @@ suspend fun Message.allStored(
 ): Message = updatedParts(parts.allStored(database, filesDir, fileIds, fs))
 
 context(viewModel: AndroidViewModel<*>)
-suspend fun Message.allStored(
+suspend inline fun Message.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = allStored(
@@ -154,7 +154,7 @@ suspend fun Message.allStored(
     fs = fs,
 )
 
-suspend fun Collection<ContentPart>.allStored(
+suspend inline fun Collection<ContentPart>.allStored(
     database: AppDatabase,
     filesDir: Path,
     fileIds: MutableList<Uuid>,
@@ -165,7 +165,7 @@ suspend fun Collection<ContentPart>.allStored(
 
 @JvmName("contentPartAllStored")
 context(viewModel: AndroidViewModel<*>)
-suspend fun Collection<ContentPart>.allStored(
+suspend inline fun Collection<ContentPart>.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = allStored(
@@ -212,12 +212,12 @@ suspend fun ContentPart.stored(
 }
 
 context(viewModel: AndroidViewModel<*>)
-suspend fun MessageEntity.allLoaded(
+suspend inline fun MessageEntity.allLoaded(
     fs: FileSystem = FileSystem.SYSTEM,
 ) = copy(parts = parts.allLoaded(fs))
 
 context(viewModel: AndroidViewModel<*>)
-suspend fun Collection<UiMessage>.allLoaded(
+suspend inline fun Collection<UiMessage>.allLoaded(
     fs: FileSystem = FileSystem.SYSTEM,
 ) = coroutineScope {
     map {
@@ -228,18 +228,18 @@ suspend fun Collection<UiMessage>.allLoaded(
     }.awaitAll()
 }
 
-suspend fun Message.allLoaded(
+suspend inline fun Message.allLoaded(
     dao: FileDao,
     fs: FileSystem = FileSystem.SYSTEM,
 ): Message = updatedParts(parts.allLoaded(dao, fs))
 
 context(viewModel: AndroidViewModel<*>)
-suspend fun Message.allLoaded(fs: FileSystem = FileSystem.SYSTEM) = allLoaded(
+suspend inline fun Message.allLoaded(fs: FileSystem = FileSystem.SYSTEM) = allLoaded(
     dao = context(viewModel.application) { AppDatabase.get() }.fileDao(),
     fs = fs,
 )
 
-suspend fun Collection<ContentPart>.allLoaded(
+suspend inline fun Collection<ContentPart>.allLoaded(
     dao: FileDao,
     fs: FileSystem = FileSystem.SYSTEM,
 ): List<ContentPart> = coroutineScope {
