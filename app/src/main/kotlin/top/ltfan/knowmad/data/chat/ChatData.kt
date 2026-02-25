@@ -118,14 +118,14 @@ fun Uri.toConversationIdFromChatLink(): Uuid? {
     return Uuid.parseOrNull(idStr)
 }
 
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun MessageEntity.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = copy(parts = parts.allStored(fileIds, fs))
 
 @JvmName("uiMessageAllStored")
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun Collection<UiMessage>.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
@@ -145,13 +145,13 @@ suspend inline fun Message.allStored(
     fs: FileSystem = FileSystem.SYSTEM,
 ): Message = updatedParts(parts.allStored(database, filesDir, fileIds, fs))
 
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun Message.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = allStored(
-    database = context(viewModel.application) { AppDatabase.get() },
-    filesDir = viewModel.application.filesDir.toOkioPath(),
+    database = context(context) { AppDatabase.get() },
+    filesDir = context.filesDir.toOkioPath(),
     fileIds = fileIds,
     fs = fs,
 )
@@ -166,13 +166,13 @@ suspend inline fun Collection<ContentPart>.allStored(
 }
 
 @JvmName("contentPartAllStored")
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun Collection<ContentPart>.allStored(
     fileIds: MutableList<Uuid>,
     fs: FileSystem = FileSystem.SYSTEM,
 ) = allStored(
-    database = context(viewModel.application) { AppDatabase.get() },
-    filesDir = viewModel.application.filesDir.toOkioPath(),
+    database = context(context) { AppDatabase.get() },
+    filesDir = context.filesDir.toOkioPath(),
     fileIds = fileIds,
     fs = fs,
 )
@@ -213,12 +213,17 @@ suspend fun ContentPart.stored(
     return updatedContent(AttachmentContent.URL(url))
 }
 
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun MessageEntity.allLoaded(
     fs: FileSystem = FileSystem.SYSTEM,
 ) = copy(parts = parts.allLoaded(fs))
 
 context(viewModel: AndroidViewModel<*>)
+suspend inline fun MessageEntity.allLoaded(
+    fs: FileSystem = FileSystem.SYSTEM,
+) = context(viewModel.application) { copy(parts = parts.allLoaded(fs)) }
+
+context(context: Context)
 suspend inline fun Collection<UiMessage>.allLoaded(
     fs: FileSystem = FileSystem.SYSTEM,
 ) = coroutineScope {
@@ -235,9 +240,9 @@ suspend inline fun Message.allLoaded(
     fs: FileSystem = FileSystem.SYSTEM,
 ): Message = updatedParts(parts.allLoaded(dao, fs))
 
-context(viewModel: AndroidViewModel<*>)
+context(context: Context)
 suspend inline fun Message.allLoaded(fs: FileSystem = FileSystem.SYSTEM) = allLoaded(
-    dao = context(viewModel.application) { AppDatabase.get() }.fileDao(),
+    dao = context(context) { AppDatabase.get() }.fileDao(),
     fs = fs,
 )
 
