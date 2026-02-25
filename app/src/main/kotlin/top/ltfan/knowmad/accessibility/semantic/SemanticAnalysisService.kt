@@ -27,6 +27,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
@@ -59,7 +60,16 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
 
     private val serviceInfoMutex = Mutex()
 
-    private val job = Job()
+    private val job = SupervisorJob().apply {
+        invokeOnCompletion { e ->
+            when (e) {
+                null -> logger.error { "SemanticAnalysisService CoroutineScope unexpectedly completed without error" }
+                is CancellationException -> logger.debug { "SemanticAnalysisService CoroutineScope cancelled" }
+                else -> logger.error(e) { "SemanticAnalysisService CoroutineScope unexpectedly completed with error" }
+            }
+            stopSelf()
+        }
+    }
     override val coroutineContext = Dispatchers.Default + job
 
     override fun onServiceConnected() {
