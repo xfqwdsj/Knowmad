@@ -18,7 +18,7 @@
 
 package top.ltfan.knowmad.data
 
-import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,7 +26,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +83,16 @@ class AppDataStore<T>(
         initialValue: T = defaultValue,
     ) = dataStateFlow(
         coroutineScope = viewModel.viewModelScope,
+        started = started,
+        initialValue = initialValue,
+    )
+
+    context(lifecycle: LifecycleOwner)
+    fun dataStateFlow(
+        started: SharingStarted = SharingStarted.Eagerly,
+        initialValue: T = defaultValue,
+    ) = dataStateFlow(
+        coroutineScope = lifecycle.lifecycleScope,
         started = started,
         initialValue = initialValue,
     )
@@ -171,14 +183,14 @@ abstract class DataStoreCompanion<T> {
 
     private var _instance: AppDataStore<T>? = null
 
-    context(application: Application)
+    context(context: Context)
     fun createDataStore(
         coroutineScope: CoroutineScope,
     ) = _instance ?: AppDataStore(
         serializer = serializer(),
         defaultValue = default,
         scope = coroutineScope + Dispatchers.IO,
-        produceFile = { application.dataStoreFile(fileName) },
+        produceFile = { context.dataStoreFile(fileName) },
     ).also {
         _instance = it
     }
@@ -187,6 +199,9 @@ abstract class DataStoreCompanion<T> {
     fun createDataStore() = context(viewModel.application) {
         createDataStore(viewModel.viewModelScope)
     }
+
+    context(lifecycle: LifecycleOwner, context: Context)
+    fun createDataStore() = createDataStore(lifecycle.lifecycleScope)
 
     context(viewModel: AndroidViewModel<*>)
     fun deleteFile() {
