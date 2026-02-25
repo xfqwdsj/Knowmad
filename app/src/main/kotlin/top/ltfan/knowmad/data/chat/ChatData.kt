@@ -60,6 +60,7 @@ import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.data.file.DbFileMutex
 import top.ltfan.knowmad.data.file.FileDao
 import top.ltfan.knowmad.data.file.getOrStoreFile
 import top.ltfan.knowmad.ui.component.AssistantMessageState
@@ -70,6 +71,7 @@ import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
 import top.ltfan.knowmad.util.HashComputationDispatcher
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.RemendProcessor
+import top.ltfan.knowmad.util.withLock
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -262,8 +264,10 @@ suspend fun ContentPart.loaded(
         val entity = dao.getFileById(uuid) ?: return this
 
         val bytes = withContext(Dispatchers.IO) {
-            if (!fs.exists(entity.path)) return@withContext null
-            fs.read(entity.path) { readByteArray() }
+            DbFileMutex.withLock(entity.hash.contentHashCode()) {
+                if (!fs.exists(entity.path)) return@withContext null
+                fs.read(entity.path) { readByteArray() }
+            }
         } ?: return this
 
         this.updatedContent(AttachmentContent.Binary.Bytes(bytes))
