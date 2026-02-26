@@ -190,7 +190,7 @@ abstract class DataStoreCompanion<T> {
         serializer = serializer(),
         defaultValue = default,
         scope = coroutineScope + Dispatchers.IO,
-        produceFile = { context.dataStoreFile(fileName) },
+        produceFile = { context.applicationContext.dataStoreFile(fileName) },
     ).also {
         _instance = it
     }

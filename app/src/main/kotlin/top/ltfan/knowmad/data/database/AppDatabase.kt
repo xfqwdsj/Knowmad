@@ -102,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         context(context: Context)
         override fun get() = instance ?: Room.databaseBuilder(
-            context = context,
+            context = context.applicationContext,
             klass = AppDatabase::class.java,
             name = databaseName,
         ).buildAppDatabase().also {
