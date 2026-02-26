@@ -18,6 +18,8 @@
 
 package top.ltfan.knowmad.util
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.binding.define
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 
 abstract class QuickJsHolder(
     jobDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : AutoCloseable {
+) : AutoCloseable, DefaultLifecycleObserver {
     protected open val logger = Logger("QuickJs")
 
     protected val quickJs = QuickJs.create(jobDispatcher)
@@ -48,5 +50,9 @@ abstract class QuickJsHolder(
 
     override fun close() {
         quickJs.close()
+    }
+
+    override fun onDestroy(owner: LifecycleOwner) {
+        close()
     }
 }
