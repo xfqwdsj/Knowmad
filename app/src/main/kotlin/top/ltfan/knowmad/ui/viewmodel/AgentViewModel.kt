@@ -918,10 +918,13 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         clearWaitingStatus()
         if (!screenCapturingMutex.tryLock()) return@launch
         capturingScreen = true
-        val node = SemanticAnalysisService.getUiTree().also {
-            capturingScreen = false
+        val node = try {
+            SemanticAnalysisService.getUiTree().also {
+                capturingScreen = false
+            } ?: return@launch
+        } finally {
             screenCapturingMutex.unlock()
-        } ?: return@launch
+        }
         val json = Json.encodeToString(node)
         sendMessage(
             allowEmptyUserInput = true,
