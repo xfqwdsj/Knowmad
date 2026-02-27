@@ -1056,7 +1056,6 @@ sealed interface AssistantMessageState {
         onQueryConversationMeta: suspend () -> ConversationMeta = { ConversationMeta() },
         onUpdateConversationMeta: (ConversationMeta) -> Unit = {},
         onUpdate: Streaming.() -> Unit = {},
-        onCompleted: (Completed) -> Unit = {},
     ) : AssistantMessageState {
         private val logger = Logger("StreamingState")
 
@@ -1169,7 +1168,6 @@ sealed interface AssistantMessageState {
                         createdAt = createdAt,
                     )
                     completedStateFlow.value = completedState
-                    onCompleted(completedState)
                 }
             }
         }

@@ -2,6 +2,7 @@
 kotlin = "2.3.10"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.10.0"
+kotlinx-collections-immutable = "0.4.0"
 kotlinx-datetime = "0.7.1-0.6.x-compat" # TODO: remove when possible
 ksp = "2.3.5"
 agp = "9.2.0-alpha01"
@@ -17,6 +18,7 @@ compose = "2026.02.00"
 compose-material3 = "1.5.0-alpha14" # TODO: remove when stable
 material3-adaptive-nav3 = "1.3.0-alpha08"
 nav3 = "1.1.0-alpha04"
+lifecycle = "2.10.0"
 lifecycle-viewmodel-nav3 = "2.10.0"
 accompanist = "0.37.3"
 materialkolor = "4.1.1"
@@ -42,6 +44,7 @@ kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinx-serialization" }
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
@@ -57,6 +60,7 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 compose = { module = "androidx.compose:compose-bom", version.ref = "compose" }
 compose-runtime = { module = "androidx.compose.runtime:runtime" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
@@ -96,6 +100,7 @@ all = [
     # kotlinx
     "kotlinx-serialization-json",
     "kotlinx-serialization-cbor",
+    "kotlinx-collections-immutable",
     "kotlinx-datetime",
     # okio
     "okio",
@@ -108,6 +113,7 @@ all = [
     "datastore",
     "splashscreen",
     "activity-compose",
+    "lifecycle-service",
     # compose
     "compose-runtime",
     "compose-foundation",

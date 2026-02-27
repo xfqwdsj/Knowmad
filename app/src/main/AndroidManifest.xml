@@ -74,6 +74,10 @@
             android:exported="false" />
 
         <service
+            android:name=".agent.ModelService"
+            android:exported="false" />
+
+        <service
             android:name=".sync.AuthenticatorService"
             android:exported="false">
             <intent-filter>

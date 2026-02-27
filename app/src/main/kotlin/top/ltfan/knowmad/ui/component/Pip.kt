@@ -284,8 +284,8 @@ fun PictureInPicture() {
         }
     }
 
-    LaunchedEffect(agentViewModel.isRunning) {
-        if (agentViewModel.isRunning) {
+    LaunchedEffect(agentViewModel.serviceCurrentTaskRunning) {
+        if (agentViewModel.serviceCurrentTaskRunning) {
             agentViewModel.pipUpdateActions(PipActions.stopGeneration(agentViewModel))
         } else {
             agentViewModel.pipUpdateActions(PipActions.newConversation(agentViewModel))

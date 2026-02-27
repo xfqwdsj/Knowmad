@@ -18,10 +18,6 @@
 
 package top.ltfan.knowmad.ui.viewmodel
 
-import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedException
-import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
@@ -36,33 +32,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import androidx.paging.PagingData
 import androidx.paging.map
-import androidx.room.withTransaction
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
@@ -70,45 +59,18 @@ import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.accessibility.requestEnableAccessibilityService
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
-import top.ltfan.knowmad.agent.ChatAgentRerun
-import top.ltfan.knowmad.agent.CodeRunnerTool
-import top.ltfan.knowmad.agent.chatSystemPrompt
-import top.ltfan.knowmad.agent.environmentSystemPrompt
-import top.ltfan.knowmad.agent.getChatAgentService
-import top.ltfan.knowmad.agent.run
-import top.ltfan.knowmad.agent.runPrompt
-import top.ltfan.knowmad.agent.runPromptForSimpleResult
-import top.ltfan.knowmad.agent.tool.conversationTools
-import top.ltfan.knowmad.agent.tool.formatAgentTime
-import top.ltfan.knowmad.agent.tool.gatherToolsTool
-import top.ltfan.knowmad.agent.tool.scheduleTools
-import top.ltfan.knowmad.agent.tool.scheduleToolsExtended
-import top.ltfan.knowmad.agent.tool.timeTool
+import top.ltfan.knowmad.agent.ModelService
 import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.data.chat.AssistantMessageContent
-import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.ConversationEntity
-import top.ltfan.knowmad.data.chat.ConversationMeta
-import top.ltfan.knowmad.data.chat.MessageEntity
-import top.ltfan.knowmad.data.chat.MessageEntityRole
 import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.chat.allLoaded
-import top.ltfan.knowmad.data.chat.allStored
 import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
-import top.ltfan.knowmad.data.llm.toClient
-import top.ltfan.knowmad.notification.NotificationMessage
-import top.ltfan.knowmad.notification.ReplyReceiver
-import top.ltfan.knowmad.notification.getAiNotificationChannel
-import top.ltfan.knowmad.notification.showChatNotification
-import top.ltfan.knowmad.notification.toNotificationMessage
 import top.ltfan.knowmad.ui.component.AssistantMessageState
-import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
-import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent.Finish
 import top.ltfan.knowmad.ui.component.LLMProviderConfigLazyListState
 import top.ltfan.knowmad.ui.component.PagingLazyListState
 import top.ltfan.knowmad.ui.component.PipActions
@@ -116,10 +78,12 @@ import top.ltfan.knowmad.ui.component.PipActionsDelta
 import top.ltfan.knowmad.ui.component.PipEvent
 import top.ltfan.knowmad.ui.page.AgentMainPage
 import top.ltfan.knowmad.ui.page.AgentSubPage
-import top.ltfan.knowmad.ui.util.SnapshotLruCache
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
-import top.ltfan.knowmad.util.RemendProcessor
+import top.ltfan.knowmad.util.ServiceConnection
+import top.ltfan.knowmad.util.ServiceConnectionStatus
+import top.ltfan.knowmad.util.ServiceConnectionStatus.Closed
+import top.ltfan.knowmad.util.SnapshotLruCache
 import top.ltfan.knowmad.util.collectAsState
 import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
@@ -133,7 +97,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     val chatDao = application.appDatabase.chatDao()
     val llmConfigDao = application.appDatabase.llmConfigDao()
-    val scheduleDao = application.appDatabase.scheduleDao()
 
     val chatDataStore = ChatData.createDataStore()
     val chatDataStateFlow = chatDataStore.dataStateFlow()
@@ -142,10 +105,14 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val drawerState = DrawerState(DrawerValue.Closed)
     var savedMessagesFirstVisibleItemIndex by mutableIntStateOf(0)
     var savedMessagesFirstVisibleItemScrollOffset by mutableIntStateOf(0)
-    val assistantMessageStates = SnapshotLruCache<Any, AssistantMessageState>(
-        snapshotStateMap = mutableStateMapOf(),
-        maxSize = 100,
-    )
+    val assistantMessageStates
+        get() = modelService.value?.assistantMessageStates
+            ?: SnapshotLruCache<Any, AssistantMessageState>(
+                snapshotStateMap = mutableStateMapOf(),
+                maxSize = 10,
+            ).also {
+                logger.warn { "ModelService not connected, using empty assistantMessageStates cache." }
+            }
 
     suspend fun toggleDrawer() {
         if (drawerState.isClosed) {
@@ -210,25 +177,21 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     val currentMessageCountFlow get() = conversationAndChatData.messageCountFlow
     val currentMessagesFlow get() = conversationAndChatData.messagesFlow
 
-    val streamingMessages = mutableStateMapOf<Uuid, AssistantStreamingMessage>()
+    val modelServiceConnection = application.ServiceConnection<ModelService>()
+    val modelService = modelServiceConnection.status
+        .onEach { status ->
+            if (status is Closed) {
+                modelServiceConnection.bind()
+            }
+        }
+        .filterIsInstance<ServiceConnectionStatus.Connected<ModelService>>()
+        .map { it.service }
+        .stateIn(viewModelScope, Eagerly, null)
 
     fun getMessage(message: MessageWithFilesAndBranchInfo?): ChatListMessage? {
         if (message == null) return null
-
-        if (!message.message.completed) {
-            val streamingMessage = streamingMessages[message.key]
-            if (streamingMessage == null) {
-                logger.warn { "Streaming message not found for incomplete message ${message.key}" }
-                viewModelScope.launch(Dispatchers.IO) {
-                    chatDao.updateMessage(message.message.copy(completed = true))
-                }
-            } else {
-                return streamingMessage
-            }
-        }
-
-        streamingMessages.remove(message.key)
-        return message
+        val service = modelService.value ?: return null
+        return service.getMessage(message)
     }
 
     fun messageOnPrevious(message: ChatListMessage) {
@@ -266,121 +229,13 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     }
 
     suspend fun generateConversationName(conversationId: Uuid): String? {
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
-            .asSequence()
-            .flatMap { it.message.parts }
-            .filterIsInstance<UiMessage.Koog>()
-            .filter { it.display }
-            .map { it.message }
-            .filterNot { message -> message is Message.System }
-            .fold("") { acc, message ->
-                if (acc.length >= 2000) return@fold acc
-                val content = message.content.replace("\\s+".toRegex(), " ")
-                "[${message.role}] $content\n" + acc
-            }
-            .trim()
-            .ifBlank { return null }
-
-        val service = currentAgentService.value ?: return null // TODO: use custom executor
-        val executor = service.promptExecutor
-        val model = service.agentConfig.model
-
-        val prompt = prompt("conversation-title") {
-            system(application.resources.environmentSystemPrompt())
-            system(
-                application.getString(R.string.llm_prompt_generate_conversation_title)
-                    .trimIndent().format(chatMessages),
-            )
-        }
-
-        return executor.runPromptForSimpleResult(
-            model = model,
-            prompt = prompt,
-            beforeStart = { logger.debug { "Generating conversation title with LLM..." } },
-            ifEmpty = { logger.warn { "LLM generated empty title" } },
-            onSuccess = { logger.debug { "Generated conversation title: $it" } },
-            onFailure = { logger.error(it) { "Error generating conversation title" } },
+        val service = modelService.value ?: return null
+        val chatAgentService = service.chatAgentServiceFlow.value ?: return null
+        return service.generateConversationName(
+            conversationId = conversationId,
+            executor = chatAgentService.promptExecutor,
+            model = chatAgentService.agentConfig.model,
         )
-    }
-
-    suspend fun generateAssistantMessageSummary(conversationId: Uuid): List<NotificationMessage>? {
-        var assistantMessage: String? = null
-
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
-            .asSequence()
-            .flatMap { it.message.parts }
-            .filterIsInstance<UiMessage.Koog>()
-            .filter { it.display }
-            .map { it.message }
-            .filterNot { message -> message is Message.System }
-            .mapNotNull { message ->
-                if (assistantMessage != null) return@mapNotNull message
-                if (message !is Assistant) return@mapNotNull null
-                val content = message.content.trim()
-                assistantMessage = "[${message.role}] $content"
-                null
-            }
-            .fold("") { acc, message ->
-                if (acc.length >= 2000) return@fold acc
-                val content = message.content.replace("\\s+".toRegex(), " ")
-                "[${message.role}] $content\n" + acc
-            }
-            .trim()
-
-        if (assistantMessage == null) {
-            logger.warn { "No assistant message found for generating summary." }
-            return null
-        }
-
-        val service = currentAgentService.value ?: return null // TODO: use custom executor
-        val executor = service.promptExecutor
-        val model = service.agentConfig.model
-
-        val prompt = prompt("assistant-message-summary") {
-            system(application.resources.environmentSystemPrompt())
-            system(
-                application.getString(R.string.llm_prompt_generate_message_summary)
-                    .trimIndent().format(chatMessages, assistantMessage),
-            )
-        }
-
-        return executor.runPrompt(
-            model = model,
-            prompt = prompt,
-            beforeStart = { logger.debug { "Generating assistant message summary with LLM..." } },
-            onSuccess = { logger.debug { "Generated assistant message summary" } },
-            onFailure = { logger.error(it) { "Error generating assistant message summary" } },
-        )?.mapNotNull {
-            it.toNotificationMessage(application.resources)
-        }
-    }
-
-    private fun MutableList<NotificationMessage>.parseQuickReplies(onlyLast: Boolean = true): List<String> {
-        val tagRegex = Regex("""(?s)<quick_reply>(.*?)</quick_reply>""")
-        val horizontalWhitespace = Regex("""[^\S\r\n]+""")
-        val lineEdgeWhitespace = Regex("""(?m)^[^\S\r\n]+|[^\S\r\n]+$""")
-        val multiNewlineRegex = Regex("""\n+""")
-
-        val allExtracted = mutableListOf<String>()
-
-        for (i in this.indices) {
-            var processed = this[i].text
-
-            if (!onlyLast || i == this.size - 1) {
-                tagRegex.findAll(processed).forEach {
-                    allExtracted.add(it.groupValues[1])
-                }
-            }
-
-            processed = processed.replace(tagRegex, "\n")
-            processed = processed.replace(horizontalWhitespace, " ")
-            processed = processed.replace(lineEdgeWhitespace, "")
-            processed = processed.replace(multiNewlineRegex, "\n")
-
-            this[i] = this[i].copy(text = processed.trim())
-        }
-
-        return allExtracted
     }
 
     fun deleteConversation(
@@ -425,25 +280,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             null,
         )
     val selectedModelEntity by selectedModelEntityFlow.collectAsState()
-    private val currentAgentService = selectedModelEntityFlow
-        .map { model ->
-            val client = model?.let { llmConfigDao.getProviderById(it.providerConfigId) }
-                ?.toClient() ?: return@map null
-            getChatAgentService(
-                promptExecutor = SingleLLMPromptExecutor(client),
-                model = model.model,
-            )
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            null,
-        )
-
-    private val cancellationEvent = Channel<Unit>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-
-    var isRunning by mutableStateOf(false)
-        private set
 
     val chatMessageTextInputState = TextFieldState("")
 
@@ -464,82 +300,33 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    val remend = RemendProcessor(application.assets)
-
-    init {
-        addCloseable(remend)
-        viewModelScope.launch {
-            remend.initialize()
+    val serviceCurrentTaskRunning: Boolean
+        inline get() {
+            val conversationId = currentConversationId ?: return false
+            val service = modelService.value ?: return false
+            return service.messageTasks[conversationId]?.value?.isNotEmpty() == true
         }
-    }
 
-    private val codeRunnerTools = mutableStateMapOf<List<String>, CodeRunnerTool>()
-    var runCodeEnabled by mutableStateOf(true)
-        private set
-    val runnableCodeComponents get() = codeRunnerTools.keys.toSet()
+    val runCodeEnabled inline get() = modelService.value?.runCodeEnabled == true
+    val runnableCodeComponents
+        inline get() = modelService.value?.runnableCodeComponents ?: emptySet()
 
-    private val runCodeMutex = Mutex()
     fun runAssistantCode(
         state: AssistantMessageState,
         contentIndex: Int,
         node: ASTNode,
         components: List<String>,
         code: String,
-    ) {
-        viewModelScope.launch {
-            runCodeEnabled = false
-            runCodeMutex.lock()
-            val tool = codeRunnerTools[components] ?: run {
-                logger.warn { "No code runner tool found for components $components" }
-                return@launch
-            }
-            if (state !is Completed) {
-                logger.warn { "Message state is not completed when running code, skipping." }
-                return@launch
-            }
-            val content = state.contents.getOrNull(contentIndex) ?: run {
-                logger.warn { "Content index $contentIndex out of bounds for message ${state.id}" }
-                return@launch
-            }
-            val result = runCatching { tool.runCode(components, code) }
-                .onFailure {
-                    logger.error(it) { "Error running code with tool for components $components" }
-                }
-                .getOrNull()
-            if (result != null) {
-                val newContent = content.appendedCodeResults(
-                    Triple(node, result, Clock.System.now()),
-                )
-                val newContents =
-                    state.contents.toMutableList().also { it[contentIndex] = newContent }
-                val newState = state.copy(
-                    contents = newContents,
-                )
-                val newEntity = newState.toEntity()
-                runCatching { chatDao.updateMessage(newEntity) }
-                    .onFailure {
-                        logger.error(it) { "Failed to update message with new code result." }
-                    }.onSuccess {
-                        assistantMessageStates[state.id] = newState
-                    }
-            }
-            runCodeMutex.unlock()
-            runCodeEnabled = true
-        }
-    }
-
-    private val chatAgentToolRegistry = ToolRegistry {
-        timeTool(application.resources, chatAgentStyle = true)
-        scheduleTools(application.resources, scheduleDao)
-        gatherToolsTool(application.resources) {
-            scheduleToolsExtended(application.resources, scheduleDao) {
-                codeRunnerTools[it.components] = it
-            }
-        }
-    }
+    ) = modelService.value?.runAssistantCode(
+        state = state,
+        contentIndex = contentIndex,
+        node = node,
+        components = components,
+        code = code,
+    ) ?: Unit
 
     val canSendMessage
-        get() = !isRunning &&
+        get() = !serviceCurrentTaskRunning &&
                 selectedModelEntity != null &&
                 !messageListLoading
 
@@ -557,297 +344,27 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         beforeStart: (() -> Unit)? = { chatMessageTextInputState.setTextAndPlaceCursorAtEnd("") },
         onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
     ) {
-        if (!canSendMessage || (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() }))
+        if (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() })
             return
-        viewModelScope.launch {
-            val isNewConversation = conversationId == null
-            val conversationId = if (isNewConversation) {
-                createNewConversation(setCurrent = setCurrentConversationIfNew)
-            } else {
-                conversationId
-            }
-            application.appDatabase.withTransaction {
-                var conversation =
-                    chatDao.getConversationById(conversationId) ?: return@withTransaction null
-                val eventFlow =
-                    MutableSharedFlow<AssistantMessageStreamingEvent>(extraBufferCapacity = 10)
-                val service = currentAgentService.filterNotNull().first()
-                val databaseMessages = chatDao.getAllMessagesByConversationOnce(conversationId)
-                val messages = databaseMessages.flatMap { entity ->
-                    entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
-                }
-                val system = if (messages.isEmpty()) {
-                    Message.System(
-                        content = application.resources.chatSystemPrompt,
-                        metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                    )
-                } else null
-                val environmentMessage = Message.User(
-                    content = application.getString(
-                        R.string.llm_prompt_environment_context,
-                        Clock.System.now().formatAgentTime(),
-                        conversation.name,
-                    ),
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                )
-
-                system?.let {
-                    chatDao.insertMessage(
-                        message = MessageEntity(
-                            conversationId = conversationId,
-                            parts = listOf(it.toUiMessage()),
-                            role = MessageEntityRole.System,
-                            generatedBy = null,
-                        ),
-                        fileIds = emptyList(),
-                    )
-                }
-                run {
-                    val tempIds = mutableListOf<Uuid>()
-                    chatDao.insertMessage(
-                        message = MessageEntity(
-                            conversationId = conversationId,
-                            parts = buildList {
-                                if (includeEnvironmentContext) {
-                                    add(environmentMessage.toUiMessage(display = false))
-                                }
-                                contextMessages?.let { addAll(it.allStored(tempIds)) }
-                                parts.takeIf { it.isNotEmpty() }?.let { parts ->
-                                    add(
-                                        Message.User(
-                                            parts = parts.allStored(tempIds),
-                                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                                        ).toUiMessage(),
-                                    )
-                                }
-                            },
-                            role = MessageEntityRole.User,
-                            generatedBy = null,
-                        ),
-                        fileIds = tempIds,
-                    )
-                }
-                if (databaseMessages.isEmpty()) {
-                    viewModelScope.launch {
-                        val title = generateConversationName(conversation.id) ?: return@launch
-                        val newConversation = conversation.copy(name = title)
-                        chatDao.updateConversation(newConversation)
-                        conversation = newConversation
-                    }
-                }
-                val updateChannel = Channel<Unit>(Channel.CONFLATED)
-                val state = AssistantMessageState.Streaming(
-                    eventFlow = eventFlow,
-                    model = service.agentConfig.model,
-                    coroutineScope = viewModelScope,
-                    conversationId = conversationId,
-                    remend = remend,
-                    onQueryConversationMeta = {
-                        chatDao.getConversationById(conversationId)?.also {
-                            conversation = it
-                        }?.meta ?: ConversationMeta()
-                    },
-                    onUpdateConversationMeta = { newMeta ->
-                        launch {
-                            val newConversation = conversation.copy(meta = newMeta)
-                            chatDao.updateConversation(newConversation)
-                            conversation = newConversation
-                        }
-                    },
-                    onUpdate = {
-                        updateChannel.trySend(Unit)
-                    },
-                    onCompleted = {
-                        viewModelScope.launch {
-                            updateChannel.close()
-                            while (updateChannel.receiveCatching().isSuccess) {
-                                logger.trace { "Dropping update event before completing message." }
-                            }
-                            chatDao.updateMessage(it.toEntity())
-                            logger.debug { "Message completed." }
-                            onEnd?.invoke(isNewConversation)
-                            sendNotification(conversationId)
-                        }
-                    },
-                ).apply {
-                    val tempIds = mutableListOf<Uuid>()
-                    chatDao.insertMessageAndGet(
-                        message = toEntity().allStored(tempIds),
-                        fileIds = tempIds,
-                    ) {
-                        it ?: return@insertMessageAndGet
-                        parentId = it.message.parentId
-                        depth = it.message.depth
-                        streamingMessages[it.message.id] = AssistantStreamingMessage(
-                            state = this@apply,
-                            branchIndex = it.branchIndex,
-                            branchCount = it.branchCount,
-                        )
-                    }
-                }
-                launch {
-                    while (updateChannel.receiveCatching().isSuccess) {
-                        val result = chatDao.updateMessage(state.toEntity())
-                        if (result < 1) {
-                            logger.warn { "Failed to update message with id ${state.id} on streaming update." }
-                            cancellationEvent.send(Unit)
-                        }
-                    }
-                }
-                logger.debug { "Running agent..." }
-                beforeStart?.invoke()
-                suspend {
-                    runAgent(
-                        state = state,
-                        eventFlow = eventFlow,
-                    ) {
-                        service.run(
-                            userParts = parts,
-                            eventFlow = eventFlow,
-                            state = state,
-                            tools = chatAgentToolRegistry + ToolRegistry {
-                                conversationTools(application.resources, conversation, chatDao)
-                            },
-                            buildPrompt = {
-                                system(application.resources.environmentSystemPrompt())
-                                system?.let { message(it) } ?: messages(messages)
-                                message(environmentMessage)
-                                contextMessages?.forEach {
-                                    if (it !is Koog) return@forEach
-                                    message(it.message)
-                                }
-                            },
-                        )
-                    }
-                }
-            }?.invoke()
-        }
-    }
-
-    private suspend fun CoroutineScope.runAgent(
-        state: AssistantMessageState.Streaming,
-        eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
-        block: suspend CoroutineScope.() -> Unit,
-    ) {
-        val channel = Channel<suspend CoroutineScope.() -> Unit>(1)
-        channel.send(block)
-
-        for (block in channel) {
-            try { // TODO: UI feedback
-                coroutineScope {
-                    isRunning = true
-                    val agentJob = async {
-                        block()
-                        false
-                    }
-
-                    val cancellationReceiver = async {
-                        cancellationEvent.receive()
-                        logger.debug { "Cancellation signal received." }
-                        true
-                    }
-
-                    select {
-                        agentJob.onAwait { it }
-                        cancellationReceiver.onAwait { it }
-                    }.also {
-                        agentJob.cancel()
-                        cancellationReceiver.cancel()
-                    }
-                }.takeIf { it }?.let { logger.info { "Agent run cancelled." } }
-            } catch (rerun: ChatAgentRerun) {
-                logger.info { "Agent will rerun" }
-                channel.send { rerun.run() }
-                continue
-            } catch (e: AIAgentMaxNumberOfIterationsReachedException) {
-                logger.info { "Agent reached max number of iterations: ${e.message}" }
-
-                val errorMessage =
-                    application.getString(R.string.chat_message_error_max_iterations_exceeded)
-
-                state.cleanUncompletedToolCalls { iterator, toolCall ->
-                    iterator.add(
-                        AssistantMessageContent.Completed(
-                            message = Message.Tool.Result(
-                                id = toolCall.id,
-                                tool = toolCall.tool,
-                                content = errorMessage,
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ),
-                            coroutineScope = viewModelScope,
-                        ),
-                    )
-                }
-
-                state.contents += AssistantMessageContent.Completed(
-                    uiMessage = UiMessage.Error(errorMessage),
-                    coroutineScope = viewModelScope,
-                )
-            } catch (e: Throwable) {
-                logger.error(e) { "Agent run error" }
-
-                val errorMessage = application.getString(R.string.chat_message_error)
-
-                state.cleanUncompletedToolCalls { iterator, toolCall ->
-                    iterator.add(
-                        AssistantMessageContent.Completed(
-                            message = Message.Tool.Result(
-                                id = toolCall.id,
-                                tool = toolCall.tool,
-                                content = errorMessage,
-                                metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
-                            ),
-                            coroutineScope = viewModelScope,
-                        ),
-                    )
-                }
-
-                state.contents += AssistantMessageContent.Completed(
-                    uiMessage = UiMessage.Error(errorMessage),
-                    coroutineScope = viewModelScope,
-                )
-            }
-
-            isRunning = false
-            logger.debug { "Agent run completed." }
-            eventFlow.emit(Finish)
-            state.awaitCompletedState()
-            cancel()
-        }
+        val service = modelService.value ?: return
+        service.sendMessage(
+            conversationId = conversationId,
+            parts = parts,
+            onNewConversation = setCurrentConversationIfNew.takeIf { it }?.let { _ ->
+                { currentConversationId = it.id }
+            },
+            includeEnvironmentContext = includeEnvironmentContext,
+            contextMessages = contextMessages,
+            beforeStart = beforeStart,
+            onEnd = onEnd,
+        )
     }
 
     fun cancelGeneration() {
         logger.debug { "UI requested to cancel generation." }
-        cancellationEvent.trySend(Unit)
-    }
-
-    init {
-        viewModelScope.launch {
-            for ((conversationId, text) in ReplyReceiver.channel) {
-                sendMessage(
-                    conversationId = conversationId,
-                    parts = listOf(ContentPart.Text(text)),
-                    beforeStart = null,
-                )
-            }
-        }
-    }
-
-    fun sendNotification(conversationId: Uuid) {
-        viewModelScope.launch {
-            val summary =
-                generateAssistantMessageSummary(conversationId)?.toMutableList() ?: return@launch
-            val quickReplies = summary.parseQuickReplies().takeIf { it.isNotEmpty() }
-            val conversation = chatDao.getConversationById(conversationId) ?: return@launch
-            val manager = NotificationManagerCompat.from(application)
-            manager.createNotificationChannel(application.resources.getAiNotificationChannel())
-            application.showChatNotification(
-                conversationId = conversationId,
-                conversationName = conversation.name,
-                messages = summary,
-                quickReplies = quickReplies,
-            )
-        }
+        val conversationId = currentConversationId ?: return
+        val service = modelService.value ?: return
+        service.stopMessageTasks(conversationId)
     }
 
     val pipScrollEvents = Channel<Unit>(Channel.CONFLATED)
@@ -964,17 +481,6 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         MainActivity.pipEventFlow.emit(PipEvent.SetActions(delta))
     }
 
-    private suspend fun createNewConversation(setCurrent: Boolean = true): Uuid {
-        val conversation = ConversationEntity(
-            name = application.getString(R.string.agent_conversation_label_new),
-        )
-        application.appDatabase.chatDao().insertConversation(conversation)
-        if (setCurrent) {
-            currentConversationId = conversation.id
-        }
-        return conversation.id
-    }
-
     fun editProviderConfig(
         config: LLMProviderConfigEntity,
         onFinished: () -> Unit,
@@ -1041,27 +547,19 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         },
     )
 
-    suspend fun generateErrorExplanation(message: String, onAppend: (String) -> Unit) {
-        val service = currentAgentService.value ?: return
-        val executor = service.promptExecutor
-        val model = service.agentConfig.model
+    suspend inline fun generateErrorExplanation(
+        errorMessage: String,
+        crossinline onAppendExplanation: (String) -> Unit,
+    ) {
+        val service = modelService.value ?: return
+        val chatAgentService = service.chatAgentServiceFlow.value ?: return
 
-        val prompt = prompt("error-explanation") {
-            system(application.resources.environmentSystemPrompt())
-            system(
-                application.getString(R.string.llm_prompt_generate_error_explanation)
-                    .trimIndent().format(message.trim()),
-            )
-        }
-
-        executor.executeStreaming(
-            model = model,
-            prompt = prompt,
-        ).collect {
-            if (it is Append) {
-                onAppend(it.text)
-            }
-        }
+        service.generateErrorExplanation(
+            errorMessage = errorMessage,
+            executor = chatAgentService.promptExecutor,
+            model = chatAgentService.agentConfig.model,
+            onAppendExplanation = onAppendExplanation,
+        )
     }
 }
 
