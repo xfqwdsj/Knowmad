@@ -59,7 +59,7 @@ interface InterruptibleTask : CoroutineScope {
 }
 
 open class JobInterruptibleTask(
-    protected val job: Job,
+    val job: Job,
     taskContext: CoroutineContext,
     val rootScope: CoroutineScope,
 ) : InterruptibleTask, CoroutineContext.Element {
