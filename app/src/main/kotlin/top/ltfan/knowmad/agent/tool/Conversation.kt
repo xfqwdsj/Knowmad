@@ -24,23 +24,25 @@ import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import android.content.res.Resources
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.util.Logger
 
 fun ToolRegistry.Builder.conversationTools(
     resources: Resources,
-    conversation: ConversationEntity,
-    chatDao: ChatDao,
+    mutex: Mutex?,
+    getConversation: suspend () -> ConversationEntity,
+    setConversation: suspend (ConversationEntity) -> Unit,
 ) {
     tool(
         ConversationTools.UpdateNameTool(
             resources = resources,
-            conversation = conversation,
-            chatDao = chatDao,
+            mutex = mutex,
+            getConversation = getConversation,
+            setConversation = setConversation,
         ),
     )
 }
@@ -50,8 +52,9 @@ object ConversationTools {
 
     class UpdateNameTool(
         resources: Resources,
-        private val conversation: ConversationEntity,
-        private val chatDao: ChatDao,
+        private val mutex: Mutex?,
+        private val getConversation: suspend () -> ConversationEntity,
+        private val setConversation: suspend (ConversationEntity) -> Unit,
     ) : Tool<UpdateNameTool.Args, Boolean>(
         argsSerializer = Args.serializer(),
         resultSerializer = Boolean.serializer(),
@@ -68,13 +71,18 @@ object ConversationTools {
         ),
     ) {
         override suspend fun execute(args: Args): Boolean {
-            val updatedConversation = conversation.copy(name = args.name)
-            runCatching { chatDao.updateConversation(updatedConversation) }
-                .onFailure {
-                    logger.error(it) { "Failed to update conversation name." }
-                    return false
-                }
-            return true
+            try {
+                mutex?.lock()
+                val updatedConversation = getConversation().copy(name = args.name)
+                runCatching { setConversation(updatedConversation) }
+                    .onFailure {
+                        logger.error(it) { "Failed to update conversation name." }
+                        return false
+                    }
+                return true
+            } finally {
+                mutex?.unlock()
+            }
         }
 
         @Serializable
