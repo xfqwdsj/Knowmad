@@ -411,11 +411,16 @@ class ModelService : LifecycleService() {
         tools: ToolRegistry? = chatAgentToolRegistry,
         onNewConversation: ((ConversationEntity) -> Unit)? = null,
         includeEnvironmentContext: Boolean = true,
+        insertEnvironmentContext: Boolean = includeEnvironmentContext,
         contextMessages: List<UiMessage>? = null,
         generateConversationNameFromInitialInput: Boolean = true,
         beforeStart: (() -> Unit)? = null,
         onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
     ) = defaultScope.asyncInterruptible task@{
+        require(!insertEnvironmentContext || includeEnvironmentContext) {
+            "insertEnvironmentContext can only be true if includeEnvironmentContext is also true"
+        }
+
         val isNewConversation = conversationId == null
         val conversationId = if (isNewConversation) {
             createNewConversation().also {
@@ -472,7 +477,9 @@ class ModelService : LifecycleService() {
                 }
 
                 run {
-                    val shouldContinue = includeEnvironmentContext ||
+                    val environmentContextFlag =
+                        includeEnvironmentContext && insertEnvironmentContext
+                    val shouldContinue = environmentContextFlag ||
                             contextMessages?.isNotEmpty() == true ||
                             parts.isNotEmpty()
 
@@ -483,7 +490,7 @@ class ModelService : LifecycleService() {
                         message = MessageEntity(
                             conversationId = conversationId,
                             parts = buildList {
-                                if (includeEnvironmentContext) {
+                                if (environmentContextFlag) {
                                     add(environmentMessage.toUiMessage(display = false))
                                 }
                                 contextMessages?.takeIf { it.isNotEmpty() }?.let {
@@ -590,7 +597,9 @@ class ModelService : LifecycleService() {
                             buildPrompt = {
                                 system(application.resources.environmentSystemPrompt())
                                 system?.let { message(it) } ?: messages(messages)
-                                message(environmentMessage)
+                                if (includeEnvironmentContext) {
+                                    message(environmentMessage)
+                                }
                                 contextMessages?.forEach {
                                     if (it !is Koog) return@forEach
                                     message(it.message)
