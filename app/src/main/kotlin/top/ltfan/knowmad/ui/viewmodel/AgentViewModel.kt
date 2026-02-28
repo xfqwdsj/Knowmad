@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.MainActivity
@@ -90,6 +91,8 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+    private val defaultScope = viewModelScope + Dispatchers.Default
+
     private val logger = Logger("AgentViewModel")
 
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
@@ -396,7 +399,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         Click, Service
     }
 
-    fun pipCaptureUi() = viewModelScope.launch {
+    fun pipCaptureUi() = defaultScope.launch {
         if (selectedModelId == null) {
             logger.debug { "No model selected, skipping pip capture." }
             return@launch
@@ -499,7 +502,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         config: LLMProviderConfigEntity,
         onFinished: () -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             llmConfigDao.insertAtEndOrUpdateProvider(config)
             onFinished()
         }
@@ -509,11 +512,11 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         config: LLMProviderConfigEntity,
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val models = llmConfigDao.getModelsByProviderOnce(config.id)
             llmConfigDao.deleteProvider(config)
             onDeleted {
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch {
                     llmConfigDao.insertProviderAtBeginning(config)
                     for (model in models) {
                         llmConfigDao.insertModelAtEnd(model)
@@ -527,7 +530,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         config: LLMConfigEntity,
         onFinished: () -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             llmConfigDao.insertAtEndOrUpdateModel(config)
             onFinished()
         }
@@ -537,10 +540,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         config: LLMConfigEntity,
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             llmConfigDao.deleteModel(config)
             onDeleted {
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch {
                     llmConfigDao.insertModelAtBeginning(config)
                 }
             }
