@@ -121,7 +121,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         }
     }
 
-    val conversationListState = PagingLazyListState(viewModelScope) {
+    val conversationListState = PagingLazyListState {
         application.appDatabase.chatDao().getAllConversations()
     }
 
