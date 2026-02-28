@@ -29,12 +29,15 @@ import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -119,9 +122,12 @@ class MainActivity : KnowmadActivity() {
         if (isViewAction && data != null) {
             val conversationId = data.toConversationIdFromChatLink()
             if (conversationId != null) {
-                agentViewModel.currentConversationId = conversationId
                 if (viewModel.backStack.lastOrNull() !is AgentPage) {
-                    viewModel.backStack.add(AgentPage())
+                    lifecycleScope.launch {
+                        snapshotFlow { viewModel.appReady }.filter { it }.first()
+                        agentViewModel.currentConversationId = conversationId
+                        viewModel.backStack.add(AgentPage())
+                    }
                 }
                 return
             }
