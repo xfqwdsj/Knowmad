@@ -100,6 +100,43 @@ interface ChatDao : FtsDao {
         }
     }
 
+    @Transaction
+    suspend fun insertSiblingMessage(
+        anchorMessageId: Uuid,
+        message: MessageEntity,
+        fileIds: List<Uuid>,
+    ): Long {
+        val anchorMessage = getMessageById(anchorMessageId)
+        requireNotNull(anchorMessage) { "Anchor message with ID $anchorMessageId not found" }
+        require(anchorMessage.conversationId == message.conversationId) { "Anchor message must be in the same conversation" }
+
+        val updatedMessage = message.copy(
+            parentId = anchorMessage.parentId,
+            depth = anchorMessage.depth,
+        )
+
+        return insertMessageWithoutSettingBranch(
+            message = updatedMessage,
+            fileIds = fileIds,
+        )
+    }
+
+    @Transaction
+    suspend fun insertSiblingMessageAndGet(
+        anchorMessageId: Uuid,
+        message: MessageEntity,
+        fileIds: List<Uuid>,
+        getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
+    ): Long {
+        return insertSiblingMessage(
+            anchorMessageId = anchorMessageId,
+            message = message,
+            fileIds = fileIds,
+        ).also {
+            getUpdatedEntity(getMessageWithFilesAndBranchInfoById(message.id))
+        }
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setMessageBranchSelection(selection: MessageBranchSelectionEntity)
 

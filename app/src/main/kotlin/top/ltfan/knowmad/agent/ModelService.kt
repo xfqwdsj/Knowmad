@@ -72,6 +72,7 @@ import top.ltfan.knowmad.agent.tool.scheduleToolsExtended
 import top.ltfan.knowmad.agent.tool.timeTool
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.AssistantStreamingMessage
+import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
 import top.ltfan.knowmad.data.chat.ConversationEntity
@@ -414,6 +415,17 @@ class ModelService : LifecycleService() {
         insertEnvironmentContext: Boolean = includeEnvironmentContext,
         contextMessages: List<UiMessage>? = null,
         generateConversationNameFromInitialInput: Boolean = true,
+        insertAssistantMessageAndGet: suspend ChatDao.(
+            message: MessageEntity,
+            fileIds: List<Uuid>,
+            getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
+        ) -> Long = { messages, fileIds, getUpdatedEntity ->
+            insertMessageAndGet(
+                message = messages,
+                fileIds = fileIds,
+                getUpdatedEntity = getUpdatedEntity,
+            )
+        },
         beforeStart: (() -> Unit)? = null,
         onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
     ) = defaultScope.asyncInterruptible task@{
@@ -553,11 +565,11 @@ class ModelService : LifecycleService() {
                     onUpdate = { updateChannel.trySend(Unit) },
                 ).apply {
                     val tempIds = mutableListOf<Uuid>()
-                    chatDao.insertMessageAndGet(
-                        message = toEntity().allStored(tempIds),
-                        fileIds = tempIds,
+                    chatDao.insertAssistantMessageAndGet(
+                        toEntity().allStored(tempIds),
+                        tempIds,
                     ) {
-                        it ?: return@insertMessageAndGet
+                        it ?: return@insertAssistantMessageAndGet
                         parentId = it.message.parentId
                         depth = it.message.depth
                         streamingMessages[it.message.id] = AssistantStreamingMessage(

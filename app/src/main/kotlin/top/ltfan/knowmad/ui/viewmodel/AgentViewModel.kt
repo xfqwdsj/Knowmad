@@ -210,7 +210,22 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
     }
 
     fun messageOnRegenerate(message: ChatListMessage) {
-
+        if (message !is Branched) return
+        val service = modelService.value ?: return
+        service.sendMessage(
+            conversationId = message.conversationId,
+            parts = emptyList(),
+            includeEnvironmentContext = true,
+            insertEnvironmentContext = false,
+            insertAssistantMessageAndGet = { messageToInsert, fileIds, getUpdatedEntity ->
+                insertSiblingMessageAndGet(
+                    anchorMessageId = message.key,
+                    message = messageToInsert,
+                    fileIds = fileIds,
+                    getUpdatedEntity = getUpdatedEntity,
+                )
+            },
+        )
     }
 
     fun newConversation() {
