@@ -183,6 +183,9 @@ data class MessageWithFilesAndBranchInfo(
 ) : MessageWithBranchInfo, ChatListMessage.Branched {
     @Ignore
     override val key = message.id
+
+    @Ignore
+    override val conversationId = message.conversationId
 }
 
 data class MessageWithConversation(

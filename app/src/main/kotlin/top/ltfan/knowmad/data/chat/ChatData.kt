@@ -438,6 +438,7 @@ sealed interface UiMessage {
 
 sealed interface ChatListMessage {
     val key: Any
+    val conversationId: Uuid
 
     sealed interface Branched : ChatListMessage, MessageWithBranchInfo {
         override val key: Uuid
@@ -453,6 +454,7 @@ data class AssistantStreamingMessage(
     override val branchCount: Int,
 ) : ChatListMessage.Branched {
     override val key = state.id
+    override val conversationId = state.conversationId
 }
 
 sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
