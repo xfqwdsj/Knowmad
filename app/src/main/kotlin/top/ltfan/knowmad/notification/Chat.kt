@@ -37,7 +37,6 @@ import androidx.core.content.LocusIdCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import kotlinx.datetime.toStdlibInstant
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.getChatIntent
 import top.ltfan.knowmad.data.chat.getChatPendingIntent
@@ -197,8 +196,8 @@ data class NotificationMessage(
 
 fun Message.toNotificationMessage(resources: Resources): NotificationMessage? {
     val (text, time) = when (this) {
-        is User -> content.trim() to metaInfo.timestamp.toStdlibInstant()
-        is Assistant -> content.trim() to metaInfo.timestamp.toStdlibInstant()
+        is User -> content.trim() to metaInfo.timestamp
+        is Assistant -> content.trim() to metaInfo.timestamp
         else -> return null
     }
     val sender = when (this) {

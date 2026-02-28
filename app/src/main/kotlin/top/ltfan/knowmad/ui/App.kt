@@ -57,7 +57,7 @@ fun AppContent() {
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
-                    sceneStrategy = overlayContentStrategy,
+                    sceneStrategies = listOf(overlayContentStrategy),
                     sharedTransitionScope = localSharedTransitionScope { this },
                     entryProvider = { it.navEntry() },
                 )

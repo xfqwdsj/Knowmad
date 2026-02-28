@@ -51,8 +51,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toDeprecatedClock
-import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
@@ -199,7 +197,7 @@ fun ChatMessageListPreview() {
                             Message.Reasoning(
                                 content = "This is a sample reasoning message.\n\n- Step 1: Do this.\n- Step 2: Do that.\n\n**Conclusion:** This is the result.",
                                 metaInfo = ResponseMetaInfo(
-                                    timestamp = Clock.System.now().toDeprecatedInstant(),
+                                    timestamp = Clock.System.now(),
                                     metadata = JsonObject(
                                         mapOf(
                                             "startedAt" to JsonPrimitive(
@@ -370,7 +368,7 @@ class StreamingAssistantMessagePreviewState(
                     id = "web_search",
                     tool = "Web Search",
                     content = "Knowmad",
-                    metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = ResponseMetaInfo.create(Clock.System),
                 ).toUiMessage(),
             ),
         )
@@ -382,7 +380,7 @@ class StreamingAssistantMessagePreviewState(
                     id = "web_search",
                     tool = "Web Search",
                     content = "Knowmad is an AI-powered knowledge nomad application designed to help users manage and explore information seamlessly.",
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
                 ).toUiMessage(),
             ),
         )
@@ -408,7 +406,7 @@ class StreamingAssistantMessagePreviewState(
                     id = "calculator",
                     tool = "Calculator",
                     content = "2 + 2",
-                    metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = ResponseMetaInfo.create(Clock.System),
                 ).toUiMessage(),
             ),
         )
@@ -420,7 +418,7 @@ class StreamingAssistantMessagePreviewState(
                     id = "calculator",
                     tool = "Calculator",
                     content = "4",
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
                 ).toUiMessage(),
             ),
         )
@@ -464,7 +462,7 @@ class StreamingAssistantMessagePreviewState(
                     AssistantMessageContent.Completed(
                         Message.Assistant(
                             content = finishMessage,
-                            metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            metaInfo = ResponseMetaInfo.create(Clock.System),
                         ),
                         coroutineScope,
                     ),

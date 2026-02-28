@@ -22,7 +22,6 @@ import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
-import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.data.chat.toUiMessage
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,7 +39,7 @@ class UiMessageModificationTest {
                 ),
                 ContentPart.Text("0123456789"),
             ),
-            metaInfo = ResponseMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = ResponseMetaInfo.create(TestClock),
         ).toUiMessage()
 
         val modifiedMessage = message.modifiedContent { _, modify ->
@@ -59,7 +58,7 @@ class UiMessageModificationTest {
                 ),
                 ContentPart.Text("9876543210"),
             ),
-            metaInfo = ResponseMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = ResponseMetaInfo.create(TestClock),
         ).toUiMessage()
 
         assertEquals(expected, modifiedMessage)

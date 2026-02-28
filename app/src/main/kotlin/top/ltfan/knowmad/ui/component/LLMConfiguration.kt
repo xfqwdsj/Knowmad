@@ -20,7 +20,6 @@ package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
-import ai.koog.prompt.llm.LLModel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.expandVertically
@@ -63,7 +62,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -307,14 +306,19 @@ fun LLMConfigEditingDialog(
 ) {
     val viewModel = LocalAgentViewModel.current
 
-    val knownModelsMap = remember { mutableStateMapOf<String, LLModel>() }
+    val info = SupportedLLMProviders[provider.provider] ?: return
+    val predefinedModelsMap = remember { info.predefinedModels.models.associateBy { it.id } }
+
+    var knownModelsMap by remember { mutableStateOf(predefinedModelsMap) }
     val knownModelIds by remember { derivedStateOf { knownModelsMap.keys.toList() } }
 
-    val modelId = rememberTextFieldState(entity.model.id)
-    val capabilities = remember { mutableStateListOf(*entity.model.capabilities.toTypedArray()) }
-    var contextLength by remember { mutableLongStateOf(entity.model.contextLength) }
-    var maxOutputTokens by remember { mutableStateOf(entity.model.maxOutputTokens) }
-    var name by remember { mutableStateOf(entity.name) }
+    val (_, id, capabilities, contextLength, maxOutputTokens) = remember { entity.model }
+
+    val inputId = rememberTextFieldState(id)
+    val inputCapabilities = remember { capabilities?.toMutableStateList() ?: mutableStateListOf() }
+    var inputContextLength by remember { mutableStateOf(contextLength) }
+    var inputMaxOutputTokens by remember { mutableStateOf(maxOutputTokens) }
+    var inputName by remember { mutableStateOf(entity.name) }
 
     var showCapabilitiesDialog by remember { mutableStateOf(false) }
 
@@ -327,12 +331,12 @@ fun LLMConfigEditingDialog(
                     onDismissRequest()
                     val newEntity = entity.copy(
                         model = entity.model.copy(
-                            id = modelId.text.toString(),
-                            capabilities = capabilities.toList(),
-                            contextLength = contextLength,
-                            maxOutputTokens = maxOutputTokens,
+                            id = inputId.text.toString(),
+                            capabilities = inputCapabilities.toList(),
+                            contextLength = inputContextLength,
+                            maxOutputTokens = inputMaxOutputTokens,
                         ),
-                        name = name.ifBlank { modelId.text.toString() },
+                        name = inputName.ifBlank { inputId.text.toString() },
                     )
                     viewModel.editModelConfig(newEntity) {}
                 },
@@ -351,20 +355,20 @@ fun LLMConfigEditingDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 LLModelTextField(
-                    state = modelId,
+                    state = inputId,
                     knownModelIds = knownModelIds,
                 )
                 LLMContextLengthTextField(
-                    contextLength = contextLength,
-                    onContextLengthChange = { contextLength = it },
+                    contextLength = inputContextLength,
+                    onContextLengthChange = { inputContextLength = it },
                 )
                 LLMMaxOutputTokensTextField(
-                    maxOutputTokens = maxOutputTokens,
-                    onMaxOutputTokensChange = { maxOutputTokens = it },
+                    maxOutputTokens = inputMaxOutputTokens,
+                    onMaxOutputTokensChange = { inputMaxOutputTokens = it },
                 )
                 LLMNameTextField(
-                    name = name,
-                    onNameChange = { name = it },
+                    name = inputName,
+                    onNameChange = { inputName = it },
                 )
                 Button(onClick = { showCapabilitiesDialog = true }) {
                     Text(
@@ -377,52 +381,41 @@ fun LLMConfigEditingDialog(
 
     if (showCapabilitiesDialog) {
         LLMConfigCapabilitiesEditingDialog(
-            stateList = capabilities,
+            stateList = inputCapabilities,
             onDismissRequest = { showCapabilitiesDialog = false },
         )
     }
 
-    var oldId by remember { mutableStateOf(modelId.text.toString()) }
+    var oldId by remember { mutableStateOf(inputId.text.toString()) }
 
-    LaunchedEffect(modelId.text) {
-        val id = modelId.text.toString()
+    LaunchedEffect(inputId.text) {
+        val id = inputId.text.toString()
         if (id.isBlank()) return@LaunchedEffect
-        if (name.isBlank() || name == oldId) {
-            name = id
+        if (inputName.isBlank() || inputName == oldId) {
+            inputName = id
         }
         oldId = id
         knownModelsMap[id]?.let { model ->
-            contextLength = model.contextLength
-            maxOutputTokens = model.maxOutputTokens
-            capabilities.clear()
-            capabilities.addAll(model.capabilities)
+            inputContextLength = model.contextLength
+            inputMaxOutputTokens = model.maxOutputTokens
+            inputCapabilities.clear()
+            model.capabilities?.let { inputCapabilities.addAll(it) }
         }
     }
 
     LaunchedEffect(Unit) {
-        val info = SupportedLLMProviders[provider.provider] ?: return@LaunchedEffect
         val client = info.convertToClient(
             provider.decryptedApiKey, provider.baseUrl,
         )
 
-        val apiModelIds = try {
-            client.models()
+        val apiModels = try {
+            client.models().associateBy { it.id }
         } catch (e: Throwable) {
             Logger("LLMConfigEditingDialog").error(e) { "Failed to fetch models from API, known models list will be empty" }
-            emptyList()
+            predefinedModelsMap
         }
 
-        knownModelsMap.putAll(
-            apiModelIds.associateWith {
-                LLModel(
-                    provider = provider.provider,
-                    id = it,
-                    capabilities = listOf(),
-                    contextLength = 0,
-                )
-            },
-        )
-        knownModelsMap.putAll(info.predefinedModels)
+        knownModelsMap = apiModels
     }
 }
 

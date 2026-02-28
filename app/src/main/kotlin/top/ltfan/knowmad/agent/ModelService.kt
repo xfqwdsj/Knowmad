@@ -27,7 +27,6 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
-import ai.koog.prompt.streaming.StreamFrame.Append
 import android.content.Intent
 import android.os.IBinder
 import androidx.annotation.StringRes
@@ -63,7 +62,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.tool.conversationTools
@@ -207,7 +205,7 @@ class ModelService : LifecycleService() {
             model = model,
             prompt = prompt,
         ).collect {
-            if (it is Append) {
+            if (it is TextDelta) {
                 onAppendExplanation(it.text)
             }
         }
@@ -449,7 +447,7 @@ class ModelService : LifecycleService() {
                 val system = if (messages.isEmpty()) {
                     Message.System(
                         content = application.resources.chatSystemPrompt,
-                        metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                        metaInfo = RequestMetaInfo.create(Clock.System),
                     )
                 } else null
                 val environmentMessage = Message.User(
@@ -458,7 +456,7 @@ class ModelService : LifecycleService() {
                         Clock.System.now().formatAgentTime(),
                         conversation.name,
                     ),
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
                 )
 
                 system?.let {
@@ -487,7 +485,7 @@ class ModelService : LifecycleService() {
                                     add(
                                         Message.User(
                                             parts = parts.allStored(tempIds),
-                                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                                            metaInfo = RequestMetaInfo.create(Clock.System),
                                         ).toUiMessage(),
                                     )
                                 }
@@ -648,7 +646,7 @@ class ModelService : LifecycleService() {
                             id = toolCall.id,
                             tool = toolCall.tool,
                             content = errorMessage,
-                            metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                            metaInfo = RequestMetaInfo.create(Clock.System),
                         ),
                     ),
                 )

@@ -47,7 +47,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toDeprecatedInstant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
@@ -500,7 +499,7 @@ sealed class AssistantMessageContent(val markdownState: SavedMarkdownState) {
         }
 
         fun createMetaInfo(timestamp: Instant = Clock.System.now()) = ResponseMetaInfo(
-            timestamp = timestamp.toDeprecatedInstant(),
+            timestamp = timestamp,
             metadata = JsonObject(mapOf("startedAt" to JsonPrimitive(startedAt.toString()))),
         ).also { metaInfo = it }
 

@@ -100,7 +100,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -548,7 +547,7 @@ fun AssistantMessage(
                                 savedMarkdownState = content.markdownState,
                                 mathJaxRendererState = mathJaxRendererState,
                                 startedAt = content.startedAt,
-                                endedAt = content.metaInfo?.timestamp?.toStdlibInstant(),
+                                endedAt = content.metaInfo?.timestamp,
                                 initialVisibility = initialReasoningVisibility,
                                 onVisibilityChange = onAnyReasoningVisibilityChange,
                                 modifier = Modifier.padding(8.dp),
@@ -578,8 +577,8 @@ fun AssistantMessage(
                                     mathJaxRendererState = mathJaxRendererState,
                                     startedAt = (message.metaInfo.metadata?.get("startedAt") as? JsonPrimitive)?.contentOrNull?.let {
                                         Instant.parseOrNull(it)
-                                    } ?: message.metaInfo.timestamp.toStdlibInstant(),
-                                    endedAt = message.metaInfo.timestamp.toStdlibInstant(),
+                                    } ?: message.metaInfo.timestamp,
+                                    endedAt = message.metaInfo.timestamp,
                                     initialVisibility = initialReasoningVisibility,
                                     onVisibilityChange = onAnyReasoningVisibilityChange,
                                     modifier = Modifier.padding(8.dp),

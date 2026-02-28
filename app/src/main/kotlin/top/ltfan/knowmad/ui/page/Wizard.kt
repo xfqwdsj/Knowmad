@@ -681,18 +681,14 @@ class WizardModelPage : WizardSubPage() {
                     ModelCapabilitiesFlow(
                         capabilities = model?.capabilities ?: emptyList(),
                         onAdd = {
-                            if (model == null) {
-                                return@ModelCapabilitiesFlow
-                            }
-                            viewModel.selectedModel =
-                                model.copy(capabilities = model.capabilities + it)
+                            if (model == null) return@ModelCapabilitiesFlow
+                            val initial = model.capabilities ?: emptyList()
+                            viewModel.selectedModel = model.copy(capabilities = initial + it)
                         },
                         onRemove = {
-                            if (model == null) {
-                                return@ModelCapabilitiesFlow
-                            }
-                            viewModel.selectedModel =
-                                model.copy(capabilities = model.capabilities - it)
+                            if (model == null) return@ModelCapabilitiesFlow
+                            val initial = model.capabilities ?: emptyList()
+                            viewModel.selectedModel = model.copy(capabilities = initial - it)
                         },
                         enabled = model != null,
                     )

@@ -53,7 +53,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.R
@@ -448,11 +447,11 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
             contextMessages = listOf(
                 Message.User(
                     content = application.getString(R.string.llm_prompt_companion_mode_context),
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
                 ).toUiMessage(display = false),
                 Message.User(
                     content = json,
-                    metaInfo = RequestMetaInfo.create(Clock.System.toDeprecatedClock()),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
                 ).toUiMessage(display = false),
             ),
             parts = listOf(),

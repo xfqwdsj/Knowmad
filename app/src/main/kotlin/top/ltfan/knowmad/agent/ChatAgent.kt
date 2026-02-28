@@ -47,9 +47,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toDeprecatedClock
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.data.chat.AssistantStreamingMessageType
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
@@ -61,6 +59,10 @@ private val logger = Logger("ChatAgent")
 
 typealias ChatAgentService = GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>
 typealias ChatAgent = GraphAIAgent<ChatAgentData<List<ContentPart>>, List<Message.Response>>
+
+private enum class StreamFrameType {
+    Text, Reasoning, Tool,
+}
 
 fun getChatAgentService(
     promptExecutor: PromptExecutor,
@@ -101,31 +103,54 @@ fun getChatAgentService(
                     llm.writeSession {
                         val stream = requestLLMStreaming()
                         logger.debug { "Streaming for ${state.id} started." }
-                        var lastIsToolCall: Boolean? = null
+
+                        var last: StreamFrameType? = null
 
                         stream.collect { frame ->
                             frames.add(frame)
                             when (frame) {
-                                is Append -> {
+                                is TextDelta -> {
                                     if (frame.text.isEmpty()) return@collect
-                                    if (lastIsToolCall != false) partIndex++
-                                    lastIsToolCall = false
+                                    if (last != Text) partIndex++
+                                    last = Text
                                     eventFlow.emit(
                                         AssistantMessageStreamingEvent.AddString(
                                             partIndex = partIndex,
                                             content = frame.text,
-                                            messageType = AssistantStreamingMessageType.Content,
+                                            messageType = Content,
                                         ),
                                     )
                                 }
 
-                                is ToolCall -> {
-                                    lastIsToolCall = true
+                                is ReasoningDelta -> {
+                                    val text = frame.text
+                                    val summary = frame.summary
+                                    val content = when {
+                                        text != null && summary != null -> "$summary\n\n$text"
+                                        text != null -> text
+                                        summary != null -> summary
+                                        else -> return@collect
+                                    }
+                                    if (content.isEmpty()) return@collect
+                                    if (last != Reasoning) partIndex++
+                                    last = Reasoning
+                                    eventFlow.emit(
+                                        AssistantMessageStreamingEvent.AddString(
+                                            partIndex = partIndex,
+                                            content = content,
+                                            messageType = Reasoning,
+                                        ),
+                                    )
+                                }
+
+                                is ToolCallComplete -> {
+                                    if (last != Tool) partIndex++
+                                    last = Tool
                                     val toolCall = Message.Tool.Call(
                                         id = frame.id,
                                         tool = frame.name,
                                         content = frame.content,
-                                        metaInfo = ResponseMetaInfo.create(Clock.System.toDeprecatedClock()),
+                                        metaInfo = ResponseMetaInfo.create(Clock.System),
                                     )
                                     eventFlow.emit(
                                         AssistantMessageStreamingEvent.SetMessage(
@@ -135,13 +160,13 @@ fun getChatAgentService(
                                     )
                                 }
 
-                                is End -> {
-                                    eventFlow.emit(
-                                        AssistantMessageStreamingEvent.SetMetaInfo(
-                                            metaInfo = frame.metaInfo,
-                                        ),
-                                    )
-                                }
+                                is End -> eventFlow.emit(
+                                    AssistantMessageStreamingEvent.SetMetaInfo(
+                                        metaInfo = frame.metaInfo,
+                                    ),
+                                )
+
+                                else -> {}
                             }
                         }
                     }

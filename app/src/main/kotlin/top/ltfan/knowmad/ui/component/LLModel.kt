@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -37,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import top.ltfan.knowmad.R
@@ -80,7 +78,7 @@ fun LLModelTextField(
                 }
             },
             inputTransformation = inputTransformation,
-            lineLimits = TextFieldLineLimits.SingleLine,
+            lineLimits = SingleLine,
         )
     }
 }
@@ -88,22 +86,16 @@ fun LLModelTextField(
 @Composable
 fun LLMContextLengthTextField(
     contextLength: Long?,
-    onContextLengthChange: (Long) -> Unit,
+    onContextLengthChange: (Long?) -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
-
     TextField(
-        value = contextLength?.toString()
-            .takeIf { it != "0" || !focused } ?: "",
+        value = contextLength?.toString() ?: "",
         onValueChange = {
-            onContextLengthChange(it.trim().toLongOrNull() ?: 0)
+            onContextLengthChange(it.trim().toLongOrNull())
         },
         modifier = Modifier
             .widthIn(max = TextFieldMaxWidth)
-            .fillMaxWidth()
-            .onFocusEvent {
-                focused = it.isFocused
-            },
+            .fillMaxWidth(),
         label = {
             Text(stringResource(R.string.llm_context_length_label))
         },
@@ -114,10 +106,10 @@ fun LLMContextLengthTextField(
                 },
             )
         },
-        placeholder = { Text("0") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
         ),
+        singleLine = true,
     )
 }
 

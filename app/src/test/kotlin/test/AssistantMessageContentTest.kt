@@ -24,7 +24,6 @@ import com.mikepenz.markdown.model.State
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.toDeprecatedClock
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.data.chat.AssistantMessageContent
 import top.ltfan.knowmad.data.chat.toUiMessage
@@ -49,7 +48,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )
@@ -109,7 +108,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )
@@ -173,7 +172,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )
@@ -237,7 +236,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )
@@ -302,7 +301,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )
@@ -363,7 +362,7 @@ class AssistantMessageContentTest {
                 metaInfo = ResponseMetaInfo.create(
                     object : Clock {
                         override fun now() = Instant.DISTANT_PAST
-                    }.toDeprecatedClock(),
+                    },
                 ),
             ).toUiMessage(),
         )

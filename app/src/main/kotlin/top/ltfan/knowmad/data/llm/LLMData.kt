@@ -19,19 +19,25 @@
 package top.ltfan.knowmad.data.llm
 
 import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.clients.LLModelDefinitions
 import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
+import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.dashscope.DashscopeClientSettings
 import ai.koog.prompt.executor.clients.dashscope.DashscopeLLMClient
+import ai.koog.prompt.executor.clients.dashscope.DashscopeModels
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekClientSettings
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
 import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
 import ai.koog.prompt.executor.clients.google.GoogleClientSettings
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
+import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterClientSettings
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterLLMClient
+import ai.koog.prompt.executor.clients.openrouter.OpenRouterModels
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
@@ -51,10 +57,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_deepseek_description,
         defaultBaseUrl = "https://api.deepseek.com",
         platformUrl = "https://platform.deepseek.com",
-        predefinedModels = setOf(
-            DeepSeekModels.DeepSeekChat,
-            DeepSeekModels.DeepSeekReasoner,
-        ),
+        predefinedModels = DeepSeekModels,
         getModelCapabilitiesUrl = { "https://api-docs.deepseek.com/quick_start/pricing" },
         polymorphic = {
             polymorphic(
@@ -77,6 +80,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_openai_description,
         defaultBaseUrl = "https://api.openai.com",
         platformUrl = "https://platform.openai.com",
+        predefinedModels = OpenAIModels,
         getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
         polymorphic = {
             polymorphic(
@@ -99,6 +103,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_anthropic_description,
         defaultBaseUrl = "https://api.anthropic.com",
         platformUrl = "https://console.anthropic.com",
+        predefinedModels = AnthropicModels,
         getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
         polymorphic = {
             polymorphic(
@@ -121,6 +126,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_google_description,
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
         platformUrl = "https://aistudio.google.com/",
+        predefinedModels = GoogleModels,
         getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
         polymorphic = {
             polymorphic(
@@ -143,6 +149,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_openrouter_description,
         defaultBaseUrl = "https://openrouter.ai",
         platformUrl = "https://openrouter.ai/keys",
+        predefinedModels = OpenRouterModels,
         getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
         polymorphic = {
             polymorphic(
@@ -165,6 +172,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_alibaba_description,
         defaultBaseUrl = "https://dashscope.aliyuncs.com/",
         platformUrl = "https://dashscope.aliyun.com/",
+        predefinedModels = DashscopeModels,
         getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
         polymorphic = {
             polymorphic(
@@ -190,33 +198,11 @@ data class LLMProviderInfo(
     @param:StringRes val description: Int,
     val defaultBaseUrl: String,
     val platformUrl: String,
-    val predefinedModels: Map<String, LLModel> = emptyMap(),
+    val predefinedModels: LLModelDefinitions,
     val getModelCapabilitiesUrl: (id: String) -> String,
     val polymorphic: SerializersModuleBuilder.() -> Unit,
     val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
-) {
-    constructor(
-        @DrawableRes icon: Int,
-        @StringRes label: Int,
-        @StringRes description: Int,
-        defaultBaseUrl: String,
-        platformUrl: String,
-        predefinedModels: Set<LLModel>,
-        getModelCapabilitiesUrl: (id: String) -> String,
-        polymorphic: SerializersModuleBuilder.() -> Unit,
-        convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
-    ) : this(
-        icon = icon,
-        label = label,
-        description = description,
-        defaultBaseUrl = defaultBaseUrl,
-        platformUrl = platformUrl,
-        predefinedModels = predefinedModels.associateBy { it.id },
-        getModelCapabilitiesUrl = getModelCapabilitiesUrl,
-        polymorphic = polymorphic,
-        convertToClient = convertToClient,
-    )
-}
+)
 
 @Suppress("UnstableApiUsage")
 val LLMCapabilities = listOf(

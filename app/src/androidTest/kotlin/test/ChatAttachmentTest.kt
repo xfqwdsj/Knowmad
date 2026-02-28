@@ -26,7 +26,6 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.toDeprecatedClock
 import okio.Path.Companion.toPath
 import okio.fakefilesystem.FakeFileSystem
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -73,7 +72,7 @@ class ChatAttachmentTest {
                     fileName = fileName,
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val fileIds = mutableListOf<Uuid>()
@@ -128,7 +127,7 @@ class ChatAttachmentTest {
                     fileName = fileName,
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val fileIds = mutableListOf<Uuid>()
@@ -173,7 +172,7 @@ class ChatAttachmentTest {
                     mimeType = mimeType,
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val fileIds = mutableListOf<Uuid>()
@@ -222,7 +221,7 @@ class ChatAttachmentTest {
                     fileName = "external.png",
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val fileIds = mutableListOf<Uuid>()
@@ -277,7 +276,7 @@ class ChatAttachmentTest {
                     fileName = "empty.dat",
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val fileIds = mutableListOf<Uuid>()
@@ -331,7 +330,7 @@ class ChatAttachmentTest {
                     fileName = "invalid3.txt",
                 ),
             ),
-            metaInfo = RequestMetaInfo.create(TestClock.toDeprecatedClock()),
+            metaInfo = RequestMetaInfo.create(TestClock),
         )
 
         val loadedMessage = invalidUrlMessage.allLoaded(db.fileDao(), fs)

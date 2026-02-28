@@ -22,13 +22,11 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.streaming.StreamFrame
 import android.content.res.Resources
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -161,7 +159,7 @@ class WizardPageViewModel(
             apiKeyTextFieldState.setTextAndPlaceCursorAtEnd(value)
         }
 
-    val knownModelsMap = mutableStateMapOf<String, LLModel>()
+    var knownModelsMap by mutableStateOf(emptyMap<String, LLModel>())
     val knownModelIds inline get() = knownModelsMap.keys.toList()
     val knownModels inline get() = knownModelsMap.values.toList()
 
@@ -173,28 +171,20 @@ class WizardPageViewModel(
             return
         }
 
-        val apiModelIds = try {
-            client.models().also {
+        val predefined = info.predefinedModels.models.associateBy { it.id }
+        knownModelsMap = predefined
+
+        val apiModels = try {
+            client.models().associateBy { it.id }.also {
                 apiConfigurationError = false
             }
         } catch (e: Throwable) {
             apiConfigurationError = true
             logger.error(e) { "Failed to fetch models from API" }
-            emptyList()
+            predefined
         }
 
-        knownModelsMap.clear()
-        knownModelsMap.putAll(
-            apiModelIds.associateWith {
-                LLModel(
-                    provider = provider,
-                    id = it,
-                    capabilities = listOf(),
-                    contextLength = 0,
-                )
-            },
-        )
-        knownModelsMap.putAll(info.predefinedModels)
+        knownModelsMap = apiModels
     }
 
     val modelTextFieldState = TextFieldState()
@@ -282,15 +272,10 @@ class WizardPageViewModel(
             firstMessageFlow.value = ""
             response.collect {
                 when (it) {
-                    is StreamFrame.Append -> {
-                        firstMessageFlow.value += it.text
-                    }
+                    is TextDelta -> firstMessageFlow.value += it.text
+                    is End -> firstMessageGenerated = true
 
-                    is StreamFrame.End -> {
-                        firstMessageGenerated = true
-                    }
-
-                    is StreamFrame.ToolCall -> {}
+                    else -> {}
                 }
                 apiConfigurationError = false
             }

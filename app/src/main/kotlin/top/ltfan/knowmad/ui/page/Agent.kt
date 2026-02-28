@@ -520,12 +520,7 @@ class AgentConfigPage : AgentSubPage() {
                 onAddModel = {
                     editingModel = it to LLMConfigEntity(
                         providerConfigId = it.id,
-                        model = LLModel(
-                            provider = it.provider,
-                            id = "",
-                            capabilities = emptyList(),
-                            contextLength = 0,
-                        ),
+                        model = LLModel(provider = it.provider, id = ""),
                     )
                 },
                 modifier = Modifier.fillMaxSize(),
