@@ -74,7 +74,6 @@ interface ChatDao : FtsDao {
     suspend fun insertMessage(
         message: MessageEntity,
         fileIds: List<Uuid>,
-        getUpdatedEntity: (MessageEntity) -> Unit = {},
     ): Long {
         val lastMessage = getLastMessageInCurrentTreeByConversation(message.conversationId)
         val updatedMessage = message.copy(
@@ -84,9 +83,7 @@ interface ChatDao : FtsDao {
         return insertMessageWithoutSettingBranch(
             message = updatedMessage,
             fileIds = fileIds,
-        ).also {
-            getUpdatedEntity(updatedMessage)
-        }
+        )
     }
 
     @Transaction
