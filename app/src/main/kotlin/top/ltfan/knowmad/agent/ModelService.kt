@@ -472,6 +472,12 @@ class ModelService : LifecycleService() {
                 }
 
                 run {
+                    val shouldContinue = includeEnvironmentContext ||
+                            contextMessages?.isNotEmpty() == true ||
+                            parts.isNotEmpty()
+
+                    if (!shouldContinue) return@run
+
                     val tempIds = mutableListOf<Uuid>()
                     chatDao.insertMessage(
                         message = MessageEntity(
@@ -480,7 +486,9 @@ class ModelService : LifecycleService() {
                                 if (includeEnvironmentContext) {
                                     add(environmentMessage.toUiMessage(display = false))
                                 }
-                                contextMessages?.let { addAll(it.allStored(tempIds)) }
+                                contextMessages?.takeIf { it.isNotEmpty() }?.let {
+                                    addAll(it.allStored(tempIds))
+                                }
                                 parts.takeIf { it.isNotEmpty() }?.let { parts ->
                                     add(
                                         Message.User(
