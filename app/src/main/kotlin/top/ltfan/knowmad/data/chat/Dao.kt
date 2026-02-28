@@ -90,7 +90,7 @@ interface ChatDao : FtsDao {
     suspend fun insertMessageAndGet(
         message: MessageEntity,
         fileIds: List<Uuid>,
-        getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit = {},
+        getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
     ): Long {
         return insertMessage(
             message = message,
