@@ -423,8 +423,10 @@ class ModelService : LifecycleService() {
 
         val isNewConversation = conversationId == null
         val conversationId = if (isNewConversation) {
-            createNewConversation().also {
-                onNewConversation?.invoke(it)
+            appDatabase.withTransaction {
+                createNewConversation().also {
+                    onNewConversation?.invoke(it)
+                }
             }.id
         } else {
             conversationId
