@@ -526,22 +526,6 @@ class ModelService : LifecycleService() {
                     )
                 }
 
-                if (generateConversationNameFromInitialInput && databaseMessages.isEmpty()) {
-                    defaultScope.launch {
-                        // TODO: use configured executor and model
-                        val title = generateConversationName(
-                            conversationId = conversationId,
-                            executor = service.promptExecutor,
-                            model = service.agentConfig.model,
-                        ) ?: return@launch
-                        conversationMutex.withLock {
-                            val updated = conversation.copy(name = title)
-                            chatDao.updateConversation(updated)
-                            conversation = updated
-                        }
-                    }
-                }
-
                 val state = AssistantMessageState.Streaming(
                     eventFlow = eventFlow,
                     model = service.agentConfig.model,
@@ -599,6 +583,22 @@ class ModelService : LifecycleService() {
                 beforeStart?.invoke();
 
                 {
+                    if (generateConversationNameFromInitialInput && databaseMessages.isEmpty()) {
+                        defaultScope.launch {
+                            // TODO: use configured executor and model
+                            val title = generateConversationName(
+                                conversationId = conversationId,
+                                executor = service.promptExecutor,
+                                model = service.agentConfig.model,
+                            ) ?: return@launch
+                            conversationMutex.withLock {
+                                val updated = conversation.copy(name = title)
+                                chatDao.updateConversation(updated)
+                                conversation = updated
+                            }
+                        }
+                    }
+
                     this@task.runAgent(
                         state = state,
                         eventFlow = eventFlow,
