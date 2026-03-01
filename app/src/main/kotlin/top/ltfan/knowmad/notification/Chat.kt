@@ -144,6 +144,7 @@ fun Context.showChatNotification(
         setNumber(unreadCount)
         setCategory(NotificationCompat.CATEGORY_MESSAGE)
         setContentIntent(getChatPendingIntent(conversationId))
+        setBubbleMetadata(getBubbleMetadata(conversationId))
     }.build()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -159,12 +160,8 @@ fun Context.showChatNotification(
 fun Context.getBubbleMetadata(
     conversationId: Uuid,
 ): NotificationCompat.BubbleMetadata? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-    NotificationCompat.BubbleMetadata.Builder(
-        conversationId.toString(),
-    ).apply {
+    NotificationCompat.BubbleMetadata.Builder(conversationId.toString()).apply {
         setDesiredHeight(600)
-        setAutoExpandBubble(true)
-        setSuppressNotification(true)
     }.build()
 } else {
     NotificationCompat.BubbleMetadata.Builder(
