@@ -143,6 +143,7 @@ class AgentMainPage : AgentSubPage() {
                 }
             },
             drawerState = viewModel.drawerState,
+            gesturesEnabled = !appViewModel.partial,
             scrimColor = DrawerScrimColor,
         ) {
             Scaffold(
