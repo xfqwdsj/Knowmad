@@ -125,22 +125,22 @@ class ServiceConnection<T : Service>(
 }
 
 sealed interface ServiceConnectionStatus<T : Service> {
-    class Connecting<T : Service>(val at: Instant = Clock.System.now()) :
+    data class Connecting<T : Service>(val at: Instant = Clock.System.now()) :
         ServiceConnectionStatus<T>
 
-    class Connected<T : Service>(val service: T) : ServiceConnectionStatus<T>
+    data class Connected<T : Service>(val service: T) : ServiceConnectionStatus<T>
 
     sealed interface BindingError<T : Service> : ServiceConnectionStatus<T>
 
-    class WrongBinding<T : Service>(val name: ComponentName?, val service: IBinder?) :
+    data class WrongBinding<T : Service>(val name: ComponentName?, val service: IBinder?) :
         BindingError<T>
 
-    class NullBinding<T : Service>(val name: ComponentName?) : BindingError<T>
+    data class NullBinding<T : Service>(val name: ComponentName?) : BindingError<T>
 
-    class Disconnected<T : Service>(val name: ComponentName?) : ServiceConnectionStatus<T>
+    data class Disconnected<T : Service>(val name: ComponentName?) : ServiceConnectionStatus<T>
 
     sealed interface Closed<T : Service> : ServiceConnectionStatus<T>
 
-    class Died<T : Service>(val name: ComponentName?) : Closed<T>
+    data class Died<T : Service>(val name: ComponentName?) : Closed<T>
     class Unbounded<T : Service> : Closed<T>
 }
