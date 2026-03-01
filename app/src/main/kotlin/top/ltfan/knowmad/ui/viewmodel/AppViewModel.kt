@@ -68,7 +68,10 @@ import top.ltfan.knowmad.util.collectAsState
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+class AppViewModel(
+    app: KnowmadApplication,
+    val partial: Boolean = false,
+) : AndroidViewModel<KnowmadApplication>(app) {
     private val logger = Logger("AppViewModel")
 
     val backStack = NavBackStack<Route>()
@@ -83,13 +86,15 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     )
 
     init {
-        viewModelScope.launch {
-            if (wizardStateStore.data.first().data == null) {
-                backStack.add(WizardPage())
-            } else {
-                navigateToMainPage()
+        if (!partial) {
+            viewModelScope.launch {
+                if (wizardStateStore.data.first().data == null) {
+                    backStack.add(WizardPage())
+                } else {
+                    navigateToMainPage()
+                }
+                appReady = true
             }
-            appReady = true
         }
     }
 

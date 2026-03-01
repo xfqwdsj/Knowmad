@@ -42,8 +42,8 @@
         <activity
             android:name=".MainActivity"
             android:allowEmbedded="true"
+            android:documentLaunchMode="intoExisting"
             android:exported="true"
-            android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustNothing">
 
@@ -51,6 +51,10 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <data android:scheme="knowmad-chat" />
             </intent-filter>
 
             <intent-filter android:label="@string/schedule_import_label">

@@ -63,7 +63,10 @@ class MainActivity : KnowmadActivity() {
     val viewModel: AppViewModel by viewModels {
         viewModelFactory {
             addInitializer(AppViewModel::class) {
-                AppViewModel(application as KnowmadApplication)
+                AppViewModel(
+                    app = application as KnowmadApplication,
+                    partial = intent?.data?.toConversationIdFromChatLink() != null,
+                )
             }
         }
     }
@@ -123,11 +126,16 @@ class MainActivity : KnowmadActivity() {
             val conversationId = data.toConversationIdFromChatLink()
             if (conversationId != null) {
                 lifecycleScope.launch {
-                    snapshotFlow { viewModel.appReady }.filter { it }.first()
-                    agentViewModel.currentConversationId = conversationId
+                    if (!viewModel.partial) {
+                        snapshotFlow { viewModel.appReady }.filter { it }.first()
+                    }
                     if (viewModel.backStack.lastOrNull() !is AgentPage) {
                         viewModel.backStack.add(AgentPage())
                     }
+                    if (viewModel.partial) {
+                        viewModel.appReady = true
+                    }
+                    agentViewModel.currentConversationId = conversationId
                 }
                 return
             }

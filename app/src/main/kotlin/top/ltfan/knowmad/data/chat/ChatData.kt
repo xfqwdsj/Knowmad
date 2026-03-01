@@ -76,8 +76,6 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 const val CHAT_LINK_SCHEME = "knowmad-chat"
-const val CHAT_LINK_DEFAULT_FLAGS = Intent.FLAG_ACTIVITY_CLEAR_TOP or
-        Intent.FLAG_ACTIVITY_SINGLE_TOP
 
 const val ATTACHMENT_STORAGE_PATH = "attachments"
 const val ATTACHMENT_STORAGE_SCHEME = "knowmad-attachment"
@@ -93,16 +91,18 @@ fun Uuid.toChatLink(): Uri = Uri.Builder().apply {
 
 fun Context.getChatIntent(
     conversationId: Uuid,
-    flags: Int = CHAT_LINK_DEFAULT_FLAGS,
+    flags: Int? = null,
 ) = Intent(this, MainActivity::class.java).apply {
     action = Intent.ACTION_VIEW
     data = conversationId.toChatLink()
-    this.flags = flags
+    if (flags != null) {
+        this.flags = flags
+    }
 }
 
 fun Context.getChatPendingIntent(
     conversationId: Uuid,
-    flags: Int = CHAT_LINK_DEFAULT_FLAGS,
+    flags: Int? = null,
 ): PendingIntent = PendingIntentCompat.getActivity(
     this,
     conversationId.hashCode(),

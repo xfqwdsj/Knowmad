@@ -164,6 +164,7 @@ class AgentMainPage : AgentSubPage() {
                             interactionSource = remember { MutableInteractionSource() },
                         ),
                         navigationIcon = {
+                            if (appViewModel.partial) return@CenterAlignedTopAppBar
                             TooltipBox(
                                 TooltipDefaults.rememberTooltipPositionProvider(
                                     TooltipAnchorPosition.Below,
@@ -208,20 +209,22 @@ class AgentMainPage : AgentSubPage() {
                                     }
                                 }
                             }
-                            TooltipBox(
-                                TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Below,
-                                ),
-                                tooltip = {
-                                    PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
-                                },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(onClick = { viewModel.newConversation() }) {
-                                    Icon(
-                                        painterResource(R.drawable.edit_square_24px),
-                                        contentDescription = stringResource(R.string.agent_conversation_label_new),
-                                    )
+                            if (!appViewModel.partial) {
+                                TooltipBox(
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
+                                    },
+                                    state = rememberTooltipState(),
+                                ) {
+                                    IconButton(onClick = { viewModel.newConversation() }) {
+                                        Icon(
+                                            painterResource(R.drawable.edit_square_24px),
+                                            contentDescription = stringResource(R.string.agent_conversation_label_new),
+                                        )
+                                    }
                                 }
                             }
                         },
