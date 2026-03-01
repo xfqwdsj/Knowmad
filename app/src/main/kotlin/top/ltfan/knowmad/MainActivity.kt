@@ -18,12 +18,14 @@
 
 package top.ltfan.knowmad
 
+import android.app.ActivityManager
 import android.app.PictureInPictureParams
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
@@ -141,6 +143,21 @@ class MainActivity : KnowmadActivity() {
                     if (appPartial) {
                         viewModel.appReady = true
                     }
+                    val conversation = agentViewModel.chatDao.getConversationById(conversationId)
+                    if (conversation == null) {
+                        logger.error { "Conversation not found for ID: $conversationId" }
+                        finish()
+                        return@launch
+                    }
+                    val description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ActivityManager.TaskDescription.Builder().apply {
+                            setLabel(conversation.name)
+                        }.build()
+                    } else {
+                        @Suppress("DEPRECATION")
+                        ActivityManager.TaskDescription(conversation.name)
+                    }
+                    setTaskDescription(description)
                 }
                 return
             }
@@ -154,8 +171,6 @@ class MainActivity : KnowmadActivity() {
     }
 
     private fun Uri.handleIcsFile() {
-        val logger = Logger("handleIcsFile")
-
         lifecycleScope.launch(Dispatchers.IO) {
             val content = runCatching {
                 contentResolver.openInputStream(this@handleIcsFile)?.use {
@@ -200,6 +215,7 @@ class MainActivity : KnowmadActivity() {
     }
 
     companion object {
+        private val logger = Logger("MainActivity")
         val pipEventFlow = MutableSharedFlow<PipEvent>()
     }
 
