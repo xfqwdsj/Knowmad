@@ -104,7 +104,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 class ModelService : LifecycleService() {
-    private val defaultScope by lazy { lifecycleScope + Dispatchers.Default }
+    private val defaultScope = lifecycleScope + Dispatchers.Default
 
     private val appDatabase by lazy { AppDatabase.get() }
 
