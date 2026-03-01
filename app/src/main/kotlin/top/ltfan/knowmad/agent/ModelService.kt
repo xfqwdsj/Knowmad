@@ -146,9 +146,9 @@ class ModelService : LifecycleService() {
     private val chatAgentToolRegistry by lazy {
         ToolRegistry {
             timeTool(application.resources, chatAgentStyle = true)
-            scheduleTools(application.resources, scheduleDao)
+            scheduleTools(application, scheduleDao)
             gatherToolsTool(application.resources) {
-                scheduleToolsExtended(application.resources, scheduleDao) {
+                scheduleToolsExtended(application, scheduleDao) {
                     codeRunnerTools[it.components] = it
                 }
             }

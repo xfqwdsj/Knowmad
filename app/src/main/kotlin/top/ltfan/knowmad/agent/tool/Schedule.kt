@@ -23,6 +23,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import android.content.Context
 import android.content.res.Resources
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -45,6 +46,7 @@ import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toFormattedAgentTimeList
 import top.ltfan.knowmad.data.schedule.toReminders
+import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
@@ -55,16 +57,22 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 fun ToolRegistry.Builder.scheduleTools(
-    resources: Resources, dao: ScheduleDao,
+    context: Context, dao: ScheduleDao,
 ) {
+    val context = context.applicationContext
+    val resources = context.resources
+
     tool(ScheduleTools.QuerySemestersTool(resources, dao))
     tool(ScheduleTools.QueryEventsTool(resources, dao))
 }
 
 fun ToolRegistry.Builder.scheduleToolsExtended(
-    resources: Resources, dao: ScheduleDao, registerCodeRunner: (CodeRunnerTool) -> Unit,
+    context: Context, dao: ScheduleDao, registerCodeRunner: (CodeRunnerTool) -> Unit,
 ) {
-    tool(ScheduleTools.ImportFromICalendarTool(resources, dao).also(registerCodeRunner))
+    val context = context.applicationContext
+    val resources = context.resources
+
+    tool(ScheduleTools.ImportFromICalendarTool(context, dao).also(registerCodeRunner))
     tool(ScheduleTools.SearchSemestersTool(resources, dao))
     tool(ScheduleTools.CreateSemesterTool(resources, dao))
     tool(ScheduleTools.UpdateSemesterTool(resources, dao))
@@ -72,25 +80,25 @@ fun ToolRegistry.Builder.scheduleToolsExtended(
     tool(ScheduleTools.CreateCoursesTool(resources, dao))
     tool(ScheduleTools.UpdateCourseTool(resources, dao))
     tool(ScheduleTools.SearchEventsTool(resources, dao))
-    tool(ScheduleTools.CreateEventsTool(resources, dao))
-    tool(ScheduleTools.UpdateEventTool(resources, dao))
+    tool(ScheduleTools.CreateEventsTool(context, dao))
+    tool(ScheduleTools.UpdateEventTool(context, dao))
 }
 
 object ScheduleTools {
     private val logger = Logger("ScheduleTools")
 
     class ImportFromICalendarTool(
-        private val resources: Resources,
+        private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<ImportFromICalendarTool.Args, ImportFromICalendarTool.Result>(
         argsSerializer = Args.serializer(),
         resultSerializer = Result.serializer(),
         descriptor = ToolDescriptor(
             name = "import_from_icalendar",
-            description = resources.getString(R.string.llm_tool_schedule_import_from_icalendar_description),
+            description = context.getString(R.string.llm_tool_schedule_import_from_icalendar_description),
         ),
     ), CodeRunnerTool, MessageWhenGatheringTool {
-        override suspend fun execute(args: Args) = Result(resources)
+        override suspend fun execute(args: Args) = Result(context.resources)
 
         @Serializable
         @SerialName("Args")
@@ -119,7 +127,7 @@ object ScheduleTools {
 
                 val events = dao.importFromICalendar(
                     iCalendar = iCal,
-                    resources = resources,
+                    resources = context.resources,
                     errors = errors,
                 ).getOrThrow()
 
@@ -130,6 +138,8 @@ object ScheduleTools {
                 events.size
             }
 
+            context.requestCalendarSync(fullSync = false)
+
             return iCalendarImportResultMessage(
                 successCount = result.getOrNull(),
                 throwable = result.exceptionOrNull(),
@@ -139,7 +149,7 @@ object ScheduleTools {
 
         override val components by lazy { LanguageComponents }
 
-        override val messageWhenGathering = Json.encodeToJsonElement(Result(resources))
+        override val messageWhenGathering = Json.encodeToJsonElement(Result(context.resources))
 
         companion object {
             const val LANGUAGE_TAG = "ics icalendar-import"
@@ -891,26 +901,26 @@ object ScheduleTools {
     }
 
     class CreateEventsTool(
-        private val resources: Resources,
+        private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<CreateEventsTool.Args, CreateEventsTool.Result>(
         argsSerializer = Args.serializer(),
         resultSerializer = Result.serializer(),
         descriptor = ToolDescriptor(
             name = "create_events",
-            description = resources.getString(R.string.llm_tool_schedule_create_event_description),
-            optionalParameters = parameters(resources) + listOf(
+            description = context.getString(R.string.llm_tool_schedule_create_event_description),
+            optionalParameters = parameters(context.resources) + listOf(
                 ToolParameterDescriptor(
                     name = "iCalendarAcknowledgement",
-                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_icalendar_acknowledgement_description),
+                    description = context.getString(R.string.llm_tool_schedule_create_event_arg_icalendar_acknowledgement_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "list",
-                    description = resources.getString(R.string.llm_tool_schedule_create_event_arg_list_description),
+                    description = context.getString(R.string.llm_tool_schedule_create_event_arg_list_description),
                     type = ToolParameterType.List(
                         itemsType = ToolParameterType.Object(
-                            properties = parameters(resources),
+                            properties = parameters(context.resources),
                             requiredProperties = listOf(
                                 "semesterId",
                                 "startTime",
@@ -961,13 +971,13 @@ object ScheduleTools {
                 }
                 val insertResults = runCatching { dao.insertAllEvents(list) }
                     .onFailure { logger.error(it) { "Failed to insert events" } }
-                    .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
+                    .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
                 val insertedList = (list.asSequence() zip insertResults.asSequence())
                     .filter {
                         (it.second >= 0L).also { success ->
                             if (!success) {
                                 errors.add(
-                                    resources.getString(
+                                    context.getString(
                                         R.string.llm_tool_schedule_create_event_result_error_insertion_failed,
                                         it.first.name,
                                     ),
@@ -977,6 +987,7 @@ object ScheduleTools {
                     }
                     .map { it.first }
                     .toList()
+                context.requestCalendarSync(fullSync = false)
                 return Result.Success(
                     events = insertedList,
                     errors = errors.takeIf { it.isNotEmpty() },
@@ -1016,15 +1027,20 @@ object ScheduleTools {
             )
             val inserted = runCatching { dao.insertEvent(event) }
                 .onFailure { logger.error(it) { "Failed to insert event" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
-            return if (inserted >= 0L) Result.Success(
-                event = event,
-                errors = errors.takeIf { it.isNotEmpty() },
-            ) else Result.Failure(
-                resources.getString(
-                    R.string.llm_tool_schedule_create_event_result_failure_reason_insertion_failed,
-                ),
-            )
+                .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
+            return if (inserted >= 0L) {
+                context.requestCalendarSync(fullSync = false)
+                Result.Success(
+                    event = event,
+                    errors = errors.takeIf { it.isNotEmpty() },
+                )
+            } else {
+                Result.Failure(
+                    context.getString(
+                        R.string.llm_tool_schedule_create_event_result_failure_reason_insertion_failed,
+                    ),
+                )
+            }
         }
 
         private inline fun parseSemesterId(
@@ -1034,13 +1050,13 @@ object ScheduleTools {
         ): Uuid {
             if (semesterIdStr == null) {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
                 errors.add(error)
                 onError(error)
             }
             return Uuid.parseOrNull(semesterIdStr) ?: run {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_semester_id)
                 errors.add(error)
                 onError(error)
             }
@@ -1053,13 +1069,13 @@ object ScheduleTools {
         ): Instant {
             if (timeStr == null) {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
                 errors.add(error)
                 onError(error)
             }
             val time = Instant.parseOrNull(timeStr) ?: run {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_start_time)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_start_time)
                 errors.add(error)
                 onError(error)
             }
@@ -1073,13 +1089,13 @@ object ScheduleTools {
         ): Instant {
             if (timeStr == null) {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_fields_required)
                 errors.add(error)
                 onError(error)
             }
             val time = Instant.parseOrNull(timeStr) ?: run {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_end_time)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_end_time)
                 errors.add(error)
                 onError(error)
             }
@@ -1096,7 +1112,7 @@ object ScheduleTools {
             if (courseIdStr == null) {
                 if (name.isNullOrBlank() || location.isNullOrBlank()) {
                     val error =
-                        resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_name_location_required)
+                        context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_name_location_required)
                     errors.add(error)
                     onError(error)
                 }
@@ -1104,7 +1120,7 @@ object ScheduleTools {
             }
             val courseId = Uuid.parseOrNull(courseIdStr) ?: run {
                 val error =
-                    resources.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_course_id)
+                    context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_invalid_course_id)
                 errors.add(error)
                 onError(error)
             }
@@ -1124,7 +1140,7 @@ object ScheduleTools {
         ) = reminders?.mapNotNull {
             it.time?.let { timeStr ->
                 val time = Instant.parseOrNull(timeStr) ?: run {
-                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
+                    errors.add(context.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
                     return@let
                 }
                 return@mapNotNull Reminder(
@@ -1134,7 +1150,7 @@ object ScheduleTools {
             }
             it.offset?.let { offsetStr ->
                 val duration = Duration.parseOrNull(offsetStr) ?: run {
-                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
+                    errors.add(context.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
                     return@let
                 }
                 val related = it.related ?: Start
@@ -1293,76 +1309,76 @@ object ScheduleTools {
     }
 
     class UpdateEventTool(
-        private val resources: Resources,
+        private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<UpdateEventTool.Args, UpdateEventTool.Result>(
         argsSerializer = Args.serializer(),
         resultSerializer = Result.serializer(),
         descriptor = ToolDescriptor(
             name = "update_event",
-            description = resources.getString(R.string.llm_tool_schedule_update_event_description),
+            description = context.getString(R.string.llm_tool_schedule_update_event_description),
             requiredParameters = listOf(
                 ToolParameterDescriptor(
                     name = "eventId",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_event_id_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_event_id_description),
                     type = ToolParameterType.String,
                 ),
             ),
             optionalParameters = listOf(
                 ToolParameterDescriptor(
                     name = "name",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_name_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_name_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "instructor",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_instructor_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_instructor_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "location",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_location_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_location_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "startTime",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_start_time_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_start_time_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "endTime",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_end_time_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_end_time_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "color",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_color_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_color_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "reminders",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_reminders_description),
                     type = ToolParameterType.List(
                         itemsType = ToolParameterType.Object(
                             properties = listOf(
                                 ToolParameterDescriptor(
                                     name = "time",
-                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_time_description),
+                                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_time_description),
                                     type = ToolParameterType.String,
                                 ),
                                 ToolParameterDescriptor(
                                     name = "offset",
-                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_offset_description),
+                                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_offset_description),
                                     type = ToolParameterType.String,
                                 ),
                                 ToolParameterDescriptor(
                                     name = "related",
-                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_related_description),
+                                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_related_description),
                                     type = ToolParameterType.Enum(ICalendarTrigger.Relative.Related.entries),
                                 ),
                                 ToolParameterDescriptor(
                                     name = "displayText",
-                                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_display_text_description),
+                                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_reminders_property_display_text_description),
                                     type = ToolParameterType.String,
                                 ),
                             ),
@@ -1371,12 +1387,12 @@ object ScheduleTools {
                 ),
                 ToolParameterDescriptor(
                     name = "notes",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_notes_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_notes_description),
                     type = ToolParameterType.String,
                 ),
                 ToolParameterDescriptor(
                     name = "priority",
-                    description = resources.getString(R.string.llm_tool_schedule_update_event_arg_priority_description),
+                    description = context.getString(R.string.llm_tool_schedule_update_event_arg_priority_description),
                     type = ToolParameterType.Enum(ICalendarPriority.entries),
                 ),
             ),
@@ -1385,21 +1401,21 @@ object ScheduleTools {
         override suspend fun execute(args: Args): Result {
             val errors = mutableListOf<String>()
             val eventId = Uuid.parseOrNull(args.eventId)
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_event_id))
+                ?: return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_event_id))
             val existingEvent = runCatching { dao.getEventEntityById(eventId) }
                 .onFailure { logger.error(it) { "Failed to fetch existing event" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
-                ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_not_found))
+                .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
+                ?: return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_not_found))
             val name = args.name ?: existingEvent.name
             val instructor = args.instructor ?: existingEvent.instructor
             val location = args.location ?: existingEvent.location
             val instant1 = args.startTime?.let {
                 Instant.parseOrNull(it)
-                    ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_start_time))
+                    ?: return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_start_time))
             } ?: existingEvent.startTime
             val instant2 = args.endTime?.let {
                 Instant.parseOrNull(it)
-                    ?: return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_end_time))
+                    ?: return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_invalid_end_time))
             } ?: existingEvent.endTime
             val (start, end) = if (instant1 <= instant2) instant1 to instant2 else instant2 to instant1
             val color = args.color?.let { ICalendarColor.fromValue(it) }
@@ -1423,11 +1439,16 @@ object ScheduleTools {
             }
             val updated = runCatching { dao.updateEvent(newEvent) }
                 .onFailure { logger.error(it) { "Failed to update event" } }
-                .getOrElse { return Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
-            return if (updated > 0) Result.Success(
-                event = newEvent,
-                errors = errors.takeIf { it.isNotEmpty() },
-            ) else Result.Failure(resources.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_update_failed))
+                .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
+            return if (updated > 0) {
+                context.requestCalendarSync(fullSync = false)
+                Result.Success(
+                    event = newEvent,
+                    errors = errors.takeIf { it.isNotEmpty() },
+                )
+            } else {
+                Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_update_failed))
+            }
         }
 
         private fun parseReminders(
@@ -1436,7 +1457,7 @@ object ScheduleTools {
         ) = reminders?.mapNotNull {
             it.time?.let { timeStr ->
                 val time = Instant.parseOrNull(timeStr) ?: run {
-                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
+                    errors.add(context.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_time))
                     return@let
                 }
                 return@mapNotNull Reminder(
@@ -1446,7 +1467,7 @@ object ScheduleTools {
             }
             it.offset?.let { offsetStr ->
                 val duration = Duration.parseOrNull(offsetStr) ?: run {
-                    errors.add(resources.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
+                    errors.add(context.getString(R.string.llm_tool_schedule_create_event_result_error_invalid_reminder_offset))
                     return@let
                 }
                 val related = it.related ?: Start

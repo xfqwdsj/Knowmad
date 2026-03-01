@@ -52,6 +52,7 @@ import top.ltfan.knowmad.data.schedule.writeStandard
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.component.CalendarState
 import top.ltfan.knowmad.ui.component.MathJaxRenderer
 import top.ltfan.knowmad.ui.component.MathJaxRendererState
@@ -266,6 +267,8 @@ class AppViewModel(
         if (events.isEmpty()) {
             return failure(Throwable("No valid events found in the iCalendar data"))
         }
+
+        application.requestCalendarSync(fullSync = false)
 
         return success(events.size)
     }
