@@ -49,6 +49,7 @@ import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
 import top.ltfan.knowmad.data.schedule.toICalendar
 import top.ltfan.knowmad.data.schedule.writeCustomized
 import top.ltfan.knowmad.data.schedule.writeStandard
+import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
 import top.ltfan.knowmad.ui.component.CalendarState
@@ -64,7 +65,6 @@ import top.ltfan.knowmad.ui.page.WizardPage
 import top.ltfan.knowmad.ui.page.back
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
-import top.ltfan.knowmad.util.transform
 import kotlin.time.Clock
 import kotlin.time.Instant
 

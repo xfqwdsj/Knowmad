@@ -34,14 +34,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import top.ltfan.knowmad.ui.viewmodel.AndroidViewModel
@@ -53,6 +54,8 @@ import java.io.OutputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class AppDataStore<T>(
     serializer: KSerializer<T>,
@@ -118,42 +121,61 @@ class AppDataStore<T>(
 class DataStoreMutableStateProperty<T>(
     private val dataStore: AppDataStore<T>,
     coroutineScope: CoroutineScope,
-    initialValue: T = dataStore.defaultValue,
+    private val initialValue: T = dataStore.defaultValue,
 ) : ReadWriteProperty<Any?, T>, AutoCloseable {
     private val logger = Logger("DataStoreMutableStateProperty")
 
     private val job = SupervisorJob(coroutineScope.coroutineContext.job)
     private val coroutineScope = coroutineScope + job
 
-    private var state by mutableStateOf(initialValue)
+    private val stateMutex = Mutex()
+    private var state by mutableStateOf<T?>(null)
+
+    private var lastUpdate = Instant.DISTANT_PAST
+
+    private val writesBeforeFirstValue = Channel<(T) -> T>(Channel.UNLIMITED)
 
     private val writeRequest = Channel<T>(Channel.CONFLATED)
 
-    private suspend fun write(value: T) {
+    private suspend inline fun write(value: T) {
         dataStore.updateData { value }
     }
 
     init {
         coroutineScope.launch {
-            while (isActive) {
-                val syncJob = launch {
-                    dataStore.data.collect { diskValue ->
-                        if (writeRequest.isEmpty) {
-                            state = diskValue
-                        }
+            state = dataStore.data.first()
+
+            stateMutex.withLock {
+                writesBeforeFirstValue.close()
+
+                for (pendingWrite in writesBeforeFirstValue) {
+                    val newValue = pendingWrite(state ?: error("State should not be null here"))
+                    state = newValue
+                }
+            }
+
+            write(state ?: error("State should not be null here"))
+            lastUpdate = Clock.System.now()
+
+            launch {
+                dataStore.data.collect { diskValue ->
+                    stateMutex.withLock {
+                        if (!writeRequest.isEmpty) return@collect
+                        if (Clock.System.now() < lastUpdate) return@collect
+
+                        state = diskValue
                     }
                 }
+            }
 
-                val firstWrite = writeRequest.receive()
-                syncJob.cancelAndJoin()
-
-                var pendingWrite = firstWrite
+            for (pendingWrite in writeRequest) {
+                var finalWrite = pendingWrite
                 while (true) {
-                    pendingWrite = writeRequest.tryReceive().getOrNull() ?: break
+                    finalWrite = writeRequest.tryReceive().getOrNull() ?: break
                 }
 
                 try {
-                    write(pendingWrite)
+                    write(finalWrite)
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
                     logger.error(e) { "Failed to write data store value" }
@@ -162,13 +184,40 @@ class DataStoreMutableStateProperty<T>(
         }
     }
 
+    private suspend inline fun setValueInternal(value: T) {
+        stateMutex.withLock {
+            state = value
+            lastUpdate = Clock.System.now()
+            writeRequest.send(value)
+        }
+    }
+
+    var value
+        get() = state ?: initialValue
+        set(value) {
+            coroutineScope.launch(Dispatchers.Main.immediate) {
+                runCatching { writesBeforeFirstValue.send { value } }
+                    .onFailure { setValueInternal(value) }
+            }
+        }
+
     override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        return state
+        return value
     }
 
     override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-        state = value
-        writeRequest.trySend(value)
+        this.value = value
+    }
+
+    fun <R> transformedGet(transform: T.() -> R): R {
+        return value.transform()
+    }
+
+    fun <R> transformedSet(transform: T.(R) -> T, newValue: R) {
+        coroutineScope.launch(Dispatchers.Main.immediate) {
+            runCatching { writesBeforeFirstValue.send { it.transform(newValue) } }
+                .onFailure { setValueInternal(value.transform(newValue)) }
+        }
     }
 
     override fun close() {
@@ -238,5 +287,19 @@ class DatastoreSerializer<T>(
         withContext(Dispatchers.IO) {
             output.write(cbor.encodeToByteArray(serializer, t))
         }
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun <T, R, P : DataStoreMutableStateProperty<T>> P.transform(
+    noinline transformIn: T.() -> R,
+    noinline transformOut: T.(R) -> T,
+): ReadWriteProperty<Any?, R> = object : ReadWriteProperty<Any?, R> {
+    override fun getValue(thisRef: Any?, property: KProperty<*>): R {
+        return this@transform.transformedGet(transformIn)
+    }
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: R) {
+        this@transform.transformedSet(transformOut, value)
     }
 }
