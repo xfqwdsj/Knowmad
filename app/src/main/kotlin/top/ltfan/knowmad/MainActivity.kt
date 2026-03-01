@@ -122,10 +122,10 @@ class MainActivity : KnowmadActivity() {
         if (isViewAction && data != null) {
             val conversationId = data.toConversationIdFromChatLink()
             if (conversationId != null) {
-                if (viewModel.backStack.lastOrNull() !is AgentPage) {
-                    lifecycleScope.launch {
-                        snapshotFlow { viewModel.appReady }.filter { it }.first()
-                        agentViewModel.currentConversationId = conversationId
+                lifecycleScope.launch {
+                    snapshotFlow { viewModel.appReady }.filter { it }.first()
+                    agentViewModel.currentConversationId = conversationId
+                    if (viewModel.backStack.lastOrNull() !is AgentPage) {
                         viewModel.backStack.add(AgentPage())
                     }
                 }
