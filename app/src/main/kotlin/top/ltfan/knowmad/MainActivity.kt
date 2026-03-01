@@ -60,12 +60,14 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.Logger
 
 class MainActivity : KnowmadActivity() {
+    val appPartial by lazy { intent?.data?.toConversationIdFromChatLink() != null }
+
     val viewModel: AppViewModel by viewModels {
         viewModelFactory {
             addInitializer(AppViewModel::class) {
                 AppViewModel(
                     app = application as KnowmadApplication,
-                    partial = intent?.data?.toConversationIdFromChatLink() != null,
+                    partial = appPartial,
                 )
             }
         }
@@ -74,7 +76,10 @@ class MainActivity : KnowmadActivity() {
     val agentViewModel: AgentViewModel by viewModels {
         viewModelFactory {
             addInitializer(AgentViewModel::class) {
-                AgentViewModel(application as KnowmadApplication)
+                AgentViewModel(
+                    app = application as KnowmadApplication,
+                    partial = appPartial,
+                )
             }
         }
     }
@@ -126,16 +131,16 @@ class MainActivity : KnowmadActivity() {
             val conversationId = data.toConversationIdFromChatLink()
             if (conversationId != null) {
                 lifecycleScope.launch {
-                    if (!viewModel.partial) {
+                    if (!appPartial) {
                         snapshotFlow { viewModel.appReady }.filter { it }.first()
                     }
                     if (viewModel.backStack.lastOrNull() !is AgentPage) {
                         viewModel.backStack.add(AgentPage())
                     }
-                    if (viewModel.partial) {
+                    agentViewModel.currentConversationId = conversationId
+                    if (appPartial) {
                         viewModel.appReady = true
                     }
-                    agentViewModel.currentConversationId = conversationId
                 }
                 return
             }

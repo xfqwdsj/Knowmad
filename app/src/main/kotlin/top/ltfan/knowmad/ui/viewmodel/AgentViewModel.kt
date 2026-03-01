@@ -90,7 +90,10 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
-class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplication>(app) {
+class AgentViewModel(
+    app: KnowmadApplication,
+    private val partial: Boolean = false,
+) : AndroidViewModel<KnowmadApplication>(app) {
     private val defaultScope = viewModelScope + Dispatchers.Default
 
     private val logger = Logger("AgentViewModel")
@@ -130,12 +133,26 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
 
     var messageListLoading by mutableStateOf(false)
 
-    private val currentConversationIdFlow = chatDataStateFlow.map { it.conversation }
-        .distinctUntilChanged()
-    var currentConversationId by chatData.transform(
-        transformIn = { conversation },
-        transformOut = { copy(conversation = it) },
-    )
+    val currentConversationIdMutableState = partial.takeIf { it }?.let {
+        mutableStateOf<Uuid?>(null)
+    }
+    var currentConversationId: Uuid?
+        get() {
+            return if (!partial) {
+                chatData.transformedGet { conversation }
+            } else {
+                currentConversationIdMutableState?.value
+            }
+        }
+        set(value) {
+            if (!partial) {
+                chatData.transformedSet(value) { copy(conversation = it) }
+            } else {
+                currentConversationIdMutableState?.value = value
+            }
+        }
+    private val currentConversationIdFlow = snapshotFlow { currentConversationId }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, currentConversationId)
 
     init {
         viewModelScope.launch {
