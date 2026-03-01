@@ -55,6 +55,11 @@
 
             <intent-filter>
                 <data android:scheme="knowmad-chat" />
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
 
             <intent-filter android:label="@string/schedule_import_label">
@@ -70,6 +75,7 @@
                 <data android:scheme="content" />
                 <data android:host="*" />
                 <data android:pathPattern=".*\\.ics" />
+                <data android:pathPattern=".*\\..*\\.ics" />
             </intent-filter>
         </activity>
 
