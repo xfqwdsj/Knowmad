@@ -148,10 +148,18 @@ class AppViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicatio
     }
 
     val standaloneAgentScreenIndex inline get() = backStack.indexOfLast { it is AgentPage }
+    val canExitStandaloneAgentScreen inline get() = backStack.size > 1
 
     fun switchStandaloneAgentScreen() {
         val index = standaloneAgentScreenIndex
         if (index != -1) {
+            if (!canExitStandaloneAgentScreen) return
+            if (index != backStack.lastIndex) {
+                for (i in backStack.lastIndex downTo index + 1) {
+                    backStack.removeAt(i)
+                }
+                return
+            }
             backStack.removeAt(index)
         } else {
             backStack.add(AgentPage())

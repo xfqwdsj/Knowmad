@@ -186,24 +186,26 @@ class AgentMainPage : AgentSubPage() {
                             }
                         },
                         actions = {
-                            TooltipBox(
-                                TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Below,
-                                ),
-                                tooltip = {
-                                    PlainTooltip {
-                                        Text(stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter))
-                                    }
-                                },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = { appViewModel.switchStandaloneAgentScreen() },
+                            if (!LocalAgentScreenIsStandalone.current || appViewModel.canExitStandaloneAgentScreen) {
+                                TooltipBox(
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip {
+                                            Text(stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter))
+                                        }
+                                    },
+                                    state = rememberTooltipState(),
                                 ) {
-                                    Icon(
-                                        painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
-                                        contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
-                                    )
+                                    IconButton(
+                                        onClick = { appViewModel.switchStandaloneAgentScreen() },
+                                    ) {
+                                        Icon(
+                                            painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
+                                            contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
+                                        )
+                                    }
                                 }
                             }
                             TooltipBox(
