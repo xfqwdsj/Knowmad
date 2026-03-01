@@ -154,7 +154,7 @@ fun getChatAgentService(
                                     )
                                     eventFlow.emit(
                                         AssistantMessageStreamingEvent.SetMessage(
-                                            partIndex = ++partIndex,
+                                            partIndex = partIndex,
                                             message = toolCall,
                                         ),
                                     )
