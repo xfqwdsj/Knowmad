@@ -452,10 +452,10 @@ class ModelService : LifecycleService() {
 
         val updateChannel = Channel<Unit>(Channel.CONFLATED)
 
+        val conversationMutex = Mutex()
+
         val agentDeferred = appDatabase.withTransaction {
             bind {
-                val conversationMutex = Mutex()
-
                 var conversation =
                     chatDao.getConversationById(conversationId) ?: return@bind null
 
@@ -562,27 +562,27 @@ class ModelService : LifecycleService() {
                             branchCount = it.branchCount,
                         )
                     }
-                }
-
-                val conversationToolRegistry = ToolRegistry {
-                    conversationTools(
-                        resources = application.resources,
-                        mutex = conversationMutex,
-                        getConversation = { conversation },
-                        setConversation = { chatDao.updateConversation(it) },
-                    )
-                }
-
-                val tools = if (tools != null) {
-                    tools + conversationToolRegistry
-                } else {
-                    conversationToolRegistry
-                }
-
-                logger.debug { "Running agent..." }
-                beforeStart?.invoke();
+                };
 
                 {
+                    val conversationToolRegistry = ToolRegistry {
+                        conversationTools(
+                            resources = application.resources,
+                            mutex = conversationMutex,
+                            getConversation = { conversation },
+                            setConversation = { chatDao.updateConversation(it) },
+                        )
+                    }
+
+                    val tools = if (tools != null) {
+                        tools + conversationToolRegistry
+                    } else {
+                        conversationToolRegistry
+                    }
+
+                    logger.debug { "Running agent..." }
+                    beforeStart?.invoke()
+
                     if (generateConversationNameFromInitialInput && databaseMessages.isEmpty()) {
                         defaultScope.launch {
                             // TODO: use configured executor and model
