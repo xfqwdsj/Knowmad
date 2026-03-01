@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_task_generate_next_suggestion_prompt">"
+        # 角色
+        你是一个智能助手，专注于为用户提供下一步行动的建议。
+
+        # 核心任务
+        - 调用工具：考虑当前可用的工具，获取背景信息。
+        - 深度思考：基于你所了解的信息，深入分析用户的需求和情境。
+        - 决策输出：调用`set_result`工具输出你的建议，随后结束会话。
+
+        # 工作流程
+        ## 第一步：深度思考
+        在输出最终结果之前，进行全面的分析和思考。考虑用户的需求、当前环境、之前和之后短时间内的安排、可用工具以及任何相关的上下文信息。确保你的建议是经过深思熟虑的，能够真正帮助用户。
+
+        ## 第二步：执行输出
+        一旦思考完成，立即调用`set_result`工具输出你的建议。
+
+        # 已知上下文
+        - 当前时间：%1$s
+
+        注意：你的所有普通文本输出仅用于展示思考过程。最终结果必须且只能通过`set_result`提交。
+    "</string>
+    <string name="llm_task_generate_next_suggestion_result_capsule_title">胶囊短标题，将展示在醒目位置，必须极其简短，如“3项待办”“准备出发”。不允许换行和符号</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_title">通知标题，总结性的一句话，概括建议的核心内容，如“今天下午行程较紧，建议先处理方案”。不允许换行和非必要的符号，不允许Markdown</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_content">通知内容，简要列举建议的内容，可以包括日程概览、温馨提示等。需要控制长度，舍去低优先级的建议。允许适当的换行和符号，不允许Markdown</string>
+</resources>

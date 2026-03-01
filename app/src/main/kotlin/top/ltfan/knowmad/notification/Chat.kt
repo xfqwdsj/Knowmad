@@ -27,7 +27,6 @@ import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
@@ -42,35 +41,6 @@ import top.ltfan.knowmad.data.chat.getChatIntent
 import top.ltfan.knowmad.data.chat.getChatPendingIntent
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
-
-const val UserPersonId = "user"
-const val AssistantPersonId = "019c0c33-1400-7442-a182-60384f02b954"
-
-val UserPersonBuilder = Person.Builder().apply {
-    setKey(UserPersonId)
-    setImportant(true)
-}
-
-val AssistantPersonBuilder = Person.Builder().apply {
-    setKey(AssistantPersonId)
-}
-
-fun Resources.getUserPerson(): Person {
-    return UserPersonBuilder.setName(getString(R.string.person_label_you)).build()
-}
-
-fun Resources.getAssistantPerson(): Person {
-    return AssistantPersonBuilder.setName(getString(R.string.person_label_ai)).build()
-}
-
-const val AiMessageChannelId = "ai_message"
-
-fun Resources.getAiNotificationChannel() = NotificationChannelCompat.Builder(
-    AiMessageChannelId,
-    NotificationManagerCompat.IMPORTANCE_DEFAULT,
-).apply {
-    setName(getString(R.string.notification_channel_ai_message_label))
-}.build()
 
 fun Resources.getChatRemoteInput(
     quickReplies: List<String>? = null,

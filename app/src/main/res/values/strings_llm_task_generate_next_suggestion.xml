@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="llm_task_generate_next_suggestion_prompt">"
+        # Role
+        You are an intelligent assistant focused on providing users with suggestions for their next course of action.
+
+        # Core Tasks
+        - Tool Invocation: Consider the currently available tools and invoke them to gather necessary background information.
+        - Deep Thinking: Based on the information acquired, perform a profound analysis of the user\'s needs and current context.
+        - Decision Output: Call the `set_result` tool to output your suggestions, then terminate the session.
+
+        # Workflow
+        ## Step 1: Deep Thinking
+        Before outputting the final result, conduct a comprehensive analysis and reflection. Consider the user\'s needs, the current environment, schedules in the immediate past and near future, available tools, and any relevant contextual information. Ensure your suggestions are well-thought-out and truly beneficial to the user.
+
+        ## Step 2: Execute Output
+        Once your thinking process is complete, immediately invoke the `set_result` tool to submit your suggestions.
+
+        # Known Context
+        - Current Time: %1$s
+
+        Note: All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `set_result`.
+    "</string>
+    <string name="llm_task_generate_next_suggestion_result_capsule_title">Capsule short title. Displayed in a prominent position; must be extremely brief, such as \"3 Tasks\" or \"Ready to go\". No line breaks or symbols allowed.</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_title">Notification title. A single summary sentence capturing the core of the suggestion, such as \"Busy afternoon ahead; suggest prioritizing the proposal.\" No line breaks, unnecessary symbols, or Markdown allowed.</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_content">Notification content. List suggestions with extreme brevity; include only the most critical schedule overviews or tips. You MUST prioritize high-value information and omit low-priority details to keep it very short. Appropriate line breaks and symbols are allowed. Markdown is not allowed.</string>
+</resources>

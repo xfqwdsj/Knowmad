@@ -20,10 +20,12 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".application.KnowmadApplication"
@@ -81,6 +83,10 @@
 
         <receiver
             android:name=".notification.ReplyReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".notification.SuggestionRequestReceiver"
             android:exported="false" />
 
         <service

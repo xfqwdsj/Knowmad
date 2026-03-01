@@ -64,6 +64,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.task.suggestion.generateAndShowNextSuggestion
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.gatherToolsTool
@@ -724,7 +725,7 @@ class ModelService : LifecycleService() {
 
     fun showNotification(conversationId: Uuid) {
         lifecycleScope.launch {
-            val service = chatAgentServiceFlow.value ?: return@launch
+            val service = chatAgentServiceFlow.filterNotNull().first()
             val summary = generateAssistantMessageSummary(
                 conversationId = conversationId,
                 executor = service.promptExecutor,

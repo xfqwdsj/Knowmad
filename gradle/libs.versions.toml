@@ -8,6 +8,8 @@ ksp = "2.3.5"
 agp = "9.2.0-alpha02"
 okio = "3.16.4"
 leakcanary = "2.14"
+androidx-core = "1.17.0"
+androidx-work = "2.11.1"
 androidx-test = "1.7.0"
 paging = "3.4.1"
 room = "2.8.4"
@@ -49,6 +51,8 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
+androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-work" }
 androidx-test-core = { module = "androidx.test:core-ktx", version.ref = "androidx-test" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test" }
 paging = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
@@ -105,6 +109,8 @@ all = [
     # okio
     "okio",
     # androidx
+    "androidx-core",
+    "androidx-work",
     "paging",
     "paging-compose",
     "room-runtime",

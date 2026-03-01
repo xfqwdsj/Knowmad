@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.notification.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.sync.getOrCreateSyncAccount
 import top.ltfan.knowmad.util.isMainProcess
 
@@ -41,6 +42,7 @@ class KnowmadApplication : Application() {
             CoroutineScope(Dispatchers.IO).launch {
                 getOrCreateSyncAccount()
             }
+            scheduleNextSuggestionGeneration()
         }
     }
 }
