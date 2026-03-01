@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.data.chat
 
+import android.content.Context
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
@@ -28,6 +29,8 @@ import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import top.ltfan.knowmad.data.FtsDao
+import top.ltfan.knowmad.notification.pushChatShortcut
+import top.ltfan.knowmad.notification.removeChatShortcut
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -35,6 +38,12 @@ import kotlin.uuid.Uuid
 interface ChatDao : FtsDao {
     @Insert
     suspend fun insertConversation(conversation: ConversationEntity): Long
+
+    @Transaction
+    suspend fun insertConversation(conversation: ConversationEntity, context: Context): Long {
+        context.pushChatShortcut(conversation.id, conversation.name)
+        return insertConversation(conversation)
+    }
 
     @Insert
     suspend fun insertMessageInternalUnsafe(message: MessageEntity): Long
@@ -182,6 +191,12 @@ interface ChatDao : FtsDao {
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity): Int
 
+    @Transaction
+    suspend fun deleteConversation(conversation: ConversationEntity, context: Context): Int {
+        context.removeChatShortcut(conversation.id)
+        return deleteConversation(conversation)
+    }
+
     @Delete
     suspend fun deleteMessage(message: MessageEntity): Int
 
@@ -197,6 +212,12 @@ interface ChatDao : FtsDao {
             updatedAt = Clock.System.now(),
         )
         return updateConversationWithoutInstant(updatedConversation)
+    }
+
+    @Transaction
+    suspend fun updateConversation(conversation: ConversationEntity, context: Context): Int {
+        context.pushChatShortcut(conversation.id, conversation.name)
+        return updateConversation(conversation)
     }
 
     @Update

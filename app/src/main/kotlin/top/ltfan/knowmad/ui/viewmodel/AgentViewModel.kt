@@ -240,7 +240,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         onFinished: () -> Unit = {},
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            application.appDatabase.chatDao().updateConversation(conversation)
+            chatDao.updateConversation(conversation, application)
             onFinished()
         }
     }
@@ -260,11 +260,10 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val dao = application.appDatabase.chatDao()
-            dao.deleteConversation(conversation)
+            chatDao.deleteConversation(conversation, application)
             onDeleted {
                 viewModelScope.launch(Dispatchers.IO) {
-                    dao.insertConversation(conversation)
+                    chatDao.insertConversation(conversation, application)
                 }
             }
         }
@@ -480,7 +479,7 @@ class AgentViewModel(app: KnowmadApplication) : AndroidViewModel<KnowmadApplicat
                 viewModelScope.launch {
                     val newTitle = generateConversationName(conversationId) ?: return@launch
                     val conversation = chatDao.getConversationById(conversationId) ?: return@launch
-                    chatDao.updateConversation(conversation.copy(name = newTitle))
+                    chatDao.updateConversation(conversation.copy(name = newTitle), application)
                 }
             },
         )

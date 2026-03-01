@@ -179,6 +179,7 @@ fun Context.pushChatShortcut(conversationId: Uuid, conversationName: String) {
     val intent = getChatIntent(conversationId)
 
     val shortcut = ShortcutInfoCompat.Builder(this, shortcutId).apply {
+        setIcon(IconCompat.createWithResource(this@pushChatShortcut, R.mipmap.ic_launcher))
         setShortLabel(conversationName)
         setLongLived(true)
         setIntent(intent)
@@ -186,6 +187,10 @@ fun Context.pushChatShortcut(conversationId: Uuid, conversationName: String) {
     }.build()
 
     ShortcutManagerCompat.pushDynamicShortcut(this, shortcut)
+}
+
+fun Context.removeChatShortcut(conversationId: Uuid) {
+    ShortcutManagerCompat.removeDynamicShortcuts(this, listOf(conversationId.toString()))
 }
 
 data class NotificationMessage(

@@ -184,7 +184,7 @@ class ModelService : LifecycleService() {
         val conversation = ConversationEntity(
             name = application.getString(R.string.agent_conversation_label_new),
         )
-        chatDao.insertConversation(conversation)
+        chatDao.insertConversation(conversation, application)
         return conversation
     }
 
@@ -541,7 +541,7 @@ class ModelService : LifecycleService() {
                         launch {
                             conversationMutex.withLock {
                                 val updated = conversation.copy(meta = newMeta)
-                                chatDao.updateConversation(updated)
+                                chatDao.updateConversation(updated, application)
                                 conversation = updated
                             }
                         }
@@ -570,7 +570,7 @@ class ModelService : LifecycleService() {
                             resources = application.resources,
                             mutex = conversationMutex,
                             getConversation = { conversation },
-                            setConversation = { chatDao.updateConversation(it) },
+                            setConversation = { chatDao.updateConversation(it, application) },
                         )
                     }
 
@@ -593,7 +593,7 @@ class ModelService : LifecycleService() {
                             ) ?: return@launch
                             conversationMutex.withLock {
                                 val updated = conversation.copy(name = title)
-                                chatDao.updateConversation(updated)
+                                chatDao.updateConversation(updated, application)
                                 conversation = updated
                             }
                         }
