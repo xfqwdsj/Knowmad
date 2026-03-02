@@ -213,7 +213,7 @@ class DataStoreMutableStateProperty<T>(
         return value.transform()
     }
 
-    fun <R> transformedSet(newValue: R, transform: T.(R) -> T,) {
+    fun <R> transformedSet(newValue: R, transform: T.(R) -> T) {
         coroutineScope.launch(Dispatchers.Main.immediate) {
             runCatching { writesBeforeFirstValue.send { it.transform(newValue) } }
                 .onFailure { setValueInternal(value.transform(newValue)) }
