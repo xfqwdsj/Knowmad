@@ -230,19 +230,27 @@ abstract class DataStoreCompanion<T> {
     abstract val default: T
     abstract fun serializer(): KSerializer<T>
 
+    private val lock = Any()
+
     private var _instance: AppDataStore<T>? = null
 
     context(context: Context)
     fun createDataStore(
         coroutineScope: CoroutineScope,
-    ) = _instance ?: AppDataStore(
-        serializer = serializer(),
-        defaultValue = default,
-        scope = coroutineScope + Dispatchers.IO,
-        produceFile = { context.applicationContext.dataStoreFile(fileName) },
-    ).also {
-        _instance = it
+    ) = synchronized(lock) {
+        _instance ?: AppDataStore(
+            serializer = serializer(),
+            defaultValue = default,
+            scope = coroutineScope + Dispatchers.IO,
+            produceFile = { context.applicationContext.dataStoreFile(fileName) },
+        ).also {
+            _instance = it
+        }
     }
+
+    @JvmName("_createDataStore")
+    context(context: Context, coroutineScope: CoroutineScope)
+    fun createDataStore() = context(context) { createDataStore(coroutineScope) }
 
     context(viewModel: AndroidViewModel<*>)
     fun createDataStore() = context(viewModel.application) {

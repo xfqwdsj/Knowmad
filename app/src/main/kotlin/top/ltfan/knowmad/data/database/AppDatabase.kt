@@ -98,15 +98,19 @@ abstract class AppDatabase : RoomDatabase() {
     companion object : DatabaseCompanion<AppDatabase> {
         override val databaseName = "db"
 
-        private var instance: AppDatabase? = null
+        private val lock = Any()
+
+        private var _instance: AppDatabase? = null
 
         context(context: Context)
-        override fun get() = instance ?: Room.databaseBuilder(
-            context = context.applicationContext,
-            klass = AppDatabase::class.java,
-            name = databaseName,
-        ).buildAppDatabase().also {
-            instance = it
+        override fun get() = synchronized(lock) {
+            _instance ?: Room.databaseBuilder(
+                context = context.applicationContext,
+                klass = AppDatabase::class.java,
+                name = databaseName,
+            ).buildAppDatabase().also {
+                _instance = it
+            }
         }
 
         @Suppress("NOTHING_TO_INLINE")
