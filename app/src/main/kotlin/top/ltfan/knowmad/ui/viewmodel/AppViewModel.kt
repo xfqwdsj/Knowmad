@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.schedule.Event
@@ -117,7 +118,10 @@ class AppViewModel(
         addCloseable(it)
     }
 
-    val scheduleDao = application.appDatabase.scheduleDao()
+    val database = application.appDatabase
+
+    val scheduleDao = database.scheduleDao()
+    val llmConfigDao = database.llmConfigDao()
 
     fun onFinishWizard(
         entry: LLMConfigEntry,
@@ -126,12 +130,11 @@ class AppViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val dao = application.appDatabase.llmConfigDao()
                 val providerConfig = entry.getProviderConfig()
-                dao.insertProviderAtEnd(providerConfig)
+                llmConfigDao.insertProviderAtEnd(providerConfig)
                 val providerId = providerConfig.id
                 val modelConfig = entry.getModelConfig(providerId)
-                dao.insertModelAtEnd(modelConfig)
+                llmConfigDao.insertModelAtEnd(modelConfig)
             } catch (e: Throwable) {
                 logger.error(e) { "Failed to save LLM config from wizard" }
                 onFailed(e.localizedMessage ?: "Unknown error")

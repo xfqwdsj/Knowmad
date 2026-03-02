@@ -22,20 +22,11 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.notification.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.sync.getOrCreateSyncAccount
 import top.ltfan.knowmad.util.isMainProcess
 
 class KnowmadApplication : Application() {
-    val appDatabase by lazy {
-        AppDatabase.get().also {
-            CoroutineScope(Dispatchers.IO).launch {
-                it.scheduleDao().checkOrCreateDefaultSemester(resources)
-            }
-        }
-    }
-
     override fun onCreate() {
         super.onCreate()
         if (isMainProcess) {

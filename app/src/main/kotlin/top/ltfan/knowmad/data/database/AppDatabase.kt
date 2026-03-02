@@ -117,5 +117,7 @@ abstract class AppDatabase : RoomDatabase() {
         inline fun Builder<AppDatabase>.buildAppDatabase() = apply {
             addCallback(RecurrenceRuleCleanup)
         }.build()
+
+        val Context.appDatabase inline get() = get()
     }
 }

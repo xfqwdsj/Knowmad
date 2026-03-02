@@ -68,6 +68,7 @@ import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.chat.allLoaded
 import top.ltfan.knowmad.data.chat.toUiMessage
+import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.transform
@@ -100,8 +101,10 @@ class AgentViewModel(
 
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
 
-    val chatDao = application.appDatabase.chatDao()
-    val llmConfigDao = application.appDatabase.llmConfigDao()
+    val database = application.appDatabase
+
+    val chatDao = database.chatDao()
+    val llmConfigDao = database.llmConfigDao()
 
     val chatDataStore = ChatData.createDataStore()
     val chatDataStateFlow = chatDataStore.dataStateFlow()
@@ -127,9 +130,7 @@ class AgentViewModel(
         }
     }
 
-    val conversationListState = PagingLazyListState {
-        application.appDatabase.chatDao().getAllConversations()
-    }
+    val conversationListState = PagingLazyListState { chatDao.getAllConversations() }
 
     var messageListLoading by mutableStateOf(false)
 
