@@ -34,6 +34,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         val request = OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
             setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
         }.build()
+        logger.debug { "Enqueuing suggestion generation work" }
         WorkManager.getInstance(context).enqueue(request)
     }
 

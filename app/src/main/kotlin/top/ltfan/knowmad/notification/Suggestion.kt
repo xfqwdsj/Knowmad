@@ -109,6 +109,7 @@ private fun Context.enqueueCancelLiveUpdateWork(suggestion: NextSuggestionNotifi
                 ),
             )
             setConstraints(NONE)
+            setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
         }.build(),
     )
 }

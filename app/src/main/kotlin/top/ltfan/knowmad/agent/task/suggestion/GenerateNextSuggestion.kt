@@ -32,28 +32,30 @@ import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.ModelService
+import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.tool.ScheduleTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
-import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.chat.ChatData
+import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
+import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.notification.NextSuggestionNotification
 import top.ltfan.knowmad.notification.showNextSuggestionNotification
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
-import top.ltfan.knowmad.util.ServiceConnection
-import top.ltfan.knowmad.util.ServiceConnectionStatus
 import kotlin.time.Clock
 
 private val logger = Logger("GenerateNextSuggestion")
@@ -173,24 +175,47 @@ class GenerateNextSuggestionWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = try {
-        val context = applicationContext as? KnowmadApplication ?: return Result.failure()
+        coroutineScope {
+            val context = applicationContext
 
-        val service = context.ServiceConnection<ModelService>().use {
-            logger.debug { "Connecting service" }
-            val (service) =
-                it.status.filterIsInstance<ServiceConnectionStatus.Connected<ModelService>>()
-                    .first()
-            logger.debug { "Service connected" }
-            service.chatAgentServiceFlow.filterNotNull().first()
+            val database = context.appDatabase
+            val llmConfigDao = database.llmConfigDao()
+            val scheduleDao = database.scheduleDao()
+
+            logger.debug { "Retrieving selected model from database" }
+
+            val chatDataStore = context(context) { ChatData.createDataStore() }
+            val selectedModelId = chatDataStore.data
+                .map { it.selectedModelId }
+                .filterNotNull()
+                .first()
+
+            logger.debug { "Querying model and provider from database" }
+
+            val model = llmConfigDao.getModelById(selectedModelId) ?: run {
+                logger.error { "Selected model with id $selectedModelId not found in database" }
+                return@coroutineScope Result.failure()
+            }
+            val client = llmConfigDao.getProviderById(model.providerConfigId)?.toClient() ?: run {
+                logger.error { "Provider for selected model with id ${model.providerConfigId} not found in database" }
+                return@coroutineScope Result.failure()
+            }
+
+            val service = getChatAgentService(
+                promptExecutor = SingleLLMPromptExecutor(client),
+                model = model.model,
+            )
+
+            logger.debug { "Starting to generate next suggestion" }
+
+            context.generateAndShowNextSuggestion(
+                scheduleDao = scheduleDao,
+                promptExecutor = service.promptExecutor,
+                model = service.agentConfig.model,
+            )
+
+            Result.success()
         }
-
-        context.generateAndShowNextSuggestion(
-            scheduleDao = context.appDatabase.scheduleDao(),
-            promptExecutor = service.promptExecutor,
-            model = service.agentConfig.model,
-        )
-
-        Result.success()
     } catch (e: Exception) {
         logger.error(e) { "Failed to generate next suggestion" }
         Result.failure()
