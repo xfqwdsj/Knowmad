@@ -128,6 +128,7 @@ class CancelLiveUpdateWorker(
         val notification = NotificationCompat.Builder(context, AiMessageChannelId).apply {
             setSmallIcon(R.mipmap.ic_launcher)
             setContentTitle(title)
+            setContentText(content)
             setStyle(NotificationCompat.BigTextStyle().bigText(content))
             setOngoing(false)
         }.build()
