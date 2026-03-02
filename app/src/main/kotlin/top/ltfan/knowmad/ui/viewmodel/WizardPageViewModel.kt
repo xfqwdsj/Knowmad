@@ -40,6 +40,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.systemPrompt
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.data.transform
@@ -75,6 +76,9 @@ class WizardPageViewModel(
     private val wizardDataStore = WizardData.createDataStore()
     private val wizardDataStateFlow = wizardDataStore.dataStateFlow()
     private val wizardData = wizardDataStore.asMutableState(wizardDataStateFlow.value)
+
+    private val database = application.appDatabase
+    private val llmConfigDao = database.llmConfigDao()
 
     fun generateCryptoKey(
         setReady: (Boolean) -> Unit,
@@ -377,7 +381,7 @@ class WizardPageViewModel(
         }
 
         viewModelScope.launch {
-            val modelCount = application.appDatabase.llmConfigDao().getTotalModelCount()
+            val modelCount = llmConfigDao.getTotalModelCount()
             if (modelCount >= 1) {
                 GlobalViewModel.showSnackbar(
                     message = R.string.setup_wizard_skip_message_suggestion_has_model.asStringRes(),

@@ -101,7 +101,7 @@ class AgentViewModel(
 
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
 
-    val database = application.appDatabase
+    private val database = application.appDatabase
 
     val chatDao = database.chatDao()
     val llmConfigDao = database.llmConfigDao()

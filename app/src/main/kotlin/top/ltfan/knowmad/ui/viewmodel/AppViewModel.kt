@@ -118,7 +118,7 @@ class AppViewModel(
         addCloseable(it)
     }
 
-    val database = application.appDatabase
+    private val database = application.appDatabase
 
     val scheduleDao = database.scheduleDao()
     val llmConfigDao = database.llmConfigDao()
