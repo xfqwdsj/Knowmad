@@ -62,7 +62,8 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         const val EXTRA_TITLE = "EXTRA_TITLE"
         const val EXTRA_CONTENT = "EXTRA_CONTENT"
 
-        fun Context.getNextSuggestionDowngradingPendingIntent(
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun Context.createDowngradeIntent(
             suggestion: NextSuggestionNotification,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
@@ -77,11 +78,21 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             false,
         )
 
-        private fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
             if (action != ACTION_DOWNGRADE) return null
-            val capsuleTitle = getStringExtra(EXTRA_CAPSULE_TITLE) ?: return null
-            val title = getStringExtra(EXTRA_TITLE) ?: return null
-            val content = getStringExtra(EXTRA_CONTENT) ?: return null
+            val capsuleTitle = getStringExtra(EXTRA_CAPSULE_TITLE) ?: run {
+                logger.warn { "Received downgrading request without capsule title" }
+                return null
+            }
+            val title = getStringExtra(EXTRA_TITLE) ?: run {
+                logger.warn { "Received downgrading request without notification title" }
+                return null
+            }
+            val content = getStringExtra(EXTRA_CONTENT) ?: run {
+                logger.warn { "Received downgrading request without notification content" }
+                return null
+            }
             return NextSuggestionNotification(
                 capsuleTitle = capsuleTitle,
                 notificationTitle = title,
@@ -95,12 +106,20 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         ) {
             val context = applicationContext
 
-            val alarmManager = context.getSystemService<AlarmManager>() ?: return
+            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
+                logger.error { "Failed to get AlarmManager for scheduling suggestion downgrading" }
+                return
+            }
 
-            val pendingIntent =
-                context.getNextSuggestionDowngradingPendingIntent(suggestion) ?: return
+            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
+                logger.warn { "Cannot schedule exact alarms, skipping scheduling suggestion downgrading" }
+                return
+            }
 
-            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) return
+            val pendingIntent = context.createDowngradeIntent(suggestion) ?: run {
+                logger.error { "Failed to create PendingIntent for scheduling suggestion downgrading" }
+                return
+            }
 
             alarmManager.setExact(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,

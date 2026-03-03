@@ -31,6 +31,9 @@ import androidx.core.content.getSystemService
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
+import top.ltfan.knowmad.util.Logger
+
+private val logger = Logger("NextSuggestion")
 
 @Serializable
 data class NextSuggestionNotification(
@@ -53,9 +56,20 @@ val Context.nextSuggestionGenerationPendingIntent
 fun Context.scheduleNextSuggestionGeneration() {
     val context = applicationContext
 
-    val alarmManager = context.getSystemService<AlarmManager>() ?: return
+    val alarmManager = context.getSystemService<AlarmManager>() ?: run {
+        logger.error { "Failed to get AlarmManager for scheduling next suggestion generation" }
+        return
+    }
 
-    val pendingIntent = context.nextSuggestionGenerationPendingIntent ?: return
+    if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
+        logger.warn { "Cannot schedule exact alarms, skipping scheduling next suggestion generation" }
+        return
+    }
+
+    val pendingIntent = context.nextSuggestionGenerationPendingIntent ?: run {
+        logger.error { "Failed to create pending intent for scheduling next suggestion generation" }
+        return
+    }
 
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 7)
@@ -65,8 +79,6 @@ fun Context.scheduleNextSuggestionGeneration() {
             add(Calendar.DATE, 1)
         }
     }
-
-    if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) return
 
     alarmManager.setExact(
         AlarmManager.RTC_WAKEUP,
@@ -92,6 +104,8 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
         scheduleNextSuggestionDowngrading(suggestion)
+    }?.let {
+        logger.warn { "Failed to show next suggestion notification due to missing permission" }
     }
 }
 

@@ -24,13 +24,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 
-inline fun Context.checkedNotificationPermission(
-    block: () -> Unit,
-) {
+inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val permissionState =
             ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-        if (permissionState != PackageManager.PERMISSION_GRANTED) return
+        if (permissionState != PackageManager.PERMISSION_GRANTED) return null
     }
-    block()
+    return block()
 }
