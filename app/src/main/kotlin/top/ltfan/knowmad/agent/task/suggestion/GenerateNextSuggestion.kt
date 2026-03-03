@@ -216,7 +216,7 @@ class GenerateNextSuggestionWorker(
 
             Result.success()
         }
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         logger.error(e) { "Failed to generate next suggestion" }
         Result.failure()
     }
