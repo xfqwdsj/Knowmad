@@ -51,9 +51,11 @@ val Context.nextSuggestionGenerationPendingIntent
     )
 
 fun Context.scheduleNextSuggestionGeneration() {
-    val alarmManager = getSystemService<AlarmManager>() ?: return
+    val context = applicationContext
 
-    val pendingIntent = nextSuggestionGenerationPendingIntent ?: return
+    val alarmManager = context.getSystemService<AlarmManager>() ?: return
+
+    val pendingIntent = context.nextSuggestionGenerationPendingIntent ?: return
 
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 7)
@@ -89,7 +91,7 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
 
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
-        applicationContext.scheduleNextSuggestionDowngrading(suggestion)
+        scheduleNextSuggestionDowngrading(suggestion)
     }
 }
 
