@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -76,6 +77,9 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST
+import androidx.work.WorkManager
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
@@ -85,6 +89,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
@@ -210,6 +215,7 @@ class MainPage : Page() {
             ) {
                 Scaffold(
                     topBar = {
+                        val context = LocalContext.current
                         TopAppBar(
                             title = {
                                 Row(
@@ -234,6 +240,14 @@ class MainPage : Page() {
                             modifier = Modifier.combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
+                                onLongClick = {
+                                    // TODO: refactor with a better method of triggering
+                                    val request =
+                                        OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
+                                            setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                                        }.build()
+                                    WorkManager.getInstance(context).enqueue(request)
+                                },
                                 onDoubleClick = {
                                     coroutineScope.launch {
                                         viewModel.calendarState.animateScrollToDate()
