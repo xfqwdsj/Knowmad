@@ -100,6 +100,7 @@ import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.checkOrRequestExactAlarmPermission
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -242,6 +243,7 @@ class MainPage : Page() {
                                 indication = null,
                                 onLongClick = {
                                     // TODO: refactor with a better method of triggering
+                                    context.checkOrRequestExactAlarmPermission()
                                     val request =
                                         OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
                                             setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
