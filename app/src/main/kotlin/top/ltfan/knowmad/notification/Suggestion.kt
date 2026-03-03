@@ -28,15 +28,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.Worker
-import androidx.work.WorkerParameters
-import androidx.work.workDataOf
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.toJavaDuration
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
 
 @Serializable
 data class NextSuggestionNotification(
@@ -47,16 +41,19 @@ data class NextSuggestionNotification(
 
 private val NotificationId = NextSuggestionNotification::class.java.name.hashCode()
 
-fun Context.scheduleNextSuggestionGeneration() {
-    val alarmManager = getSystemService<AlarmManager>() ?: return
-
-    val pendingIntent = PendingIntentCompat.getBroadcast(
+val Context.nextSuggestionGenerationPendingIntent
+    inline get() = PendingIntentCompat.getBroadcast(
         applicationContext,
         0,
         Intent(applicationContext, SuggestionRequestReceiver::class.java),
         PendingIntent.FLAG_UPDATE_CURRENT,
         false,
-    ) ?: return
+    )
+
+fun Context.scheduleNextSuggestionGeneration() {
+    val alarmManager = getSystemService<AlarmManager>() ?: return
+
+    val pendingIntent = nextSuggestionGenerationPendingIntent ?: return
 
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 7)
@@ -92,56 +89,25 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
 
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
-        applicationContext.enqueueCancelLiveUpdateWork(suggestion)
+        applicationContext.scheduleNextSuggestionDowngrading(suggestion)
     }
 }
 
-private fun Context.enqueueCancelLiveUpdateWork(suggestion: NextSuggestionNotification) {
-    WorkManager.getInstance(this).enqueueUniqueWork(
-        uniqueWorkName = "top.ltfan.knowmad.notification.CancelLiveUpdateWorker_$NotificationId",
-        existingWorkPolicy = REPLACE,
-        request = OneTimeWorkRequestBuilder<CancelLiveUpdateWorker>().apply {
-            setInitialDelay(1.hours.toJavaDuration())
-            setInputData(
-                workDataOf(
-                    CancelLiveUpdateWorker.TITLE to suggestion.notificationTitle,
-                    CancelLiveUpdateWorker.CONTENT to suggestion.notificationContent,
-                ),
-            )
-            setConstraints(NONE)
-        }.build(),
-    )
-}
+fun Context.downgradeNextSuggestionNotification(suggestion: NextSuggestionNotification) {
+    createAiNotificationChannel()
 
-class CancelLiveUpdateWorker(
-    context: Context,
-    params: WorkerParameters,
-) : Worker(context, params) {
-    override fun doWork(): Result {
-        val context = applicationContext
+    val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
+        setSmallIcon(R.drawable.ic_launcher_foreground)
+        setContentTitle(suggestion.capsuleTitle)
+        setSubText(suggestion.notificationTitle)
+        setContentText(suggestion.notificationContent)
+        setStyle(NotificationCompat.BigTextStyle().bigText(suggestion.notificationContent))
+        setOngoing(false)
+        setAutoCancel(true)
+        setRequestPromotedOngoing(false)
+    }.build()
 
-        val title = inputData.getString(TITLE) ?: ""
-        val content = inputData.getString(CONTENT) ?: ""
-
-        val manager = NotificationManagerCompat.from(context)
-
-        val notification = NotificationCompat.Builder(context, AiMessageChannelId).apply {
-            setSmallIcon(R.mipmap.ic_launcher)
-            setContentTitle(title)
-            setContentText(content)
-            setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            setOngoing(false)
-        }.build()
-
-        context.checkedNotificationPermission {
-            manager.notify(NotificationId, notification)
-        }
-
-        return Result.success()
-    }
-
-    companion object {
-        const val TITLE = "title"
-        const val CONTENT = "content"
+    checkedNotificationPermission {
+        NotificationManagerCompat.from(this).notify(NotificationId, notification)
     }
 }

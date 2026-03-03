@@ -18,17 +18,32 @@
 
 package top.ltfan.knowmad.notification
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
+import androidx.core.app.AlarmManagerCompat
+import androidx.core.app.PendingIntentCompat
+import androidx.core.content.getSystemService
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.util.Logger
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 
 class SuggestionRequestReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
+
+        intent.extractDowngradingInfo()?.let { suggestion ->
+            logger.debug { "Received downgrading request for suggestion: $suggestion" }
+            context.downgradeNextSuggestionNotification(suggestion)
+            return
+        }
+
         val context = context.applicationContext
         context.scheduleNextSuggestionGeneration()
         val request = OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
@@ -40,5 +55,58 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
     companion object {
         private val logger = Logger("SuggestionRequestReceiver")
+
+        const val ACTION_DOWNGRADE = "DOWNGRADE"
+
+        const val EXTRA_CAPSULE_TITLE = "EXTRA_CAPSULE_TITLE"
+        const val EXTRA_TITLE = "EXTRA_TITLE"
+        const val EXTRA_CONTENT = "EXTRA_CONTENT"
+
+        fun Context.getNextSuggestionDowngradingPendingIntent(
+            suggestion: NextSuggestionNotification,
+        ) = PendingIntentCompat.getBroadcast(
+            applicationContext,
+            1,
+            Intent(applicationContext, SuggestionRequestReceiver::class.java).apply {
+                action = ACTION_DOWNGRADE
+                putExtra(EXTRA_CAPSULE_TITLE, suggestion.capsuleTitle)
+                putExtra(EXTRA_TITLE, suggestion.notificationTitle)
+                putExtra(EXTRA_CONTENT, suggestion.notificationContent)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT,
+            false,
+        )
+
+        private fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
+            if (action != ACTION_DOWNGRADE) return null
+            val capsuleTitle = getStringExtra(EXTRA_CAPSULE_TITLE) ?: return null
+            val title = getStringExtra(EXTRA_TITLE) ?: return null
+            val content = getStringExtra(EXTRA_CONTENT) ?: return null
+            return NextSuggestionNotification(
+                capsuleTitle = capsuleTitle,
+                notificationTitle = title,
+                notificationContent = content,
+            )
+        }
+
+        fun Context.scheduleNextSuggestionDowngrading(
+            suggestion: NextSuggestionNotification,
+            delay: Duration = 1.hours,
+        ) {
+            val context = applicationContext
+
+            val alarmManager = context.getSystemService<AlarmManager>() ?: return
+
+            val pendingIntent =
+                context.getNextSuggestionDowngradingPendingIntent(suggestion) ?: return
+
+            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) return
+
+            alarmManager.setExact(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + delay.inWholeMilliseconds,
+                pendingIntent,
+            )
+        }
     }
 }
