@@ -80,7 +80,10 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
-            if (action != ACTION_DOWNGRADE) return null
+            if (action != ACTION_DOWNGRADE) {
+                logger.debug { "Received intent with unsupported action: $action, ignoring" }
+                return null
+            }
             val capsuleTitle = getStringExtra(EXTRA_CAPSULE_TITLE) ?: run {
                 logger.warn { "Received downgrading request without capsule title" }
                 return null
@@ -120,6 +123,8 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 logger.error { "Failed to create PendingIntent for scheduling suggestion downgrading" }
                 return
             }
+
+            logger.debug { "Scheduling suggestion downgrading for suggestion: ${suggestion.notificationTitle} with delay: $delay" }
 
             alarmManager.setExact(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
