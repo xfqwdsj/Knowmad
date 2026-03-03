@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad.notification
 
+import android.content.Context
 import android.content.res.Resources
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
@@ -52,3 +53,8 @@ fun Resources.getAiNotificationChannel() = NotificationChannelCompat.Builder(
 ).apply {
     setName(getString(R.string.notification_channel_ai_message_label))
 }.build()
+
+fun Context.createAiNotificationChannel() {
+    val channel = resources.getAiNotificationChannel()
+    NotificationManagerCompat.from(this).createNotificationChannel(channel)
+}

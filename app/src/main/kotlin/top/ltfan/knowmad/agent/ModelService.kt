@@ -36,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.room.withTransaction
@@ -64,7 +63,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.task.suggestion.generateAndShowNextSuggestion
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.gatherToolsTool
@@ -88,7 +86,6 @@ import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.notification.NotificationMessage
 import top.ltfan.knowmad.notification.ReplyReceiver
-import top.ltfan.knowmad.notification.getAiNotificationChannel
 import top.ltfan.knowmad.notification.showChatNotification
 import top.ltfan.knowmad.notification.toNotificationMessage
 import top.ltfan.knowmad.ui.component.AssistantMessageState
@@ -735,8 +732,6 @@ class ModelService : LifecycleService() {
                 summary.extractQuickReplies().takeIf { it.isNotEmpty() }
             }
             val conversation = chatDao.getConversationById(conversationId) ?: return@launch
-            val manager = NotificationManagerCompat.from(application)
-            manager.createNotificationChannel(application.resources.getAiNotificationChannel())
             application.showChatNotification(
                 conversationId = conversationId,
                 conversationName = conversation.name,

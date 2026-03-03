@@ -77,7 +77,7 @@ fun Context.scheduleNextSuggestionGeneration() {
 }
 
 fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotification) {
-    val manager = NotificationManagerCompat.from(this)
+    createAiNotificationChannel()
 
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.mipmap.ic_launcher)
@@ -91,7 +91,7 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
     }.build()
 
     checkedNotificationPermission {
-        manager.notify(NotificationId, notification)
+        NotificationManagerCompat.from(this).notify(NotificationId, notification)
         applicationContext.enqueueCancelLiveUpdateWork(suggestion)
     }
 }

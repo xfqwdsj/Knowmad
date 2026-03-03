@@ -99,6 +99,7 @@ fun Context.showChatNotification(
     quickReplies: List<String>? = null,
     unreadCount: Int = 1,
 ) {
+    createAiNotificationChannel()
     pushChatShortcut(conversationId, conversationName)
 
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
