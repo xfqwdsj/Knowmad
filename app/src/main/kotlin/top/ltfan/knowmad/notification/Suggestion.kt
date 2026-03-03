@@ -104,7 +104,8 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
         scheduleNextSuggestionDowngrading(suggestion)
-    }?.let {
+    }.let {
+        if (it != null) return@let
         logger.warn { "Failed to show next suggestion notification due to missing permission" }
     }
 }
