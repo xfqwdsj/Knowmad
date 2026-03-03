@@ -80,7 +80,7 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
     createAiNotificationChannel()
 
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
-        setSmallIcon(R.mipmap.ic_launcher)
+        setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
         setContentText(suggestion.notificationContent)
