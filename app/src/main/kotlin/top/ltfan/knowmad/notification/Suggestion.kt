@@ -121,6 +121,7 @@ fun Context.downgradeNextSuggestionNotification(suggestion: NextSuggestionNotifi
         setOngoing(false)
         setAutoCancel(true)
         setRequestPromotedOngoing(false)
+        setOnlyAlertOnce(true)
     }.build()
 
     checkedNotificationPermission {
