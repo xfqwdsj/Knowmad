@@ -19,14 +19,11 @@
 package top.ltfan.knowmad.notification
 
 import ai.koog.prompt.message.Message
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
@@ -117,14 +114,9 @@ fun Context.showChatNotification(
         setBubbleMetadata(getBubbleMetadata(conversationId))
     }.build()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val permissionState =
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-
-        if (permissionState != PackageManager.PERMISSION_GRANTED) return
+    checkedNotificationPermission {
+        NotificationManagerCompat.from(this).notify(conversationId.hashCode(), notification)
     }
-
-    NotificationManagerCompat.from(this).notify(conversationId.hashCode(), notification)
 }
 
 fun Context.getBubbleMetadata(
