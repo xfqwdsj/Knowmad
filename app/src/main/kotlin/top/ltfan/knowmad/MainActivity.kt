@@ -130,7 +130,6 @@ class MainActivity : KnowmadActivity() {
     private fun Intent?.handle() {
         val isViewAction = this?.action == Intent.ACTION_VIEW
         val data = this?.data
-        val mimeType = this?.type
 
         if (isViewAction && data != null) {
             val conversationId = data.toConversationIdFromChatLink()
@@ -164,12 +163,19 @@ class MainActivity : KnowmadActivity() {
                 }
                 return
             }
+            val mimeType = type
             val isIcsFile = mimeType == "text/calendar" ||
                     mimeType == "application/ics" ||
                     data.path?.endsWith(".ics", ignoreCase = true) == true
             if (isIcsFile) {
                 data.handleIcsFile()
             }
+            return
+        }
+
+        val isPipAction = this?.action == ACTION_PIP
+        if (isPipAction) {
+            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }
 
@@ -218,10 +224,18 @@ class MainActivity : KnowmadActivity() {
     }
 
     companion object {
+        const val ACTION_PIP = "ACTION_PIP"
+
         const val EXTRA_IS_PARTIAL = "IS_PARTIAL"
 
         private val logger = Logger("MainActivity")
         val pipEventFlow = MutableSharedFlow<PipEvent>()
+
+        val Context.launchMainActivityInPipIntent
+            inline get() = Intent(this, MainActivity::class.java).apply {
+                action = ACTION_PIP
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            }
     }
 
     override fun onStop() {
