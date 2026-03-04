@@ -44,7 +44,6 @@
         <activity
             android:name=".MainActivity"
             android:allowEmbedded="true"
-            android:documentLaunchMode="intoExisting"
             android:exported="true"
             android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustNothing">

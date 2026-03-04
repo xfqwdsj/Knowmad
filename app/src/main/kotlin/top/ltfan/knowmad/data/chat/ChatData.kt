@@ -89,24 +89,28 @@ fun Uuid.toChatLink(): Uri = Uri.Builder().apply {
     appendPath(this@toChatLink.toString())
 }.build()
 
-fun Context.getChatIntent(
+@Suppress("NOTHING_TO_INLINE")
+inline fun Intent.chatLinkFlags() {
+    addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+}
+
+inline fun Context.getChatIntent(
     conversationId: Uuid,
-    flags: Int? = null,
+    build: Intent.() -> Unit = Intent::chatLinkFlags,
 ) = Intent(this, MainActivity::class.java).apply {
     action = Intent.ACTION_VIEW
     data = conversationId.toChatLink()
-    if (flags != null) {
-        this.flags = flags
-    }
+    putExtra(MainActivity.EXTRA_IS_PARTIAL, true)
+    build()
 }
 
-fun Context.getChatPendingIntent(
+inline fun Context.getChatPendingIntent(
     conversationId: Uuid,
-    flags: Int? = null,
+    build: Intent.() -> Unit = Intent::chatLinkFlags,
 ): PendingIntent = PendingIntentCompat.getActivity(
     this,
     conversationId.hashCode(),
-    getChatIntent(conversationId, flags),
+    getChatIntent(conversationId, build),
     PendingIntent.FLAG_UPDATE_CURRENT,
     true,
 ) ?: error("Failed to create PendingIntent for conversation $conversationId")

@@ -62,7 +62,7 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.Logger
 
 class MainActivity : KnowmadActivity() {
-    val appPartial by lazy { intent?.data?.toConversationIdFromChatLink() != null }
+    val appPartial by lazy { intent?.getBooleanExtra(EXTRA_IS_PARTIAL, false) ?: false }
 
     val viewModel: AppViewModel by viewModels {
         viewModelFactory {
@@ -90,11 +90,13 @@ class MainActivity : KnowmadActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch {
-            updatePipActions(PipActions.standard(agentViewModel))
-            pipEventFlow.collect { event ->
-                when (event) {
-                    is SetActions -> lifecycleScope.launch { updatePipActions(event.delta) }
+        if (!appPartial) {
+            lifecycleScope.launch {
+                updatePipActions(PipActions.standard(agentViewModel))
+                pipEventFlow.collect { event ->
+                    when (event) {
+                        is SetActions -> lifecycleScope.launch { updatePipActions(event.delta) }
+                    }
                 }
             }
         }
@@ -121,6 +123,7 @@ class MainActivity : KnowmadActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        this.intent = intent
         intent.handle()
     }
 
@@ -215,6 +218,8 @@ class MainActivity : KnowmadActivity() {
     }
 
     companion object {
+        const val EXTRA_IS_PARTIAL = "IS_PARTIAL"
+
         private val logger = Logger("MainActivity")
         val pipEventFlow = MutableSharedFlow<PipEvent>()
     }
