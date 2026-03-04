@@ -379,7 +379,6 @@ class AgentViewModel(
         contextMessages: List<UiMessage>? = null,
         parts: List<ContentPart> = listOf(ContentPart.Text(chatMessageTextInputState.text.toString())),
         beforeStart: (() -> Unit)? = { chatMessageTextInputState.setTextAndPlaceCursorAtEnd("") },
-        onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
     ) {
         if (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() })
             return
@@ -393,7 +392,6 @@ class AgentViewModel(
             includeEnvironmentContext = includeEnvironmentContext,
             contextMessages = contextMessages,
             beforeStart = beforeStart,
-            onEnd = onEnd,
         )
     }
 
@@ -494,15 +492,6 @@ class AgentViewModel(
             ),
             parts = listOf(),
             beforeStart = null,
-            onEnd = { isNewConversation ->
-                if (!isNewConversation) return@sendMessage
-                val conversationId = currentConversationId ?: return@sendMessage
-                viewModelScope.launch {
-                    val newTitle = generateConversationName(conversationId) ?: return@launch
-                    val conversation = chatDao.getConversationById(conversationId) ?: return@launch
-                    chatDao.updateConversation(conversation.copy(name = newTitle), application)
-                }
-            },
         )
     }
 

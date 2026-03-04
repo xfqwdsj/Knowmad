@@ -422,7 +422,21 @@ class ModelService : LifecycleService() {
             getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
         ) -> Long = ChatDao::insertMessageAndGet,
         beforeStart: (() -> Unit)? = null,
-        onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
+        onEnd: (suspend (
+            conversationId: Uuid,
+            isNewConversation: Boolean,
+        ) -> Unit)? = e@{ conversationId, isNewConversation ->
+            if (!isNewConversation) return@e
+            val service = chatAgentServiceFlow.value ?: return@e
+            val newName = generateConversationName(
+                conversationId = conversationId,
+                executor = service.promptExecutor,
+                model = service.agentConfig.model,
+            ) ?: return@e
+            val conversation = chatDao.getConversationById(conversationId) ?: return@e
+            val updated = conversation.copy(name = newName)
+            chatDao.updateConversation(updated, application)
+        },
     ) = defaultScope.asyncInterruptible task@{
         require(!insertEnvironmentContext || includeEnvironmentContext) {
             "insertEnvironmentContext can only be true if includeEnvironmentContext is also true"
@@ -649,10 +663,10 @@ class ModelService : LifecycleService() {
                 val entity = completed.toEntity()
                 chatDao.updateMessage(entity)
                 logger.debug { "Message completed" }
-                showNotification(conversationId)
                 entity
             }.also {
-                onEnd?.invoke(isNewConversation)
+                onEnd?.invoke(conversationId, isNewConversation)
+                showNotification(conversationId)
             }
         }
     }
