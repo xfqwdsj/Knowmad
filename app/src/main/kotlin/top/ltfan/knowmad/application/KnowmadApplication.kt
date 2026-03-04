@@ -22,7 +22,7 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import top.ltfan.knowmad.notification.scheduleNextSuggestionGeneration
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.sync.getOrCreateSyncAccount
 import top.ltfan.knowmad.util.isMainProcess
 

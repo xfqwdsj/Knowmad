@@ -23,6 +23,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.icu.util.Calendar
 import android.os.SystemClock
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
@@ -61,6 +62,49 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         const val EXTRA_CAPSULE_TITLE = "EXTRA_CAPSULE_TITLE"
         const val EXTRA_TITLE = "EXTRA_TITLE"
         const val EXTRA_CONTENT = "EXTRA_CONTENT"
+
+        private val Context.generationIntent
+            inline get() = PendingIntentCompat.getBroadcast(
+                applicationContext,
+                0,
+                Intent(applicationContext, SuggestionRequestReceiver::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT,
+                false,
+            )
+
+        fun Context.scheduleNextSuggestionGeneration() {
+            val context = applicationContext
+
+            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
+                logger.error { "Failed to get AlarmManager for scheduling next suggestion generation" }
+                return
+            }
+
+            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
+                logger.warn { "Cannot schedule exact alarms, skipping scheduling next suggestion generation" }
+                return
+            }
+
+            val pendingIntent = context.generationIntent ?: run {
+                logger.error { "Failed to create pending intent for scheduling next suggestion generation" }
+                return
+            }
+
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 7)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                if (before(Calendar.getInstance())) {
+                    add(Calendar.DATE, 1)
+                }
+            }
+
+            alarmManager.setExact(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                pendingIntent,
+            )
+        }
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.createDowngradeIntent(
