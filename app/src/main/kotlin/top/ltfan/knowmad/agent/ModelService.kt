@@ -409,6 +409,9 @@ class ModelService : LifecycleService() {
         parts: List<ContentPart>,
         tools: ToolRegistry? = chatAgentToolRegistry,
         onNewConversation: ((ConversationEntity) -> Unit)? = null,
+        getAllMessages: suspend ChatDao.(
+            conversationId: Uuid,
+        ) -> List<MessageWithFilesAndBranchInfo> = ChatDao::getAllMessagesByConversationOnce,
         includeEnvironmentContext: Boolean = true,
         insertEnvironmentContext: Boolean = includeEnvironmentContext,
         contextMessages: List<UiMessage>? = null,
@@ -417,13 +420,7 @@ class ModelService : LifecycleService() {
             message: MessageEntity,
             fileIds: List<Uuid>,
             getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
-        ) -> Long = { messages, fileIds, getUpdatedEntity ->
-            insertMessageAndGet(
-                message = messages,
-                fileIds = fileIds,
-                getUpdatedEntity = getUpdatedEntity,
-            )
-        },
+        ) -> Long = ChatDao::insertMessageAndGet,
         beforeStart: (() -> Unit)? = null,
         onEnd: ((isNewConversation: Boolean) -> Unit)? = null,
     ) = defaultScope.asyncInterruptible task@{
@@ -457,7 +454,7 @@ class ModelService : LifecycleService() {
                 var conversation =
                     chatDao.getConversationById(conversationId) ?: return@bind null
 
-                val databaseMessages = chatDao.getAllMessagesByConversationOnce(conversationId)
+                val databaseMessages = chatDao.getAllMessages(conversationId)
                 val messages = databaseMessages.flatMap { entity ->
                     entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
                 }

@@ -236,6 +236,9 @@ class AgentViewModel(
         service.sendMessage(
             conversationId = message.conversationId,
             parts = emptyList(),
+            getAllMessages = { conversationId ->
+                getAllMessagesByConversationOnce(conversationId).dropLastWhile { it.key == message.key }
+            },
             includeEnvironmentContext = true,
             insertEnvironmentContext = false,
             insertAssistantMessageAndGet = { messageToInsert, fileIds, getUpdatedEntity ->
