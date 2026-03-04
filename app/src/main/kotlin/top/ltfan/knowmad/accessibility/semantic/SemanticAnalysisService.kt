@@ -133,6 +133,8 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
                                         delay(100.milliseconds)
                                     }
                                 }
+                            } catch (e: Throwable) {
+                                logger.error(e) { "Failed to retrieve UI tree" }
                             } finally {
                                 serviceInfo = originalInfo
                             }
