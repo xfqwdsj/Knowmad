@@ -169,6 +169,7 @@ class MainActivity : KnowmadActivity() {
                     data.path?.endsWith(".ics", ignoreCase = true) == true
             if (isIcsFile) {
                 data.handleIcsFile()
+                return
             }
             return
         }
@@ -176,6 +177,7 @@ class MainActivity : KnowmadActivity() {
         val isPipAction = this?.action == ACTION_PIP
         if (isPipAction) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+            return
         }
     }
 
