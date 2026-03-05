@@ -21,7 +21,6 @@ package top.ltfan.knowmad.accessibility.semantic
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
-import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +50,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import android.graphics.Rect as AndroidRect
 
 @SuppressLint("AccessibilityPolicy")
 class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
@@ -351,7 +351,7 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
             parentSnapshot: NodeSnapshot,
             queue: ArrayDeque<NodeSnapshot>,
         ) {
-            val rect = Rect()
+            val rect = AndroidRect()
             childInfo.getBoundsInScreen(rect)
             if (!childInfo.isVisibleToUser || rect.isEmpty) {
                 @Suppress("DEPRECATION")
@@ -442,6 +442,8 @@ class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
         isClickable = isClickable,
         isFocusable = isFocusable,
         isVisibleToUser = isVisibleToUser,
+        rect = AndroidRect().apply { getBoundsInScreen(this) }.takeIf { !it.isEmpty }
+            ?.let { Rect(it) },
         children = mutableListOf(),
     )
 }

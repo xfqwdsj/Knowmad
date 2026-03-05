@@ -18,17 +18,20 @@
 
 package top.ltfan.knowmad.accessibility.semantic
 
+import android.graphics.Rect
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Node(
-    val id: String? = null,
-    val name: String? = null,
-    val contentDescription: String? = null,
-    val text: String? = null,
-    val isClickable: Boolean = false,
-    val isFocusable: Boolean = false,
-    val isVisibleToUser: Boolean = true,
-    val rect: Rect? = null,
-    val children: List<Node> = emptyList(),
-)
+data class Rect(
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int,
+) {
+    constructor(rect: Rect) : this(
+        left = rect.left,
+        top = rect.top,
+        right = rect.right,
+        bottom = rect.bottom,
+    )
+}
