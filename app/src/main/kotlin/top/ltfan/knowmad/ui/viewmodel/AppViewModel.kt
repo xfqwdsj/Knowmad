@@ -47,13 +47,13 @@ import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.exportICalendar
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
+import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.data.schedule.toICalendar
 import top.ltfan.knowmad.data.schedule.writeCustomized
 import top.ltfan.knowmad.data.schedule.writeStandard
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
-import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.component.CalendarState
 import top.ltfan.knowmad.ui.component.MathJaxRenderer
 import top.ltfan.knowmad.ui.component.MathJaxRendererState
@@ -271,7 +271,7 @@ class AppViewModel(
             return failure(Throwable("No valid events found in the iCalendar data"))
         }
 
-        application.requestCalendarSync(fullSync = false)
+        application.syncEvents(fullSync = false)
 
         return success(events.size)
     }

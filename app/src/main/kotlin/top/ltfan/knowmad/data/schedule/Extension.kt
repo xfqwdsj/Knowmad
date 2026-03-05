@@ -18,7 +18,9 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.content.Context
 import android.content.res.Resources
+import androidx.glance.appwidget.updateAll
 import biweekly.ICalendar
 import biweekly.io.TimezoneAssignment
 import biweekly.io.TimezoneInfo
@@ -26,7 +28,9 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.util.format
+import top.ltfan.knowmad.widget.TodayWidget
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarTrigger
 import java.time.format.DateTimeFormatter
@@ -37,6 +41,13 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import biweekly.property.Color as BiweeklyColor
 import kotlinx.datetime.TimeZone as KotlinTimeZone
 import java.util.TimeZone as JavaTimeZone
+
+suspend fun Context.syncEvents(
+    fullSync: Boolean = true,
+) {
+    requestCalendarSync(fullSync = fullSync)
+    TodayWidget().updateAll(this)
+}
 
 fun SemesterEntity.constructICalendar(): ICalendar = ICalendar().apply {
     version = ICalendarVersion

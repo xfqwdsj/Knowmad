@@ -90,7 +90,7 @@ import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
-import top.ltfan.knowmad.sync.requestCalendarSync
+import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
@@ -325,7 +325,7 @@ class MainPage : Page() {
 
         if (calendarPermissionsState.allPermissionsGranted) {
             LaunchedEffect(Unit) {
-                viewModel.application.requestCalendarSync()
+                viewModel.application.syncEvents()
             }
         } else {
             if (calendarPermissionsState.shouldShowRationale) {

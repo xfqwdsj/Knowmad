@@ -44,9 +44,9 @@ import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.iCalendarImportResultMessage
 import top.ltfan.knowmad.data.schedule.readCustomizedICalendar
+import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.data.schedule.toFormattedAgentTimeList
 import top.ltfan.knowmad.data.schedule.toReminders
-import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.omnical.icalendar.ICalendarColor
@@ -138,7 +138,7 @@ object ScheduleTools {
                 events.size
             }
 
-            context.requestCalendarSync(fullSync = false)
+            context.syncEvents(fullSync = false)
 
             return iCalendarImportResultMessage(
                 successCount = result.getOrNull(),
@@ -987,7 +987,7 @@ object ScheduleTools {
                     }
                     .map { it.first }
                     .toList()
-                context.requestCalendarSync(fullSync = false)
+                context.syncEvents(fullSync = false)
                 return Result.Success(
                     events = insertedList,
                     errors = errors.takeIf { it.isNotEmpty() },
@@ -1029,7 +1029,7 @@ object ScheduleTools {
                 .onFailure { logger.error(it) { "Failed to insert event" } }
                 .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_create_event_result_failure_reason_internal_error)) }
             return if (inserted >= 0L) {
-                context.requestCalendarSync(fullSync = false)
+                context.syncEvents(fullSync = false)
                 Result.Success(
                     event = event,
                     errors = errors.takeIf { it.isNotEmpty() },
@@ -1441,7 +1441,7 @@ object ScheduleTools {
                 .onFailure { logger.error(it) { "Failed to update event" } }
                 .getOrElse { return Result.Failure(context.getString(R.string.llm_tool_schedule_update_event_result_failure_reason_internal_error)) }
             return if (updated > 0) {
-                context.requestCalendarSync(fullSync = false)
+                context.syncEvents(fullSync = false)
                 Result.Success(
                     event = newEvent,
                     errors = errors.takeIf { it.isNotEmpty() },
