@@ -183,6 +183,15 @@ class MainActivity : KnowmadActivity() {
                         endTime = date.plusDays(1).atStartOfDayIn(timeZone),
                     )
                     snapshotFlow { viewModel.appReady }.first { it }
+                    val iterator = viewModel.backStack.asReversed().listIterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        if (entry is EventsDialogPage) {
+                            iterator.remove()
+                        } else {
+                            break
+                        }
+                    }
                     viewModel.backStack += EventsDialogPage(
                         date = date,
                         timeZone = timeZone,
