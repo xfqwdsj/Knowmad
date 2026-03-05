@@ -31,6 +31,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
@@ -69,7 +70,7 @@ fun WidgetEventList(
     upcomingEvents: List<Event>,
     completedEvents: List<Event>,
     supplementaryEvents: List<Event>?,
-    onEventClick: (Event) -> Unit,
+    getEventClickAction: (Event) -> Action,
     modifier: GlanceModifier = GlanceModifier,
     contentPadding: Dp = 8.dp,
 ) {
@@ -84,7 +85,7 @@ fun WidgetEventList(
                 WidgetEventItem(
                     event = event,
                     completed = false,
-                    onClick = { onEventClick(event) },
+                    onClick = getEventClickAction(event),
                 )
             }
         }
@@ -95,7 +96,7 @@ fun WidgetEventList(
                 WidgetEventItem(
                     event = event,
                     completed = true,
-                    onClick = { onEventClick(event) },
+                    onClick = getEventClickAction(event),
                 )
             }
         }
@@ -124,7 +125,7 @@ fun WidgetEventList(
                     WidgetEventItem(
                         event = event,
                         completed = false,
-                        onClick = { onEventClick(event) },
+                        onClick = getEventClickAction(event),
                     )
                 }
             }
@@ -141,7 +142,7 @@ fun WidgetEventList(
 fun WidgetEventItem(
     event: Event,
     completed: Boolean,
-    onClick: () -> Unit,
+    onClick: Action,
 ) {
     val context = LocalContext.current
 
@@ -165,7 +166,7 @@ fun WidgetEventItem(
             .fillMaxWidth()
             .cornerRadius(AppRadiusLarge)
             .background(color)
-            .clickable(block = onClick)
+            .clickable(onClick)
             .padding(16.dp),
         verticalAlignment = CenterVertically,
     ) {

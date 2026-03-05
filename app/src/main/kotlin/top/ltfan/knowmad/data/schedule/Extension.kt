@@ -18,15 +18,21 @@
 
 package top.ltfan.knowmad.data.schedule
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
+import android.net.Uri
+import androidx.core.app.PendingIntentCompat
 import androidx.glance.appwidget.updateAll
 import biweekly.ICalendar
 import biweekly.io.TimezoneAssignment
 import biweekly.io.TimezoneInfo
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.datetime.toLocalDateTime
+import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.sync.requestCalendarSync
 import top.ltfan.knowmad.ui.util.format
@@ -37,16 +43,66 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle.MEDIUM
 import java.util.Locale
 import kotlin.time.Instant
+import kotlin.uuid.Uuid
 import androidx.compose.ui.graphics.Color as ComposeColor
 import biweekly.property.Color as BiweeklyColor
 import kotlinx.datetime.TimeZone as KotlinTimeZone
 import java.util.TimeZone as JavaTimeZone
+
+const val CalendarLinkScheme = "knowmad-calendar"
+
+const val CalendarLinkAuthorityDate = "date"
+const val CalendarLinkAuthorityEvent = "event"
 
 suspend fun Context.syncEvents(
     fullSync: Boolean = true,
 ) {
     requestCalendarSync(fullSync = fullSync)
     TodayWidget().updateAll(this)
+}
+
+fun LocalDate.toCalendarLink(): Uri = Uri.Builder().apply {
+    scheme(CalendarLinkScheme)
+    authority(CalendarLinkAuthorityDate)
+    appendPath(this@toCalendarLink.toString())
+}.build()
+
+fun Uuid.toCalendarEventLink(): Uri = Uri.Builder().apply {
+    scheme(CalendarLinkScheme)
+    authority(CalendarLinkAuthorityEvent)
+    appendPath(this@toCalendarEventLink.toString())
+}.build()
+
+fun Uri.toCalendarDateOrNull(): LocalDate? {
+    if (scheme != CalendarLinkScheme || authority != CalendarLinkAuthorityDate) return null
+    return pathSegments.firstOrNull()?.let {
+        runCatching { LocalDate.parse(it) }.getOrNull()
+    }
+}
+
+inline fun Context.getCalendarEventIntent(
+    eventId: Uuid,
+    build: Intent.() -> Unit = {},
+) = Intent(this, MainActivity::class.java).apply {
+    action = Intent.ACTION_VIEW
+    data = eventId.toCalendarEventLink()
+    build()
+}
+
+inline fun Context.getCalendarEventPendingIntent(
+    eventId: Uuid,
+    build: Intent.() -> Unit = {},
+) = PendingIntentCompat.getActivity(
+    this,
+    eventId.hashCode(),
+    getCalendarEventIntent(eventId, build),
+    PendingIntent.FLAG_UPDATE_CURRENT,
+    false,
+) ?: error("Failed to create pending intent for calendar event with ID: $eventId")
+
+fun Uri.toCalendarEventIdOrNull(): Uuid? {
+    if (scheme != CalendarLinkScheme || authority != CalendarLinkAuthorityEvent) return null
+    return pathSegments.firstOrNull()?.let { Uuid.parseOrNull(it) }
 }
 
 fun SemesterEntity.constructICalendar(): ICalendar = ICalendar().apply {

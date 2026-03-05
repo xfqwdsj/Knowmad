@@ -29,24 +29,36 @@ import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.kizitonwose.calendar.core.plusDays
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
+import top.ltfan.knowmad.data.schedule.CalendarLinkScheme
+import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.schedule.toCalendarDateOrNull
+import top.ltfan.knowmad.data.schedule.toCalendarEventIdOrNull
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.component.PipAction
 import top.ltfan.knowmad.ui.component.PipActions
 import top.ltfan.knowmad.ui.component.PipActionsDelta
 import top.ltfan.knowmad.ui.component.PipEvent
 import top.ltfan.knowmad.ui.component.handlePipActions
+import top.ltfan.knowmad.ui.page.EventsDialogPage
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -132,6 +144,53 @@ class MainActivity : KnowmadActivity() {
             if (isIcsFile) {
                 data.handleIcsFile()
                 return
+            }
+
+            val scheme = data.scheme
+            val isCalendarView = scheme == CalendarLinkScheme
+            if (isCalendarView) {
+                if (appPartial) return
+                logger.debug { "Received calendar view deep link: $data" }
+                val timeZone = TimeZone.currentSystemDefault()
+                val locale = resources.configuration.locales[0].toLanguageTag()
+                val dao = viewModel.scheduleDao
+                lifecycleScope.launch {
+                    val (highlight, date) = run {
+                        val eventId = data.toCalendarEventIdOrNull()
+                        if (eventId != null) {
+                            val event = dao.getEventById(eventId) ?: run {
+                                logger.warn { "No event found with ID: $eventId" }
+                                return@launch
+                            }
+
+                            val highlight = Channel<Event>(capacity = 1).apply {
+                                trySend(event)
+                            }
+
+                            return@run highlight to event.startTime.toLocalDateTime(timeZone).date
+                        }
+
+                        val date = data.toCalendarDateOrNull()
+                        if (date != null) {
+                            return@run null to date
+                        }
+
+                        logger.warn { "Failed to parse calendar view deep link data: $data" }
+                        return@launch
+                    }
+                    val events = dao.getEventsInRange(
+                        startTime = date.atStartOfDayIn(timeZone),
+                        endTime = date.plusDays(1).atStartOfDayIn(timeZone),
+                    )
+                    snapshotFlow { viewModel.appReady }.first { it }
+                    viewModel.backStack += EventsDialogPage(
+                        date = date,
+                        timeZone = timeZone,
+                        localeLanguageTag = locale,
+                        initialEvents = events,
+                        highlight = highlight,
+                    )
+                }
             }
             return
         }

@@ -24,6 +24,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -34,6 +35,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.data.schedule.getCalendarEventIntent
 import top.ltfan.knowmad.ui.component.WidgetEventList
 import top.ltfan.knowmad.ui.theme.AppRadiusLarge
 import top.ltfan.knowmad.widget.TodayWidgetReceiver.Companion.scheduleTodayWidgetUpdate
@@ -77,7 +79,9 @@ class TodayWidget : GlanceAppWidget() {
                     upcomingEvents = upcomingEvents,
                     completedEvents = completedEvents,
                     supplementaryEvents = supplementaryEvents,
-                    onEventClick = {},
+                    getEventClickAction = { event ->
+                        actionStartActivity(context.getCalendarEventIntent(event.id))
+                    },
                     contentPadding = 8.dp,
                 )
             }
