@@ -83,6 +83,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -91,6 +92,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -717,24 +719,26 @@ fun EventsDialogContent(
     locale: Locale = LocalConfiguration.current.locales[0],
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        modifier = modifier
-            .sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth)
-            .dialogContent(),
-        shape = shape,
-        tonalElevation = 6.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Column(Modifier.padding(contentPadding)) {
-            Spacer(Modifier.height(24.dp))
-            EventsDateHeader(
-                date = date,
-                modifier = Modifier.padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                locale = locale,
-            )
-            Spacer(Modifier.height(8.dp))
-            content()
+    CompositionLocalProvider(LocalScreenId provides Uuid.generateV7()) {
+        Surface(
+            modifier = modifier
+                .sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth)
+                .dialogContent(),
+            shape = shape,
+            tonalElevation = 6.dp,
+            shadowElevation = 6.dp,
+        ) {
+            Column(Modifier.padding(contentPadding)) {
+                Spacer(Modifier.height(24.dp))
+                EventsDateHeader(
+                    date = date,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    locale = locale,
+                )
+                Spacer(Modifier.height(8.dp))
+                content()
+            }
         }
     }
 }
@@ -1067,7 +1071,11 @@ sealed class EventEdit {
                     if (animatedVisibilityScope != null) {
                         sharedElement(
                             rememberSharedContentState(
-                                ScheduleSharedKey.EditItem(event.id, this@EventEdit),
+                                ScheduleSharedKey.EditItem(
+                                    id = event.id,
+                                    edit = this@EventEdit,
+                                    screenId = LocalScreenId.current,
+                                ),
                             ),
                             animatedVisibilityScope = animatedVisibilityScope,
                         )
@@ -1151,7 +1159,12 @@ fun DetailedEvent(
             onClick = onClick,
             modifier = modifier.fillMaxWidth().run {
                 if (animatedVisibilityScope != null) sharedBounds(
-                    rememberSharedContentState(ScheduleSharedKey.Event(event.id)),
+                    rememberSharedContentState(
+                        ScheduleSharedKey.Event(
+                            id = event.id,
+                            screenId = LocalScreenId.current,
+                        ),
+                    ),
                     animatedVisibilityScope = animatedVisibilityScope,
                     resizeMode = RemeasureToBounds,
                 ) else this
@@ -1919,8 +1932,17 @@ private fun LabelWithIcon(
 @Immutable
 private sealed interface ScheduleSharedKey {
     @Immutable
-    data class Event(val id: Uuid) : ScheduleSharedKey
+    data class Event(
+        val id: Uuid,
+        val screenId: Uuid? = Uuid.generateV7(),
+    ) : ScheduleSharedKey
 
     @Immutable
-    data class EditItem(val id: Uuid, val edit: EventEdit) : ScheduleSharedKey
+    data class EditItem(
+        val id: Uuid,
+        val edit: EventEdit,
+        val screenId: Uuid? = Uuid.generateV7(),
+    ) : ScheduleSharedKey
 }
+
+private val LocalScreenId = staticCompositionLocalOf<Uuid?> { null }
