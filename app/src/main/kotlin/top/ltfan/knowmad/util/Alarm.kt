@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.ui.util
+package top.ltfan.knowmad.util
 
 import android.app.Activity
 import android.app.AlarmManager

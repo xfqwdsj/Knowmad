@@ -100,11 +100,11 @@ import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.ui.util.checkOrRequestExactAlarmPermission
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.checkOrRequestExactAlarmPermission
 
 @Serializable
 class MainPage : Page() {
