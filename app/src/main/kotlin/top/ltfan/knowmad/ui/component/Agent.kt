@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.component
 
 import ai.koog.prompt.llm.LLModel
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -137,6 +138,8 @@ fun AgentMainScreen(
     val appViewModel = LocalAppViewModel.current
     val viewModel = LocalAgentViewModel.current
 
+    val isNewWindow = LocalAgentScreenIsNewWindow.current
+
     val coroutineScope = rememberCoroutineScope()
     val layoutDirection = LocalLayoutDirection.current
 
@@ -167,7 +170,7 @@ fun AgentMainScreen(
             }
         },
         drawerState = viewModel.drawerState,
-        gesturesEnabled = !appViewModel.partial,
+        gesturesEnabled = !isNewWindow,
         scrimColor = DrawerScrimColor,
     ) {
         Scaffold(
@@ -189,7 +192,13 @@ fun AgentMainScreen(
                         interactionSource = remember { MutableInteractionSource() },
                     ),
                     navigationIcon = {
-                        if (appViewModel.partial) return@CenterAlignedTopAppBar
+                        if (isNewWindow) {
+                            val activity = LocalActivity.current
+                            if (activity != null) {
+                                CloseIconButton(onClick = activity::finish)
+                            }
+                            return@CenterAlignedTopAppBar
+                        }
                         TooltipBox(
                             TooltipDefaults.rememberTooltipPositionProvider(
                                 TooltipAnchorPosition.Below,
@@ -224,9 +233,7 @@ fun AgentMainScreen(
                                 },
                                 state = rememberTooltipState(),
                             ) {
-                                IconButton(
-                                    onClick = { appViewModel.switchStandaloneAgentScreen() },
-                                ) {
+                                IconButton(onClick = appViewModel::switchStandaloneAgentScreen) {
                                     Icon(
                                         painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
                                         contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
@@ -234,7 +241,7 @@ fun AgentMainScreen(
                                 }
                             }
                         }
-                        if (!appViewModel.partial) {
+                        if (!isNewWindow) {
                             TooltipBox(
                                 TooltipDefaults.rememberTooltipPositionProvider(
                                     TooltipAnchorPosition.Below,
@@ -244,7 +251,7 @@ fun AgentMainScreen(
                                 },
                                 state = rememberTooltipState(),
                             ) {
-                                IconButton(onClick = { viewModel.newConversation() }) {
+                                IconButton(onClick = viewModel::newConversation) {
                                     Icon(
                                         painterResource(R.drawable.edit_square_24px),
                                         contentDescription = stringResource(R.string.agent_conversation_label_new),
@@ -367,10 +374,14 @@ fun AgentMainScreen(
                         return@subcompose
                     }
 
-                    val lazyListState = rememberLazyListState(
-                        initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
-                        initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
-                    )
+                    val lazyListState = if (!isNewWindow) {
+                        rememberLazyListState(
+                            initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
+                            initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
+                        )
+                    } else {
+                        rememberLazyListState()
+                    }
 
                     CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
                         ChatMessageList(
@@ -394,14 +405,16 @@ fun AgentMainScreen(
                         )
                     }
 
-                    LaunchedEffect(lazyListState) {
-                        snapshotFlow {
-                            lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
-                        }
-                            .collect { (index, offset) ->
-                                viewModel.savedMessagesFirstVisibleItemIndex = index
-                                viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
+                    if (!isNewWindow) {
+                        LaunchedEffect(lazyListState) {
+                            snapshotFlow {
+                                lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
                             }
+                                .collect { (index, offset) ->
+                                    viewModel.savedMessagesFirstVisibleItemIndex = index
+                                    viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
+                                }
+                        }
                     }
 
                     var isAtBottom by remember { mutableStateOf(true) }
@@ -593,3 +606,4 @@ data object AgentScreenSharedKey
 val LocalAgentScreenTransparentContainer = staticCompositionLocalOf { false }
 val LocalAgentScreenPreferredContainerColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalAgentScreenIsStandalone = staticCompositionLocalOf { false }
+val LocalAgentScreenIsNewWindow = staticCompositionLocalOf { false }
