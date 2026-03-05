@@ -57,7 +57,7 @@ import okio.Path
 import okio.Path.Companion.toOkioPath
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
-import top.ltfan.knowmad.MainActivity
+import top.ltfan.knowmad.ConversationActivity
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.file.DbFileMutex
 import top.ltfan.knowmad.data.file.FileDao
@@ -89,24 +89,18 @@ fun Uuid.toChatLink(): Uri = Uri.Builder().apply {
     appendPath(this@toChatLink.toString())
 }.build()
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun Intent.chatLinkFlags() {
-    addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-}
-
 inline fun Context.getChatIntent(
     conversationId: Uuid,
-    build: Intent.() -> Unit = Intent::chatLinkFlags,
-) = Intent(this, MainActivity::class.java).apply {
+    build: Intent.() -> Unit = {},
+) = Intent(this, ConversationActivity::class.java).apply {
     action = Intent.ACTION_VIEW
     data = conversationId.toChatLink()
-    putExtra(MainActivity.EXTRA_IS_PARTIAL, true)
     build()
 }
 
 inline fun Context.getChatPendingIntent(
     conversationId: Uuid,
-    build: Intent.() -> Unit = Intent::chatLinkFlags,
+    build: Intent.() -> Unit = {},
 ): PendingIntent = PendingIntentCompat.getActivity(
     this,
     conversationId.hashCode(),

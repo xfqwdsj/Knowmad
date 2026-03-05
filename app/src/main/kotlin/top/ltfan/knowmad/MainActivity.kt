@@ -18,42 +18,35 @@
 
 package top.ltfan.knowmad
 
-import android.app.ActivityManager
 import android.app.PictureInPictureParams
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.snapshotFlow
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
-import top.ltfan.knowmad.data.chat.toConversationIdFromChatLink
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.component.PipAction
 import top.ltfan.knowmad.ui.component.PipActions
 import top.ltfan.knowmad.ui.component.PipActionsDelta
 import top.ltfan.knowmad.ui.component.PipEvent
 import top.ltfan.knowmad.ui.component.handlePipActions
-import top.ltfan.knowmad.ui.page.AgentPage
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
@@ -132,37 +125,6 @@ class MainActivity : KnowmadActivity() {
         val data = this?.data
 
         if (isViewAction && data != null) {
-            val conversationId = data.toConversationIdFromChatLink()
-            if (conversationId != null) {
-                lifecycleScope.launch {
-                    if (!appPartial) {
-                        snapshotFlow { viewModel.appReady }.filter { it }.first()
-                    }
-                    if (viewModel.backStack.lastOrNull() !is AgentPage) {
-                        viewModel.backStack.add(AgentPage())
-                    }
-                    agentViewModel.currentConversationId = conversationId
-                    if (appPartial) {
-                        viewModel.appReady = true
-                    }
-                    val conversation = agentViewModel.chatDao.getConversationById(conversationId)
-                    if (conversation == null) {
-                        logger.error { "Conversation not found for ID: $conversationId" }
-                        finish()
-                        return@launch
-                    }
-                    val description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        ActivityManager.TaskDescription.Builder().apply {
-                            setLabel(conversation.name)
-                        }.build()
-                    } else {
-                        @Suppress("DEPRECATION")
-                        ActivityManager.TaskDescription(conversation.name)
-                    }
-                    setTaskDescription(description)
-                }
-                return
-            }
             val mimeType = type
             val isIcsFile = mimeType == "text/calendar" ||
                     mimeType == "application/ics" ||
@@ -236,9 +198,6 @@ class MainActivity : KnowmadActivity() {
         val Context.launchMainActivityInPipIntent
             inline get() = Intent(this, MainActivity::class.java).apply {
                 action = ACTION_PIP
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
     }
 

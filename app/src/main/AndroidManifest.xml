@@ -43,8 +43,8 @@
 
         <activity
             android:name=".MainActivity"
-            android:allowEmbedded="true"
             android:exported="true"
+            android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustNothing">
 
@@ -52,15 +52,6 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <intent-filter>
-                <data android:scheme="knowmad-chat" />
-
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
 
             <intent-filter android:label="@string/schedule_import_label">
@@ -77,6 +68,24 @@
                 <data android:host="*" />
                 <data android:pathPattern=".*\\.ics" />
                 <data android:pathPattern=".*\\..*\\.ics" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ConversationActivity"
+            android:allowEmbedded="true"
+            android:documentLaunchMode="intoExisting"
+            android:exported="true"
+            android:theme="@style/Theme.Knowmad"
+            android:windowSoftInputMode="adjustNothing">
+
+            <intent-filter>
+                <data android:scheme="knowmad-chat" />
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
         </activity>
 
