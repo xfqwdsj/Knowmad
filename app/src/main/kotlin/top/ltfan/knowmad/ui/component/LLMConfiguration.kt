@@ -513,7 +513,7 @@ fun LLMProviderConfigLazyColumn(
                 else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(
-                            LLMProviderConfigItemSharedKey.Container(entity.id),
+                            ProviderSharedKey.Container(entity.id),
                         ),
                         animatedVisibilityScope,
                     )
@@ -765,7 +765,7 @@ fun LLMConfigLazyColumn(
                 else localSharedTransitionScope {
                     sharedBounds(
                         rememberSharedContentState(
-                            LLMProviderConfigItemSharedKey.Container(entity.id),
+                            ProviderSharedKey.Container(entity.id),
                         ),
                         animatedVisibilityScope,
                     )
@@ -903,14 +903,14 @@ fun LLMConfigItem(
     }
 }
 
-sealed interface LLMProviderConfigItemSharedKey {
+private sealed interface ProviderSharedKey {
     val id: Uuid
 
-    data class Container(override val id: Uuid) : LLMProviderConfigItemSharedKey
+    data class Container(override val id: Uuid) : ProviderSharedKey
 }
 
-sealed interface LLMConfigItemSharedKey {
+private sealed interface ModelSharedKey {
     val id: Uuid
 
-    data class Container(override val id: Uuid) : LLMConfigItemSharedKey
+    data class Container(override val id: Uuid) : ModelSharedKey
 }

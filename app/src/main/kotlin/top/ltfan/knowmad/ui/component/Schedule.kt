@@ -1917,7 +1917,7 @@ private fun LabelWithIcon(
 }
 
 @Immutable
-sealed interface ScheduleSharedKey {
+private sealed interface ScheduleSharedKey {
     @Immutable
     data class Event(val id: Uuid) : ScheduleSharedKey
 

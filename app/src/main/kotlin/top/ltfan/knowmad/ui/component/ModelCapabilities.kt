@@ -139,7 +139,7 @@ private fun CapabilityToggleButton(
                         if (animatedVisibilityScope == null) this
                         else localSharedTransitionScope {
                             sharedBounds(
-                                rememberSharedContentState(SharedKey.Container(item)),
+                                rememberSharedContentState(CapabilitySharedKey.Container(item)),
                                 animatedVisibilityScope,
                                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                             )
@@ -157,7 +157,7 @@ private fun CapabilityToggleButton(
                         if (animatedVisibilityScope == null) this
                         else localSharedTransitionScope {
                             sharedBounds(
-                                rememberSharedContentState(SharedKey.Label(item)),
+                                rememberSharedContentState(CapabilitySharedKey.Label(item)),
                                 animatedVisibilityScope,
                             )
                         }
@@ -275,7 +275,7 @@ private fun CapabilityItem(
             if (animatedVisibilityScope == null) this
             else localSharedTransitionScope {
                 sharedBounds(
-                    rememberSharedContentState(SharedKey.Container(item)),
+                    rememberSharedContentState(CapabilitySharedKey.Container(item)),
                     animatedVisibilityScope,
                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                 )
@@ -290,7 +290,7 @@ private fun CapabilityItem(
                 if (animatedVisibilityScope == null) this
                 else localSharedTransitionScope {
                     sharedBounds(
-                        rememberSharedContentState(SharedKey.Label(item)),
+                        rememberSharedContentState(CapabilitySharedKey.Label(item)),
                         animatedVisibilityScope,
                     )
                 }
@@ -322,12 +322,12 @@ private fun getAllCapabilities(items: List<LLMCapabilityInfo>): List<LLMCapabili
 }
 
 @Immutable
-private interface SharedKey {
+private sealed interface CapabilitySharedKey {
     val item: LLMCapabilityInfo.Capability
 
     @Immutable
-    data class Label(override val item: LLMCapabilityInfo.Capability) : SharedKey
+    data class Label(override val item: LLMCapabilityInfo.Capability) : CapabilitySharedKey
 
     @Immutable
-    data class Container(override val item: LLMCapabilityInfo.Capability) : SharedKey
+    data class Container(override val item: LLMCapabilityInfo.Capability) : CapabilitySharedKey
 }
