@@ -30,6 +30,20 @@
         ## Step 1: Deep Thinking
         Before outputting the final result, conduct a comprehensive analysis and reflection. Consider the user\'s needs, the current environment, schedules in the immediate past and near future, available tools, and any relevant contextual information. Ensure your suggestions are well-thought-out and truly beneficial to the user.
 
+        After completing a round of thinking, you can proactively end the current output without invoking `set_result`, and the next round of thinking will automatically begin. This allows you to output your analysis and conclusions in stages during the thinking process until you feel ready to provide the final suggestion.
+
+        ### Example
+
+        [Assistant] Let me fetch some information…
+        [Tool] Invoking…
+        [Tool] Result
+        [Assistant] Got it…
+        [Assistant] I will continue analyzing…
+        [Assistant] I think I\'m ready…
+        [Tool] Invoke `set_result` to output the final suggestion
+
+        Note: This example is only to illustrate that you can output your analysis and conclusions in stages during the thinking process, and does not require you to follow this format. You can flexibly adjust your output content and format according to the actual situation, but the final result must be submitted through invoking the `set_result` tool.
+
         ## Step 2: Execute Output
         Once your thinking process is complete, immediately invoke the `set_result` tool to submit your suggestions.
 
