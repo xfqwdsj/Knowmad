@@ -37,7 +37,10 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
@@ -46,6 +49,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.getChatAgentService
+import top.ltfan.knowmad.agent.task.summary.generateMessageSummary
 import top.ltfan.knowmad.agent.tool.ScheduleTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.data.chat.ChatData
@@ -54,6 +58,7 @@ import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.notification.NextSuggestionNotification
 import top.ltfan.knowmad.notification.showNextSuggestionNotification
+import top.ltfan.knowmad.notification.withAgentRunningNotification
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
@@ -95,6 +100,7 @@ suspend fun Context.generateAndShowNextSuggestion(
     promptExecutor: PromptExecutor,
     model: LLModel,
     maxAgentIterations: Int = 50,
+    onSummary: ((String) -> Unit)? = null,
 ) {
     val context = applicationContext
 
@@ -158,7 +164,24 @@ suspend fun Context.generateAndShowNextSuggestion(
     ) {
         install(EventHandler) {
             onLLMCallStarting { logger.debug { "LLM call starting" } }
-            onLLMCallCompleted { logger.debug { "LLM call completed" } }
+            onLLMCallCompleted { completedContext ->
+                logger.debug { "LLM call completed" }
+                onSummary?.let { onSummary ->
+                    val summary = generateMessageSummary(
+                        contextMessages = completedContext.prompt.messages,
+                        targetMessages = completedContext.responses,
+                        executor = promptExecutor,
+                        model = model,
+                        resources = context.resources,
+                    )
+                    if (summary != null) {
+                        logger.debug { "Generated summary for LLM call" }
+                        onSummary(summary)
+                    } else {
+                        logger.warn { "Failed to generate summary for LLM call" }
+                    }
+                }
+            }
             onToolCallCompleted { logger.debug { "Tool call completed" } }
         }
     }
@@ -178,43 +201,61 @@ class GenerateNextSuggestionWorker(
         coroutineScope {
             val context = applicationContext
 
-            val database = context.appDatabase
-            val llmConfigDao = database.llmConfigDao()
-            val scheduleDao = database.scheduleDao()
+            context.withAgentRunningNotification {
+                val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ForegroundInfo(
+                        notificationId,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                    )
+                } else {
+                    ForegroundInfo(notificationId, notification)
+                }
+                setForeground(foregroundInfo)
 
-            logger.debug { "Retrieving selected model from database" }
+                val database = context.appDatabase
+                val llmConfigDao = database.llmConfigDao()
+                val scheduleDao = database.scheduleDao()
 
-            val chatDataStore = context(context) { ChatData.createDataStore() }
-            val selectedModelId = chatDataStore.data
-                .map { it.selectedModelId }
-                .filterNotNull()
-                .first()
+                logger.debug { "Retrieving selected model from database" }
 
-            logger.debug { "Querying model and provider from database" }
+                val chatDataStore = context(context) { ChatData.createDataStore() }
+                val selectedModelId = chatDataStore.data
+                    .map { it.selectedModelId }
+                    .filterNotNull()
+                    .first()
 
-            val model = llmConfigDao.getModelById(selectedModelId) ?: run {
-                logger.error { "Selected model with id $selectedModelId not found in database" }
-                return@coroutineScope Result.failure()
+                logger.debug { "Querying model and provider from database" }
+
+                val model = llmConfigDao.getModelById(selectedModelId) ?: run {
+                    logger.error { "Selected model with id $selectedModelId not found in database" }
+                    return@coroutineScope Result.failure()
+                }
+                val client =
+                    llmConfigDao.getProviderById(model.providerConfigId)?.toClient() ?: run {
+                        logger.error { "Provider for selected model with id ${model.providerConfigId} not found in database" }
+                        return@coroutineScope Result.failure()
+                    }
+
+                val service = getChatAgentService(
+                    promptExecutor = SingleLLMPromptExecutor(client),
+                    model = model.model,
+                )
+
+                logger.debug { "Starting to generate next suggestion" }
+
+                context.generateAndShowNextSuggestion(
+                    scheduleDao = scheduleDao,
+                    promptExecutor = service.promptExecutor,
+                    model = service.agentConfig.model,
+                    onSummary = ::updateContent,
+                )
+
+                Result.success()
+            } ?: run {
+                logger.error { "Failed to show agent running notification" }
+                Result.failure()
             }
-            val client = llmConfigDao.getProviderById(model.providerConfigId)?.toClient() ?: run {
-                logger.error { "Provider for selected model with id ${model.providerConfigId} not found in database" }
-                return@coroutineScope Result.failure()
-            }
-
-            val service = getChatAgentService(
-                promptExecutor = SingleLLMPromptExecutor(client),
-                model = model.model,
-            )
-
-            logger.debug { "Starting to generate next suggestion" }
-
-            context.generateAndShowNextSuggestion(
-                scheduleDao = scheduleDao,
-                promptExecutor = service.promptExecutor,
-                model = service.agentConfig.model,
-            )
-
-            Result.success()
         }
     } catch (e: Throwable) {
         logger.error(e) { "Failed to generate next suggestion" }

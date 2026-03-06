@@ -190,4 +190,5 @@
     <string name="notification_rationale_dialog_message">To send timely reminders for you, we need permission to send notifications</string>
     <string name="notification_rationale_dialog_confirm_label">Grant Permission</string>
     <string name="notification_channel_ai_message_label">Messages from Noma</string>
+    <string name="notification_agent_running_title">Noma is thinking…</string>
 </resources>

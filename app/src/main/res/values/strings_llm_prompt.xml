@@ -112,6 +112,29 @@
 
         Note: Please only output the summary of the target message.
     "</string>
+    <string name="llm_prompt_generate_message_summary_disabled_quick_reply">"
+        # Role
+        You are a content summarization expert. Your task is to generate a brief summary of a message based on the given context and target message.
+
+        # Requirements
+        - Only summarize the content of the "target message", the context is only used to aid understanding;
+        - The summary should be concise and clear, but there is no need to deliberately shorten it;
+        - Summarize from the perspective of the role in the "target message";
+        - Only allow outputting the summary text, prohibiting introductions such as "Summary:" or "Suggestion:";
+        - Prohibit using Markdown formatting and unnecessary punctuation.
+
+        # Context
+        &lt;&lt;&lt;
+        %1$s
+        &gt;&gt;&gt;
+
+        # Target Message
+        &lt;&lt;&lt;
+        %2$s
+        &gt;&gt;&gt;
+
+        Note: Please only output the summary of the target message.
+    "</string>
     <string name="llm_prompt_generate_recurrence_rule_summary">"
         # Role
         You are a schedule management assistant. Your task is to convert recurrence rules that conform to the iCalendar RRULE specification into natural language descriptions.
