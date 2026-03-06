@@ -22,49 +22,68 @@ import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
-suspend fun PromptExecutor.runPrompt(
+@OptIn(ExperimentalContracts::class)
+suspend inline fun PromptExecutor.runPrompt(
     model: LLModel,
     prompt: Prompt,
-    beforeStart: (() -> Unit)? = null,
-    onSuccess: ((List<Message.Assistant>) -> Unit)? = null,
-    onFailure: ((Throwable) -> Unit)? = null,
-): List<Message.Assistant>? {
-    return runCatching {
-        beforeStart?.invoke()
+    beforeStart: () -> Unit = {},
+    onSuccess: (List<Message.Response>) -> Unit = {},
+    onFailure: (Throwable) -> Unit = {},
+): List<Message.Response>? {
+    contract {
+        callsInPlace(beforeStart, EXACTLY_ONCE)
+        callsInPlace(onSuccess, AT_MOST_ONCE)
+        callsInPlace(onFailure, AT_MOST_ONCE)
+    }
+    beforeStart()
+    return try {
         execute(
             prompt = prompt,
             model = model,
-        ).filterIsInstance<Message.Assistant>()
+        ).also(onSuccess)
+    } catch (e: Throwable) {
+        onFailure(e)
+        null
     }
-        .onSuccess { onSuccess?.invoke(it) }
-        .onFailure { onFailure?.invoke(it) }
-        .getOrNull()
 }
 
-suspend fun PromptExecutor.runPromptForSimpleResult(
+@OptIn(ExperimentalContracts::class)
+suspend inline fun PromptExecutor.runPromptForSimpleResult(
     model: LLModel,
     prompt: Prompt,
-    beforeStart: (() -> Unit)? = null,
-    ifEmpty: (() -> Unit)? = null,
-    onSuccess: ((String) -> Unit)? = null,
-    onFailure: ((Throwable) -> Unit)? = null,
-): String? {
-    return runCatching {
-        beforeStart?.invoke()
-        execute(
-            prompt = prompt,
-            model = model,
-        ).filterIsInstance<Message.Assistant>()
+    beforeStart: () -> Unit = {},
+    ifEmpty: () -> Unit = {},
+    onSuccess: (String) -> Unit = {},
+    onFailure: (Throwable) -> Unit = {},
+    transform: Sequence<Message.Response>.() -> String = {
+        this
+            .filterIsInstance<Message.Assistant>()
             .joinToString(" ") { it.content }
             .trim()
             .replace("\\s+".toRegex(), " ")
-            .ifEmpty {
-                ifEmpty?.invoke()
-                return null
-            }
+    },
+): String? {
+    contract {
+        callsInPlace(beforeStart, EXACTLY_ONCE)
+        callsInPlace(ifEmpty, AT_MOST_ONCE)
+        callsInPlace(onSuccess, AT_MOST_ONCE)
+        callsInPlace(onFailure, AT_MOST_ONCE)
+        callsInPlace(transform, AT_MOST_ONCE)
     }
-        .onSuccess { onSuccess?.invoke(it) }
-        .onFailure { onFailure?.invoke(it) }
-        .getOrNull()
+    beforeStart()
+    return try {
+        execute(
+            prompt = prompt,
+            model = model,
+        ).asSequence().transform().ifEmpty {
+            ifEmpty()
+            return null
+        }.also(onSuccess)
+    } catch (e: Throwable) {
+        onFailure(e)
+        null
+    }
 }
