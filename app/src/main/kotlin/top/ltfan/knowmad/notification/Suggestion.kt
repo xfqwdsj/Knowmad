@@ -25,6 +25,7 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
 import top.ltfan.knowmad.util.Logger
+import kotlin.uuid.Uuid
 
 private val logger = Logger("NextSuggestion")
 
@@ -35,7 +36,7 @@ data class NextSuggestionNotification(
     val notificationContent: String,
 )
 
-private val NotificationId = NextSuggestionNotification::class.java.name.hashCode()
+private val NotificationId = Uuid.parse("019c0c33-1400-7480-87e0-f12641ae67f7").hashCode()
 
 fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotification) {
     createAiNotificationChannel()
