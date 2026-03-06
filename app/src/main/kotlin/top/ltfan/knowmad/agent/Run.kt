@@ -58,13 +58,9 @@ suspend inline fun PromptExecutor.runPromptForSimpleResult(
     ifEmpty: () -> Unit = {},
     onSuccess: (String) -> Unit = {},
     onFailure: (Throwable) -> Unit = {},
-    transform: Sequence<Message.Response>.() -> String = {
-        this
-            .filterIsInstance<Message.Assistant>()
-            .joinToString(" ") { it.content }
-            .trim()
-            .replace("\\s+".toRegex(), " ")
-    },
+    transform: Sequence<Message.Response>.(
+        default: Sequence<Message.Response>.() -> String,
+    ) -> String = { it() },
 ): String? {
     contract {
         callsInPlace(beforeStart, EXACTLY_ONCE)
@@ -78,7 +74,12 @@ suspend inline fun PromptExecutor.runPromptForSimpleResult(
         execute(
             prompt = prompt,
             model = model,
-        ).asSequence().transform().ifEmpty {
+        ).asSequence().transform {
+            this
+                .joinToString(" ") { it.content }
+                .trim()
+                .replace("\\s+".toRegex(), " ")
+        }.ifEmpty {
             ifEmpty()
             return null
         }.also(onSuccess)

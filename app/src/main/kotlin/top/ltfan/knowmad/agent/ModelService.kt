@@ -245,6 +245,7 @@ class ModelService : LifecycleService() {
             ifEmpty = { logger.warn { "LLM generated empty title" } },
             onSuccess = { logger.debug { "Generated conversation title: $it" } },
             onFailure = { logger.error(it) { "Error generating conversation title" } },
+            transform = { filterIsInstance<Message.Assistant>().it() },
         )
     }
 
