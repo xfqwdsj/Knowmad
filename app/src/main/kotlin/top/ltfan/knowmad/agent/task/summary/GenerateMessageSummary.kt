@@ -23,6 +23,7 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import android.content.res.Resources
+import kotlinx.coroutines.CancellationException
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.environmentSystemPrompt
 import top.ltfan.knowmad.agent.runPromptForSimpleResult
@@ -73,6 +74,9 @@ suspend fun generateMessageSummary(
         prompt = prompt,
         beforeStart = { logger.debug { "Generating message summary with LLM..." } },
         onSuccess = { logger.debug { "Generated message summary" } },
-        onFailure = { logger.error(it) { "Error generating message summary" } },
+        onFailure = {
+            if (it is CancellationException) throw it
+            logger.error(it) { "Error generating message summary" }
+        },
     )
 }

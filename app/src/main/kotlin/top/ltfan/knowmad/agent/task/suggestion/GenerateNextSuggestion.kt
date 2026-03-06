@@ -42,10 +42,15 @@ import android.os.Build
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.getChatAgentService
@@ -101,7 +106,7 @@ suspend fun Context.generateAndShowNextSuggestion(
     model: LLModel,
     maxAgentIterations: Int = 50,
     onSummary: ((String) -> Unit)? = null,
-) {
+) = coroutineScope {
     val context = applicationContext
 
     val strategy = strategy<Unit, NextSuggestionNotification>("generate_next_suggestion") {
@@ -167,18 +172,25 @@ suspend fun Context.generateAndShowNextSuggestion(
             onLLMCallCompleted { completedContext ->
                 logger.debug { "LLM call completed" }
                 onSummary?.let { onSummary ->
-                    val summary = generateMessageSummary(
-                        contextMessages = completedContext.prompt.messages,
-                        targetMessages = completedContext.responses,
-                        executor = promptExecutor,
-                        model = model,
-                        resources = context.resources,
-                    )
-                    if (summary != null) {
-                        logger.debug { "Generated summary for LLM call" }
-                        onSummary(summary)
-                    } else {
-                        logger.warn { "Failed to generate summary for LLM call" }
+                    launch {
+                        try {
+                            val summary = generateMessageSummary(
+                                contextMessages = completedContext.prompt.messages,
+                                targetMessages = completedContext.responses,
+                                executor = promptExecutor,
+                                model = model,
+                                resources = context.resources,
+                            )
+                            if (!isActive) return@launch
+                            if (summary != null) {
+                                logger.debug { "Generated summary for LLM call" }
+                                onSummary(summary)
+                            } else {
+                                logger.warn { "Failed to generate summary for LLM call" }
+                            }
+                        } catch (e: CancellationException) {
+                            logger.debug(e) { "Next suggestion generation completed, cancelling summary generation" }
+                        }
                     }
                 }
             }
@@ -191,6 +203,8 @@ suspend fun Context.generateAndShowNextSuggestion(
     logger.debug { "Next suggestion generated: $notification" }
 
     showNextSuggestionNotification(notification)
+
+    coroutineContext.job.cancelChildren()
 }
 
 class GenerateNextSuggestionWorker(
