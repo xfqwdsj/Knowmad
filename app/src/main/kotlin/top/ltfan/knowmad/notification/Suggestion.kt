@@ -25,6 +25,8 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
 import top.ltfan.knowmad.util.Logger
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 private val logger = Logger("NextSuggestion")
@@ -38,7 +40,10 @@ data class NextSuggestionNotification(
 
 private val NotificationId = Uuid.parse("019c0c33-1400-7480-87e0-f12641ae67f7").hashCode()
 
-fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotification) {
+fun Context.showNextSuggestionNotification(
+    suggestion: NextSuggestionNotification,
+    at: Instant = Clock.System.now(),
+) {
     createAiNotificationChannel()
 
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
@@ -50,18 +55,22 @@ fun Context.showNextSuggestionNotification(suggestion: NextSuggestionNotificatio
         setOngoing(true)
         setAutoCancel(false)
         setRequestPromotedOngoing(true)
+        setWhen(at.toEpochMilliseconds())
     }.build()
 
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
-        scheduleNextSuggestionDowngrading(suggestion)
+        scheduleNextSuggestionDowngrading(suggestion, at)
     }.let {
         if (it != null) return@let
         logger.warn { "Failed to show next suggestion notification due to missing permission" }
     }
 }
 
-fun Context.downgradeNextSuggestionNotification(suggestion: NextSuggestionNotification) {
+fun Context.downgradeNextSuggestionNotification(
+    suggestion: NextSuggestionNotification,
+    createdAt: Instant,
+) {
     createAiNotificationChannel()
 
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
@@ -74,6 +83,7 @@ fun Context.downgradeNextSuggestionNotification(suggestion: NextSuggestionNotifi
         setAutoCancel(true)
         setRequestPromotedOngoing(false)
         setOnlyAlertOnce(true)
+        setWhen(createdAt.toEpochMilliseconds())
     }.build()
 
     checkedNotificationPermission {

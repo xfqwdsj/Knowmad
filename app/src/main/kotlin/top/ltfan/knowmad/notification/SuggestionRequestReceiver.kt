@@ -34,14 +34,15 @@ import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 class SuggestionRequestReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
 
-        intent.extractDowngradingInfo()?.let { suggestion ->
+        intent.extractDowngradingInfo()?.let { (suggestion, createdAt) ->
             logger.debug { "Received downgrading request for suggestion: $suggestion" }
-            context.downgradeNextSuggestionNotification(suggestion)
+            context.downgradeNextSuggestionNotification(suggestion, createdAt)
             return
         }
 
@@ -62,6 +63,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         const val EXTRA_CAPSULE_TITLE = "EXTRA_CAPSULE_TITLE"
         const val EXTRA_TITLE = "EXTRA_TITLE"
         const val EXTRA_CONTENT = "EXTRA_CONTENT"
+        const val EXTRA_CREATED_AT = "EXTRA_CREATED_AT"
 
         private val Context.generationIntent
             inline get() = PendingIntentCompat.getBroadcast(
@@ -109,6 +111,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.createDowngradeIntent(
             suggestion: NextSuggestionNotification,
+            createdAt: Instant,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
             1,
@@ -117,13 +120,14 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_CAPSULE_TITLE, suggestion.capsuleTitle)
                 putExtra(EXTRA_TITLE, suggestion.notificationTitle)
                 putExtra(EXTRA_CONTENT, suggestion.notificationContent)
+                putExtra(EXTRA_CREATED_AT, createdAt.toEpochMilliseconds())
             },
             PendingIntent.FLAG_UPDATE_CURRENT,
             false,
         )
 
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
+        private inline fun Intent.extractDowngradingInfo(): Pair<NextSuggestionNotification, Instant>? {
             if (action != ACTION_DOWNGRADE) {
                 logger.debug { "Received intent with unsupported action: $action, ignoring" }
                 return null
@@ -140,15 +144,21 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 logger.warn { "Received downgrading request without notification content" }
                 return null
             }
+            val createdAtMillis = getLongExtra(EXTRA_CREATED_AT, -1L).takeIf { it != -1L } ?: run {
+                logger.warn { "Received downgrading request without created at timestamp" }
+                return null
+            }
+            val createdAt = Instant.fromEpochMilliseconds(createdAtMillis)
             return NextSuggestionNotification(
                 capsuleTitle = capsuleTitle,
                 notificationTitle = title,
                 notificationContent = content,
-            )
+            ) to createdAt
         }
 
         fun Context.scheduleNextSuggestionDowngrading(
             suggestion: NextSuggestionNotification,
+            createdAt: Instant,
             delay: Duration = 1.hours,
         ) {
             val context = applicationContext
@@ -163,7 +173,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 return
             }
 
-            val pendingIntent = context.createDowngradeIntent(suggestion) ?: run {
+            val pendingIntent = context.createDowngradeIntent(suggestion, createdAt) ?: run {
                 logger.error { "Failed to create PendingIntent for scheduling suggestion downgrading" }
                 return
             }
