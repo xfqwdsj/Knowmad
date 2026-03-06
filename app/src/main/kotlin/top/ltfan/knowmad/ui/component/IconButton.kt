@@ -461,7 +461,7 @@ fun CloseIconButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     enabled: Boolean = true,
-    @StringRes contentDescriptionRes: Int? = android.R.string.cancel,
+    @StringRes contentDescriptionRes: Int? = R.string.label_close,
     @StringRes tooltipTextRes: Int? = contentDescriptionRes,
 ) {
     TooltipBox(
