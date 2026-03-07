@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -66,10 +65,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -80,6 +82,8 @@ import top.ltfan.knowmad.ui.page.AgentConfigPage
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.copy
+import top.ltfan.knowmad.ui.util.detectLongPress
+import top.ltfan.knowmad.ui.util.detectPointerFirstDown
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
@@ -181,146 +185,180 @@ fun ConversationList(
             ) { index ->
                 val conversation = conversations[index] ?: return@items
 
+                val density = LocalDensity.current
+                val hapticFeedback = LocalHapticFeedback.current
+
                 var showDialog by remember { mutableStateOf(false) }
 
-                NavigationDrawerItem(
-                    label = {
-                        Text(
-                            conversation.name,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false,
-                            maxLines = 1,
+                var showMenu by remember { mutableStateOf(false) }
+                var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
+                val menuOffset = remember(density, menuOriginalOffset) {
+                    with(density) {
+                        DpOffset(
+                            x = menuOriginalOffset.x.toDp(),
+                            y = menuOriginalOffset.y.toDp(),
                         )
-                    },
-                    selected = currentConversationId == conversation.id,
-                    onClick = { onConversationSelected(conversation.id) },
-                    modifier = Modifier.animateItem(),
-                    icon = {
-                        AnimatedContent(
-                            targetState = conversation.isPinned,
-                        ) { pinned ->
-                            if (!pinned) return@AnimatedContent
-                            Icon(
-                                painterResource(R.drawable.keep_24px),
-                                contentDescription = stringResource(R.string.label_pinned),
+                    }
+                }
+
+                Box {
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                conversation.name,
+                                overflow = Ellipsis,
+                                softWrap = false,
+                                maxLines = 1,
                             )
-                        }
-                    },
-                    badge = {
-                        Box(Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            var showMenu by remember { mutableStateOf(false) }
+                        },
+                        selected = currentConversationId == conversation.id,
+                        onClick = { onConversationSelected(conversation.id) },
+                        modifier = Modifier
+                            .detectPointerFirstDown(
+                                requireUnconsumed = false,
+                                pass = Initial,
+                            ) {
+                                menuOriginalOffset = it.position
+                            }
+                            .detectLongPress(
+                                requireUnconsumed = false,
+                                firstDownPass = Initial,
+                                upOrCancellationPass = Initial,
+                                onFinish = { it.consume() },
+                            ) {
+                                hapticFeedback.performHapticFeedback(LongPress)
+                                showMenu = true
+                                it.consume()
+                            }
+                            .animateItem(),
+                        icon = {
+                            AnimatedContent(
+                                targetState = conversation.isPinned,
+                            ) { pinned ->
+                                if (!pinned) return@AnimatedContent
+                                Icon(
+                                    painterResource(R.drawable.keep_24px),
+                                    contentDescription = stringResource(R.string.label_pinned),
+                                )
+                            }
+                        },
+                        badge = {
                             IconButton(onClick = { showMenu = true }) {
                                 Icon(
                                     painterResource(R.drawable.more_vert_24px),
                                     contentDescription = stringResource(R.string.label_more_options),
                                 )
                             }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                            ) {
-                                DropdownMenuItem(
-                                    onClick = {
-                                        onEditConversation(
-                                            conversation.copy(isPinned = !conversation.isPinned),
-                                        )
-                                        showMenu = false
-                                    },
-                                    text = {
-                                        Text(stringResource(if (!conversation.isPinned) R.string.label_pin else R.string.label_unpin))
-                                    },
-                                    shape = MenuDefaults.leadingItemThemedShape,
-                                    leadingIcon = {
-                                        Icon(
-                                            painterResource(if (!conversation.isPinned) R.drawable.keep_24px else R.drawable.keep_off_24px),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    onClick = {
-                                        showDialog = true
-                                        showMenu = false
-                                    },
-                                    text = { Text(stringResource(R.string.label_edit)) },
-                                    shape = MenuDefaults.middleItemShape,
-                                    leadingIcon = {
-                                        Icon(
-                                            painterResource(R.drawable.edit_24px),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    onClick = {
-                                        onEditConversation(
-                                            conversation.copy(isArchived = true),
-                                        ) {
-                                            if (currentConversationId == conversation.id) {
-                                                onConversationSelected(null)
-                                            }
-                                            coroutineScope.launch {
-                                                GlobalViewModel.showSnackbar(
-                                                    message = R.string.label_archived.asStringRes(),
-                                                    action = SnackbarAction(R.string.label_undo.asStringRes()) {
-                                                        onEditConversation(
-                                                            conversation.copy(isArchived = false),
-                                                        )
-                                                    },
-                                                    withDismissAction = true,
-                                                    duration = SnackbarDuration.Long,
-                                                )
-                                            }
+                        },
+                    )
+
+                    Box {
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            offset = menuOffset,
+                        ) {
+                            DropdownMenuItem(
+                                onClick = {
+                                    onEditConversation(
+                                        conversation.copy(isPinned = !conversation.isPinned),
+                                    )
+                                    showMenu = false
+                                },
+                                text = {
+                                    Text(stringResource(if (!conversation.isPinned) R.string.label_pin else R.string.label_unpin))
+                                },
+                                shape = MenuDefaults.leadingItemThemedShape,
+                                leadingIcon = {
+                                    Icon(
+                                        painterResource(if (!conversation.isPinned) R.drawable.keep_24px else R.drawable.keep_off_24px),
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                onClick = {
+                                    showDialog = true
+                                    showMenu = false
+                                },
+                                text = { Text(stringResource(R.string.label_edit)) },
+                                shape = MenuDefaults.middleItemShape,
+                                leadingIcon = {
+                                    Icon(
+                                        painterResource(R.drawable.edit_24px),
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                onClick = {
+                                    onEditConversation(
+                                        conversation.copy(isArchived = true),
+                                    ) {
+                                        if (currentConversationId == conversation.id) {
+                                            onConversationSelected(null)
                                         }
-                                        showMenu = false
-                                    },
-                                    text = { Text(stringResource(R.string.label_archive)) },
-                                    shape = MenuDefaults.middleItemShape,
-                                    leadingIcon = {
-                                        Icon(
-                                            painterResource(R.drawable.archive_24px),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    onClick = {
-                                        onDeleteConversation(conversation) { onUndo ->
-                                            if (currentConversationId == conversation.id) {
-                                                onConversationSelected(null)
-                                            }
-                                            coroutineScope.launch {
-                                                GlobalViewModel.showSnackbar(
-                                                    message = R.string.label_deleted
-                                                        .asStringRes(conversation.name),
-                                                    action = SnackbarAction(
-                                                        R.string.label_undo.asStringRes(),
-                                                        onUndo,
-                                                    ),
-                                                    withDismissAction = true,
-                                                    duration = SnackbarDuration.Long,
-                                                )
-                                            }
+                                        coroutineScope.launch {
+                                            GlobalViewModel.showSnackbar(
+                                                message = R.string.label_archived.asStringRes(),
+                                                action = SnackbarAction(R.string.label_undo.asStringRes()) {
+                                                    onEditConversation(
+                                                        conversation.copy(isArchived = false),
+                                                    )
+                                                },
+                                                withDismissAction = true,
+                                                duration = SnackbarDuration.Long,
+                                            )
                                         }
-                                        showMenu = false
-                                    },
-                                    text = { Text(stringResource(R.string.label_delete)) },
-                                    shape = MenuDefaults.trailingItemThemedShape,
-                                    leadingIcon = {
-                                        Icon(
-                                            painterResource(R.drawable.delete_24px),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    colors = MenuDefaults.itemColors(
-                                        textColor = MaterialTheme.colorScheme.error,
-                                        leadingIconColor = MaterialTheme.colorScheme.error,
-                                    ),
-                                )
-                            }
+                                    }
+                                    showMenu = false
+                                },
+                                text = { Text(stringResource(R.string.label_archive)) },
+                                shape = MenuDefaults.middleItemShape,
+                                leadingIcon = {
+                                    Icon(
+                                        painterResource(R.drawable.archive_24px),
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                onClick = {
+                                    onDeleteConversation(conversation) { onUndo ->
+                                        if (currentConversationId == conversation.id) {
+                                            onConversationSelected(null)
+                                        }
+                                        coroutineScope.launch {
+                                            GlobalViewModel.showSnackbar(
+                                                message = R.string.label_deleted
+                                                    .asStringRes(conversation.name),
+                                                action = SnackbarAction(
+                                                    R.string.label_undo.asStringRes(),
+                                                    onUndo,
+                                                ),
+                                                withDismissAction = true,
+                                                duration = SnackbarDuration.Long,
+                                            )
+                                        }
+                                    }
+                                    showMenu = false
+                                },
+                                text = { Text(stringResource(R.string.label_delete)) },
+                                shape = MenuDefaults.trailingItemThemedShape,
+                                leadingIcon = {
+                                    Icon(
+                                        painterResource(R.drawable.delete_24px),
+                                        contentDescription = null,
+                                    )
+                                },
+                                colors = MenuDefaults.itemColors(
+                                    textColor = MaterialTheme.colorScheme.error,
+                                    leadingIconColor = MaterialTheme.colorScheme.error,
+                                ),
+                            )
                         }
-                    },
-                )
+                    }
+                }
 
                 if (showDialog) {
                     ConversationEditingDialog(
