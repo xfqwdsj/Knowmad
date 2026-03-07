@@ -1913,7 +1913,11 @@ private fun LabelWithIcon(
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = if (label.count { it == '\n' } == 0) {
+            Alignment.CenterVertically
+        } else {
+            Alignment.Top
+        },
     ) {
         Icon(
             painterResource(icon),

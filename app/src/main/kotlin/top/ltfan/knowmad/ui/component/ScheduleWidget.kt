@@ -244,7 +244,7 @@ private fun LabelWithIcon(
 ) {
     Row(
         modifier = modifier,
-        verticalAlignment = CenterVertically,
+        verticalAlignment = if (label.count { it == '\n' } == 0) CenterVertically else Top,
     ) {
         Image(
             ImageProvider(icon),
