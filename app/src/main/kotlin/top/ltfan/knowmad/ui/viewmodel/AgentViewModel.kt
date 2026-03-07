@@ -258,11 +258,11 @@ class AgentViewModel(
 
     fun editConversation(
         conversation: ConversationEntity,
-        onFinished: () -> Unit = {},
+        onFinished: (() -> Unit)? = null,
     ) {
         viewModelScope.launch {
             chatDao.updateConversation(conversation, application)
-            onFinished()
+            onFinished?.invoke()
         }
     }
 

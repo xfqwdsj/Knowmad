@@ -110,7 +110,7 @@ fun ConversationList(
     currentConversationId: Uuid?,
     onConversationSelected: (Uuid?) -> Unit,
     onSettingsClick: () -> Unit,
-    onEditConversation: (newEntity: ConversationEntity, onFinished: () -> Unit) -> Unit,
+    onEditConversation: (newEntity: ConversationEntity, onFinished: (() -> Unit)?) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
     onAutoGenerateName: (suspend (conversationId: Uuid) -> String?)? = null,
@@ -120,6 +120,10 @@ fun ConversationList(
     val conversations = state.flow.collectAsLazyPagingItems()
 
     val layoutDirection = LocalLayoutDirection.current
+
+    fun onEditConversation(newEntity: ConversationEntity, onFinished: (() -> Unit)? = null) {
+        onEditConversation.invoke(newEntity, onFinished)
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -219,7 +223,7 @@ fun ConversationList(
                                     onClick = {
                                         onEditConversation(
                                             conversation.copy(isPinned = !conversation.isPinned),
-                                        ) {}
+                                        )
                                         showMenu = false
                                     },
                                     text = {
@@ -261,7 +265,7 @@ fun ConversationList(
                                                     action = SnackbarAction(R.string.label_undo.asStringRes()) {
                                                         onEditConversation(
                                                             conversation.copy(isArchived = false),
-                                                        ) {}
+                                                        )
                                                     },
                                                     withDismissAction = true,
                                                     duration = SnackbarDuration.Long,
@@ -322,7 +326,7 @@ fun ConversationList(
                         conversation = conversation,
                         onDismissRequest = { showDialog = false },
                         onConfirm = { newEntity ->
-                            onEditConversation(newEntity) {}
+                            onEditConversation(newEntity)
                             showDialog = false
                         },
                         onAutoGenerateName = onAutoGenerateName?.let {
