@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.ui.component
 
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.animateBounds
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
@@ -38,7 +37,6 @@ fun SnackbarHost(
     localSharedTransitionScope {
         SnackbarHost(
             viewModel.snackbarHostState,
-            modifier = Modifier.animateBounds(this),
         ) { data ->
             Snackbar(
                 snackbarData = data,
