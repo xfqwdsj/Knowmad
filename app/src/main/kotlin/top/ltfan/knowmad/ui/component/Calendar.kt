@@ -110,6 +110,7 @@ import com.tyme.solar.SolarDay
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -405,13 +406,15 @@ private fun DaySecondaryText(
         )
     }
 
-    LaunchedEffect(texts) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, texts) {
         var index = 0
         while (index in texts.indices) {
             currentText = texts[index]
             index++
             if (index >= texts.size) index = 0
             delay(5.seconds)
+            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
         }
     }
 }
