@@ -34,8 +34,6 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,7 +81,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
@@ -123,6 +120,7 @@ import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
+import top.ltfan.knowmad.ui.util.detectPointerFirstDown
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
@@ -926,11 +924,7 @@ fun UserMessage(
                     onLongClick = { menuExpanded = true },
                     onClick = {},
                 )
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        menuOriginalOffset = awaitFirstDown().position
-                    }
-                },
+                .detectPointerFirstDown { menuOriginalOffset = it.position },
         ) {
             UserMessageContent(
                 content = content,
