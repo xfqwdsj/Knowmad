@@ -259,6 +259,11 @@ fun ConversationList(
                             offset = menuOffset,
                         ) {
                             DropdownMenuItem(
+                                text = { Text(conversation.name) },
+                                onClick = {},
+                                enabled = false,
+                            )
+                            DropdownMenuItem(
                                 onClick = {
                                     onEditConversation(
                                         conversation.copy(isPinned = !conversation.isPinned),
