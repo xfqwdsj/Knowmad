@@ -138,12 +138,15 @@ private class ListPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val appViewModel = LocalAppViewModel.current
+
         val viewModel = viewModel<EventsDialogPageViewModel>()
 
         DetailedEventList(
             events = viewModel.events,
             selectedEvent = viewModel.selectedEvent,
             onEventSelected = { viewModel.backStack.add(DetailsPage(it)) },
+            onDeleteEvent = appViewModel::deleteEvent,
             highlight = highlight,
             contentPadding = contentPadding + PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -177,6 +180,8 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val appViewModel = LocalAppViewModel.current
+
         val viewModel = viewModel<EventsDialogPageViewModel>()
         val layoutDirection = LocalLayoutDirection.current
         val contentPadding = contentPadding + PaddingValues(8.dp)
@@ -187,6 +192,10 @@ private class DetailsPage(override val selectedEvent: Event) : EventDetailsSubPa
             onRequestEdit = { viewModel.backStack.add(EditPage(selectedEvent, it)) },
             onEdit = viewModel::onEdit,
             onRequestBatchEdit = viewModel::onRequestBatchEdit,
+            onDelete = { onDeleted ->
+                viewModel.backStack.retainAll { it is ListPage }
+                appViewModel.deleteEvent(selectedEvent, onDeleted)
+            },
             eventModifier = Modifier.padding(
                 contentPadding.copy(
                     layoutDirection,
@@ -220,6 +229,8 @@ private class EditPage(
     @Composable
     context(contentPadding: PaddingValues)
     override fun Content() {
+        val appViewModel = LocalAppViewModel.current
+
         val viewModel = viewModel<EventsDialogPageViewModel>()
         val layoutDirection = LocalLayoutDirection.current
         val contentPadding = contentPadding + PaddingValues(8.dp)
@@ -229,6 +240,10 @@ private class EditPage(
             edit = edit,
             onBack = viewModel::onBack,
             onEdit = viewModel::onEdit,
+            onDelete = { onDeleted ->
+                viewModel.backStack.retainAll { it is ListPage }
+                appViewModel.deleteEvent(selectedEvent, onDeleted)
+            },
             eventModifier = Modifier.padding(
                 contentPadding.copy(
                     layoutDirection,

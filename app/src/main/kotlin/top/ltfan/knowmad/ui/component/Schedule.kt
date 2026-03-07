@@ -77,6 +77,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -95,6 +96,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
@@ -102,11 +104,14 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
@@ -143,13 +148,17 @@ import top.ltfan.knowmad.data.schedule.reversedValueInType
 import top.ltfan.knowmad.data.schedule.type
 import top.ltfan.knowmad.ui.page.EventDetailsSubPageKey
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
+import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.contractColorFor
+import top.ltfan.knowmad.ui.util.detectLongPress
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
+import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
+import top.ltfan.knowmad.util.asStringRes
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import java.time.format.DateTimeFormatter
@@ -687,6 +696,7 @@ fun EventsDialogContent(
                     events = events,
                     selectedEvent = selectedEvent,
                     onEventSelected = onEventSelected,
+                    onDeleteEvent = { _, _ -> },
                     contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     locale = locale,
@@ -700,6 +710,7 @@ fun EventsDialogContent(
                     onRequestEdit = {},
                     onEdit = {},
                     onRequestBatchEdit = { _, _ -> },
+                    onDelete = {},
                     modifier = Modifier.padding(8.dp),
                     locale = locale,
                     timeZone = timeZone,
@@ -785,6 +796,10 @@ fun DetailedEventList(
     events: List<Event>,
     selectedEvent: Event?,
     onEventSelected: (Event) -> Unit,
+    onDeleteEvent: (
+        event: Event,
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) -> Unit,
     modifier: Modifier = Modifier,
     lazyListState: LazyListState = rememberLazyListState(),
     highlight: Channel<Event>? = null,
@@ -852,6 +867,7 @@ fun DetailedEventList(
                 DetailedEvent(
                     event = event,
                     onClick = { onEventSelected(event) },
+                    onDelete = { onDeleteEvent(event, it) },
                     selected = event == selectedEvent,
                     locale = locale,
                     timeZone = timeZone,
@@ -924,6 +940,9 @@ fun EventInformationScreen(
     onRequestEdit: (EventEdit) -> Unit,
     onEdit: (EventEditResult) -> Unit,
     onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+    onDelete: (
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) -> Unit,
     modifier: Modifier = Modifier,
     eventModifier: Modifier = Modifier,
     listModifier: @Composable (padding: PaddingValues) -> Modifier = {
@@ -939,7 +958,8 @@ fun EventInformationScreen(
         val eventPlaceable = subcompose("event") {
             DetailedEvent(
                 event = event,
-                onClick = { onBack() },
+                onClick = onBack,
+                onDelete = onDelete,
                 modifier = eventModifier,
                 selected = true,
                 locale = locale,
@@ -981,6 +1001,9 @@ fun EventEditScreen(
     edit: EventEdit,
     onBack: () -> Unit,
     onEdit: (EventEditResult) -> Unit,
+    onDelete: (
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) -> Unit,
     modifier: Modifier = Modifier,
     eventModifier: Modifier = Modifier,
     editModifier: @Composable (padding: PaddingValues) -> Modifier = {
@@ -1000,7 +1023,8 @@ fun EventEditScreen(
             ) {
                 DetailedEvent(
                     event = event,
-                    onClick = { onBack() },
+                    onClick = onBack,
+                    onDelete = onDelete,
                     selected = true,
                     locale = locale,
                     timeZone = timeZone,
@@ -1127,6 +1151,9 @@ fun interface EventEditResult {
 fun DetailedEvent(
     event: Event,
     onClick: () -> Unit,
+    onDelete: (
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) -> Unit,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     highlighted: Boolean = false,
@@ -1138,6 +1165,11 @@ fun DetailedEvent(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     additionalContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
+    val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    val coroutineScope = rememberCoroutineScope()
+
     val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
         .takeOrElse { contractColorFor(color) }
 
@@ -1154,89 +1186,138 @@ fun DetailedEvent(
         if (isForward) 4.dp else 0.dp
     } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
 
-    localSharedTransitionScope {
-        Surface(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth().run {
-                if (animatedVisibilityScope != null) sharedBounds(
-                    rememberSharedContentState(
-                        ScheduleSharedKey.Event(
-                            id = event.id,
-                            screenId = LocalScreenId.current,
-                        ),
-                    ),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    resizeMode = RemeasureToBounds,
-                ) else this
-            },
-            shape = shape,
-            color = color,
-            contentColor = contentColor,
-            shadowElevation = if (event.priority.type == High) {
-                event.priority.reversedValueInType.toInt().dp
-            } else {
-                0.dp
-            }.coerceAtLeast(minShadowElevation),
-            border = if (highlighted) {
-                BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
-            } else null,
-            interactionSource = interactionSource,
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (event.priority.type == High) {
-                            Icon(
-                                painterResource(R.drawable.priority_high_24px),
-                                contentDescription = event.priority.name,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                        Text(text = event.name, style = MaterialTheme.typography.titleMedium)
-                    }
-                    EventLocationLabel(event)
-                    EventNotesLabel(event)
-                    additionalContent?.let { it() }
-                }
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalAlignment = Alignment.End,
-                ) {
-                    val formatter = remember(locale) {
-                        DateTimeFormatter.ofLocalizedTime(SHORT).withLocale(locale)
-                    }
+    var showMenu by remember { mutableStateOf(false) }
+    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
+    val menuOffset = remember(density, menuOriginalOffset) {
+        with(density) {
+            DpOffset(
+                x = menuOriginalOffset.x.toDp(),
+                y = menuOriginalOffset.y.toDp(),
+            )
+        }
+    }
 
-                    Text(
-                        text = remember(event.startTime, formatter, timeZone) {
-                            val localDateTime =
-                                event.startTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
-                            formatter.format(localDateTime)
-                        },
-                        style = MaterialTheme.typography.bodyLargeEmphasized,
-                        fontWeight = ExtraBold,
-                    )
-                    Text(
-                        text = remember(event.endTime, formatter, timeZone) {
-                            val localDateTime =
-                                event.endTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
-                            formatter.format(localDateTime)
-                        },
-                        color = contentColor.copy(alpha = .7f),
-                        style = MaterialTheme.typography.bodyMediumEmphasized,
-                        fontWeight = Bold,
-                    )
+    Box {
+        localSharedTransitionScope {
+            Surface(
+                onClick = onClick,
+                modifier = modifier
+                    .fillMaxWidth()
+                    .detectLongPress(
+                        requireUnconsumed = false,
+                        firstDownPass = Initial,
+                        upOrCancellationPass = Initial,
+                        onFinish = { it.consume() },
+                    ) {
+                        hapticFeedback.performHapticFeedback(LongPress)
+                        menuOriginalOffset = it.position
+                        showMenu = true
+                    }
+                    .run {
+                        if (animatedVisibilityScope != null) sharedBounds(
+                            rememberSharedContentState(
+                                ScheduleSharedKey.Event(
+                                    id = event.id,
+                                    screenId = LocalScreenId.current,
+                                ),
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            resizeMode = RemeasureToBounds,
+                        ) else this
+                    },
+                shape = shape,
+                color = color,
+                contentColor = contentColor,
+                shadowElevation = if (event.priority.type == High) {
+                    event.priority.reversedValueInType.toInt().dp
+                } else {
+                    0.dp
+                }.coerceAtLeast(minShadowElevation),
+                border = if (highlighted) {
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
+                } else null,
+                interactionSource = interactionSource,
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (event.priority.type == High) {
+                                Icon(
+                                    painterResource(R.drawable.priority_high_24px),
+                                    contentDescription = event.priority.name,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Text(text = event.name, style = MaterialTheme.typography.titleMedium)
+                        }
+                        EventLocationLabel(event)
+                        EventNotesLabel(event)
+                        additionalContent?.let { it() }
+                    }
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.End,
+                    ) {
+                        val formatter = remember(locale) {
+                            DateTimeFormatter.ofLocalizedTime(SHORT).withLocale(locale)
+                        }
+
+                        Text(
+                            text = remember(event.startTime, formatter, timeZone) {
+                                val localDateTime =
+                                    event.startTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
+                                formatter.format(localDateTime)
+                            },
+                            style = MaterialTheme.typography.bodyLargeEmphasized,
+                            fontWeight = ExtraBold,
+                        )
+                        Text(
+                            text = remember(event.endTime, formatter, timeZone) {
+                                val localDateTime =
+                                    event.endTime.toLocalDateTime(timeZone).toJavaLocalDateTime()
+                                formatter.format(localDateTime)
+                            },
+                            color = contentColor.copy(alpha = .7f),
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
+                            fontWeight = Bold,
+                        )
+                    }
                 }
             }
+        }
+
+        Box {
+            EventDropdownMenu(
+                event = event,
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                onDelete = {
+                    onDelete { onUndo ->
+                        coroutineScope.launch {
+                            GlobalViewModel.showSnackbar(
+                                message = R.string.label_deleted.asStringRes(event.name),
+                                action = SnackbarAction(
+                                    R.string.label_undo.asStringRes(),
+                                    onUndo,
+                                ),
+                                withDismissAction = true,
+                                duration = SnackbarDuration.Long,
+                            )
+                        }
+                    }
+                },
+                offset = menuOffset,
+            )
         }
     }
 }
@@ -1260,6 +1341,30 @@ private fun EventNotesLabel(event: Event) {
             label = notes,
             contentDescription = stringResource(R.string.schedule_event_notes_label),
             tint = LocalContentColor.current,
+        )
+    }
+}
+
+@Composable
+fun EventDropdownMenu(
+    event: Event,
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onDelete: () -> Unit,
+    offset: DpOffset = Zero,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        offset = offset,
+    ) {
+        DropdownMenuItem(
+            text = { Text(event.name) },
+            onClick = {},
+            enabled = false,
+        )
+        DeleteDropdownMenuItem(
+            onDelete = onDelete,
         )
     }
 }

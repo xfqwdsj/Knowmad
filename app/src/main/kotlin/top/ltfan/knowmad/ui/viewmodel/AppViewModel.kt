@@ -319,6 +319,21 @@ class AppViewModel(
         )
     }
 
+    fun deleteEvent(
+        event: Event,
+        onDeleted: (onUndo: () -> Unit) -> Unit,
+    ) {
+        viewModelScope.launch {
+            scheduleDao.deleteEventById(event.id)
+
+            onDeleted {
+                viewModelScope.launch {
+                    scheduleDao.insertEvent(event.toEntity())
+                }
+            }
+        }
+    }
+
     fun closeEventsDialog(page: EventsDialogPage) {
         backStack.removeIf { it == page }
     }
