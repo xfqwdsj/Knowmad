@@ -241,6 +241,7 @@ data class EventEntity(
     }
 }
 
+// TODO: fix the primary key
 @Entity(
     indices = [
         Index("target"),

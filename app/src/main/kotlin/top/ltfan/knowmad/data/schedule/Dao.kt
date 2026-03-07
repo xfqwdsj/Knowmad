@@ -67,6 +67,7 @@ interface ScheduleDao : FtsDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAllCourses(courses: List<CourseEntity>): List<Long>
 
+    // TODO: delete tombstones if exist
     @Insert
     suspend fun insertEvent(event: EventEntity): Long
 
@@ -132,19 +133,19 @@ interface ScheduleDao : FtsDao {
         return deleteCourseInternal(course)
     }
 
-    @Delete
-    suspend fun deleteEventInternal(event: EventEntity): Int
+    @Query("DELETE FROM EventEntity WHERE id = :id")
+    suspend fun deleteEventByIdInternal(id: Uuid): Int
 
     @Transaction
-    suspend fun deleteEvent(event: EventEntity): Int {
+    suspend fun deleteEventById(id: Uuid): Int {
         val tombstones = EventDeletionTarget.entries.map { target ->
             EventTombstoneEntity(
-                id = event.id,
+                id = id,
                 target = target,
             )
         }
         insertAllEventTombstones(tombstones)
-        return deleteEventInternal(event)
+        return deleteEventByIdInternal(id)
     }
 
     @Query(
