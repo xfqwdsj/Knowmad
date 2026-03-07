@@ -34,6 +34,8 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,7 +81,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
@@ -896,7 +900,18 @@ fun UserMessage(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
+
     var menuExpanded by remember { mutableStateOf(false) }
+    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
+    val menuOffset = remember(density, menuOriginalOffset) {
+        with(density) {
+            DpOffset(
+                x = menuOriginalOffset.x.toDp(),
+                y = menuOriginalOffset.y.toDp(),
+            )
+        }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -910,37 +925,44 @@ fun UserMessage(
                 .combinedClickable(
                     onLongClick = { menuExpanded = true },
                     onClick = {},
-                ),
-            contentAlignment = Alignment.TopEnd,
+                )
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        menuOriginalOffset = awaitFirstDown().position
+                    }
+                },
         ) {
             UserMessageContent(
                 content = content,
                 modifier = Modifier.padding(16.dp),
             )
-            DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
-            ) {
-                val coroutineScope = rememberCoroutineScope()
-                val clipboard = LocalClipboard.current
+            Box {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    offset = menuOffset,
+                ) {
+                    val coroutineScope = rememberCoroutineScope()
+                    val clipboard = LocalClipboard.current
 
-                DropdownMenuItem(
-                    text = { Text(stringResource(android.R.string.copy)) },
-                    shape = MenuDefaults.middleItemShape,
-                    onClick = {
-                        coroutineScope.launch {
-                            val clipData = ClipData.newPlainText(null, content)
-                            clipboard.setClipEntry(ClipEntry(clipData))
-                        }
-                        menuExpanded = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painterResource(R.drawable.content_copy_24px),
-                            contentDescription = null,
-                        )
-                    },
-                )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(android.R.string.copy)) },
+                        shape = MenuDefaults.middleItemShape,
+                        onClick = {
+                            coroutineScope.launch {
+                                val clipData = ClipData.newPlainText(null, content)
+                                clipboard.setClipEntry(ClipEntry(clipData))
+                            }
+                            menuExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(R.drawable.content_copy_24px),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
             }
         }
         if (total > 1) {
