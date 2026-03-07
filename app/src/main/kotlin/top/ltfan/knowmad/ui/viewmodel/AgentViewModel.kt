@@ -41,13 +41,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -153,7 +153,7 @@ class AgentViewModel(
             }
         }
     private val currentConversationIdFlow = snapshotFlow { currentConversationId }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, currentConversationId)
+        .stateIn(viewModelScope, Eagerly, currentConversationId)
 
     init {
         viewModelScope.launch {
@@ -186,9 +186,10 @@ class AgentViewModel(
                 messageListLoading = false
             }
         }
+        .flowOn(Dispatchers.Default)
         .stateIn(
             viewModelScope,
-            started = SharingStarted.Eagerly,
+            started = Eagerly,
             initialValue = Empty,
         )
         .collectAsState()
@@ -297,7 +298,7 @@ class AgentViewModel(
     val providers by llmConfigDao.getAllProvidersFlow()
         .stateIn(
             viewModelScope,
-            SharingStarted.Eagerly,
+            Eagerly,
             emptyList(),
         )
         .collectAsState()
@@ -314,7 +315,7 @@ class AgentViewModel(
         .map { it?.let { id -> llmConfigDao.getModelById(id) } }
         .stateIn(
             viewModelScope,
-            SharingStarted.Eagerly,
+            Eagerly,
             null,
         )
     val selectedModelEntity by selectedModelEntityFlow.collectAsState()
