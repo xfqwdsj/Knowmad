@@ -216,7 +216,7 @@ class AgentViewModel(
 
     fun messageOnPrevious(message: ChatListMessage) {
         if (message is Branched) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 chatDao.selectPreviousMessageOnBranch(message.key)
             }
         }
@@ -224,7 +224,7 @@ class AgentViewModel(
 
     fun messageOnNext(message: ChatListMessage) {
         if (message is Branched) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 chatDao.selectNextMessageOnBranch(message.key)
             }
         }
@@ -260,7 +260,7 @@ class AgentViewModel(
         conversation: ConversationEntity,
         onFinished: () -> Unit = {},
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             chatDao.updateConversation(conversation, application)
             onFinished()
         }
@@ -280,10 +280,11 @@ class AgentViewModel(
         conversation: ConversationEntity,
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        // TODO: optimize by not deleting messages and files, but just mark them as deleted
+        viewModelScope.launch {
             chatDao.deleteConversation(conversation, application)
             onDeleted {
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch {
                     chatDao.insertConversation(conversation, application)
                 }
             }
