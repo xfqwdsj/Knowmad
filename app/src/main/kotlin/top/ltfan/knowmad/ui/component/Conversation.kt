@@ -42,7 +42,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.PlainTooltip
@@ -327,8 +326,8 @@ fun ConversationList(
                                     )
                                 },
                             )
-                            DropdownMenuItem(
-                                onClick = {
+                            DeleteDropdownMenuItem(
+                                onDelete = {
                                     onDeleteConversation(conversation) { onUndo ->
                                         if (currentConversationId == conversation.id) {
                                             onConversationSelected(null)
@@ -348,18 +347,7 @@ fun ConversationList(
                                     }
                                     showMenu = false
                                 },
-                                text = { Text(stringResource(R.string.label_delete)) },
                                 shape = MenuDefaults.trailingItemThemedShape,
-                                leadingIcon = {
-                                    Icon(
-                                        painterResource(R.drawable.delete_24px),
-                                        contentDescription = null,
-                                    )
-                                },
-                                colors = MenuDefaults.itemColors(
-                                    textColor = MaterialTheme.colorScheme.error,
-                                    leadingIconColor = MaterialTheme.colorScheme.error,
-                                ),
                             )
                         }
                     }
