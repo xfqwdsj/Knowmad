@@ -373,6 +373,8 @@ fun SemesterInformation(
     onBackup: (suspend () -> String)? = null,
     onDelete: (suspend () -> Unit)? = null,
 ) {
+    val density = LocalDensity.current
+
     val coroutineScope = rememberCoroutineScope()
 
     val dateFormatter = remember(locale) {
@@ -394,6 +396,15 @@ fun SemesterInformation(
     }
 
     var showMenu by remember { mutableStateOf(false) }
+    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
+    val menuOffset = remember(density, menuOriginalOffset) {
+        with(density) {
+            DpOffset(
+                x = menuOriginalOffset.x.toDp(),
+                y = menuOriginalOffset.y.toDp(),
+            )
+        }
+    }
 
     Surface(
         modifier = modifier,
@@ -408,6 +419,7 @@ fun SemesterInformation(
                     onLongClick = { showMenu = true },
                     onClick = { onSelectionChange?.invoke(!selected) },
                 )
+                .detectLongPress { menuOriginalOffset = it.position }
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) content@{
@@ -543,65 +555,73 @@ fun SemesterInformation(
         var exportationContent by remember { mutableStateOf<String?>(null) }
         var backupContent by remember { mutableStateOf<String?>(null) }
 
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false },
-        ) {
-            DropdownMenuItem(
-                onClick = {
-                    showMenu = false
-                    coroutineScope.launch {
-                        exportationContent = onExport?.invoke()
-                    }
-                },
-                text = { Text(stringResource(R.string.schedule_semester_label_export)) },
-                shape = MenuDefaults.leadingItemThemedShape,
-                leadingIcon = {
-                    Icon(
-                        painterResource(R.drawable.file_export_24px),
-                        contentDescription = null,
-                    )
-                },
-                enabled = onExport != null,
-            )
-            DropdownMenuItem(
-                onClick = {
-                    showMenu = false
-                    coroutineScope.launch {
-                        backupContent = onBackup?.invoke()
-                    }
-                },
-                text = { Text(stringResource(R.string.schedule_semester_label_backup)) },
-                shape = MenuDefaults.middleItemShape,
-                leadingIcon = {
-                    Icon(
-                        painterResource(R.drawable.file_export_24px),
-                        contentDescription = null,
-                    )
-                },
-                enabled = onBackup != null,
-            )
-            DropdownMenuItem(
-                onClick = {
-                    showMenu = false
-                    coroutineScope.launch {
-                        onDelete?.invoke()
-                    }
-                },
-                text = { Text(stringResource(R.string.schedule_semester_label_delete)) },
-                shape = MenuDefaults.trailingItemThemedShape,
-                leadingIcon = {
-                    Icon(
-                        painterResource(R.drawable.delete_24px),
-                        contentDescription = null,
-                    )
-                },
-                enabled = onDelete != null && semester.id != SemesterEntity.DefaultSemesterId,
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.error,
-                    leadingIconColor = MaterialTheme.colorScheme.error,
-                ),
-            )
+        Box {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                offset = menuOffset,
+            ) {
+                DropdownMenuItem(
+                    text = { Text(semester.name) },
+                    onClick = {},
+                    enabled = false,
+                )
+                DropdownMenuItem(
+                    onClick = {
+                        showMenu = false
+                        coroutineScope.launch {
+                            exportationContent = onExport?.invoke()
+                        }
+                    },
+                    text = { Text(stringResource(R.string.schedule_semester_label_export)) },
+                    shape = MenuDefaults.leadingItemThemedShape,
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.file_export_24px),
+                            contentDescription = null,
+                        )
+                    },
+                    enabled = onExport != null,
+                )
+                DropdownMenuItem(
+                    onClick = {
+                        showMenu = false
+                        coroutineScope.launch {
+                            backupContent = onBackup?.invoke()
+                        }
+                    },
+                    text = { Text(stringResource(R.string.schedule_semester_label_backup)) },
+                    shape = MenuDefaults.middleItemShape,
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.file_export_24px),
+                            contentDescription = null,
+                        )
+                    },
+                    enabled = onBackup != null,
+                )
+                DropdownMenuItem(
+                    onClick = {
+                        showMenu = false
+                        coroutineScope.launch {
+                            onDelete?.invoke()
+                        }
+                    },
+                    text = { Text(stringResource(R.string.schedule_semester_label_delete)) },
+                    shape = MenuDefaults.trailingItemThemedShape,
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.delete_24px),
+                            contentDescription = null,
+                        )
+                    },
+                    enabled = onDelete != null && semester.id != SemesterEntity.DefaultSemesterId,
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.error,
+                        leadingIconColor = MaterialTheme.colorScheme.error,
+                    ),
+                )
+            }
         }
 
         exportationContent?.let {
