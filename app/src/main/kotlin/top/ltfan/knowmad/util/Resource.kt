@@ -21,28 +21,51 @@ package top.ltfan.knowmad.util
 import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
-import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
 sealed interface Resource {
-    @Serializable
     @Immutable
     sealed interface String {
-        @Serializable
         @Immutable
-        data class Original(val value: kotlin.String) : String
-
-        @Serializable
-        @Immutable
-        data class Id(@param:StringRes val id: Int) : String
-
-        fun get(resources: Resources): kotlin.String = when (this) {
-            is Original -> value
-            is Id -> resources.getString(id)
+        data class Original(val value: kotlin.String) : String {
+            override fun get(resources: Resources) = value
         }
+
+        @Immutable
+        data class Id(
+            @param:StringRes val id: Int,
+            val formatArgs: Array<out Any>? = null,
+        ) : String {
+            override fun get(resources: Resources) = if (formatArgs != null) {
+                resources.getString(id, *formatArgs)
+            } else {
+                resources.getString(id)
+            }
+
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as Id
+
+                if (id != other.id) return false
+                if (!formatArgs.contentEquals(other.formatArgs)) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = id
+                result = 31 * result + (formatArgs?.contentHashCode() ?: 0)
+                return result
+            }
+        }
+
+        fun get(resources: Resources): kotlin.String
     }
 }
 
 fun String.asResource(): Resource.String = Resource.String.Original(this)
-fun Int.asStringRes(): Resource.String = Resource.String.Id(this)
+fun @receiver:StringRes Int.asStringRes(
+    vararg formatArgs: Any,
+): Resource.String = Resource.String.Id(this, formatArgs.takeIf { it.isNotEmpty() })

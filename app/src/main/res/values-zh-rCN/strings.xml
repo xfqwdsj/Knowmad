@@ -43,7 +43,7 @@
     <string name="label_help">帮助</string>
     <string name="label_edit">编辑</string>
     <string name="label_delete">删除</string>
-    <string name="label_deleted">已删除</string>
+    <string name="label_deleted">已删除：%s</string>
     <string name="label_run">运行</string>
     <string name="label_need_attention">需要注意</string>
     <string name="label_not_changed">未更改</string>

@@ -129,7 +129,7 @@ fun LLMProviderConfig(
             viewModel.deleteProviderConfig(it) { onUndo ->
                 coroutineScope.launch {
                     GlobalViewModel.showSnackbar(
-                        message = R.string.label_deleted.asStringRes(),
+                        message = R.string.label_deleted.asStringRes(it.name),
                         action = SnackbarAction(R.string.label_undo.asStringRes(), onUndo),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,
@@ -142,7 +142,7 @@ fun LLMProviderConfig(
             viewModel.deleteModelConfig(it) { onUndo ->
                 coroutineScope.launch {
                     GlobalViewModel.showSnackbar(
-                        message = R.string.label_deleted.asStringRes(),
+                        message = R.string.label_deleted.asStringRes(it.name),
                         action = SnackbarAction(R.string.label_undo.asStringRes(), onUndo),
                         withDismissAction = true,
                         duration = SnackbarDuration.Long,
