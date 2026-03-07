@@ -62,6 +62,7 @@ import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.notification.NextSuggestionNotification
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.notification.showNextSuggestionNotification
 import top.ltfan.knowmad.notification.withAgentRunningNotification
 import top.ltfan.knowmad.util.Json
@@ -70,7 +71,7 @@ import kotlin.time.Clock
 
 private val logger = Logger("GenerateNextSuggestion")
 
-private class GenerateNextSuggestion(
+private class SetResult(
     context: Context,
 ) : Tool<NextSuggestionNotification, NextSuggestionNotification>(
     argsSerializer = NextSuggestionNotification.serializer(),
@@ -95,9 +96,23 @@ private class GenerateNextSuggestion(
                 type = ToolParameterType.String,
             ),
         ),
+        optionalParameters = listOf(
+            ToolParameterDescriptor(
+                name = "suggestedNextGenerationTime",
+                description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_time),
+                type = ToolParameterType.String,
+            ),
+        ),
     ),
 ) {
-    override suspend fun execute(args: NextSuggestionNotification) = args
+    override suspend fun execute(args: NextSuggestionNotification): NextSuggestionNotification {
+        val suggestedNextGenerationTime = args.suggestedNextGenerationTime
+        if (suggestedNextGenerationTime != null) {
+            val now = Clock.System.now()
+            require(suggestedNextGenerationTime >= now) { "Suggested next generation time must be in the future" }
+        }
+        return args
+    }
 }
 
 suspend fun Context.generateAndShowNextSuggestion(
@@ -107,104 +122,116 @@ suspend fun Context.generateAndShowNextSuggestion(
     maxAgentIterations: Int = 50,
     onSummary: ((String) -> Unit)? = null,
 ) = coroutineScope {
-    val context = applicationContext
+    try {
+        val context = applicationContext
 
-    val strategy = strategy<Unit, NextSuggestionNotification>("generate_next_suggestion") {
-        val nodeLLMRequest by node<Unit, List<Message.Response>> {
-            llm.writeSession {
-                requestLLMMultiple()
+        val strategy = strategy<Unit, NextSuggestionNotification>("generate_next_suggestion") {
+            val nodeLLMRequest by node<Unit, List<Message.Response>> {
+                llm.writeSession {
+                    requestLLMMultiple()
+                }
             }
-        }
-        val nodeExecuteTools by nodeExecuteMultipleTools(parallelTools = true)
-        val nodeLLMSendToolResults by nodeLLMSendMultipleToolResults()
+            val nodeExecuteTools by nodeExecuteMultipleTools(parallelTools = true)
+            val nodeLLMSendToolResults by nodeLLMSendMultipleToolResults()
 
-        edge(nodeStart forwardTo nodeLLMRequest)
-        edge(
-            nodeLLMRequest forwardTo nodeExecuteTools
-                    onMultipleToolCalls { true },
-        )
-        edge(
-            nodeExecuteTools forwardTo nodeFinish
-                    onCondition { it.singleOrNull()?.tool == "set_result" }
-                    transformed {
-                it.singleOrNull()?.result?.let { json -> Json.decodeFromJsonElement(json) }
-                    ?: error("This should never happen")
-            },
-        )
-        edge(nodeExecuteTools forwardTo nodeLLMSendToolResults)
-        edge(
-            nodeLLMSendToolResults forwardTo nodeExecuteTools
-                    onMultipleToolCalls { true },
-        )
-        edge(
-            nodeLLMSendToolResults forwardTo nodeLLMRequest
-                    transformed {},
-        )
-    }
-
-    val agentConfig = AIAgentConfig(
-        prompt = prompt("next-suggestion") {
-            system(
-                context.getString(R.string.llm_task_generate_next_suggestion_prompt)
-                    .trimIndent().format(Clock.System.now().formatAgentTime()),
+            edge(nodeStart forwardTo nodeLLMRequest)
+            edge(
+                nodeLLMRequest forwardTo nodeExecuteTools
+                        onMultipleToolCalls { true },
             )
-        },
-        model = model,
-        maxAgentIterations = maxAgentIterations,
-    )
+            edge(
+                nodeExecuteTools forwardTo nodeFinish onCondition {
+                    val singleOrNull = it.singleOrNull() ?: return@onCondition false
+                    if (singleOrNull.resultKind != Success) return@onCondition false
+                    singleOrNull.tool == "set_result"
+                } transformed {
+                    it.singleOrNull()?.result?.let { json -> Json.decodeFromJsonElement(json) }
+                        ?: error("This should never happen")
+                },
+            )
+            edge(nodeExecuteTools forwardTo nodeLLMSendToolResults)
+            edge(
+                nodeLLMSendToolResults forwardTo nodeExecuteTools
+                        onMultipleToolCalls { true },
+            )
+            edge(
+                nodeLLMSendToolResults forwardTo nodeLLMRequest
+                        transformed {},
+            )
+        }
 
-    val toolRegistry = ToolRegistry {
-        tool(ScheduleTools.QuerySemestersTool(context.resources, scheduleDao))
-        tool(ScheduleTools.SearchSemestersTool(context.resources, scheduleDao))
-        tool(ScheduleTools.QueryEventsTool(context.resources, scheduleDao))
-        tool(ScheduleTools.SearchCoursesTool(context.resources, scheduleDao))
-        tool(GenerateNextSuggestion(context))
-    }
+        val agentConfig = AIAgentConfig(
+            prompt = prompt("next-suggestion") {
+                system(
+                    context.getString(R.string.llm_task_generate_next_suggestion_prompt)
+                        .trimIndent().format(Clock.System.now().formatAgentTime()),
+                )
+            },
+            model = model,
+            maxAgentIterations = maxAgentIterations,
+        )
 
-    val agent = AIAgent(
-        promptExecutor = promptExecutor,
-        agentConfig = agentConfig,
-        strategy = strategy,
-        toolRegistry = toolRegistry,
-    ) {
-        install(EventHandler) {
-            onLLMCallStarting { logger.debug { "LLM call starting" } }
-            onLLMCallCompleted { completedContext ->
-                logger.debug { "LLM call completed" }
-                onSummary?.let { onSummary ->
-                    launch {
-                        try {
-                            val summary = generateMessageSummary(
-                                contextMessages = completedContext.prompt.messages,
-                                targetMessages = completedContext.responses,
-                                executor = promptExecutor,
-                                model = model,
-                                resources = context.resources,
-                            )
-                            if (!isActive) return@launch
-                            if (summary != null) {
-                                logger.debug { "Generated summary for LLM call" }
-                                onSummary(summary)
-                            } else {
-                                logger.warn { "Failed to generate summary for LLM call" }
+        val toolRegistry = ToolRegistry {
+            tool(ScheduleTools.QuerySemestersTool(context.resources, scheduleDao))
+            tool(ScheduleTools.SearchSemestersTool(context.resources, scheduleDao))
+            tool(ScheduleTools.QueryEventsTool(context.resources, scheduleDao))
+            tool(ScheduleTools.SearchCoursesTool(context.resources, scheduleDao))
+            tool(SetResult(context))
+        }
+
+        val agent = AIAgent(
+            promptExecutor = promptExecutor,
+            agentConfig = agentConfig,
+            strategy = strategy,
+            toolRegistry = toolRegistry,
+        ) {
+            install(EventHandler) {
+                onLLMCallStarting { logger.debug { "LLM call starting" } }
+                onLLMCallCompleted { completedContext ->
+                    logger.debug { "LLM call completed" }
+                    onSummary?.let { onSummary ->
+                        launch {
+                            try {
+                                val summary = generateMessageSummary(
+                                    contextMessages = completedContext.prompt.messages,
+                                    targetMessages = completedContext.responses,
+                                    executor = promptExecutor,
+                                    model = model,
+                                    resources = context.resources,
+                                )
+                                if (!isActive) return@launch
+                                if (summary != null) {
+                                    logger.debug { "Generated summary for LLM call" }
+                                    onSummary(summary)
+                                } else {
+                                    logger.warn { "Failed to generate summary for LLM call" }
+                                }
+                            } catch (e: CancellationException) {
+                                logger.debug(e) { "Next suggestion generation completed, cancelling summary generation" }
                             }
-                        } catch (e: CancellationException) {
-                            logger.debug(e) { "Next suggestion generation completed, cancelling summary generation" }
                         }
                     }
                 }
+                onToolCallCompleted { logger.debug { "Tool call completed" } }
             }
-            onToolCallCompleted { logger.debug { "Tool call completed" } }
         }
+
+        val notification = agent.run(Unit)
+        coroutineContext.job.cancelChildren()
+
+        logger.debug { "Next suggestion generated: $notification" }
+
+        showNextSuggestionNotification(notification)
+
+        notification.suggestedNextGenerationTime?.let { time ->
+            logger.debug { "Scheduling next suggestion generation at suggested time: $time" }
+            scheduleNextSuggestionGeneration {
+                timeInMillis = time.toEpochMilliseconds()
+            }
+        }
+    } catch (e: Throwable) {
+        logger.error(e) { "Failed to generate and show next suggestion" }
     }
-
-    val notification = agent.run(Unit)
-
-    logger.debug { "Next suggestion generated: $notification" }
-
-    showNextSuggestionNotification(notification)
-
-    coroutineContext.job.cancelChildren()
 }
 
 class GenerateNextSuggestionWorker(

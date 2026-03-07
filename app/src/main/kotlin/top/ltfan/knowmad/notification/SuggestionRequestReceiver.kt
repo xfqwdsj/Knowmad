@@ -74,7 +74,16 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 false,
             )
 
-        fun Context.scheduleNextSuggestionGeneration() {
+        fun Context.scheduleNextSuggestionGeneration(
+            buildCalendar: Calendar.() -> Unit = {
+                set(Calendar.HOUR_OF_DAY, 7)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                if (before(Calendar.getInstance())) {
+                    add(Calendar.DATE, 1)
+                }
+            },
+        ) {
             val context = applicationContext
 
             val alarmManager = context.getSystemService<AlarmManager>() ?: run {
@@ -92,14 +101,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 return
             }
 
-            val calendar = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 7)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                if (before(Calendar.getInstance())) {
-                    add(Calendar.DATE, 1)
-                }
-            }
+            val calendar = Calendar.getInstance().apply(buildCalendar)
 
             alarmManager.setExact(
                 AlarmManager.RTC_WAKEUP,

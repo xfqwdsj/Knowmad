@@ -36,6 +36,7 @@ data class NextSuggestionNotification(
     val capsuleTitle: String,
     val notificationTitle: String,
     val notificationContent: String,
+    val suggestedNextGenerationTime: Instant? = null,
 )
 
 private val NotificationId = Uuid.parse("019c0c33-1400-7480-87e0-f12641ae67f7").hashCode()
