@@ -22,7 +22,9 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.MainActivity.Companion.getViewSuggestionPendingIntent
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.getSuggestionDowngradingPendingIntent
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
@@ -37,13 +39,14 @@ data class NextSuggestionNotification(
     val notificationTitle: String,
     val notificationContent: String,
     val suggestedNextGenerationTime: Instant? = null,
+    val suggestedNextGenerationPrompt: String? = null,
+    val createdAt: Instant = Clock.System.now(),
 )
 
 private val NotificationId = Uuid.parse("019c0c33-1400-7480-87e0-f12641ae67f7").hashCode()
 
 fun Context.showNextSuggestionNotification(
     suggestion: NextSuggestionNotification,
-    at: Instant = Clock.System.now(),
 ) {
     createAiNotificationChannel()
 
@@ -56,12 +59,18 @@ fun Context.showNextSuggestionNotification(
         setOngoing(true)
         setAutoCancel(false)
         setRequestPromotedOngoing(true)
-        setWhen(at.toEpochMilliseconds())
+        setWhen(suggestion.createdAt.toEpochMilliseconds())
+        setContentIntent(getViewSuggestionPendingIntent(suggestion))
+        addAction(
+            R.drawable.keep_off_24px,
+            getString(R.string.label_unpin),
+            getSuggestionDowngradingPendingIntent(suggestion),
+        )
     }.build()
 
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
-        scheduleNextSuggestionDowngrading(suggestion, at)
+        scheduleNextSuggestionDowngrading(suggestion)
     }.let {
         if (it != null) return@let
         logger.warn { "Failed to show next suggestion notification due to missing permission" }
@@ -70,7 +79,6 @@ fun Context.showNextSuggestionNotification(
 
 fun Context.downgradeNextSuggestionNotification(
     suggestion: NextSuggestionNotification,
-    createdAt: Instant,
 ) {
     createAiNotificationChannel()
 
@@ -84,7 +92,8 @@ fun Context.downgradeNextSuggestionNotification(
         setAutoCancel(true)
         setRequestPromotedOngoing(false)
         setOnlyAlertOnce(true)
-        setWhen(createdAt.toEpochMilliseconds())
+        setWhen(suggestion.createdAt.toEpochMilliseconds())
+        setContentIntent(getViewSuggestionPendingIntent(suggestion))
     }.build()
 
     checkedNotificationPermission {

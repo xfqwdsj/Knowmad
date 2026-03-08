@@ -47,13 +47,31 @@
         ## 第二步：执行输出
         一旦思考完成，立即调用`set_result`工具输出你的建议。
 
+        ### 可能的建议方向
+
+        - 安排总览：提供一个清晰的时间线概览，帮助用户了解接下来一段时间内（一般是上午、下午或晚上，可灵活调整）的安排和空闲时间。
+        - 优先级建议：提供优先级建议，告诉用户接下来应该优先处理哪些事项，以及为什么。
+        - 时间管理建议：如果用户的日程安排较为紧凑，提供时间管理建议，帮助用户更高效地利用时间，例如建议调整某些事项的时间，或者建议用户在某些时间段内专注于处理特定类型的任务。
+        - 物品携带/转场建议：如果用户在接下来的一段时间内有外出安排，提供物品携带建议（例如需要携带的物品清单）和转场建议（例如最佳的出发时间、交通工具选择等）。
+        - 生活建议：提供一些生活建议，例如建议用户在某些时间段内休息、锻炼或者进行其他有益身心健康的活动。
+        - 普通问候：如果用户的日程安排较为宽松，或者当前时间适合进行一些轻松的活动，提供一些普通的问候和建议，例如建议用户享受一个悠闲的下午，或者建议用户利用空闲时间进行一些兴趣爱好活动。
+
         # 已知上下文
-        - 当前时间：%1$s
+        ## 当前时间
+        %1$s
+
+        ## 本次建议的提示语
+        &lt;&lt;&lt;
+        %2$s
+        &gt;&gt;&gt;
 
         注意：你的所有普通文本输出仅用于展示思考过程。最终结果必须且只能通过`set_result`提交。
     "</string>
     <string name="llm_task_generate_next_suggestion_result_capsule_title">胶囊短标题，将展示在醒目位置，必须极其简短，如“3项待办”“准备出发”。不允许换行和符号</string>
     <string name="llm_task_generate_next_suggestion_result_notification_title">通知标题，总结性的一句话，概括建议的核心内容，如“今天下午行程较紧，建议先处理方案”。不允许换行和非必要的符号，不允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">通知内容，简要列举建议的内容，可以包括日程概览、温馨提示等。需要控制长度，舍去低优先级的建议。允许适当的换行和符号，不允许Markdown</string>
-    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">建议的下一次生成建议的时间，格式为ISO 8601的日期时间字符串，如“2020–01–01T12:00:00Z”，也可指定其他偏移，建议使用用户的时区。这个字段是可选的，但强烈建议根据用户的日程和习惯提供一个合理的时间，以便系统能够在适当的时候再次生成建议</string>
+    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">建议的下一次生成建议的时间，格式为ISO 8601的日期时间字符串，如“2020&#8211;01&#8211;01T12:00:00Z”，也可指定其他偏移，建议使用用户的时区。这个字段是可选的，但强烈建议根据用户的日程和习惯提供一个合理的时间，以便系统能够在适当的时候再次生成建议；时间间隔不宜过短（如10分钟，紧急情况除外），以免频繁打扰用户，也不宜过长（如2小时，休息时间、繁忙时间除外），以免建议失去时效性</string>
+    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_prompt">建议的下一次生成建议时提供给智能助手的提示语，帮助智能助手理解为什么在这个时间点生成建议，以及需要关注的重点内容，如“用户即将下课，可以提供一些关于如何利用课后时间的建议，或者简单的问候”。这个字段是可选的，但强烈建议提供，并将其编写得尽可能具体和有指导性，以帮助智能助手在下一次生成建议时能够更好地满足用户的需求和情境</string>
+    <string name="llm_task_generate_next_suggestion_prompt_default">本次生成建议没有特定的提示语，智能助手可以根据已知的上下文信息和一般的用户需求来生成建议</string>
+    <string name="llm_task_generate_next_suggestion_prompt_manual">用户手动请求了生成建议，可以在这个时间点提供一些建议来满足用户的需求</string>
 </resources>

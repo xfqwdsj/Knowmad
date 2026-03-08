@@ -18,6 +18,7 @@
 
 package top.ltfan.knowmad
 
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -30,6 +31,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshotFlow
+import androidx.core.app.PendingIntentCompat
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -45,6 +47,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.activity.KnowmadActivity
 import top.ltfan.knowmad.application.KnowmadApplication
@@ -52,6 +56,7 @@ import top.ltfan.knowmad.data.schedule.CalendarLinkScheme
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.toCalendarDateOrNull
 import top.ltfan.knowmad.data.schedule.toCalendarEventIdOrNull
+import top.ltfan.knowmad.notification.NextSuggestionNotification
 import top.ltfan.knowmad.ui.AppContent
 import top.ltfan.knowmad.ui.component.PipAction
 import top.ltfan.knowmad.ui.component.PipActions
@@ -64,6 +69,7 @@ import top.ltfan.knowmad.ui.viewmodel.AgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.AppViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
+import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 
 class MainActivity : KnowmadActivity() {
@@ -209,6 +215,18 @@ class MainActivity : KnowmadActivity() {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
             return
         }
+
+        val isViewSuggestionAction = this?.action == ACTION_VIEW_SUGGESTION
+        if (isViewSuggestionAction) {
+            val notification = getByteArrayExtra(EXTRA_NEXT_SUGGESTION_NOTIFICATION)
+                ?.let { Cbor.decodeFromByteArray<NextSuggestionNotification>(it) }
+                ?: run {
+                    logger.warn { "Received view suggestion intent without notification data" }
+                    return
+                }
+            viewModel.viewingSuggestion = notification
+            return
+        }
     }
 
     private fun Uri.handleIcsFile() {
@@ -257,8 +275,11 @@ class MainActivity : KnowmadActivity() {
 
     companion object {
         const val ACTION_PIP = "ACTION_PIP"
+        const val ACTION_VIEW_SUGGESTION = "ACTION_VIEW_SUGGESTION"
 
         const val EXTRA_IS_PARTIAL = "IS_PARTIAL"
+
+        const val EXTRA_NEXT_SUGGESTION_NOTIFICATION = "EXTRA_NEXT_SUGGESTION_NOTIFICATION"
 
         private val logger = Logger("MainActivity")
         val pipEventFlow = MutableSharedFlow<PipEvent>()
@@ -267,6 +288,20 @@ class MainActivity : KnowmadActivity() {
             inline get() = Intent(this, MainActivity::class.java).apply {
                 action = ACTION_PIP
             }
+
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun Context.getViewSuggestionPendingIntent(
+            notification: NextSuggestionNotification,
+        ) = PendingIntentCompat.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                action = ACTION_VIEW_SUGGESTION
+                putExtra(EXTRA_NEXT_SUGGESTION_NOTIFICATION, Cbor.encodeToByteArray(notification))
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT,
+            false,
+        )
     }
 
     override fun onStop() {

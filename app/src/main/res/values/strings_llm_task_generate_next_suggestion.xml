@@ -47,13 +47,31 @@
         ## Step 2: Execute Output
         Once your thinking process is complete, immediately invoke the `set_result` tool to submit your suggestions.
 
+        ### Possible Suggestion Directions
+
+        - Schedule Overview: Provide a clear timeline overview to help users understand their upcoming schedule and free time in the next period (generally morning, afternoon, or evening, but can be flexibly adjusted).
+        - Priority Suggestions: Offer priority recommendations, telling users which matters they should prioritize next and why.
+        - Time Management Advice: If the user\'s schedule is tight, provide time management suggestions to help them utilize their time more efficiently, such as suggesting adjustments to certain tasks\' timings or recommending that users focus on specific types of tasks during certain time periods.
+        - Item Carrying/Transition Suggestions: If the user has plans to go out in the next period, provide suggestions on what items to carry (e.g., a checklist of necessary items) and transition advice (e.g., optimal departure time, transportation options, etc.).
+        - Lifestyle Advice: Offer some lifestyle suggestions, such as recommending that users take breaks, exercise, or engage in other activities beneficial to their physical and mental health during certain time periods.
+        - Casual Greetings: If the user\'s schedule is relatively relaxed, or if the current time is suitable for some light activities, provide some casual greetings and suggestions, such as recommending that users enjoy a leisurely afternoon or utilize their free time for some hobbies.
+
         # Known Context
-        - Current Time: %1$s
+        ## Current Time
+        %1$s
+
+        ## Prompt for This Suggestion Generation
+        &lt;&lt;&lt;
+        %2$s
+        &gt;&gt;&gt;
 
         Note: All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `set_result`.
     "</string>
     <string name="llm_task_generate_next_suggestion_result_capsule_title">Capsule short title. Displayed in a prominent position; must be extremely brief, such as \"3 Tasks\" or \"Ready to go\". No line breaks or symbols allowed</string>
     <string name="llm_task_generate_next_suggestion_result_notification_title">Notification title. A single summary sentence capturing the core of the suggestion, such as \"Busy afternoon ahead; suggest prioritizing the proposal.\" No line breaks, unnecessary symbols, or Markdown allowed</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">Notification content. List suggestions with extreme brevity; include only the most critical schedule overviews or tips. You MUST prioritize high-value information and omit low-priority details to keep it very short. Appropriate line breaks and symbols are allowed. Markdown is not allowed</string>
-    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">Suggested next generation time for suggestions, formatted as an ISO 8601 date–time string, such as \"2020–01–01T12:00:00Z\". You can also specify other offsets; it\'s recommended to use the user\'s time zone. This field is optional but strongly recommended to provide a reasonable time based on the user\'s schedule and habits, so the system can generate suggestions again at an appropriate time</string>
+    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">Suggested next suggestion generation time, formatted as an ISO 8601 date–time string, such as \"2020&#8211;01&#8211;01T12:00:00Z\". You can also specify other offsets, preferably using the user\'s time zone. This field is optional but strongly recommended to provide a reasonable time based on the user\'s schedule and habits, so that the system can generate suggestions again at an appropriate time; the time interval should not be too short (e.g., 10 minutes, except in urgent situations) to avoid frequent interruptions, nor too long (e.g., 2 hours, except during rest or busy times) to prevent suggestions from losing timeliness</string>
+    <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_prompt">Suggested prompt for the next suggestion generation, provided to the intelligent assistant to help it understand why to generate suggestions at this time point and what key content to focus on, such as \"The user is about to finish class, you can provide some suggestions on how to utilize after-school time, or a simple greeting\". This field is optional but strongly recommended to be provided and written as specifically and instructively as possible to help the intelligent assistant better meet the user\'s needs and context in the next suggestion generation</string>
+    <string name="llm_task_generate_next_suggestion_prompt_default">There is no specific prompt for this suggestion generation, the intelligent assistant can generate suggestions based on the known contextual information and general user needs</string>
+    <string name="llm_task_generate_next_suggestion_prompt_manual">The user has manually requested to generate suggestions, you can provide some suggestions at this time point to meet the user\'s needs</string>
 </resources>

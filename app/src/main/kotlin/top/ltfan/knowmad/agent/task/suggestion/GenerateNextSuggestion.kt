@@ -23,6 +23,7 @@ import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.nodeExecuteMultipleTools
+import ai.koog.agents.core.dsl.extension.nodeLLMRequestStreamingAndSendResults
 import ai.koog.agents.core.dsl.extension.nodeLLMSendMultipleToolResults
 import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
 import ai.koog.agents.core.tools.Tool
@@ -35,12 +36,13 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.message.Message
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ForegroundInfo
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelChildren
@@ -102,6 +104,11 @@ private class SetResult(
                 description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_time),
                 type = ToolParameterType.String,
             ),
+            ToolParameterDescriptor(
+                name = "suggestedNextGenerationPrompt",
+                description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_prompt),
+                type = ToolParameterType.String,
+            ),
         ),
     ),
 ) {
@@ -116,6 +123,7 @@ private class SetResult(
 }
 
 suspend fun Context.generateAndShowNextSuggestion(
+    prompt: String,
     scheduleDao: ScheduleDao,
     promptExecutor: PromptExecutor,
     model: LLModel,
@@ -126,11 +134,7 @@ suspend fun Context.generateAndShowNextSuggestion(
         val context = applicationContext
 
         val strategy = strategy<Unit, NextSuggestionNotification>("generate_next_suggestion") {
-            val nodeLLMRequest by node<Unit, List<Message.Response>> {
-                llm.writeSession {
-                    requestLLMMultiple()
-                }
-            }
+            val nodeLLMRequest by nodeLLMRequestStreamingAndSendResults<Unit>()
             val nodeExecuteTools by nodeExecuteMultipleTools(parallelTools = true)
             val nodeLLMSendToolResults by nodeLLMSendMultipleToolResults()
 
@@ -164,7 +168,7 @@ suspend fun Context.generateAndShowNextSuggestion(
             prompt = prompt("next-suggestion") {
                 system(
                     context.getString(R.string.llm_task_generate_next_suggestion_prompt)
-                        .trimIndent().format(Clock.System.now().formatAgentTime()),
+                        .trimIndent().format(Clock.System.now().formatAgentTime(), prompt),
                 )
             },
             model = model,
@@ -225,7 +229,7 @@ suspend fun Context.generateAndShowNextSuggestion(
 
         notification.suggestedNextGenerationTime?.let { time ->
             logger.debug { "Scheduling next suggestion generation at suggested time: $time" }
-            scheduleNextSuggestionGeneration {
+            scheduleNextSuggestionGeneration(notification.suggestedNextGenerationPrompt) {
                 timeInMillis = time.toEpochMilliseconds()
             }
         }
@@ -286,6 +290,7 @@ class GenerateNextSuggestionWorker(
                 logger.debug { "Starting to generate next suggestion" }
 
                 context.generateAndShowNextSuggestion(
+                    prompt = inputData.getString(DATA_PROMPT) ?: context.getString(DefaultPromptId),
                     scheduleDao = scheduleDao,
                     promptExecutor = service.promptExecutor,
                     model = service.agentConfig.model,
@@ -301,5 +306,22 @@ class GenerateNextSuggestionWorker(
     } catch (e: Throwable) {
         logger.error(e) { "Failed to generate next suggestion" }
         Result.failure()
+    }
+
+    companion object {
+        const val DATA_PROMPT = "DATA_PROMPT"
+
+        val DefaultPromptId inline get() = R.string.llm_task_generate_next_suggestion_prompt_default
+
+        fun buildRequest(
+            prompt: String,
+        ) = OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
+            setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+
+            val data = Data.Builder().apply {
+                putString(DATA_PROMPT, prompt)
+            }.build()
+            setInputData(data)
+        }.build()
     }
 }

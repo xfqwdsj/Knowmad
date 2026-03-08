@@ -18,6 +18,7 @@
 
 <resources>
     <string name="app_name">知行</string>
+    <string name="label_view">查看</string>
     <string name="label_skip">跳过</string>
     <string name="label_skip_for_now">暂时跳过</string>
     <string name="label_close">关闭</string>

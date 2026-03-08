@@ -22,8 +22,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -68,6 +73,19 @@ fun AppContent() {
                     onDismissRequest = { appViewModel.iCalendarImportResult = null },
                     result = result,
                     errors = errors,
+                )
+            }
+
+            appViewModel.viewingSuggestion?.let { notification ->
+                AlertDialog(
+                    onDismissRequest = { appViewModel.viewingSuggestion = null },
+                    title = { Text(notification.capsuleTitle) },
+                    text = { SelectionContainer { Text(notification.notificationContent) } },
+                    confirmButton = {
+                        TextButton(onClick = { appViewModel.viewingSuggestion = null }) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
                 )
             }
         } else {

@@ -77,8 +77,6 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST
 import androidx.work.WorkManager
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -217,6 +215,8 @@ class MainPage : Page() {
                 Scaffold(
                     topBar = {
                         val context = LocalContext.current
+                        val prompt =
+                            stringResource(R.string.llm_task_generate_next_suggestion_prompt_manual)
                         TopAppBar(
                             title = {
                                 Row(
@@ -244,10 +244,7 @@ class MainPage : Page() {
                                 onLongClick = {
                                     // TODO: refactor with a better method of triggering
                                     context.checkOrRequestExactAlarmPermission()
-                                    val request =
-                                        OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
-                                            setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                                        }.build()
+                                    val request = GenerateNextSuggestionWorker.buildRequest(prompt)
                                     WorkManager.getInstance(context).enqueue(request)
                                 },
                                 onDoubleClick = {

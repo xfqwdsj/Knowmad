@@ -34,7 +34,7 @@ class KnowmadApplication : Application() {
             CoroutineScope(Dispatchers.IO).launch {
                 getOrCreateSyncAccount()
             }
-            scheduleNextSuggestionGeneration(PendingIntent.FLAG_NO_CREATE)
+            scheduleNextSuggestionGeneration(flags = PendingIntent.FLAG_NO_CREATE)
         }
     }
 }

@@ -28,9 +28,11 @@ import android.os.SystemClock
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
+import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -40,17 +42,19 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
 
-        intent.extractDowngradingInfo()?.let { (suggestion, createdAt) ->
+        intent.extractDowngradingInfo()?.let { suggestion ->
+            context.cancelScheduledSuggestionDowngrading()
             logger.debug { "Received downgrading request for suggestion: $suggestion" }
-            context.downgradeNextSuggestionNotification(suggestion, createdAt)
+            context.downgradeNextSuggestionNotification(suggestion)
             return
         }
 
         val context = context.applicationContext
-        context.scheduleNextSuggestionGeneration(PendingIntent.FLAG_NO_CREATE)
-        val request = OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
-            setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-        }.build()
+        context.scheduleNextSuggestionGeneration(flags = PendingIntent.FLAG_NO_CREATE)
+
+        val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: context.defaultPrompt
+
+        val request = GenerateNextSuggestionWorker.buildRequest(prompt)
         logger.debug { "Enqueuing suggestion generation work" }
         WorkManager.getInstance(context).enqueue(request)
     }
@@ -60,22 +64,29 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         const val ACTION_DOWNGRADE = "DOWNGRADE"
 
-        const val EXTRA_CAPSULE_TITLE = "EXTRA_CAPSULE_TITLE"
-        const val EXTRA_TITLE = "EXTRA_TITLE"
-        const val EXTRA_CONTENT = "EXTRA_CONTENT"
-        const val EXTRA_CREATED_AT = "EXTRA_CREATED_AT"
+        const val EXTRA_PROMPT = "EXTRA_PROMPT"
 
-        private fun Context.createGenerationIntent(
+        const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
+
+        private val Context.defaultPrompt
+            inline get() = getString(GenerateNextSuggestionWorker.DefaultPromptId)
+
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun Context.getGenerationIntent(
+            prompt: String = defaultPrompt,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
             0,
-            Intent(applicationContext, SuggestionRequestReceiver::class.java),
+            Intent(applicationContext, SuggestionRequestReceiver::class.java).apply {
+                putExtra(EXTRA_PROMPT, prompt)
+            },
             flags,
             false,
         )
 
         fun Context.scheduleNextSuggestionGeneration(
+            prompt: String? = null,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
             buildCalendar: Calendar.() -> Unit = {
                 set(Calendar.HOUR_OF_DAY, 7)
@@ -98,7 +109,8 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 return
             }
 
-            val pendingIntent = context.createGenerationIntent(flags) ?: run {
+            val prompt = prompt ?: defaultPrompt
+            val pendingIntent = context.getGenerationIntent(prompt, flags) ?: run {
                 logger.error { "Failed to create pending intent for scheduling next suggestion generation" }
                 return
             }
@@ -116,56 +128,37 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         }
 
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun Context.createDowngradeIntent(
-            suggestion: NextSuggestionNotification,
-            createdAt: Instant,
+        inline fun Context.getSuggestionDowngradingPendingIntent(
+            suggestion: NextSuggestionNotification?,
+            @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
             1,
             Intent(applicationContext, SuggestionRequestReceiver::class.java).apply {
                 action = ACTION_DOWNGRADE
-                putExtra(EXTRA_CAPSULE_TITLE, suggestion.capsuleTitle)
-                putExtra(EXTRA_TITLE, suggestion.notificationTitle)
-                putExtra(EXTRA_CONTENT, suggestion.notificationContent)
-                putExtra(EXTRA_CREATED_AT, createdAt.toEpochMilliseconds())
+                putExtra(EXTRA_NOTIFICATION, Cbor.encodeToByteArray(suggestion))
             },
-            PendingIntent.FLAG_UPDATE_CURRENT,
+            flags,
             false,
         )
 
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun Intent.extractDowngradingInfo(): Pair<NextSuggestionNotification, Instant>? {
+        private inline fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
             if (action != ACTION_DOWNGRADE) {
                 logger.debug { "Received intent with unsupported action: $action, ignoring" }
                 return null
             }
-            val capsuleTitle = getStringExtra(EXTRA_CAPSULE_TITLE) ?: run {
-                logger.warn { "Received downgrading request without capsule title" }
-                return null
-            }
-            val title = getStringExtra(EXTRA_TITLE) ?: run {
-                logger.warn { "Received downgrading request without notification title" }
-                return null
-            }
-            val content = getStringExtra(EXTRA_CONTENT) ?: run {
-                logger.warn { "Received downgrading request without notification content" }
-                return null
-            }
-            val createdAtMillis = getLongExtra(EXTRA_CREATED_AT, -1L).takeIf { it != -1L } ?: run {
-                logger.warn { "Received downgrading request without created at timestamp" }
-                return null
-            }
-            val createdAt = Instant.fromEpochMilliseconds(createdAtMillis)
-            return NextSuggestionNotification(
-                capsuleTitle = capsuleTitle,
-                notificationTitle = title,
-                notificationContent = content,
-            ) to createdAt
+            val notification = getByteArrayExtra(EXTRA_NOTIFICATION)
+                ?.let { Cbor.decodeFromByteArray<NextSuggestionNotification>(it) }
+                ?: run {
+                    logger.warn { "Received downgrading request without notification data" }
+                    return null
+                }
+            return notification
         }
 
         fun Context.scheduleNextSuggestionDowngrading(
             suggestion: NextSuggestionNotification,
-            createdAt: Instant,
             delay: Duration = 1.hours,
         ) {
             val context = applicationContext
@@ -180,7 +173,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 return
             }
 
-            val pendingIntent = context.createDowngradeIntent(suggestion, createdAt) ?: run {
+            val pendingIntent = context.getSuggestionDowngradingPendingIntent(suggestion) ?: run {
                 logger.error { "Failed to create PendingIntent for scheduling suggestion downgrading" }
                 return
             }
@@ -192,6 +185,26 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 SystemClock.elapsedRealtime() + delay.inWholeMilliseconds,
                 pendingIntent,
             )
+        }
+
+        fun Context.cancelScheduledSuggestionDowngrading() {
+            val context = applicationContext
+
+            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
+                logger.error { "Failed to get AlarmManager for canceling scheduled suggestion downgrading" }
+                return
+            }
+
+            val pendingIntent = context.getSuggestionDowngradingPendingIntent(
+                suggestion = null,
+                flags = PendingIntent.FLAG_NO_CREATE,
+            ) ?: run {
+                logger.debug { "No existing PendingIntent for suggestion downgrading, nothing to cancel" }
+                return
+            }
+
+            logger.debug { "Canceling scheduled suggestion downgrading" }
+            alarmManager.cancel(pendingIntent)
         }
     }
 }

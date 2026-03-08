@@ -54,6 +54,7 @@ import top.ltfan.knowmad.data.schedule.writeStandard
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.notification.NextSuggestionNotification
 import top.ltfan.knowmad.ui.component.CalendarState
 import top.ltfan.knowmad.ui.component.MathJaxRenderer
 import top.ltfan.knowmad.ui.component.MathJaxRendererState
@@ -275,6 +276,8 @@ class AppViewModel(
 
         return success(events.size)
     }
+
+    var viewingSuggestion by mutableStateOf<NextSuggestionNotification?>(null)
 
     private val eventsCache =
         object : LinkedHashMap<Pair<Instant, Instant>, List<Event>>(10, .75f, true) {
