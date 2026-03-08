@@ -100,6 +100,11 @@ private class SetResult(
         ),
         optionalParameters = listOf(
             ToolParameterDescriptor(
+                name = "notificationSummary",
+                description = context.getString(R.string.llm_task_generate_next_suggestion_result_notification_summary),
+                type = ToolParameterType.String,
+            ),
+            ToolParameterDescriptor(
                 name = "suggestedNextGenerationTime",
                 description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_time),
                 type = ToolParameterType.String,

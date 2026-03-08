@@ -38,6 +38,7 @@ data class NextSuggestionNotification(
     val capsuleTitle: String,
     val notificationTitle: String,
     val notificationContent: String,
+    val notificationSummary: String? = null,
     val suggestedNextGenerationTime: Instant? = null,
     val suggestedNextGenerationPrompt: String? = null,
     val createdAt: Instant = Clock.System.now(),
@@ -54,7 +55,7 @@ fun Context.showNextSuggestionNotification(
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
-        setContentText(suggestion.notificationContent)
+        setContentText(suggestion.notificationSummary ?: suggestion.notificationContent)
         setStyle(NotificationCompat.BigTextStyle().bigText(suggestion.notificationContent))
         setOngoing(true)
         setAutoCancel(false)
@@ -86,7 +87,7 @@ fun Context.downgradeNextSuggestionNotification(
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
-        setContentText(suggestion.notificationContent)
+        setContentText(suggestion.notificationSummary ?: suggestion.notificationContent)
         setStyle(NotificationCompat.BigTextStyle().bigText(suggestion.notificationContent))
         setOngoing(false)
         setAutoCancel(true)
