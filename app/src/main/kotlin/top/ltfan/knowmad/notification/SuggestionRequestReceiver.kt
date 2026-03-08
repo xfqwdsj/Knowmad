@@ -55,7 +55,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: context.defaultPrompt
 
         val request = GenerateNextSuggestionWorker.buildRequest(prompt)
-        logger.debug { "Enqueuing suggestion generation work" }
+        logger.debug { "Enqueuing suggestion generation work with prompt: $prompt" }
         WorkManager.getInstance(context).enqueue(request)
     }
 
@@ -111,7 +111,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
             val prompt = prompt ?: defaultPrompt
             val pendingIntent = context.getGenerationIntent(prompt, flags) ?: run {
-                logger.error { "Failed to create pending intent for scheduling next suggestion generation" }
+                logger.warn { "Failed to create pending intent for scheduling next suggestion generation" }
                 return
             }
 
@@ -174,7 +174,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             }
 
             val pendingIntent = context.getSuggestionDowngradingPendingIntent(suggestion) ?: run {
-                logger.error { "Failed to create PendingIntent for scheduling suggestion downgrading" }
+                logger.warn { "Failed to create PendingIntent for scheduling suggestion downgrading" }
                 return
             }
 

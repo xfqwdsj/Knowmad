@@ -292,10 +292,15 @@ class GenerateNextSuggestionWorker(
                     model = model.model,
                 )
 
-                logger.debug { "Starting to generate next suggestion" }
+                val prompt = inputData.getString(DATA_PROMPT) ?: run {
+                    logger.warn { "No prompt provided for generating next suggestion, using default prompt" }
+                    context.getString(DefaultPromptId)
+                }
+
+                logger.debug { "Starting to generate next suggestion with prompt: $prompt" }
 
                 context.generateAndShowNextSuggestion(
-                    prompt = inputData.getString(DATA_PROMPT) ?: context.getString(DefaultPromptId),
+                    prompt = prompt,
                     scheduleDao = scheduleDao,
                     promptExecutor = service.promptExecutor,
                     model = service.agentConfig.model,

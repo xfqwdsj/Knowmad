@@ -72,10 +72,7 @@ fun Context.showNextSuggestionNotification(
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
         scheduleNextSuggestionDowngrading(suggestion)
-    }.let {
-        if (it != null) return@let
-        logger.warn { "Failed to show next suggestion notification due to missing permission" }
-    }
+    } ?: logger.warn { "Failed to show suggestion notification due to missing permission" }
 }
 
 fun Context.downgradeNextSuggestionNotification(
@@ -99,5 +96,5 @@ fun Context.downgradeNextSuggestionNotification(
 
     checkedNotificationPermission {
         NotificationManagerCompat.from(this).notify(NotificationId, notification)
-    }
+    } ?: logger.warn { "Failed to downgrade suggestion notification due to missing permission" }
 }
