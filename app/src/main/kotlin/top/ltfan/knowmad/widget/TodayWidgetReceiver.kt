@@ -80,6 +80,9 @@ class TodayWidgetReceiver : GlanceAppWidgetReceiver() {
                 logger.warn { "Cannot schedule exact alarms, skipping scheduling today widget update" }
                 return
             }
+
+            logger.debug { "Scheduling today widget update at: $at" }
+
             alarmManager.setExact(
                 AlarmManager.RTC_WAKEUP,
                 at.toEpochMilliseconds(),
