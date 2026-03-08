@@ -41,6 +41,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
@@ -71,7 +72,7 @@ fun WidgetEventList(
     completedEvents: List<Event>,
     supplementaryEvents: List<Event>?,
     getEventClickAction: (Event) -> Action,
-    modifier: GlanceModifier = GlanceModifier,
+    modifier: GlanceModifier = GlanceModifier.fillMaxSize(),
     contentPadding: Dp = 8.dp,
 ) {
     LazyColumn(modifier) {
@@ -105,11 +106,10 @@ fun WidgetEventList(
         if (!supplementaryEvents.isNullOrEmpty()) {
             if (hasPrevious) {
                 item {
-                    Box(
+                    Column(
                         modifier = GlanceModifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp, vertical = 8.dp),
-                        contentAlignment = Center,
                     ) {
                         Spacer(
                             modifier = GlanceModifier
@@ -117,7 +117,24 @@ fun WidgetEventList(
                                 .height(1.dp)
                                 .background(GlanceTheme.colors.surfaceVariant),
                         )
+                        Spacer(GlanceModifier.height(4.dp))
+                        LabelWithIcon(
+                            icon = R.drawable.info_24px,
+                            label = LocalContext.current.getString(R.string.schedule_event_list_indicator_label_next_day),
+                            modifier = GlanceModifier.padding(horizontal = contentPadding),
+                        )
                     }
+                }
+            } else {
+                item {
+                    LabelWithIcon(
+                        icon = R.drawable.info_24px,
+                        label = LocalContext.current.getString(R.string.schedule_event_list_indicator_label_next_day),
+                        modifier = GlanceModifier.padding(horizontal = contentPadding + 16.dp),
+                    )
+                }
+                item {
+                    Spacer(GlanceModifier.height(8.dp))
                 }
             }
             spacedItems(supplementaryEvents) { event ->

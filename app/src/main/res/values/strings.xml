@@ -161,6 +161,8 @@
     <string name="schedule_event_recurrence_rule_label_none">Not part of any recurrence rule</string>
     <string name="schedule_event_color_label">Color</string>
     <string name="schedule_event_dot_label">Has Events</string>
+    <string name="schedule_event_list_label_widget_no_events">No events for today and tomorrow, enjoy your free time!</string>
+    <string name="schedule_event_list_indicator_label_next_day">Next Day</string>
     <string name="schedule_event_list_indicator_label_new_day">New Day</string>
     <string name="schedule_event_list_indicator_label_not_started">Up to here</string>
     <string name="schedule_event_list_indicator_label_close_to_start">Up to here, next starts in %s</string>

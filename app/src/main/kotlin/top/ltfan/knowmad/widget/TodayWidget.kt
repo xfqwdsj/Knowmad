@@ -30,14 +30,18 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.text.Text
 import com.kizitonwose.calendar.core.plusDays
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
+import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.database.AppDatabase
 import top.ltfan.knowmad.data.schedule.getCalendarEventIntent
 import top.ltfan.knowmad.ui.component.WidgetEventList
 import top.ltfan.knowmad.ui.theme.AppRadiusLarge
+import top.ltfan.knowmad.ui.theme.AppTypography
+import top.ltfan.knowmad.ui.util.toGlanceTextStyle
 import top.ltfan.knowmad.widget.TodayWidgetReceiver.Companion.scheduleTodayWidgetUpdate
 import kotlin.time.Clock
 
@@ -74,7 +78,21 @@ class TodayWidget : GlanceAppWidget() {
                     .fillMaxSize()
                     .background(GlanceTheme.colors.widgetBackground)
                     .cornerRadius(AppRadiusLarge),
+                contentAlignment = Center,
             ) {
+                if (
+                    upcomingEvents.isEmpty() &&
+                    completedEvents.isEmpty() &&
+                    supplementaryEvents.isNullOrEmpty()
+                ) {
+                    Text(
+                        text = context.getString(R.string.schedule_event_list_label_widget_no_events),
+                        style = AppTypography.titleLargeEmphasized
+                            .toGlanceTextStyle(GlanceTheme.colors.secondary),
+                    )
+                    return@Box
+                }
+
                 WidgetEventList(
                     upcomingEvents = upcomingEvents,
                     completedEvents = completedEvents,
