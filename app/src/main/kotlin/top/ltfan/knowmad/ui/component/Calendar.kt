@@ -535,7 +535,7 @@ fun Events(
 
             layout(width, totalUsedHeight) {
                 var y = 0
-                allPlaceables.forEachIndexed { i, p ->
+                allPlaceables.fastForEachIndexed { i, p ->
                     p.placeRelative(
                         x = (width - p.width) / 2,
                         y = y,
