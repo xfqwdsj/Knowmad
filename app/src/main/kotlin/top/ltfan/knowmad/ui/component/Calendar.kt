@@ -72,6 +72,7 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,6 +96,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
@@ -110,9 +112,12 @@ import com.tyme.solar.SolarDay
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -160,6 +165,8 @@ fun Calendar(
 ) {
     val today = rememberSystemDate(timeZone = state.timeZone)
 
+    val tick = remember { MutableStateFlow(0u) }
+
     val transition = rememberTransition(state.transitionState)
 
     val allEvents by remember {
@@ -170,87 +177,89 @@ fun Calendar(
         }
     }.collectAsState(initial = emptyList())
 
-    transition.AnimatedContent(
-        modifier = modifier,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-    ) { mode ->
-        when (mode) {
-            Month -> HorizontalCalendar(
-                modifier = Modifier.fillMaxSize(),
-                state = state.monthCalendarState,
-                contentHeightMode = Fill,
-                dayContent = { day ->
-                    val events = remember(day, state.timeZone, allEvents) {
-                        if (day.position != MonthDate) return@remember null
-                        val startTime = day.date.atStartOfDayIn(state.timeZone)
-                        val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
-                        allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
-                    }
+    CompositionLocalProvider(LocalDaySecondaryTextTick provides tick) {
+        transition.AnimatedContent(
+            modifier = modifier,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+        ) { mode ->
+            when (mode) {
+                Month -> HorizontalCalendar(
+                    modifier = Modifier.fillMaxSize(),
+                    state = state.monthCalendarState,
+                    contentHeightMode = Fill,
+                    dayContent = { day ->
+                        val events = remember(day, state.timeZone, allEvents) {
+                            if (day.position != MonthDate) return@remember null
+                            val startTime = day.date.atStartOfDayIn(state.timeZone)
+                            val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
+                            allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
+                        }
 
-                    Day(
-                        date = day.date,
-                        onClick = onDayClick?.let { callback ->
-                            { callback(day.date, events) }
-                        },
-                        events = events,
-                        onEventClick = onEventClick?.let { callback ->
-                            { clicked, events ->
-                                callback(day.date, clicked, events)
-                            }
-                        },
-                        outOfMonth = day.position != MonthDate,
-                        border = if (day.date == today) BorderStroke(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) else null,
-                    )
-                },
-                monthHeader = {
-                    WeekHeader(
-                        modifier = headerModifier,
-                        daysOfWeek = state.daysOfWeek,
-                        locale = locale,
-                        textStyle = headerTextStyle,
-                    )
-                },
-            )
+                        Day(
+                            date = day.date,
+                            onClick = onDayClick?.let { callback ->
+                                { callback(day.date, events) }
+                            },
+                            events = events,
+                            onEventClick = onEventClick?.let { callback ->
+                                { clicked, events ->
+                                    callback(day.date, clicked, events)
+                                }
+                            },
+                            outOfMonth = day.position != MonthDate,
+                            border = if (day.date == today) BorderStroke(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                            ) else null,
+                        )
+                    },
+                    monthHeader = {
+                        WeekHeader(
+                            modifier = headerModifier,
+                            daysOfWeek = state.daysOfWeek,
+                            locale = locale,
+                            textStyle = headerTextStyle,
+                        )
+                    },
+                )
 
-            Week -> WeekCalendar(
-                modifier = Modifier.fillMaxSize(),
-                state = state.weekCalendarState,
-                dayContent = { day ->
-                    val events = remember(day, state.timeZone, allEvents) {
-                        val startTime = day.date.atStartOfDayIn(state.timeZone)
-                        val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
-                        allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
-                    }
+                Week -> WeekCalendar(
+                    modifier = Modifier.fillMaxSize(),
+                    state = state.weekCalendarState,
+                    dayContent = { day ->
+                        val events = remember(day, state.timeZone, allEvents) {
+                            val startTime = day.date.atStartOfDayIn(state.timeZone)
+                            val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
+                            allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
+                        }
 
-                    Day(
-                        date = day.date,
-                        onClick = onDayClick?.let { callback ->
-                            { callback(day.date, events) }
-                        },
-                        hasEvents = events.isNotEmpty(),
-                        onEventClick = onEventClick?.let { callback ->
-                            { clicked, events ->
-                                callback(day.date, clicked, events)
-                            }
-                        },
-                        border = if (day.date == today) BorderStroke(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) else null,
-                    )
-                },
-                weekHeader = {
-                    WeekHeader(
-                        modifier = headerModifier,
-                        daysOfWeek = state.daysOfWeek,
-                        locale = locale,
-                        textStyle = headerTextStyle,
-                    )
-                },
-            )
+                        Day(
+                            date = day.date,
+                            onClick = onDayClick?.let { callback ->
+                                { callback(day.date, events) }
+                            },
+                            hasEvents = events.isNotEmpty(),
+                            onEventClick = onEventClick?.let { callback ->
+                                { clicked, events ->
+                                    callback(day.date, clicked, events)
+                                }
+                            },
+                            border = if (day.date == today) BorderStroke(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                            ) else null,
+                        )
+                    },
+                    weekHeader = {
+                        WeekHeader(
+                            modifier = headerModifier,
+                            daysOfWeek = state.daysOfWeek,
+                            locale = locale,
+                            textStyle = headerTextStyle,
+                        )
+                    },
+                )
+            }
         }
     }
 
@@ -267,6 +276,15 @@ fun Calendar(
         if (lastTimeZone != currentTimeZone) {
             onSystemTimeZoneChanged?.invoke(lastTimeZone, currentTimeZone)
             lastTimeZone = currentTimeZone
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        while (isActive) {
+            delay(5.seconds)
+            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
+            tick.value += 1u
         }
     }
 }
@@ -385,7 +403,11 @@ private fun DaySecondaryText(
     maxLines: Int = 1,
     style: TextStyle = MaterialTheme.typography.bodySmall,
 ) {
-    var currentText by remember { mutableStateOf(texts.firstOrNull()) }
+    val tick by LocalDaySecondaryTextTick.current.collectAsStateWithLifecycle()
+    val currentText = remember(texts, tick) {
+        if (texts.size <= 1) texts.firstOrNull()
+        else texts[(tick % texts.size.toUInt()).toInt()]
+    }
 
     AnimatedContent(
         targetState = currentText,
@@ -404,18 +426,6 @@ private fun DaySecondaryText(
             maxLines = maxLines,
             style = style,
         )
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner, texts) {
-        var index = 0
-        while (index in texts.indices) {
-            currentText = texts[index]
-            index++
-            if (index >= texts.size) index = 0
-            delay(5.seconds)
-            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
-        }
     }
 }
 
@@ -853,3 +863,7 @@ private sealed interface CalendarSharedKey {
 }
 
 const val AdjacentMonths = 50
+
+private val LocalDaySecondaryTextTick = staticCompositionLocalOf<StateFlow<UInt>> {
+    error("No LocalDaySecondaryTextTick provided")
+}
