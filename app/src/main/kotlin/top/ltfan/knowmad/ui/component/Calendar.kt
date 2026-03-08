@@ -91,7 +91,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.compose.ui.util.fastMapIndexed
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -439,7 +441,19 @@ fun Events(
         val activeIds = remember(events) { events.map { it.id }.toSet() }
 
         SideEffect {
-            events.forEach { if (!internalRenderList.contains(it)) internalRenderList.add(it) }
+            val currentPoolMap = mutableMapOf<Uuid, Int>()
+            internalRenderList.fastForEachIndexed { index, event ->
+                currentPoolMap[event.id] = index
+            }
+
+            events.fastForEach { newEvent ->
+                val poolIndex = currentPoolMap[newEvent.id]
+                if (poolIndex == null) {
+                    internalRenderList.add(newEvent)
+                } else if (internalRenderList[poolIndex] !== newEvent) {
+                    internalRenderList[poolIndex] = newEvent
+                }
+            }
         }
 
         SubcomposeLayout(
@@ -500,7 +514,7 @@ fun Events(
                 }.map { it.measure(constraints) }
             } else emptyList()
 
-            val eventPlaceables = internalRenderList.map { event ->
+            val eventPlaceables = internalRenderList.fastMapIndexed { index, event ->
                 subcompose("anim_${event.id}") {
                     AnimatedVisibility(
                         visible = visibilityMap[event.id] == true,
@@ -510,7 +524,7 @@ fun Events(
                         val radius by transition.animateDp { if (it == Visible) AppRadiusSmall else 2.dp }
                         Event(
                             event = event,
-                            modifier = if (internalRenderList.indexOf(event) == 0) {
+                            modifier = if (index == 0) {
                                 Modifier.sharedBounds(
                                     rememberSharedContentState(CalendarSharedKey.Dot(date)),
                                     animatedVisibilityScope = this,
@@ -523,7 +537,10 @@ fun Events(
                         )
 
                         if (!activeIds.contains(event.id) && transition.currentState == PostExit) {
-                            SideEffect { internalRenderList.remove(event) }
+                            SideEffect {
+                                val target = internalRenderList.indexOfFirst { it.id == event.id }
+                                if (target != -1) internalRenderList.removeAt(target)
+                            }
                         }
                     }
                 }.map { it.measure(constraints) }
@@ -531,7 +548,7 @@ fun Events(
 
             val allPlaceables = dotPlaceables + eventPlaceables.flatten()
             val totalUsedHeight = if (allPlaceables.isEmpty()) 0
-            else allPlaceables.sumOf { it.height } + (allPlaceables.size - 1) * spacing
+            else allPlaceables.sumOf { it.height } + (allPlaceables.size - 1).coerceAtLeast(0) * spacing
 
             layout(width, totalUsedHeight) {
                 var y = 0
