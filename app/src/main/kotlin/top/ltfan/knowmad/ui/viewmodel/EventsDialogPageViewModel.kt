@@ -31,7 +31,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.ScheduleDao
-import top.ltfan.knowmad.ui.component.EventEdit
 import top.ltfan.knowmad.ui.component.EventEditChange
 import top.ltfan.knowmad.ui.component.EventEditResult
 import top.ltfan.knowmad.ui.page.EventDetailsSubPage
@@ -84,7 +83,7 @@ class EventsDialogPageViewModel(
         }
     }
 
-    fun onRequestBatchEdit(edit: EventEdit, change: EventEditChange) {
+    fun onRequestBatchEdit(change: EventEditChange) {
 
     }
 }

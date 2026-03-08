@@ -731,7 +731,7 @@ fun EventsDialogContent(
                     onBack = { onEventSelected(null) },
                     onRequestEdit = {},
                     onEdit = {},
-                    onRequestBatchEdit = { _, _ -> },
+                    onRequestBatchEdit = {},
                     onDelete = {},
                     modifier = Modifier.padding(8.dp),
                     locale = locale,
@@ -957,13 +957,17 @@ fun DetailedEventList(
     }
 }
 
+private typealias OnRequestEdit = (EventEdit) -> Unit
+private typealias OnEdit = (EventEditResult) -> Unit
+private typealias OnRequestBatchEdit = (EventEditChange) -> Unit
+
 @Composable
 fun EventInformationScreen(
     event: Event,
     onBack: () -> Unit,
-    onRequestEdit: (EventEdit) -> Unit,
-    onEdit: (EventEditResult) -> Unit,
-    onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+    onRequestEdit: OnRequestEdit,
+    onEdit: OnEdit,
+    onRequestBatchEdit: OnRequestBatchEdit,
     onDelete: (
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) -> Unit,
@@ -1024,7 +1028,7 @@ fun EventEditScreen(
     event: Event,
     edit: EventEdit,
     onBack: () -> Unit,
-    onEdit: (EventEditResult) -> Unit,
+    onEdit: OnEdit,
     onDelete: (
         onDeleted: (onUndo: () -> Unit) -> Unit,
     ) -> Unit,
@@ -1058,7 +1062,7 @@ fun EventEditScreen(
                     event = event,
                     onRequestEdit = {},
                     onEdit = {},
-                    onRequestBatchEdit = { _, _ -> },
+                    onRequestBatchEdit = {},
                     animatedVisibilityScope = animatedVisibilityScope,
                 )
             }
@@ -1096,7 +1100,7 @@ sealed class EventEdit {
     open fun EditContent(
         event: Event,
         onBack: () -> Unit,
-        onEdit: (EventEditResult) -> Unit,
+        onEdit: OnEdit,
         modifier: Modifier = Modifier,
     ) {
     }
@@ -1104,9 +1108,9 @@ sealed class EventEdit {
     @Composable
     fun SharedListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         animatedVisibilityScope: AnimatedVisibilityScope?,
     ) {
         localSharedTransitionScope {
@@ -1136,13 +1140,13 @@ sealed class EventEdit {
     @Composable
     abstract fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier = Modifier,
     )
 
-    protected val ((EventEdit) -> Unit).onClick: () -> Unit
+    protected val OnRequestEdit.onClick: () -> Unit
         get() = { this(this@EventEdit) }
 
     companion object {
@@ -1396,9 +1400,9 @@ fun EventDropdownMenu(
 @Composable
 fun DetailedEventInformation(
     event: Event,
-    onRequestEdit: (EventEdit) -> Unit,
-    onEdit: (EventEditResult) -> Unit,
-    onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+    onRequestEdit: OnRequestEdit,
+    onEdit: OnEdit,
+    onRequestBatchEdit: OnRequestBatchEdit,
     modifier: Modifier = Modifier,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -1423,9 +1427,9 @@ private object LabelEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1443,9 +1447,9 @@ private object LocationEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1464,7 +1468,7 @@ private object NotesEdit : EventEdit() {
     override fun EditContent(
         event: Event,
         onBack: () -> Unit,
-        onEdit: (EventEditResult) -> Unit,
+        onEdit: OnEdit,
         modifier: Modifier,
     ) {
         Column(
@@ -1515,9 +1519,9 @@ private object NotesEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1539,9 +1543,9 @@ private object CourseEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1564,9 +1568,9 @@ private object PriorityEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         var showMenu by remember { mutableStateOf(false) }
@@ -1590,7 +1594,7 @@ private object PriorityEdit : EventEdit() {
                     ),
                 ) {
                     BatchEditButton {
-                        lastChange?.let { onRequestBatchEdit(this@PriorityEdit, it) }
+                        lastChange?.let { onRequestBatchEdit(it) }
                     }
                 }
             },
@@ -1639,9 +1643,9 @@ private object RemindersEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1671,9 +1675,9 @@ private object InstructorEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         if (event !is Course) return
@@ -1692,9 +1696,9 @@ private object RecurrenceRuleEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1712,9 +1716,9 @@ private object SemesterEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -1732,9 +1736,9 @@ private object ColorEdit : EventEdit() {
     @Composable
     override fun ListItem(
         event: Event,
-        onRequestEdit: (EventEdit) -> Unit,
-        onEdit: (EventEditResult) -> Unit,
-        onRequestBatchEdit: (EventEdit, EventEditChange) -> Unit,
+        onRequestEdit: OnRequestEdit,
+        onEdit: OnEdit,
+        onRequestBatchEdit: OnRequestBatchEdit,
         modifier: Modifier,
     ) {
         DetailedEventInformationEntry(
@@ -2060,6 +2064,11 @@ private fun LabelWithIcon(
             color = tint,
         )
     }
+}
+
+@Immutable
+enum class BatchEditScope {
+    Recurrence, Semester
 }
 
 @Immutable
