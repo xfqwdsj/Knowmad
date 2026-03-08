@@ -25,7 +25,6 @@ import android.content.IntentFilter
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.rememberTransition
@@ -62,13 +61,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -80,7 +79,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -93,7 +91,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
+import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -140,6 +138,7 @@ import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.uuid.Uuid
 import com.kizitonwose.calendar.compose.CalendarState as MonthCalendarState
 
 @Composable
@@ -436,113 +435,114 @@ fun Events(
     onEventClick: ((event: Event) -> Unit)? = null,
 ) {
     localSharedTransitionScope {
-        Column(
+        val internalRenderList = remember { mutableStateListOf<Event>() }
+        val activeIds = remember(events) { events.map { it.id }.toSet() }
+
+        SideEffect {
+            events.forEach { if (!internalRenderList.contains(it)) internalRenderList.add(it) }
+        }
+
+        SubcomposeLayout(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(2.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            var canUpdateEvents by remember { mutableStateOf(true) }
-            val eventsSnapshot = remember { mutableStateListOf<Event>() }
-            val displayedEvents = remember { mutableStateSetOf<Event>() }
-            var showDot by remember { mutableStateOf<Boolean?>(null) }
-            AnimatedVisibility(
-                visible = showDot == true,
-                enter = expandIn(),
-                exit = shrinkOut(),
-            ) {
-                var positioned by remember { mutableStateOf(false) }
-                val radius by transition.animateDp {
-                    if (it == Visible) 2.dp else AppRadiusSmall
+        ) { constraints ->
+            val width = constraints.maxWidth
+            val spacing = 2.dp.roundToPx()
+
+            var remainingHeight = constraints.maxHeight
+            val visibilityMap = mutableMapOf<Uuid, Boolean>()
+            var globalShowDot = false
+
+            internalRenderList.fastForEachIndexed { index, event ->
+                val isCurrentlyActive = activeIds.contains(event.id)
+                if (!isCurrentlyActive) {
+                    visibilityMap[event.id] = false
+                    return@fastForEachIndexed
                 }
-                Dot(
-                    modifier = if (positioned) Modifier.sharedBounds(
-                        rememberSharedContentState(CalendarSharedKey.Dot(date)),
-                        animatedVisibilityScope = this@AnimatedVisibility,
-                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                        renderInOverlayDuringTransition = false,
-                    )
-                    else Modifier.onGloballyPositioned { positioned = true },
-                    shape = ContinuousRoundedRectangle(radius),
-                )
-            }
 
-            if (canUpdateEvents) {
-                eventsSnapshot.clear()
-                eventsSnapshot.addAll(events)
-            }
+                val h =
+                    subcompose("probe_${event.id}") { Event(event) }[0].maxIntrinsicHeight(width)
 
-            for ((index, event) in eventsSnapshot.withIndex()) {
-                SubcomposeLayout(Modifier.zIndex((-index).toFloat())) { constraints ->
-                    val width = constraints.maxWidth
-
-                    val expandedHeight = subcompose("expanded-event") {
-                        Event(event)
-                    }[0].maxIntrinsicHeight(width)
-
-                    if (showDot == null) showDot = expandedHeight > constraints.maxHeight
-                    val isMinimized = if (index == 0) showDot ?: error("Uninitialized")
-                    else expandedHeight > constraints.maxHeight
-                    if (index == 0) {
-                        showDot = expandedHeight > constraints.maxHeight
+                if (index == 0) {
+                    if (h > remainingHeight) {
+                        globalShowDot = true
+                        visibilityMap[event.id] = false
+                    } else {
+                        globalShowDot = false
+                        visibilityMap[event.id] = true
+                        remainingHeight -= (h + spacing)
                     }
+                } else {
+                    if (h <= remainingHeight && !globalShowDot) {
+                        visibilityMap[event.id] = true
+                        remainingHeight -= (h + spacing)
+                    } else {
+                        visibilityMap[event.id] = false
+                    }
+                }
+            }
 
-                    val placeable = subcompose("event") {
-                        AnimatedVisibility(
-                            visible = displayedEvents.contains(event) && !isMinimized,
-                            enter = fadeIn() + expandVertically(clip = false),
-                            exit = fadeOut() + shrinkVertically(clip = false),
-                        ) {
-                            var positioned by remember { mutableStateOf(false) }
-                            val radius by transition.animateDp {
-                                if (it == Visible) AppRadiusSmall else 2.dp
-                            }
-                            Event(
-                                event = event,
-                                modifier = when (index) {
-                                    0 if positioned -> Modifier
-                                        .sharedBounds(
-                                            rememberSharedContentState(CalendarSharedKey.Dot(date)),
-                                            animatedVisibilityScope = this@AnimatedVisibility,
-                                            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                                            renderInOverlayDuringTransition = false,
-                                        )
+            val dotPlaceables = if (globalShowDot) {
+                subcompose("dot") {
+                    AnimatedVisibility(true, enter = expandIn(), exit = shrinkOut()) {
+                        val radius by transition.animateDp { if (it == Visible) 2.dp else AppRadiusSmall }
+                        Dot(
+                            modifier = Modifier.sharedBounds(
+                                rememberSharedContentState(CalendarSharedKey.Dot(date)),
+                                animatedVisibilityScope = this,
+                                resizeMode = RemeasureToBounds,
+                                renderInOverlayDuringTransition = false,
+                            ),
+                            shape = ContinuousRoundedRectangle(radius),
+                        )
+                    }
+                }.map { it.measure(constraints) }
+            } else emptyList()
 
-                                    0 -> Modifier.onGloballyPositioned {
-                                        positioned = true
-                                    }
-
-                                    else -> Modifier
-                                },
-                                onClick = onEventClick?.let { callback ->
-                                    { callback(event) }
-                                },
-                                shape = ContinuousRoundedRectangle(radius),
-                            )
-                            DisposableEffect(Unit) {
-                                onDispose {
-                                    eventsSnapshot.remove(event)
-                                }
-                            }
-                        }
-                    }.firstOrNull()?.measure(constraints)
-
-                    layout(
-                        width = width,
-                        height = placeable?.height ?: 0,
+            val eventPlaceables = internalRenderList.map { event ->
+                subcompose("anim_${event.id}") {
+                    AnimatedVisibility(
+                        visible = visibilityMap[event.id] == true,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
                     ) {
-                        placeable?.placeRelative(0, 0)
+                        val radius by transition.animateDp { if (it == Visible) AppRadiusSmall else 2.dp }
+                        Event(
+                            event = event,
+                            modifier = if (internalRenderList.indexOf(event) == 0) {
+                                Modifier.sharedBounds(
+                                    rememberSharedContentState(CalendarSharedKey.Dot(date)),
+                                    animatedVisibilityScope = this,
+                                    resizeMode = RemeasureToBounds,
+                                    renderInOverlayDuringTransition = false,
+                                )
+                            } else Modifier,
+                            onClick = onEventClick?.let { { it(event) } },
+                            shape = ContinuousRoundedRectangle(radius),
+                        )
+
+                        if (!activeIds.contains(event.id) && transition.currentState == PostExit) {
+                            SideEffect { internalRenderList.remove(event) }
+                        }
                     }
-                }
+                }.map { it.measure(constraints) }
             }
 
-            canUpdateEvents = true
+            val allPlaceables = dotPlaceables + eventPlaceables.flatten()
+            val totalUsedHeight = if (allPlaceables.isEmpty()) 0
+            else allPlaceables.sumOf { it.height } + (allPlaceables.size - 1) * spacing
 
-            LaunchedEffect(events) {
-                canUpdateEvents = false
-                displayedEvents.clear()
-                displayedEvents.addAll(events)
+            layout(width, totalUsedHeight) {
+                var y = 0
+                allPlaceables.forEachIndexed { i, p ->
+                    p.placeRelative(
+                        x = (width - p.width) / 2,
+                        y = y,
+                        zIndex = -i.toFloat(),
+                    )
+                    y += p.height + spacing
+                }
             }
         }
     }
