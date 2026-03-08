@@ -104,6 +104,9 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             }
 
             val calendar = Calendar.getInstance().apply(buildCalendar)
+            val time = Instant.fromEpochMilliseconds(calendar.timeInMillis)
+
+            logger.debug { "Scheduling next suggestion generation at: $time" }
 
             alarmManager.setExact(
                 AlarmManager.RTC_WAKEUP,
