@@ -47,7 +47,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         }
 
         val context = context.applicationContext
-        context.scheduleNextSuggestionGeneration()
+        context.scheduleNextSuggestionGeneration(PendingIntent.FLAG_NO_CREATE)
         val request = OneTimeWorkRequestBuilder<GenerateNextSuggestionWorker>().apply {
             setExpedited(RUN_AS_NON_EXPEDITED_WORK_REQUEST)
         }.build()
@@ -65,16 +65,18 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         const val EXTRA_CONTENT = "EXTRA_CONTENT"
         const val EXTRA_CREATED_AT = "EXTRA_CREATED_AT"
 
-        private val Context.generationIntent
-            inline get() = PendingIntentCompat.getBroadcast(
-                applicationContext,
-                0,
-                Intent(applicationContext, SuggestionRequestReceiver::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT,
-                false,
-            )
+        private fun Context.createGenerationIntent(
+            @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
+        ) = PendingIntentCompat.getBroadcast(
+            applicationContext,
+            0,
+            Intent(applicationContext, SuggestionRequestReceiver::class.java),
+            flags,
+            false,
+        )
 
         fun Context.scheduleNextSuggestionGeneration(
+            @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
             buildCalendar: Calendar.() -> Unit = {
                 set(Calendar.HOUR_OF_DAY, 7)
                 set(Calendar.MINUTE, 0)
@@ -96,7 +98,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 return
             }
 
-            val pendingIntent = context.generationIntent ?: run {
+            val pendingIntent = context.createGenerationIntent(flags) ?: run {
                 logger.error { "Failed to create pending intent for scheduling next suggestion generation" }
                 return
             }
