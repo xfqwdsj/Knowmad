@@ -117,11 +117,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.scene.Scene
 import com.kizitonwose.calendar.core.minusDays
 import com.kizitonwose.calendar.core.plusDays
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -945,9 +947,11 @@ fun DetailedEventList(
         }
     }
 
-    LaunchedEffect(events, resources, locale) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(LocalLifecycleOwner, events, resources, locale) {
         while (true) {
             delay(1.seconds)
+            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
             indicator = calculateIndicator(events, resources, locale = locale)
         }
     }
