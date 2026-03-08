@@ -51,12 +51,14 @@ fun Context.showNextSuggestionNotification(
 ) {
     createAiNotificationChannel()
 
+    val content = suggestion.notificationSummary ?: suggestion.notificationContent
+
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
-        setContentText(suggestion.notificationSummary ?: suggestion.notificationContent)
-        setStyle(NotificationCompat.BigTextStyle().bigText(suggestion.notificationContent))
+        setContentText(content)
+        setStyle(NotificationCompat.BigTextStyle().bigText(content))
         setOngoing(true)
         setAutoCancel(false)
         setRequestPromotedOngoing(true)
@@ -80,12 +82,14 @@ fun Context.downgradeNextSuggestionNotification(
 ) {
     createAiNotificationChannel()
 
+    val content = suggestion.notificationSummary ?: suggestion.notificationContent
+
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
-        setContentText(suggestion.notificationSummary ?: suggestion.notificationContent)
-        setStyle(NotificationCompat.BigTextStyle().bigText(suggestion.notificationContent))
+        setContentText(content)
+        setStyle(NotificationCompat.BigTextStyle().bigText(content))
         setOngoing(false)
         setAutoCancel(true)
         setRequestPromotedOngoing(false)
