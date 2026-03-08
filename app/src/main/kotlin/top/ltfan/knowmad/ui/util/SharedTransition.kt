@@ -24,14 +24,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
 @Composable
-fun <R> localSharedTransitionScope(content: @Composable SharedTransitionScope.() -> R) =
+inline fun <R> localSharedTransitionScope(content: @Composable SharedTransitionScope.() -> R) =
     with(LocalSharedTransitionScope.current) {
         content()
     }
 
 @Composable
-fun SharedTransitionScope.ProvideLocalSharedTransitionScope(
-    content: @Composable SharedTransitionScope.() -> Unit,
+inline fun SharedTransitionScope.ProvideLocalSharedTransitionScope(
+    crossinline content: @Composable SharedTransitionScope.() -> Unit,
 ) {
     CompositionLocalProvider(LocalSharedTransitionScope provides this) {
         content()
