@@ -92,6 +92,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -118,12 +119,12 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation3.scene.Scene
 import com.kizitonwose.calendar.core.minusDays
 import com.kizitonwose.calendar.core.plusDays
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -947,12 +948,18 @@ fun DetailedEventList(
         }
     }
 
+    val updatedEvents by rememberUpdatedState(events)
+    val updatedResources by rememberUpdatedState(resources)
+    val updatedLocale by rememberUpdatedState(locale)
+
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(LocalLifecycleOwner, events, resources, locale) {
-        while (true) {
-            delay(1.seconds)
-            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
-            indicator = calculateIndicator(events, resources, locale = locale)
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(STARTED) {
+            while (true) {
+                delay(1.seconds)
+                indicator =
+                    calculateIndicator(updatedEvents, updatedResources, locale = updatedLocale)
+            }
         }
     }
 }

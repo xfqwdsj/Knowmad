@@ -69,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -94,9 +95,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMapIndexed
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
@@ -114,7 +115,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
@@ -282,10 +282,11 @@ fun Calendar(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
-        while (isActive) {
-            delay(5.seconds)
-            lifecycleOwner.lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
-            tick.value += 1u
+        lifecycleOwner.lifecycle.repeatOnLifecycle(STARTED) {
+            while (isActive) {
+                delay(5.seconds)
+                tick.value += 1u
+            }
         }
     }
 }
@@ -785,20 +786,19 @@ fun rememberSystemDate(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    val updatedClock by rememberUpdatedState(clock)
+    val updatedTimeZone by rememberUpdatedState(timeZone)
+
     var systemDate by remember { mutableStateOf(LocalDate.now(clock, timeZone)) }
 
     LaunchedEffect(clock, timeZone) {
         systemDate = LocalDate.now(clock, timeZone)
     }
 
-    DisposableEffect(lifecycleOwner, clock, timeZone) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == ON_RESUME) {
-                systemDate = LocalDate.now(clock, timeZone)
-            }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(RESUMED) {
+            systemDate = LocalDate.now(updatedClock, updatedTimeZone)
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     DisposableEffect(context, clock, timeZone) {
@@ -825,14 +825,10 @@ fun rememberSystemTimeZone(): TimeZone {
 
     var systemTimeZone by remember { mutableStateOf(TimeZone.currentSystemDefault()) }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == ON_RESUME) {
-                systemTimeZone = TimeZone.currentSystemDefault()
-            }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(RESUMED) {
+            systemTimeZone = TimeZone.currentSystemDefault()
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     DisposableEffect(context) {
