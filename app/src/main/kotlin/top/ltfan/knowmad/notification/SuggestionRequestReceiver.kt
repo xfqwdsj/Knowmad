@@ -50,7 +50,8 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         }
 
         val context = context.applicationContext
-        context.scheduleNextSuggestionGeneration(flags = PendingIntent.FLAG_NO_CREATE)
+
+        context.scheduleNextSuggestionGeneration(override = false)
 
         val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: context.defaultPrompt
 
@@ -73,7 +74,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.getGenerationIntent(
-            prompt: String = defaultPrompt,
+            prompt: String? = defaultPrompt,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
@@ -87,6 +88,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         fun Context.scheduleNextSuggestionGeneration(
             prompt: String? = null,
+            override: Boolean = true,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
             buildCalendar: Calendar.() -> Unit = {
                 set(Calendar.HOUR_OF_DAY, 7)
@@ -98,6 +100,14 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             },
         ) {
             val context = applicationContext
+
+            if (!override) {
+                val intent = context.getGenerationIntent(null, PendingIntent.FLAG_NO_CREATE)
+                if (intent != null) {
+                    logger.warn { "Suggestion generation intent already exists and override is false, skipping scheduling next suggestion generation" }
+                    return
+                }
+            }
 
             val alarmManager = context.getSystemService<AlarmManager>() ?: run {
                 logger.error { "Failed to get AlarmManager for scheduling next suggestion generation" }

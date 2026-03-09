@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.application
 
 import android.app.Application
-import android.app.PendingIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,7 +33,7 @@ class KnowmadApplication : Application() {
             CoroutineScope(Dispatchers.IO).launch {
                 getOrCreateSyncAccount()
             }
-            scheduleNextSuggestionGeneration(flags = PendingIntent.FLAG_NO_CREATE)
+            scheduleNextSuggestionGeneration(override = false)
         }
     }
 }
