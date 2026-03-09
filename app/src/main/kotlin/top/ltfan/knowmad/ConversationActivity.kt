@@ -68,6 +68,7 @@ class ConversationActivity : KnowmadActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         intent.handle()
+        viewModel.initializeApp()
         setContent {
             AppTheme {
                 CompositionLocalProvider(
@@ -85,6 +86,7 @@ class ConversationActivity : KnowmadActivity() {
         super.onNewIntent(intent)
         this.intent = intent
         intent.handle()
+        viewModel.initializeApp()
     }
 
     private fun Intent?.handle() {
@@ -99,7 +101,7 @@ class ConversationActivity : KnowmadActivity() {
                         viewModel.backStack.add(AgentPage())
                     }
                     agentViewModel.currentConversationId = conversationId
-                    viewModel.appReady = true
+                    viewModel.initializeApp()
                     val conversation = agentViewModel.chatDao.getConversationById(conversationId)
                     if (conversation == null) {
                         logger.error { "Conversation not found for ID: $conversationId" }

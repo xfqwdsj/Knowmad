@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
@@ -69,6 +70,7 @@ import top.ltfan.knowmad.ui.page.back
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.collectAsState
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 class AppViewModel(
@@ -79,6 +81,7 @@ class AppViewModel(
 
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
+        private set
 
     private val wizardStateStore = WizardState.createDataStore()
     private val wizardStateFlow = wizardStateStore.dataStateFlow()
@@ -88,16 +91,22 @@ class AppViewModel(
         transformOut = { copy(data = it) },
     )
 
-    init {
-        if (!partial) {
-            viewModelScope.launch {
-                if (wizardStateStore.data.first().data == null) {
-                    backStack.add(WizardPage())
-                } else {
-                    navigateToMainPage()
-                }
-                appReady = true
+    fun initializeApp() {
+        if (appReady) return
+        if (partial) {
+            appReady = true
+            return
+        }
+        viewModelScope.launch {
+            val firstJoinedData = withTimeoutOrNull(30.seconds) {
+                wizardStateStore.data.first().data
             }
+            if (firstJoinedData == null) {
+                backStack.add(WizardPage())
+            } else {
+                navigateToMainPage()
+            }
+            appReady = true
         }
     }
 

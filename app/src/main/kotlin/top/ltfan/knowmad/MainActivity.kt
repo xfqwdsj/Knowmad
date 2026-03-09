@@ -101,6 +101,8 @@ class MainActivity : KnowmadActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        viewModel.initializeApp()
+
         if (!appPartial) {
             lifecycleScope.launch {
                 updatePipActions(PipActions.standard(agentViewModel))
@@ -136,6 +138,7 @@ class MainActivity : KnowmadActivity() {
         super.onNewIntent(intent)
         this.intent = intent
         intent.handle()
+        viewModel.initializeApp()
     }
 
     private fun Intent?.handle() {
