@@ -46,12 +46,13 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModuleBuilder
+import kotlinx.serialization.serializer
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.util.CryptoManager
 import kotlin.uuid.Uuid
 
 val SupportedLLMProviders = mapOf(
-    LLMProvider.DeepSeek to LLMProviderInfo(
+    LLMProvider.DeepSeek.info(
         icon = R.drawable.llm_provider_deepseek,
         label = R.string.llm_provider_deepseek_label,
         description = R.string.llm_provider_deepseek_description,
@@ -59,13 +60,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://platform.deepseek.com",
         predefinedModels = DeepSeekModels,
         getModelCapabilitiesUrl = { "https://api-docs.deepseek.com/quick_start/pricing" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.DeepSeek::class,
-                LLMProvider.DeepSeek.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         DeepSeekLLMClient(
             apiKey = apiKey,
@@ -74,7 +68,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    LLMProvider.OpenAI to LLMProviderInfo(
+    LLMProvider.OpenAI.info(
         icon = R.drawable.llm_provider_openai,
         label = R.string.llm_provider_openai_label,
         description = R.string.llm_provider_openai_description,
@@ -82,13 +76,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://platform.openai.com",
         predefinedModels = OpenAIModels,
         getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.OpenAI::class,
-                LLMProvider.OpenAI.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         OpenAILLMClient(
             apiKey = apiKey,
@@ -97,7 +84,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    LLMProvider.Anthropic to LLMProviderInfo(
+    LLMProvider.Anthropic.info(
         icon = R.drawable.llm_provider_anthropic,
         label = R.string.llm_provider_anthropic_label,
         description = R.string.llm_provider_anthropic_description,
@@ -105,13 +92,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://console.anthropic.com",
         predefinedModels = AnthropicModels,
         getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.Anthropic::class,
-                LLMProvider.Anthropic.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         AnthropicLLMClient(
             apiKey = apiKey,
@@ -120,7 +100,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    LLMProvider.Google to LLMProviderInfo(
+    LLMProvider.Google.info(
         icon = R.drawable.llm_provider_google,
         label = R.string.llm_provider_google_label,
         description = R.string.llm_provider_google_description,
@@ -128,13 +108,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://aistudio.google.com/",
         predefinedModels = GoogleModels,
         getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.Google::class,
-                LLMProvider.Google.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         GoogleLLMClient(
             apiKey = apiKey,
@@ -143,7 +116,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    LLMProvider.OpenRouter to LLMProviderInfo(
+    LLMProvider.OpenRouter.info(
         icon = R.drawable.llm_provider_openrouter,
         label = R.string.llm_provider_openrouter_label,
         description = R.string.llm_provider_openrouter_description,
@@ -151,13 +124,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://openrouter.ai/keys",
         predefinedModels = OpenRouterModels,
         getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.OpenRouter::class,
-                LLMProvider.OpenRouter.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         OpenRouterLLMClient(
             apiKey = apiKey,
@@ -166,7 +132,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    LLMProvider.Alibaba to LLMProviderInfo(
+    LLMProvider.Alibaba.info(
         icon = R.drawable.llm_provider_alibaba,
         label = R.string.llm_provider_alibaba_label,
         description = R.string.llm_provider_alibaba_description,
@@ -174,13 +140,6 @@ val SupportedLLMProviders = mapOf(
         platformUrl = "https://dashscope.aliyun.com/",
         predefinedModels = DashscopeModels,
         getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
-        polymorphic = {
-            polymorphic(
-                LLMProvider::class,
-                LLMProvider.Alibaba::class,
-                LLMProvider.Alibaba.serializer(),
-            )
-        },
     ) { apiKey, baseUrl ->
         DashscopeLLMClient(
             apiKey = apiKey,
@@ -202,6 +161,33 @@ data class LLMProviderInfo(
     val getModelCapabilitiesUrl: (id: String) -> String,
     val polymorphic: SerializersModuleBuilder.() -> Unit,
     val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
+)
+
+private inline fun <reified T : LLMProvider> T.info(
+    @DrawableRes icon: Int,
+    @StringRes label: Int,
+    @StringRes description: Int,
+    defaultBaseUrl: String,
+    platformUrl: String,
+    predefinedModels: LLModelDefinitions,
+    noinline getModelCapabilitiesUrl: (id: String) -> String,
+    noinline convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
+) = this to LLMProviderInfo(
+    icon = icon,
+    label = label,
+    description = description,
+    defaultBaseUrl = defaultBaseUrl,
+    platformUrl = platformUrl,
+    predefinedModels = predefinedModels,
+    getModelCapabilitiesUrl = getModelCapabilitiesUrl,
+    polymorphic = {
+        polymorphic(
+            LLMProvider::class,
+            T::class,
+            serializer(),
+        )
+    },
+    convertToClient = convertToClient,
 )
 
 @Suppress("UnstableApiUsage")
