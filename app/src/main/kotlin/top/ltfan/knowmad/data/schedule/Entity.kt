@@ -241,15 +241,17 @@ data class EventEntity(
     }
 }
 
-// TODO: fix the primary key
 @Entity(
     indices = [
+        Index("eventId"),
         Index("target"),
+        Index("eventId", "target", unique = true),
     ],
 )
 data class EventTombstoneEntity(
     @PrimaryKey
-    val id: Uuid,
+    val id: Uuid = Uuid.generateV7(),
+    val eventId: Uuid,
     val target: EventDeletionTarget,
     val deletedAt: Instant = Clock.System.now(),
 )

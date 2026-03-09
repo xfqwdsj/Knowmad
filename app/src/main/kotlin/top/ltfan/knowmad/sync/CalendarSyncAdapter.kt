@@ -95,8 +95,8 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
                         if (ops.size >= 100) {
                             provider.executeBatch(ops, syncResult)
                         }
-                        deleted.add(tombstone.id)
-                        val systemId = systemEventIdMap[tombstone.id] ?: continue
+                        deleted.add(tombstone.eventId)
+                        val systemId = systemEventIdMap[tombstone.eventId] ?: continue
                         ops.add(buildDeleteOp(systemId, account))
                         syncResult.stats.numDeletes++
                     }

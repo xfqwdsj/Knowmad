@@ -82,7 +82,7 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         RoadEntity::class,
         RoadFtsEntity::class,
     ],
-    version = 260201,
+    version = 260300,
     autoMigrations = [
         AutoMigration(from = 260200, to = 260201),
     ],
@@ -116,6 +116,7 @@ abstract class AppDatabase : RoomDatabase() {
         @Suppress("NOTHING_TO_INLINE")
         inline fun Builder<AppDatabase>.buildAppDatabase() = apply {
             addCallback(RecurrenceRuleCleanup)
+            addMigrations(Migration260201To260300)
         }.build()
 
         val Context.appDatabase inline get() = get()

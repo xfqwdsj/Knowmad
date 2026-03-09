@@ -86,7 +86,7 @@ interface ScheduleDao : FtsDao {
         val tombstones = eventIds.flatMap { eventId ->
             EventDeletionTarget.entries.map { target ->
                 EventTombstoneEntity(
-                    id = eventId,
+                    eventId = eventId,
                     target = target,
                 )
             }
@@ -106,7 +106,7 @@ interface ScheduleDao : FtsDao {
         val tombstones = eventIds.flatMap { eventId ->
             EventDeletionTarget.entries.map { target ->
                 EventTombstoneEntity(
-                    id = eventId,
+                    eventId = eventId,
                     target = target,
                 )
             }
@@ -124,7 +124,7 @@ interface ScheduleDao : FtsDao {
         val tombstones = eventIds.flatMap { eventId ->
             EventDeletionTarget.entries.map { target ->
                 EventTombstoneEntity(
-                    id = eventId,
+                    eventId = eventId,
                     target = target,
                 )
             }
@@ -140,7 +140,7 @@ interface ScheduleDao : FtsDao {
     suspend fun deleteEventById(id: Uuid): Int {
         val tombstones = EventDeletionTarget.entries.map { target ->
             EventTombstoneEntity(
-                id = id,
+                eventId = id,
                 target = target,
             )
         }
@@ -151,7 +151,7 @@ interface ScheduleDao : FtsDao {
     @Query(
         """
             DELETE FROM EventTombstoneEntity
-            WHERE id IN (:ids) AND target = :target
+            WHERE eventId IN (:ids) AND target = :target
         """,
     )
     suspend fun deleteEventTombstonesForTarget(
