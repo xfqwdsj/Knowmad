@@ -30,7 +30,9 @@ val Cbor = Cbor {
     }
 }
 
-fun Cbor(builderAction: CborBuilder.() -> Unit) = Cbor(top.ltfan.knowmad.util.Cbor, builderAction)
+@Suppress("NOTHING_TO_INLINE")
+inline fun Cbor(noinline builderAction: CborBuilder.() -> Unit) =
+    Cbor(top.ltfan.knowmad.util.Cbor, builderAction)
 
 val Json = Json {
     serializersModule = SerializersModule {
@@ -38,4 +40,6 @@ val Json = Json {
     }
 }
 
-fun Json(builderAction: JsonBuilder.() -> Unit) = Json(top.ltfan.knowmad.util.Json, builderAction)
+@Suppress("NOTHING_TO_INLINE")
+inline fun Json(noinline builderAction: JsonBuilder.() -> Unit) =
+    Json(top.ltfan.knowmad.util.Json, builderAction)
