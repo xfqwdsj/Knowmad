@@ -28,15 +28,21 @@ import android.os.SystemClock
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
+import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
+import top.ltfan.knowmad.data.suggestion.PendingSuggestionEntity
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
+import kotlin.uuid.Uuid
 
 class SuggestionRequestReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
@@ -50,43 +56,83 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         }
 
         val context = context.applicationContext
-
-        context.scheduleNextSuggestionGeneration(override = false)
-
-        val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: context.defaultPrompt
-
-        val request = GenerateNextSuggestionWorker.buildRequest(prompt)
-        logger.debug { "Enqueuing suggestion generation work with prompt: $prompt" }
-        WorkManager.getInstance(context).enqueue(request)
+        context.enqueueSuggestionRequestHandling(intent)
     }
 
     companion object {
         private val logger = Logger("SuggestionRequestReceiver")
 
+        const val ACTION_GENERATE = "GENERATE"
+
         const val ACTION_DOWNGRADE = "DOWNGRADE"
 
         const val EXTRA_PROMPT = "EXTRA_PROMPT"
 
+        const val EXTRA_PENDING_SUGGESTION_ID = "EXTRA_PENDING_SUGGESTION_ID"
+
         const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
+
+        const val DATA_ACTION = "DATA_ACTION"
+
+        const val DATA_PROMPT = "DATA_PROMPT"
+
+        const val DATA_PENDING_SUGGESTION_ID = "DATA_PENDING_SUGGESTION_ID"
 
         private val Context.defaultPrompt
             inline get() = getString(GenerateNextSuggestionWorker.DefaultPromptId)
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.getGenerationIntent(
+            pendingSuggestionId: Uuid?,
             prompt: String? = defaultPrompt,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
             0,
             Intent(applicationContext, SuggestionRequestReceiver::class.java).apply {
+                action = ACTION_GENERATE
+                putExtra(EXTRA_PENDING_SUGGESTION_ID, pendingSuggestionId?.toString())
                 putExtra(EXTRA_PROMPT, prompt)
             },
             flags,
             false,
         )
 
-        fun Context.scheduleNextSuggestionGeneration(
+        private fun Context.scheduleSuggestionGenerationAlarm(
+            pendingSuggestion: PendingSuggestionEntity,
+            @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
+        ) {
+            val context = applicationContext
+
+            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
+                logger.error { "Failed to get AlarmManager for scheduling next suggestion generation" }
+                return
+            }
+
+            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
+                logger.warn { "Cannot schedule exact alarms, skipping scheduling next suggestion generation" }
+                return
+            }
+
+            val pendingIntent = context.getGenerationIntent(
+                pendingSuggestionId = pendingSuggestion.id,
+                prompt = pendingSuggestion.prompt ?: defaultPrompt,
+                flags = flags,
+            ) ?: run {
+                logger.warn { "Failed to create pending intent for scheduling next suggestion generation" }
+                return
+            }
+
+            logger.debug { "Scheduling next suggestion generation at: ${pendingSuggestion.expected}" }
+
+            alarmManager.setExact(
+                AlarmManager.RTC_WAKEUP,
+                pendingSuggestion.expected.toEpochMilliseconds(),
+                pendingIntent,
+            )
+        }
+
+        suspend fun Context.scheduleNextSuggestionGeneration(
             prompt: String? = null,
             override: Boolean = true,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
@@ -100,41 +146,91 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             },
         ) {
             val context = applicationContext
+            val dao = context.appDatabase.suggestionDao()
 
             if (!override) {
-                val intent = context.getGenerationIntent(null, PendingIntent.FLAG_NO_CREATE)
-                if (intent != null) {
-                    logger.warn { "Suggestion generation intent already exists and override is false, skipping scheduling next suggestion generation" }
+                val existingPending = dao.getNextPendingSuggestion()
+                if (existingPending != null) {
+                    logger.debug { "Pending suggestion already exists and override is false, keeping existing schedule at ${existingPending.expected}" }
+                    context.scheduleSuggestionGenerationAlarm(existingPending, flags)
                     return
                 }
             }
 
-            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
-                logger.error { "Failed to get AlarmManager for scheduling next suggestion generation" }
-                return
-            }
-
-            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
-                logger.warn { "Cannot schedule exact alarms, skipping scheduling next suggestion generation" }
-                return
+            if (override) {
+                val deleted = dao.deleteAllPendingSuggestions()
+                if (deleted > 0) {
+                    logger.debug { "Deleted $deleted pending suggestions before overriding schedule" }
+                }
             }
 
             val prompt = prompt ?: defaultPrompt
-            val pendingIntent = context.getGenerationIntent(prompt, flags) ?: run {
-                logger.warn { "Failed to create pending intent for scheduling next suggestion generation" }
-                return
-            }
 
             val calendar = Calendar.getInstance().apply(buildCalendar)
             val time = Instant.fromEpochMilliseconds(calendar.timeInMillis)
-
-            logger.debug { "Scheduling next suggestion generation at: $time" }
-
-            alarmManager.setExact(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent,
+            val pendingSuggestion = PendingSuggestionEntity(
+                expected = time,
+                prompt = prompt,
             )
+            dao.insertPendingSuggestion(pendingSuggestion)
+
+            context.scheduleSuggestionGenerationAlarm(pendingSuggestion, flags)
+        }
+
+        fun Context.enqueueSuggestionRequestHandling(intent: Intent) {
+            val context = applicationContext
+            val data = Data.Builder().apply {
+                putString(DATA_ACTION, intent.action)
+                putString(DATA_PROMPT, intent.getStringExtra(EXTRA_PROMPT))
+                putString(
+                    DATA_PENDING_SUGGESTION_ID,
+                    intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID),
+                )
+            }.build()
+
+            val request = OneTimeWorkRequestBuilder<SuggestionRequestWorker>()
+                .setInputData(data)
+                .build()
+
+            WorkManager.getInstance(context).enqueue(request)
+        }
+
+        suspend fun Context.resolvePromptForGeneration(intent: Intent): String? {
+            val context = applicationContext
+            val dao = context.appDatabase.suggestionDao()
+            val now = Clock.System.now()
+
+            dao.deletePendingSuggestionsBefore(now)
+
+            val pendingSuggestionId = intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID)?.let {
+                Uuid.parseOrNull(it) ?: run {
+                    logger.warn { "Failed to parse pending suggestion id: $it" }
+                    null
+                }
+            }
+
+            if (pendingSuggestionId != null) {
+                val pendingSuggestion = dao.getPendingSuggestionById(pendingSuggestionId) ?: run {
+                    logger.warn { "Pending suggestion not found for id: $pendingSuggestionId" }
+                    return null
+                }
+
+                dao.deletePendingSuggestion(pendingSuggestionId)
+
+                if (pendingSuggestion.expected < now) {
+                    logger.debug { "Pending suggestion expired at ${pendingSuggestion.expected}, dropping it without retry" }
+                    return null
+                }
+
+                return pendingSuggestion.prompt ?: defaultPrompt
+            }
+
+            if (intent.action != null && intent.action != ACTION_GENERATE) {
+                logger.warn { "Received intent with unsupported action for generation: ${intent.action}" }
+                return null
+            }
+
+            return intent.getStringExtra(EXTRA_PROMPT) ?: defaultPrompt
         }
 
         @Suppress("NOTHING_TO_INLINE")

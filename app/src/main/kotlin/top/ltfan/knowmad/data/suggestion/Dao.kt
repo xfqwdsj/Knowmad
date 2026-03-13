@@ -39,6 +39,9 @@ interface SuggestionDao {
     @Query("DELETE FROM PendingSuggestionEntity WHERE expected < :time")
     suspend fun deletePendingSuggestionsBefore(time: Instant): Int
 
+    @Query("DELETE FROM PendingSuggestionEntity WHERE deletedAt IS NULL")
+    suspend fun deleteAllPendingSuggestions(): Int
+
     @Query("UPDATE PendingSuggestionEntity SET deletedAt = :now WHERE id = :id")
     suspend fun softDeletePendingSuggestion(id: Uuid, now: Instant = Clock.System.now()): Int
 
@@ -51,7 +54,7 @@ interface SuggestionDao {
     @Query(
         """
             SELECT * FROM PendingSuggestionEntity
-            WHERE expected <= :now AND deletedAt IS NULL
+            WHERE expected >= :now AND deletedAt IS NULL
             ORDER BY expected ASC
             LIMIT 1
         """,

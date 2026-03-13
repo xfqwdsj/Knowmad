@@ -32,8 +32,8 @@ class KnowmadApplication : Application() {
         if (isMainProcess) {
             CoroutineScope(Dispatchers.IO).launch {
                 getOrCreateSyncAccount()
+                scheduleNextSuggestionGeneration(override = false)
             }
-            scheduleNextSuggestionGeneration(override = false)
         }
     }
 }
