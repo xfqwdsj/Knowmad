@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ data class FileEntity(
     val mimeType: String,
     val size: Int,
     val createdAt: Instant = Clock.System.now(),
+    val deletedAt: Instant? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -60,6 +61,7 @@ data class FileEntity(
         if (format != other.format) return false
         if (mimeType != other.mimeType) return false
         if (createdAt != other.createdAt) return false
+        if (deletedAt != other.deletedAt) return false
 
         return true
     }
@@ -74,6 +76,7 @@ data class FileEntity(
         result = 31 * result + format.hashCode()
         result = 31 * result + mimeType.hashCode()
         result = 31 * result + createdAt.hashCode()
+        result = 31 * result + (deletedAt?.hashCode() ?: 0)
         return result
     }
 }

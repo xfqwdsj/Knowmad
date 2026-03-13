@@ -29,6 +29,7 @@ import top.ltfan.knowmad.data.DatabaseCompanion
 import top.ltfan.knowmad.data.chat.ChatDao
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.data.chat.MessageBranchSelectionEntity
+import top.ltfan.knowmad.data.chat.MessageCodeResultEntity
 import top.ltfan.knowmad.data.chat.MessageEntity
 import top.ltfan.knowmad.data.chat.MessageFileCrossRef
 import top.ltfan.knowmad.data.chat.MessageFtsEntity
@@ -52,9 +53,15 @@ import top.ltfan.knowmad.data.schedule.EventEntity
 import top.ltfan.knowmad.data.schedule.EventFtsEntity
 import top.ltfan.knowmad.data.schedule.EventTombstoneEntity
 import top.ltfan.knowmad.data.schedule.RecurrenceRuleEntity
+import top.ltfan.knowmad.data.schedule.RecurrenceRuleSummaryEntity
+import top.ltfan.knowmad.data.schedule.RecurrenceRuleSummaryFtsEntity
 import top.ltfan.knowmad.data.schedule.ScheduleDao
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
+import top.ltfan.knowmad.data.suggestion.PendingSuggestionEntity
+import top.ltfan.knowmad.data.suggestion.SuggestionDao
+import top.ltfan.knowmad.data.suggestion.SuggestionEntity
+import top.ltfan.knowmad.data.suggestion.SuggestionFtsEntity
 
 @Database(
     entities = [
@@ -63,6 +70,8 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         SemesterEntity::class,
         SemesterFtsEntity::class,
         RecurrenceRuleEntity::class,
+        RecurrenceRuleSummaryEntity::class,
+        RecurrenceRuleSummaryFtsEntity::class,
         CourseEntity::class,
         CourseFtsEntity::class,
         EventEntity::class,
@@ -73,7 +82,11 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         MessageEntity::class,
         MessageBranchSelectionEntity::class,
         MessageFileCrossRef::class,
+        MessageCodeResultEntity::class,
         MessageFtsEntity::class,
+        PendingSuggestionEntity::class,
+        SuggestionEntity::class,
+        SuggestionFtsEntity::class,
         PlaceEntity::class,
         PlaceFtsEntity::class,
         NodeEntity::class,
@@ -82,9 +95,10 @@ import top.ltfan.knowmad.data.schedule.SemesterFtsEntity
         RoadEntity::class,
         RoadFtsEntity::class,
     ],
-    version = 260300,
+    version = 260301,
     autoMigrations = [
         AutoMigration(from = 260200, to = 260201),
+        AutoMigration(from = 260300, to = 260301),
     ],
 )
 @TypeConverters(AppDatabaseConverters::class)
@@ -93,6 +107,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun scheduleDao(): ScheduleDao
     abstract fun fileDao(): FileDao
     abstract fun chatDao(): ChatDao
+    abstract fun suggestionDao(): SuggestionDao
     abstract fun geoDao(): GeoDao
 
     companion object : DatabaseCompanion<AppDatabase> {

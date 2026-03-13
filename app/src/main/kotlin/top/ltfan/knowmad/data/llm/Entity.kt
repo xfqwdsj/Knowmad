@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import top.ltfan.knowmad.util.UnsafeEmptyRank
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 @Entity(
@@ -41,6 +42,7 @@ data class LLMProviderConfigEntity(
     val iv: ByteArray?,
     val rank: ByteArray = UnsafeEmptyRank,
     val baseUrl: String? = null,
+    val deletedAt: Instant? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -55,6 +57,7 @@ data class LLMProviderConfigEntity(
         if (!iv.contentEquals(other.iv)) return false
         if (!rank.contentEquals(other.rank)) return false
         if (baseUrl != other.baseUrl) return false
+        if (deletedAt != other.deletedAt) return false
 
         return true
     }
@@ -67,6 +70,7 @@ data class LLMProviderConfigEntity(
         result = 31 * result + (iv?.contentHashCode() ?: 0)
         result = 31 * result + rank.contentHashCode()
         result = 31 * result + (baseUrl?.hashCode() ?: 0)
+        result = 31 * result + (deletedAt?.hashCode() ?: 0)
         return result
     }
 }
@@ -91,6 +95,7 @@ data class LLMConfigEntity(
     val model: LLModel,
     val name: String = model.id,
     val rank: ByteArray = UnsafeEmptyRank,
+    val deletedAt: Instant? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -103,6 +108,7 @@ data class LLMConfigEntity(
         if (model != other.model) return false
         if (name != other.name) return false
         if (!rank.contentEquals(other.rank)) return false
+        if (deletedAt != other.deletedAt) return false
 
         return true
     }
@@ -113,6 +119,7 @@ data class LLMConfigEntity(
         result = 31 * result + model.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + rank.contentHashCode()
+        result = 31 * result + (deletedAt?.hashCode() ?: 0)
         return result
     }
 }

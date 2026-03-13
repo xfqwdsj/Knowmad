@@ -27,6 +27,7 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import okio.Path
 import okio.Path.Companion.toPath
+import top.ltfan.knowmad.data.chat.CodeResult
 import top.ltfan.knowmad.data.chat.ConversationMeta
 import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.geo.Wgs84Point
@@ -189,5 +190,15 @@ object AppDatabaseConverters {
     @TypeConverter
     fun toUiMessageList(data: String): List<UiMessage> {
         return Json.decodeFromString(data)
+    }
+
+    @TypeConverter
+    fun fromCodeResult(data: CodeResult): ByteArray {
+        return Cbor.encodeToByteArray(data)
+    }
+
+    @TypeConverter
+    fun toCodeResult(data: ByteArray): CodeResult {
+        return Cbor.decodeFromByteArray(data)
     }
 }

@@ -50,6 +50,7 @@ data class PlaceEntity(
     val southernLatitude: Double,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
+    val deletedAt: Instant? = null,
 )
 
 fun PlaceEntity(
@@ -108,6 +109,7 @@ data class NodeEntity(
     val zOrder: Long,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
+    val deletedAt: Instant? = null,
 ) {
     constructor(
         id: Uuid = Uuid.generateV7(),
@@ -116,6 +118,7 @@ data class NodeEntity(
         point: Wgs84Point,
         createdAt: Instant = Clock.System.now(),
         updatedAt: Instant = createdAt,
+        deletedAt: Instant? = null,
     ) : this(
         id = id,
         name = name,
@@ -126,6 +129,7 @@ data class NodeEntity(
         zOrder = point.zOrder,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        deletedAt = deletedAt,
     )
 }
 
@@ -199,6 +203,7 @@ data class RoadEntity(
     val isOneWay: Boolean = false,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
+    val deletedAt: Instant? = null,
 )
 
 @Fts4(

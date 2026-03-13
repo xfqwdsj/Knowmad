@@ -300,6 +300,12 @@ data class ConversationMeta(
     val gatheredTools: Set<String> = emptySet(),
 )
 
+@Serializable
+@Immutable
+data class CodeResult(
+    val result: String,
+)
+
 sealed interface MessageWithBranchInfo {
     /** 1-based */
     val branchIndex: Int

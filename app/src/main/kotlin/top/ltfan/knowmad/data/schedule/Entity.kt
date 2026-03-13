@@ -55,6 +55,7 @@ data class SemesterEntity(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val timeZone: TimeZone,
+    val deletedAt: Instant? = null,
 ) : PrimaryFieldsHashed {
     override val primaryFieldsHash by lazy {
         var result = name.hashCode()
@@ -103,6 +104,41 @@ data class RecurrenceRuleEntity(
     val startTime: Instant,
     val duration: Duration,
     val exceptions: Set<Instant> = emptySet(),
+    val deletedAt: Instant? = null,
+)
+
+@Entity(
+    indices = [
+        Index("recurrenceRuleId"),
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = RecurrenceRuleEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recurrenceRuleId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class RecurrenceRuleSummaryEntity(
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
+    val recurrenceRuleId: Uuid,
+    val summary: String,
+    val createdAt: Instant = Clock.System.now(),
+    val deletedAt: Instant? = null,
+)
+
+@Fts4(
+    tokenizer = FtsOptions.TOKENIZER_ICU,
+    contentEntity = RecurrenceRuleSummaryEntity::class,
+)
+@Entity
+data class RecurrenceRuleSummaryFtsEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "rowid")
+    val rowId: Long,
+    val summary: String,
 )
 
 @Serializable
@@ -134,6 +170,7 @@ data class CourseEntity(
     val name: String,
     val instructor: String,
     val location: String,
+    val deletedAt: Instant? = null,
 ) : PrimaryFieldsHashed {
     override val primaryFieldsHash by lazy {
         var result = name.hashCode()
@@ -228,6 +265,7 @@ data class EventEntity(
     val priority: ICalendarPriority = None,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
+    val deletedAt: Instant? = null,
 ) : TimeRange, PrimaryFieldsHashed {
     val vAlarms inline get() = reminders.toVAlarms { name }
 

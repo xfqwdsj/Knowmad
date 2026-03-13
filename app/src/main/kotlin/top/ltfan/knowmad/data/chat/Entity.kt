@@ -50,6 +50,7 @@ data class ConversationEntity(
     val meta: ConversationMeta = ConversationMeta(),
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = createdAt,
+    val deletedAt: Instant? = null,
 )
 
 @Entity(
@@ -93,6 +94,7 @@ data class MessageEntity(
     val generatedBy: LLModel?,
     val completed: Boolean = true,
     val createdAt: Instant = Clock.System.now(),
+    val deletedAt: Instant? = null,
 ) {
     companion object {
         fun getSearchableContent(parts: List<UiMessage>) = parts.asSequence()
@@ -212,6 +214,28 @@ data class FileWithMessages(
         ),
     )
     val messages: List<MessageWithConversation>,
+)
+
+@Entity(
+    indices = [
+        Index("messageId"),
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = MessageEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["messageId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class MessageCodeResultEntity(
+    @PrimaryKey
+    val id: Uuid = Uuid.generateV7(),
+    val messageId: Uuid,
+    val result: CodeResult,
+    val createdAt: Instant = Clock.System.now(),
+    val deletedAt: Instant? = null,
 )
 
 @Fts4(
