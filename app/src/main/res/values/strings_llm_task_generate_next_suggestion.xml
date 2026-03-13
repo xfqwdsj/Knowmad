@@ -67,7 +67,7 @@
 
         Note: All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `set_result`.
     "</string>
-    <string name="llm_task_generate_next_suggestion_result_capsule_title">Capsule short title. Displayed in a prominent position; must be extremely brief, such as \"3 Tasks\" or \"Ready to go\". No line breaks or symbols allowed</string>
+    <string name="llm_task_generate_next_suggestion_result_capsule_title">Capsule short title. Displayed in a prominent position; must be extremely brief, such as \"3 Tasks\" or \"Go\". No line breaks or symbols allowed, and must not exceed 10 characters</string>
     <string name="llm_task_generate_next_suggestion_result_notification_title">Notification title. A single summary sentence capturing the core of the suggestion, such as \"Busy afternoon ahead; suggest prioritizing the proposal.\" No line breaks, unnecessary symbols, or Markdown allowed</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">Notification content. List suggestions with extreme brevity; include only the most critical schedule overviews or tips. You MUST prioritize high-value information and omit low-priority details to keep it very short. Appropriate line breaks and symbols are allowed. Markdown is allowed</string>
     <string name="llm_task_generate_next_suggestion_result_notification_summary">Notification summary, highlighting the most important content. Markdown is not allowed</string>

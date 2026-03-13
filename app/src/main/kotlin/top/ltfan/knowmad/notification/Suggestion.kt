@@ -56,6 +56,7 @@ fun Context.showNextSuggestionNotification(
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
+        setShortCriticalText(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
         setContentText(content)
         setStyle(NotificationCompat.BigTextStyle().bigText(content))
@@ -87,6 +88,7 @@ fun Context.downgradeNextSuggestionNotification(
     val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
+        setShortCriticalText(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
         setContentText(content)
         setStyle(NotificationCompat.BigTextStyle().bigText(content))

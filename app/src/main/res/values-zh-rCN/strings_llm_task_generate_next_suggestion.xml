@@ -67,7 +67,7 @@
 
         注意：你的所有普通文本输出仅用于展示思考过程。最终结果必须且只能通过`set_result`提交。
     "</string>
-    <string name="llm_task_generate_next_suggestion_result_capsule_title">胶囊短标题，将展示在醒目位置，必须极其简短，如“3项待办”“准备出发”。不允许换行和符号</string>
+    <string name="llm_task_generate_next_suggestion_result_capsule_title">胶囊短标题，将展示在醒目位置，必须极其简短，如“3项待办”“准备出发”。不允许超过5个字，不允许换行和符号</string>
     <string name="llm_task_generate_next_suggestion_result_notification_title">通知标题，总结性的一句话，概括建议的核心内容，如“今天下午行程较紧，建议先处理方案”。不允许换行和非必要的符号，不允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">通知内容，简要列举建议的内容，可以包括日程概览、温馨提示等。需要控制长度，舍去低优先级的建议。允许适当的换行和符号，允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_notification_summary">通知摘要，突出最重要的内容。不允许Markdown</string>
