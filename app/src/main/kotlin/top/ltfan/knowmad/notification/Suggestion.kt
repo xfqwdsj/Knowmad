@@ -20,7 +20,6 @@ package top.ltfan.knowmad.notification
 
 import android.content.Context
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.MainActivity.Companion.getViewSuggestionPendingIntent
 import top.ltfan.knowmad.R
@@ -49,11 +48,9 @@ private val NotificationId = Uuid.parse("019c0c33-1400-7480-87e0-f12641ae67f7").
 fun Context.showNextSuggestionNotification(
     suggestion: NextSuggestionNotification,
 ) {
-    createAiNotificationChannel()
-
     val content = suggestion.notificationSummary ?: suggestion.notificationContent
 
-    val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
+    val notification = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setShortCriticalText(suggestion.capsuleTitle)
@@ -72,7 +69,7 @@ fun Context.showNextSuggestionNotification(
     }.build()
 
     checkedNotificationPermission {
-        NotificationManagerCompat.from(this).notify(NotificationId, notification)
+        notification.notifyCompat(NotificationId)
         scheduleNextSuggestionDowngrading(suggestion)
     } ?: logger.warn { "Failed to show suggestion notification due to missing permission" }
 }
@@ -80,11 +77,9 @@ fun Context.showNextSuggestionNotification(
 fun Context.downgradeNextSuggestionNotification(
     suggestion: NextSuggestionNotification,
 ) {
-    createAiNotificationChannel()
-
     val content = suggestion.notificationSummary ?: suggestion.notificationContent
 
-    val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
+    val notification = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setShortCriticalText(suggestion.capsuleTitle)
@@ -99,6 +94,6 @@ fun Context.downgradeNextSuggestionNotification(
     }.build()
 
     checkedNotificationPermission {
-        NotificationManagerCompat.from(this).notify(NotificationId, notification)
+        notification.notifyCompat(NotificationId)
     } ?: logger.warn { "Failed to downgrade suggestion notification due to missing permission" }
 }

@@ -36,9 +36,8 @@ inline fun <Result> Context.withAgentRunningNotification(
     notificationId: Int = AgentRunningNotificationId,
     block: AgentRunningNotificationScope.() -> Result,
 ) = checkedNotificationPermission {
-    createAiNotificationChannel()
 
-    val builder = NotificationCompat.Builder(this, AiMessageChannelId).apply {
+    val builder = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(getString(R.string.notification_agent_running_title))
         initialContent?.let { setContentText(it) }

@@ -45,16 +45,16 @@ fun Resources.getAssistantPerson(): Person {
     return AssistantPersonBuilder.setName(getString(R.string.person_label_ai)).build()
 }
 
-const val AiMessageChannelId = "ai_message"
+private const val AiMessageChannelId = "ai_message"
 
-fun Resources.getAiNotificationChannel() = NotificationChannelCompat.Builder(
-    AiMessageChannelId,
-    NotificationManagerCompat.IMPORTANCE_DEFAULT,
-).apply {
-    setName(getString(R.string.notification_channel_ai_message_label))
-}.build()
-
-fun Context.createAiNotificationChannel() {
-    val channel = resources.getAiNotificationChannel()
-    NotificationManagerCompat.from(this).createNotificationChannel(channel)
-}
+val Context.aiNotificationChannel: NotificationChannelCompat
+    get() {
+        val channel = NotificationChannelCompat.Builder(
+            AiMessageChannelId,
+            NotificationManagerCompat.IMPORTANCE_DEFAULT,
+        ).apply {
+            setName(getString(R.string.notification_channel_ai_message_label))
+        }.build()
+        NotificationManagerCompat.from(this).createNotificationChannel(channel)
+        return channel
+    }

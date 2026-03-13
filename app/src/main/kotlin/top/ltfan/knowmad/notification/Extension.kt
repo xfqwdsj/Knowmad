@@ -19,10 +19,17 @@
 package top.ltfan.knowmad.notification
 
 import android.Manifest
+import android.app.Notification
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -31,4 +38,20 @@ inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
         if (permissionState != PackageManager.PERMISSION_GRANTED) return null
     }
     return block()
+}
+
+@OptIn(ExperimentalContracts::class)
+context(context: Context)
+inline fun NotificationChannelCompat.withNotificationBuilder(
+    block: NotificationCompat.Builder.() -> Unit,
+): NotificationCompat.Builder {
+    contract { callsInPlace(block, EXACTLY_ONCE) }
+    return NotificationCompat.Builder(context, id).apply(block)
+}
+
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+@Suppress("NOTHING_TO_INLINE")
+context(context: Context)
+inline fun Notification.notifyCompat(id: Int, tag: String? = null) {
+    NotificationManagerCompat.from(context).notify(tag, id, this)
 }

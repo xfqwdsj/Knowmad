@@ -25,7 +25,6 @@ import android.content.Intent
 import android.content.res.Resources
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
@@ -99,10 +98,9 @@ fun Context.showChatNotification(
     quickReplies: List<String>? = null,
     unreadCount: Int = 1,
 ) {
-    createAiNotificationChannel()
     pushChatShortcut(conversationId, conversationName)
 
-    val notification = NotificationCompat.Builder(this, AiMessageChannelId).apply {
+    val notification = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setStyle(resources.getMessagingStyle(messages))
         addAction(getReplyAction(conversationId, conversationName, quickReplies))
@@ -116,7 +114,7 @@ fun Context.showChatNotification(
     }.build()
 
     checkedNotificationPermission {
-        NotificationManagerCompat.from(this).notify(conversationId.hashCode(), notification)
+        notification.notifyCompat(conversationId.hashCode())
     }
 }
 
