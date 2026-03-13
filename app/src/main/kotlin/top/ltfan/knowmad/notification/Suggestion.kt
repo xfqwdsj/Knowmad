@@ -91,7 +91,7 @@ fun Context.downgradeNextSuggestionNotification(
         setSubText(suggestion.notificationTitle)
         setStyle(NotificationCompat.BigTextStyle().bigText(content))
         setOngoing(false)
-        setAutoCancel(true)
+        setAutoCancel(false)
         setRequestPromotedOngoing(false)
         setOnlyAlertOnce(true)
         setWhen(suggestion.createdAt.toEpochMilliseconds())
