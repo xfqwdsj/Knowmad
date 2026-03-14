@@ -529,3 +529,35 @@ fun AgentChatIconButton(
         }
     }
 }
+
+@Composable
+fun GenerateSuggestionIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes contentDescriptionRes: Int? = R.string.llm_task_generate_next_suggestion_user_label,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                painterResource(R.drawable.wand_stars_24px),
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
+            )
+        }
+    }
+}

@@ -93,6 +93,7 @@ import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreen
 import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.CloseFullscreenIconButton
+import top.ltfan.knowmad.ui.component.GenerateSuggestionIconButton
 import top.ltfan.knowmad.ui.component.LocalAgentScreenPreferredContainerColor
 import top.ltfan.knowmad.ui.component.LocalAgentScreenTransparentContainer
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
@@ -214,9 +215,6 @@ class MainPage : Page() {
             ) {
                 Scaffold(
                     topBar = {
-                        val context = LocalContext.current
-                        val prompt =
-                            stringResource(R.string.llm_task_generate_next_suggestion_prompt_manual)
                         TopAppBar(
                             title = {
                                 Row(
@@ -241,12 +239,6 @@ class MainPage : Page() {
                             modifier = Modifier.combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onLongClick = {
-                                    // TODO: refactor with a better method of triggering
-                                    context.checkOrRequestExactAlarmPermission()
-                                    val request = GenerateNextSuggestionWorker.buildRequest(prompt)
-                                    WorkManager.getInstance(context).enqueue(request)
-                                },
                                 onDoubleClick = {
                                     coroutineScope.launch {
                                         viewModel.calendarState.animateScrollToDate()
@@ -255,6 +247,19 @@ class MainPage : Page() {
                                 onClick = {},
                             ),
                             actions = {
+                                val context = LocalContext.current
+                                val prompt =
+                                    stringResource(R.string.llm_task_generate_next_suggestion_prompt_manual)
+
+                                GenerateSuggestionIconButton(
+                                    onClick = {
+                                        context.checkOrRequestExactAlarmPermission()
+                                        val request =
+                                            GenerateNextSuggestionWorker.buildRequest(prompt)
+                                        WorkManager.getInstance(context).enqueue(request)
+                                    },
+                                )
+
                                 val activity = LocalActivity.current
                                 if (activity != null) {
                                     CloseFullscreenIconButton(

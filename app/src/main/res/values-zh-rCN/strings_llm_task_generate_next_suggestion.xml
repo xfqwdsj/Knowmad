@@ -75,4 +75,5 @@
     <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_prompt">建议的下一次生成建议时提供给智能助手的提示语，帮助智能助手理解为什么在这个时间点生成建议，以及需要关注的重点内容，如“用户即将下课，可以提供一些关于如何利用课后时间的建议，或者简单的问候”。这个字段是可选的，但强烈建议提供，并将其编写得尽可能具体和有指导性，以帮助智能助手在下一次生成建议时能够更好地满足用户的需求和情境</string>
     <string name="llm_task_generate_next_suggestion_prompt_default">本次生成建议没有特定的提示语，智能助手可以根据已知的上下文信息和一般的用户需求来生成建议</string>
     <string name="llm_task_generate_next_suggestion_prompt_manual">用户手动请求了生成建议，可以在这个时间点提供一些建议来满足用户的需求</string>
+    <string name="llm_task_generate_next_suggestion_user_label">生成智能建议</string>
 </resources>
