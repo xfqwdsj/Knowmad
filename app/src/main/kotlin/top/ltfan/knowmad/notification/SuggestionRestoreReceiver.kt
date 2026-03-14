@@ -22,7 +22,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import top.ltfan.knowmad.util.Logger
@@ -31,23 +30,29 @@ class SuggestionRestoreReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
 
-        if (intent.action !in SupportedActions) {
-            logger.debug { "Ignoring unsupported restore action: ${intent.action}" }
+        val action = intent.action ?: run {
+            logger.debug { "Ignoring intent with no action" }
             return
         }
 
-        val appContext = context.applicationContext
-        val request = OneTimeWorkRequestBuilder<SuggestionRestoreWorker>()
-            .setInputData(
-                Data.Builder()
-                    .putString(SuggestionRestoreWorker.DATA_ACTION, intent.action)
-                    .build(),
-            )
-            .build()
-        WorkManager.getInstance(appContext).enqueueUniqueWork(
-            SuggestionRestoreWorker.UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            request,
+        if (action !in SupportedActions) {
+            logger.debug { "Ignoring unsupported restore action: $action" }
+            return
+        }
+
+        val context = context.applicationContext
+
+        val request = OneTimeWorkRequestBuilder<SuggestionRestoreWorker>().apply {
+            val data = Data.Builder().apply {
+                putString(SuggestionRestoreWorker.DATA_ACTION, action)
+            }.build()
+            setInputData(data)
+        }.build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            uniqueWorkName = SuggestionRestoreWorker.UNIQUE_WORK_NAME,
+            existingWorkPolicy = KEEP,
+            request = request,
         )
     }
 
