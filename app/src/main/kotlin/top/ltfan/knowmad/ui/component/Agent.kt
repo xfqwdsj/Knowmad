@@ -21,6 +21,7 @@ package top.ltfan.knowmad.ui.component
 import ai.koog.prompt.llm.LLModel
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -113,7 +114,7 @@ fun AgentScreen(
                     sharedBounds(
                         rememberSharedContentState(AgentScreenSharedKey),
                         animatedVisibilityScope,
-                        resizeMode = RemeasureToBounds,
+                        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(Crop),
                     )
                 }
             },
