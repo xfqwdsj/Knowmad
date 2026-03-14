@@ -59,15 +59,5 @@ interface SuggestionDao {
             LIMIT 1
         """,
     )
-    suspend fun getNextPendingSuggestionInternal(now: Instant = Clock.System.now()): PendingSuggestionEntity?
-
-    suspend fun getNextPendingSuggestion(now: Instant = Clock.System.now()): PendingSuggestionEntity? {
-        val suggestion = getNextPendingSuggestionInternal(now)
-        try {
-            deletePendingSuggestionsBefore(now)
-        } catch (e: Throwable) {
-            logger.error(e) { "Failed to delete pending suggestions before $now" }
-        }
-        return suggestion
-    }
+    suspend fun getNextPendingSuggestion(now: Instant = Clock.System.now()): PendingSuggestionEntity?
 }

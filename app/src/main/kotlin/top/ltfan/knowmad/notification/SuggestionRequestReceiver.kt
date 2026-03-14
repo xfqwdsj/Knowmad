@@ -36,6 +36,7 @@ import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.suggestion.PendingSuggestionEntity
+import top.ltfan.knowmad.data.suggestion.SuggestionDao
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
@@ -80,6 +81,16 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         private val Context.defaultPrompt
             inline get() = getString(GenerateNextSuggestionWorker.DefaultPromptId)
+
+        private suspend inline fun SuggestionDao.cleanupExpiredPendingSuggestions(
+            now: Instant = Clock.System.now(),
+        ): Int {
+            val deleted = deletePendingSuggestionsBefore(now)
+            if (deleted > 0) {
+                logger.debug { "Deleted $deleted expired pending suggestions before continuing" }
+            }
+            return deleted
+        }
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.getGenerationIntent(
@@ -200,8 +211,6 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             val dao = context.appDatabase.suggestionDao()
             val now = Clock.System.now()
 
-            dao.deletePendingSuggestionsBefore(now)
-
             val pendingSuggestionId = intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID)?.let {
                 Uuid.parseOrNull(it) ?: run {
                     logger.warn { "Failed to parse pending suggestion id: $it" }
@@ -209,28 +218,28 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                 }
             }
 
-            if (pendingSuggestionId != null) {
-                val pendingSuggestion = dao.getPendingSuggestionById(pendingSuggestionId) ?: run {
-                    logger.warn { "Pending suggestion not found for id: $pendingSuggestionId" }
+            try {
+                if (pendingSuggestionId != null) {
+                    val pendingSuggestion =
+                        dao.getPendingSuggestionById(pendingSuggestionId) ?: run {
+                            logger.warn { "Pending suggestion not found for id: $pendingSuggestionId" }
+                            return null
+                        }
+
+                    dao.deletePendingSuggestion(pendingSuggestionId)
+
+                    return pendingSuggestion.prompt ?: defaultPrompt
+                }
+
+                if (intent.action != null && intent.action != ACTION_GENERATE) {
+                    logger.warn { "Received intent with unsupported action for generation: ${intent.action}" }
                     return null
                 }
 
-                dao.deletePendingSuggestion(pendingSuggestionId)
-
-                if (pendingSuggestion.expected < now) {
-                    logger.debug { "Pending suggestion expired at ${pendingSuggestion.expected}, dropping it without retry" }
-                    return null
-                }
-
-                return pendingSuggestion.prompt ?: defaultPrompt
+                return intent.getStringExtra(EXTRA_PROMPT) ?: defaultPrompt
+            } finally {
+                dao.cleanupExpiredPendingSuggestions(now)
             }
-
-            if (intent.action != null && intent.action != ACTION_GENERATE) {
-                logger.warn { "Received intent with unsupported action for generation: ${intent.action}" }
-                return null
-            }
-
-            return intent.getStringExtra(EXTRA_PROMPT) ?: defaultPrompt
         }
 
         @Suppress("NOTHING_TO_INLINE")
