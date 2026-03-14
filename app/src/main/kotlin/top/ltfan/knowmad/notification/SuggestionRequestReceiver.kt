@@ -28,8 +28,6 @@ import android.os.SystemClock
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
-import androidx.work.Data
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
@@ -64,20 +62,12 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
         private val logger = Logger("SuggestionRequestReceiver")
 
         const val ACTION_GENERATE = "GENERATE"
-
         const val ACTION_DOWNGRADE = "DOWNGRADE"
 
+        const val EXTRA_PENDING_SUGGESTION_ID = "EXTRA_PENDING_SUGGESTION_ID"
         const val EXTRA_PROMPT = "EXTRA_PROMPT"
 
-        const val EXTRA_PENDING_SUGGESTION_ID = "EXTRA_PENDING_SUGGESTION_ID"
-
         const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
-
-        const val DATA_ACTION = "DATA_ACTION"
-
-        const val DATA_PROMPT = "DATA_PROMPT"
-
-        const val DATA_PENDING_SUGGESTION_ID = "DATA_PENDING_SUGGESTION_ID"
 
         private val Context.defaultPrompt
             inline get() = getString(GenerateNextSuggestionWorker.DefaultPromptId)
@@ -190,28 +180,25 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         fun Context.enqueueSuggestionRequestHandling(intent: Intent) {
             val context = applicationContext
-            val data = Data.Builder().apply {
-                putString(DATA_ACTION, intent.action)
-                putString(DATA_PROMPT, intent.getStringExtra(EXTRA_PROMPT))
-                putString(
-                    DATA_PENDING_SUGGESTION_ID,
-                    intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID),
-                )
-            }.build()
 
-            val request = OneTimeWorkRequestBuilder<SuggestionRequestWorker>()
-                .setInputData(data)
-                .build()
+            val request = SuggestionRequestWorker.buildRequest(
+                action = intent.action,
+                prompt = intent.getStringExtra(EXTRA_PROMPT),
+                pendingSuggestionId = intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID),
+            )
 
             WorkManager.getInstance(context).enqueue(request)
         }
 
-        suspend fun Context.resolvePromptForGeneration(intent: Intent): String? {
+        suspend fun Context.resolvePromptForGeneration(
+            action: String?,
+            prompt: String?,
+            pendingSuggestionId: String?,
+        ): String? {
             val context = applicationContext
             val dao = context.appDatabase.suggestionDao()
-            val now = Clock.System.now()
 
-            val pendingSuggestionId = intent.getStringExtra(EXTRA_PENDING_SUGGESTION_ID)?.let {
+            val pendingSuggestionId = pendingSuggestionId?.let {
                 Uuid.parseOrNull(it) ?: run {
                     logger.warn { "Failed to parse pending suggestion id: $it" }
                     null
@@ -231,14 +218,14 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
                     return pendingSuggestion.prompt ?: defaultPrompt
                 }
 
-                if (intent.action != null && intent.action != ACTION_GENERATE) {
-                    logger.warn { "Received intent with unsupported action for generation: ${intent.action}" }
+                if (action != null && action != ACTION_GENERATE) {
+                    logger.warn { "Received intent with unsupported action for generation: $action" }
                     return null
                 }
 
-                return intent.getStringExtra(EXTRA_PROMPT) ?: defaultPrompt
+                return prompt ?: defaultPrompt
             } finally {
-                dao.cleanupExpiredPendingSuggestions(now)
+                dao.cleanupExpiredPendingSuggestions()
             }
         }
 
@@ -259,10 +246,7 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Intent.extractDowngradingInfo(): NextSuggestionNotification? {
-            if (action != ACTION_DOWNGRADE) {
-                logger.debug { "Received intent with unsupported action: $action, ignoring" }
-                return null
-            }
+            if (action != ACTION_DOWNGRADE) return null
             val notification = getByteArrayExtra(EXTRA_NOTIFICATION)
                 ?.let { Cbor.decodeFromByteArray<NextSuggestionNotification>(it) }
                 ?: run {

@@ -19,8 +19,9 @@
 package top.ltfan.knowmad.notification
 
 import android.content.Context
-import android.content.Intent
 import androidx.work.CoroutineWorker
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
@@ -34,21 +35,16 @@ class SuggestionRequestWorker(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = try {
         val context = applicationContext
+
+        val data = inputData
+
         context.scheduleNextSuggestionGeneration(override = false)
 
-        val intent = Intent(context, SuggestionRequestReceiver::class.java).apply {
-            action = inputData.getString(SuggestionRequestReceiver.DATA_ACTION)
-            putExtra(
-                SuggestionRequestReceiver.EXTRA_PROMPT,
-                inputData.getString(SuggestionRequestReceiver.DATA_PROMPT),
-            )
-            putExtra(
-                SuggestionRequestReceiver.EXTRA_PENDING_SUGGESTION_ID,
-                inputData.getString(SuggestionRequestReceiver.DATA_PENDING_SUGGESTION_ID),
-            )
-        }
-
-        val prompt = context.resolvePromptForGeneration(intent) ?: run {
+        val prompt = context.resolvePromptForGeneration(
+            action = data.getString(DATA_ACTION),
+            prompt = data.getString(DATA_PROMPT),
+            pendingSuggestionId = data.getString(DATA_PENDING_SUGGESTION_ID),
+        ) ?: run {
             logger.warn { "Skipping suggestion generation because no valid pending suggestion was found" }
             return Result.success()
         }
@@ -65,5 +61,22 @@ class SuggestionRequestWorker(
 
     companion object {
         private val logger = Logger("SuggestionRequestWorker")
+
+        const val DATA_ACTION = "DATA_ACTION"
+        const val DATA_PROMPT = "DATA_PROMPT"
+        const val DATA_PENDING_SUGGESTION_ID = "DATA_PENDING_SUGGESTION_ID"
+
+        fun buildRequest(
+            action: String?,
+            prompt: String?,
+            pendingSuggestionId: String?,
+        ) = OneTimeWorkRequestBuilder<SuggestionRequestWorker>().apply {
+            val data = Data.Builder().apply {
+                putString(DATA_ACTION, action)
+                putString(DATA_PROMPT, prompt)
+                putString(DATA_PENDING_SUGGESTION_ID, pendingSuggestionId)
+            }.build()
+            setInputData(data)
+        }.build()
     }
 }
