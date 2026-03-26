@@ -136,7 +136,6 @@ class MainActivity : KnowmadActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        this.intent = intent
         intent.handle()
         viewModel.initializeApp()
     }
