@@ -20,7 +20,6 @@ package top.ltfan.knowmad.agent.task.suggestion
 
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
-import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.nodeExecuteMultipleTools
 import ai.koog.agents.core.dsl.extension.nodeLLMRequestStreamingAndSendResults
@@ -33,9 +32,11 @@ import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
+import ai.koog.serialization.kotlinx.toKotlinxJsonElement
+import ai.koog.serialization.typeToken
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -76,8 +77,8 @@ private val logger = Logger("GenerateNextSuggestion")
 private class SetResult(
     context: Context,
 ) : Tool<NextSuggestionNotification, NextSuggestionNotification>(
-    argsSerializer = NextSuggestionNotification.serializer(),
-    resultSerializer = NextSuggestionNotification.serializer(),
+    argsType = typeToken<NextSuggestionNotification>(),
+    resultType = typeToken<NextSuggestionNotification>(),
     descriptor = ToolDescriptor(
         name = "set_result",
         description = "set_result",
@@ -154,7 +155,8 @@ suspend fun Context.generateAndShowNextSuggestion(
                     if (singleOrNull.resultKind != Success) return@onCondition false
                     singleOrNull.tool == "set_result"
                 } transformed {
-                    it.singleOrNull()?.result?.let { json -> Json.decodeFromJsonElement(json) }
+                    // TODO: use a more robust way to extract the result
+                    it.singleOrNull()?.result?.let { json -> Json.decodeFromJsonElement(json.toKotlinxJsonElement()) }
                         ?: error("This should never happen")
                 },
             )
@@ -288,7 +290,7 @@ class GenerateNextSuggestionWorker(
                     }
 
                 val service = getChatAgentService(
-                    promptExecutor = SingleLLMPromptExecutor(client),
+                    promptExecutor = MultiLLMPromptExecutor(client),
                     model = model.model,
                 )
 

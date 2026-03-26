@@ -23,6 +23,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.serialization.typeToken
 import android.content.Context
 import android.content.res.Resources
 import kotlinx.datetime.LocalDate
@@ -91,8 +92,8 @@ object ScheduleTools {
         private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<ImportFromICalendarTool.Args, ImportFromICalendarTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "import_from_icalendar",
             description = context.getString(R.string.llm_tool_schedule_import_from_icalendar_description),
@@ -161,8 +162,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<QuerySemestersTool.Args, QuerySemestersTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "query_semesters",
             description = resources.getString(R.string.llm_tool_schedule_query_semesters_description),
@@ -230,8 +231,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<SearchSemestersTool.Args, SearchSemestersTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "search_semesters",
             description = resources.getString(R.string.llm_tool_schedule_search_semesters_description),
@@ -272,8 +273,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<CreateSemesterTool.Args, CreateSemesterTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "create_semester",
             description = resources.getString(R.string.llm_tool_schedule_create_semester_description),
@@ -351,8 +352,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<UpdateSemesterTool.Args, UpdateSemesterTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "update_semester",
             description = resources.getString(R.string.llm_tool_schedule_update_semester_description),
@@ -450,8 +451,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<SearchCoursesTool.Args, SearchCoursesTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "search_courses",
             description = resources.getString(R.string.llm_tool_schedule_search_courses_description),
@@ -503,8 +504,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<CreateCoursesTool.Args, CreateCoursesTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "create_courses",
             description = resources.getString(R.string.llm_tool_schedule_create_course_description),
@@ -678,8 +679,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<UpdateCourseTool.Args, UpdateCourseTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "update_course",
             description = resources.getString(R.string.llm_tool_schedule_update_course_description),
@@ -759,8 +760,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<QueryEventsTool.Args, QueryEventsTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "query_events",
             description = resources.getString(R.string.llm_tool_schedule_query_events_description),
@@ -836,8 +837,8 @@ object ScheduleTools {
         private val resources: Resources,
         private val dao: ScheduleDao,
     ) : Tool<SearchEventsTool.Args, SearchEventsTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "search_events",
             description = resources.getString(R.string.llm_tool_schedule_search_events_description),
@@ -904,8 +905,8 @@ object ScheduleTools {
         private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<CreateEventsTool.Args, CreateEventsTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "create_events",
             description = context.getString(R.string.llm_tool_schedule_create_event_description),
@@ -1312,8 +1313,8 @@ object ScheduleTools {
         private val context: Context,
         private val dao: ScheduleDao,
     ) : Tool<UpdateEventTool.Args, UpdateEventTool.Result>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Result.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Result>(),
         descriptor = ToolDescriptor(
             name = "update_event",
             description = context.getString(R.string.llm_tool_schedule_update_event_description),

@@ -21,7 +21,7 @@ package top.ltfan.knowmad.agent
 import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedException
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.ContentPart
@@ -130,7 +130,7 @@ class ModelService : LifecycleService() {
                 val client = model?.let { llmConfigDao.getProviderById(it.providerConfigId) }
                     ?.toClient() ?: return@map null
                 getChatAgentService(
-                    promptExecutor = SingleLLMPromptExecutor(client),
+                    promptExecutor = MultiLLMPromptExecutor(client),
                     model = model.model,
                 )
             }

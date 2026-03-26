@@ -23,10 +23,10 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.util.Logger
@@ -56,8 +56,8 @@ object ConversationTools {
         private val getConversation: suspend () -> ConversationEntity,
         private val setConversation: suspend (ConversationEntity) -> Unit,
     ) : Tool<UpdateNameTool.Args, Boolean>(
-        argsSerializer = Args.serializer(),
-        resultSerializer = Boolean.serializer(),
+        argsType = typeToken<Args>(),
+        resultType = typeToken<Boolean>(),
         descriptor = ToolDescriptor(
             name = "update_conversation_name",
             description = resources.getString(R.string.llm_tool_conversation_update_name_description),

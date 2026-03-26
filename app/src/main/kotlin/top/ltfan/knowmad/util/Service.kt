@@ -33,19 +33,6 @@ import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-context(lifecycleOwner: LifecycleOwner)
-inline fun <reified T : Service> Context.ServiceConnection(
-    bind: Boolean = true,
-) = ServiceConnection(
-    context = applicationContext,
-    klass = T::class,
-).also {
-    lifecycleOwner.lifecycle.addObserver(it)
-    if (bind) {
-        it.bind()
-    }
-}
-
 inline fun <reified T : Service> Context.ServiceConnection(
     bind: Boolean = true,
 ) = ServiceConnection(

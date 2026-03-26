@@ -24,6 +24,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -52,8 +53,8 @@ class GatherMoreToolsTool(
     private val resources: Resources,
     tools: ToolRegistry.Builder.() -> Unit,
 ) : Tool<GatherMoreToolsTool.Args, GatherMoreToolsTool.Result>(
-    argsSerializer = Args.serializer(),
-    resultSerializer = Result.serializer(),
+    argsType = typeToken<Args>(),
+    resultType = typeToken<Result>(),
     descriptor = ToolDescriptor(
         name = "gather_more_tools",
         description = resources.getString(R.string.llm_tool_gather_more_tools_description),

@@ -23,6 +23,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import com.tyme.solar.SolarDay
 import kotlinx.datetime.LocalDate
@@ -52,8 +53,8 @@ class TimeTool(
     private val resources: Resources,
     val chatAgentStyle: Boolean = false,
 ) : Tool<TimeTool.Args, TimeTool.Result>(
-    argsSerializer = Args.serializer(),
-    resultSerializer = Result.serializer(),
+    argsType = typeToken<Args>(),
+    resultType = typeToken<Result>(),
     descriptor = ToolDescriptor(
         name = "time",
         description = if (!chatAgentStyle) {

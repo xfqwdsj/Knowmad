@@ -22,14 +22,14 @@ import ai.koog.agents.core.tools.Tool
 import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
+import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
 import top.ltfan.knowmad.R
 
 class ExitTool(resources: Resources) : Tool<ExitTool.Args, String>(
-    argsSerializer = Args.serializer(),
-    resultSerializer = String.serializer(),
+    argsType = typeToken<Args>(),
+    resultType = typeToken<String>(),
     descriptor = ToolDescriptor(
         name = name,
         description = resources.getString(R.string.llm_tool_exit_description),

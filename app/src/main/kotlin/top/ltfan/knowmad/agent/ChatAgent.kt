@@ -24,12 +24,10 @@ import ai.koog.agents.core.agent.GraphAIAgentService
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.context.AIAgentLLMContext
 import ai.koog.agents.core.dsl.builder.AIAgentEdgeBuilderIntermediate
-import ai.koog.agents.core.dsl.builder.EdgeTransformationDslMarker
-import ai.koog.agents.core.dsl.builder.forwardTo
+import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
 import ai.koog.agents.core.environment.ReceivedToolResult
-import ai.koog.agents.core.environment.executeTools
 import ai.koog.agents.core.environment.result
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.dsl.Prompt
@@ -359,7 +357,6 @@ data class ChatAgentRerun(
     }
 }
 
-@EdgeTransformationDslMarker
 private inline infix fun <IncomingOutput, IntermediateOutput, OutgoingInput, NewIncomingOutput, NewIntermediateOutput, NewOutgoingInput> AIAgentEdgeBuilderIntermediate<IncomingOutput, ChatAgentData<IntermediateOutput>, OutgoingInput>.extracted(
     block: AIAgentEdgeBuilderIntermediate<IncomingOutput, IntermediateOutput, OutgoingInput>.() -> AIAgentEdgeBuilderIntermediate<NewIncomingOutput, NewIntermediateOutput, NewOutgoingInput>,
 ): AIAgentEdgeBuilderIntermediate<NewIncomingOutput, ChatAgentData<NewIntermediateOutput>, NewOutgoingInput> {
