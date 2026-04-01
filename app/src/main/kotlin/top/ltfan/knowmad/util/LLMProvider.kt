@@ -18,7 +18,13 @@
 
 package top.ltfan.knowmad.util
 
+import ai.koog.prompt.llm.AlibabaLLMProvider
+import ai.koog.prompt.llm.DeepSeekLLMProvider
 import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.OpenAILLMProvider
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.modules.SerializersModuleBuilder
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
 import top.ltfan.knowmad.model.UnknownLLMProvider
@@ -29,6 +35,58 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
             polymorphic()
         }
     }
+
+    // TODO: remove this migration
+    polymorphicDefaultDeserializer(LLMProvider::class) { className ->
+        // DeepSeek
+        if (className == "ai.koog.prompt.llm.LLMProvider.DeepSeek") {
+            return@polymorphicDefaultDeserializer object :
+                DeserializationStrategy<DeepSeekLLMProvider> {
+                override val descriptor =
+                    buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.DeepSeek")
+
+                override fun deserialize(decoder: Decoder) = DeepSeekLLMProvider().also {
+                    decoder.beginStructure(descriptor).apply {
+                        decodeElementIndex(descriptor)
+                        endStructure(descriptor)
+                    }
+                }
+            }
+        }
+        // OpenAI
+        if (className == "ai.koog.prompt.llm.LLMProvider.OpenAI") {
+            return@polymorphicDefaultDeserializer object :
+                DeserializationStrategy<OpenAILLMProvider> {
+                override val descriptor =
+                    buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.OpenAI")
+
+                override fun deserialize(decoder: Decoder) = OpenAILLMProvider().also {
+                    decoder.beginStructure(descriptor).apply {
+                        decodeElementIndex(descriptor)
+                        endStructure(descriptor)
+                    }
+                }
+            }
+        }
+        // Alibaba
+        if (className == "ai.koog.prompt.llm.LLMProvider.Alibaba") {
+            return@polymorphicDefaultDeserializer object :
+                DeserializationStrategy<AlibabaLLMProvider> {
+                override val descriptor =
+                    buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.Alibaba")
+
+                override fun deserialize(decoder: Decoder) = AlibabaLLMProvider().also {
+                    decoder.beginStructure(descriptor).apply {
+                        decodeElementIndex(descriptor)
+                        endStructure(descriptor)
+                    }
+                }
+            }
+        }
+
+        null
+    }
+
     polymorphic(
         baseClass = LLMProvider::class,
         actualClass = UnknownLLMProvider::class,
