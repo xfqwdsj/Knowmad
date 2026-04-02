@@ -1261,7 +1261,7 @@ fun DetailedEvent(
             if (isForward) 4.dp else 0.dp
         } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
     } else {
-        animateDpAsState(0.dp)
+        animateDpAsState(if (selected) 4.dp else 0.dp)
     }
 
     var showMenu by remember { mutableStateOf(false) }
