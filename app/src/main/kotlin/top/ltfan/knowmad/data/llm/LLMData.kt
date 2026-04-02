@@ -58,7 +58,7 @@ import top.ltfan.knowmad.util.CryptoManager
 import kotlin.uuid.Uuid
 
 val SupportedLLMProviders = mapOf(
-    DeepSeekLLMProvider().info(
+    (LLMProvider.DeepSeek as DeepSeekLLMProvider).info(
         icon = R.drawable.llm_provider_deepseek,
         label = R.string.llm_provider_deepseek_label,
         description = R.string.llm_provider_deepseek_description,
@@ -74,7 +74,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    OpenAILLMProvider().info(
+    (LLMProvider.OpenAI as OpenAILLMProvider).info(
         icon = R.drawable.llm_provider_openai,
         label = R.string.llm_provider_openai_label,
         description = R.string.llm_provider_openai_description,
@@ -90,7 +90,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    AnthropicLLMProvider().info(
+    (LLMProvider.Anthropic as AnthropicLLMProvider).info(
         icon = R.drawable.llm_provider_anthropic,
         label = R.string.llm_provider_anthropic_label,
         description = R.string.llm_provider_anthropic_description,
@@ -106,7 +106,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    GoogleLLMProvider().info(
+    (LLMProvider.Google as GoogleLLMProvider).info(
         icon = R.drawable.llm_provider_google,
         label = R.string.llm_provider_google_label,
         description = R.string.llm_provider_google_description,
@@ -122,7 +122,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    OpenRouterLLMProvider().info(
+    (LLMProvider.OpenRouter as OpenRouterLLMProvider).info(
         icon = R.drawable.llm_provider_openrouter,
         label = R.string.llm_provider_openrouter_label,
         description = R.string.llm_provider_openrouter_description,
@@ -138,7 +138,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    AlibabaLLMProvider().info(
+    (LLMProvider.Alibaba as AlibabaLLMProvider).info(
         icon = R.drawable.llm_provider_alibaba,
         label = R.string.llm_provider_alibaba_label,
         description = R.string.llm_provider_alibaba_description,

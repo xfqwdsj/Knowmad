@@ -24,6 +24,7 @@ import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.OpenAILLMProvider
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.CompositeDecoder
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.modules.SerializersModuleBuilder
 import top.ltfan.knowmad.data.llm.SupportedLLMProviders
@@ -45,12 +46,14 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                 override val descriptor =
                     buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.DeepSeek")
 
-                override fun deserialize(decoder: Decoder) = DeepSeekLLMProvider().also {
+                override fun deserialize(decoder: Decoder) = LLMProvider.DeepSeek.also {
                     decoder.beginStructure(descriptor).apply {
-                        decodeElementIndex(descriptor)
+                        while (decodeElementIndex(descriptor) != CompositeDecoder.DECODE_DONE) {
+                            // Skip all elements
+                        }
                         endStructure(descriptor)
                     }
-                }
+                } as DeepSeekLLMProvider
             }
         }
         // OpenAI
@@ -60,12 +63,14 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                 override val descriptor =
                     buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.OpenAI")
 
-                override fun deserialize(decoder: Decoder) = OpenAILLMProvider().also {
+                override fun deserialize(decoder: Decoder) = LLMProvider.OpenAI.also {
                     decoder.beginStructure(descriptor).apply {
-                        decodeElementIndex(descriptor)
+                        while (decodeElementIndex(descriptor) != CompositeDecoder.DECODE_DONE) {
+                            // Skip all elements
+                        }
                         endStructure(descriptor)
                     }
-                }
+                } as OpenAILLMProvider
             }
         }
         // Alibaba
@@ -75,12 +80,14 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                 override val descriptor =
                     buildClassSerialDescriptor("ai.koog.prompt.llm.LLMProvider.Alibaba")
 
-                override fun deserialize(decoder: Decoder) = AlibabaLLMProvider().also {
+                override fun deserialize(decoder: Decoder) = LLMProvider.Alibaba.also {
                     decoder.beginStructure(descriptor).apply {
-                        decodeElementIndex(descriptor)
+                        while (decodeElementIndex(descriptor) != CompositeDecoder.DECODE_DONE) {
+                            // Skip all elements
+                        }
                         endStructure(descriptor)
                     }
-                }
+                } as AlibabaLLMProvider
             }
         }
 
