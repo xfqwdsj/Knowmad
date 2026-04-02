@@ -1101,6 +1101,7 @@ fun EventEditScreen(
                     locale = locale,
                     timeZone = timeZone,
                     animatedVisibilityScope = animatedVisibilityScope,
+                    elevateOnEnter = false,
                 )
                 edit.SharedListItem(
                     event = event,
@@ -1235,6 +1236,7 @@ fun DetailedEvent(
     color: Color = event.color.compose,
     interactionSource: MutableInteractionSource? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    elevateOnEnter: Boolean = true,
     additionalContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val density = LocalDensity.current
@@ -1245,18 +1247,22 @@ fun DetailedEvent(
     val contentColor = MaterialTheme.colorScheme.contentColorFor(color)
         .takeOrElse { contractColorFor(color) }
 
-    val minShadowElevation by animatedVisibilityScope?.transition?.animateDp {
-        val sceneTransition = animatedVisibilityScope.transition.parentTransition
-        val targetScene = sceneTransition?.targetState as? Scene<*>
-        val targetContentKey =
-            targetScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
-        val currentScene = sceneTransition?.currentState as? Scene<*>
-        val currentContentKey =
-            currentScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
-        val isForward = (targetContentKey?.eventId == event.id && it == Visible) ||
-                (currentContentKey?.eventId == event.id && it != Visible)
-        if (isForward) 4.dp else 0.dp
-    } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
+    val minShadowElevation by if (elevateOnEnter) {
+        animatedVisibilityScope?.transition?.animateDp {
+            val sceneTransition = animatedVisibilityScope.transition.parentTransition
+            val targetScene = sceneTransition?.targetState as? Scene<*>
+            val targetContentKey =
+                targetScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
+            val currentScene = sceneTransition?.currentState as? Scene<*>
+            val currentContentKey =
+                currentScene?.entries?.lastOrNull()?.contentKey as? EventDetailsSubPageKey
+            val isForward = (targetContentKey?.eventId == event.id && it == Visible) ||
+                    (currentContentKey?.eventId == event.id && it != Visible)
+            if (isForward) 4.dp else 0.dp
+        } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
+    } else {
+        animateDpAsState(0.dp)
+    }
 
     var showMenu by remember { mutableStateOf(false) }
     var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
