@@ -40,6 +40,7 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -50,8 +51,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -73,6 +77,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -83,6 +88,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -98,6 +104,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
@@ -111,6 +118,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.coerceAtLeast
@@ -1006,6 +1014,34 @@ fun EventInformationScreen(
         val eventWidth = eventPlaceable.width
         val eventHeight = eventPlaceable.height + 16.dp.roundToPx()
 
+        val scrimPlaceable = subcompose("scrim") {
+            val tonalElevation = LocalAbsoluteTonalElevation.current
+            val color = MaterialTheme.colorScheme.surfaceColorAtElevation(tonalElevation)
+
+            Column(Modifier.fillMaxSize()) {
+                Spacer(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(color),
+                )
+                Spacer(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 64.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    color,
+                                    Color.Transparent,
+                                ),
+                            ),
+                        ),
+                )
+            }
+        }.first().measure(Constraints.fixed(eventWidth, eventHeight))
+
         val listPlaceable = subcompose("list") {
             DetailedEventInformation(
                 event = event,
@@ -1025,6 +1061,7 @@ fun EventInformationScreen(
 
         layout(width, height) {
             listPlaceable.placeRelative(0, 0)
+            scrimPlaceable.placeRelative(0, 0)
             eventPlaceable.placeRelative(0, 0)
         }
     }
