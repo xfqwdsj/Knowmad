@@ -22,7 +22,7 @@ import ai.koog.agents.core.tools.Tool
 import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
-import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.ToolRegistryBuilder
 import ai.koog.serialization.typeToken
 import android.content.Context
 import android.content.res.Resources
@@ -57,7 +57,7 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-fun ToolRegistry.Builder.scheduleTools(
+fun ToolRegistryBuilder.scheduleTools(
     context: Context, dao: ScheduleDao,
 ) {
     val context = context.applicationContext
@@ -67,7 +67,7 @@ fun ToolRegistry.Builder.scheduleTools(
     tool(ScheduleTools.QueryEventsTool(resources, dao))
 }
 
-fun ToolRegistry.Builder.scheduleToolsExtended(
+fun ToolRegistryBuilder.scheduleToolsExtended(
     context: Context, dao: ScheduleDao, registerCodeRunner: (CodeRunnerTool) -> Unit,
 ) {
     val context = context.applicationContext

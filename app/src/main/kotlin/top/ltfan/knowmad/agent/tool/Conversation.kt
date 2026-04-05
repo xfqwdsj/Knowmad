@@ -22,7 +22,7 @@ import ai.koog.agents.core.tools.Tool
 import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
-import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.ToolRegistryBuilder
 import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import kotlinx.coroutines.sync.Mutex
@@ -31,7 +31,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.util.Logger
 
-fun ToolRegistry.Builder.conversationTools(
+fun ToolRegistryBuilder.conversationTools(
     resources: Resources,
     mutex: Mutex?,
     getConversation: suspend () -> ConversationEntity,

@@ -22,7 +22,7 @@ import ai.koog.agents.core.tools.Tool
 import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
-import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.ToolRegistryBuilder
 import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import com.tyme.solar.SolarDay
@@ -44,7 +44,7 @@ import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-fun ToolRegistry.Builder.timeTool(
+fun ToolRegistryBuilder.timeTool(
     resources: Resources,
     chatAgentStyle: Boolean = false,
 ) = tool(TimeTool(resources, chatAgentStyle))

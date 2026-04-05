@@ -38,15 +38,9 @@ import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterClientSettings
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterLLMClient
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterModels
-import ai.koog.prompt.llm.AlibabaLLMProvider
-import ai.koog.prompt.llm.AnthropicLLMProvider
-import ai.koog.prompt.llm.DeepSeekLLMProvider
-import ai.koog.prompt.llm.GoogleLLMProvider
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.llm.OpenAILLMProvider
-import ai.koog.prompt.llm.OpenRouterLLMProvider
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
@@ -58,7 +52,7 @@ import top.ltfan.knowmad.util.CryptoManager
 import kotlin.uuid.Uuid
 
 val SupportedLLMProviders = mapOf(
-    (LLMProvider.DeepSeek as DeepSeekLLMProvider).info(
+    LLMProvider.DeepSeek.info(
         icon = R.drawable.llm_provider_deepseek,
         label = R.string.llm_provider_deepseek_label,
         description = R.string.llm_provider_deepseek_description,
@@ -74,7 +68,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    (LLMProvider.OpenAI as OpenAILLMProvider).info(
+    LLMProvider.OpenAI.info(
         icon = R.drawable.llm_provider_openai,
         label = R.string.llm_provider_openai_label,
         description = R.string.llm_provider_openai_description,
@@ -90,7 +84,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    (LLMProvider.Anthropic as AnthropicLLMProvider).info(
+    LLMProvider.Anthropic.info(
         icon = R.drawable.llm_provider_anthropic,
         label = R.string.llm_provider_anthropic_label,
         description = R.string.llm_provider_anthropic_description,
@@ -106,7 +100,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    (LLMProvider.Google as GoogleLLMProvider).info(
+    LLMProvider.Google.info(
         icon = R.drawable.llm_provider_google,
         label = R.string.llm_provider_google_label,
         description = R.string.llm_provider_google_description,
@@ -122,7 +116,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    (LLMProvider.OpenRouter as OpenRouterLLMProvider).info(
+    LLMProvider.OpenRouter.info(
         icon = R.drawable.llm_provider_openrouter,
         label = R.string.llm_provider_openrouter_label,
         description = R.string.llm_provider_openrouter_description,
@@ -138,7 +132,7 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
-    (LLMProvider.Alibaba as AlibabaLLMProvider).info(
+    LLMProvider.Alibaba.info(
         icon = R.drawable.llm_provider_alibaba,
         label = R.string.llm_provider_alibaba_label,
         description = R.string.llm_provider_alibaba_description,

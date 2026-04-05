@@ -53,7 +53,7 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                         }
                         endStructure(descriptor)
                     }
-                } as DeepSeekLLMProvider
+                }
             }
         }
         // OpenAI
@@ -70,7 +70,7 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                         }
                         endStructure(descriptor)
                     }
-                } as OpenAILLMProvider
+                }
             }
         }
         // Alibaba
@@ -87,7 +87,7 @@ fun SerializersModuleBuilder.llmProvidersPolymorphic() {
                         }
                         endStructure(descriptor)
                     }
-                } as AlibabaLLMProvider
+                }
             }
         }
 

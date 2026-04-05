@@ -24,6 +24,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.ToolRegistryBuilder
 import ai.koog.serialization.typeToken
 import android.content.res.Resources
 import kotlinx.coroutines.coroutineScope
@@ -41,9 +42,9 @@ import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
 import kotlin.coroutines.resume
 
-fun ToolRegistry.Builder.gatherToolsTool(
+fun ToolRegistryBuilder.gatherToolsTool(
     resources: Resources,
-    tools: ToolRegistry.Builder.() -> Unit,
+    tools: ToolRegistryBuilder.() -> Unit,
 ) {
     tool(GatherMoreToolsTool(resources, tools))
     tools()
@@ -51,7 +52,7 @@ fun ToolRegistry.Builder.gatherToolsTool(
 
 class GatherMoreToolsTool(
     private val resources: Resources,
-    tools: ToolRegistry.Builder.() -> Unit,
+    tools: ToolRegistryBuilder.() -> Unit,
 ) : Tool<GatherMoreToolsTool.Args, GatherMoreToolsTool.Result>(
     argsType = typeToken<Args>(),
     resultType = typeToken<Result>(),
