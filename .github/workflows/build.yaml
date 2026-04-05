@@ -23,6 +23,20 @@ jobs:
           path: koog-fixed-llm-provider
           depth: 1
 
+      - name: Get Koog SHA
+        id: koog-sha
+        run: |
+          echo "sha=$(git -C koog-fixed-llm-provider rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Koog Maven Artifacts
+        id: cache-koog
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository/ai/koog
+          key: ${{ runner.os }}-maven-koog-${{ steps.koog-sha.outputs.sha }}
+          restore-keys: |
+            ${{ runner.os }}-maven-koog-
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -35,11 +49,12 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Build Koog
+        if: steps.cache-koog.outputs.cache-hit != 'true'
         run: |
           cd koog-fixed-llm-provider
-          ./gradlew publishJvmPublicationToMavenLocal
-          ./gradlew publishKotlinMultiplatformPublicationToMavenLocal
-          ./gradlew :serialization:serialization-jackson:publishToMavenLocal
+          ./gradlew publishJvmPublicationToMavenLocal \
+            publishKotlinMultiplatformPublicationToMavenLocal \
+            :serialization:serialization-jackson:publishToMavenLocal
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
