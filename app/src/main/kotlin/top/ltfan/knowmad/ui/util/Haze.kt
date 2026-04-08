@@ -32,7 +32,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
 
 val DefaultHazeStyle @Composable inline get() = HazeMaterials.ultraThick()
-val HazeEasing = CubicBezierEasing(.2f, .0f, .2f, 1f)
+val HazeEasing = CubicBezierEasing(.3f, .0f, .4f, 1f)
 
 @Stable
 @Composable
