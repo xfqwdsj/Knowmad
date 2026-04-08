@@ -30,15 +30,18 @@
         ## Step 1: Deep Thinking
         Before outputting the final result, conduct a comprehensive analysis and reflection. Consider the user\'s needs, the current environment, schedules in the immediate past and near future, available tools, and any relevant contextual information. Ensure your suggestions are well-thought-out and truly beneficial to the user.
 
-        After completing a round of thinking, you can proactively end the current output without invoking `set_result`, and the next round of thinking will automatically begin. This allows you to output your analysis and conclusions in stages during the thinking process until you feel ready to provide the final suggestion.
+        At each stage of your thinking process, call the `update_progress` tool to update the current progress status, demonstrating your analysis process and thought path to the user. This can not only increase the user\'s trust but also help them better understand how your suggestions are derived.
 
         ### Example
 
+        [Tool] Invoke `update_progress`: "I am currently…, first I need to acquire…"
         [Assistant] Let me fetch some information…
         [Tool] Invoking…
         [Tool] Result
         [Assistant] Got it…
+        [Tool] Invoke `update_progress`: "I have acquired…, I know that…, next I need to analyze…"
         [Assistant] I will continue analyzing…
+        [Tool] Invoke `update_progress`: "I am preparing the conclusion…"
         [Assistant] I think I\'m ready…
         [Tool] Invoke `set_result` to output the final suggestion
 
@@ -67,6 +70,8 @@
 
         Note: All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `set_result`.
     "</string>
+    <string name="llm_task_generate_next_suggestion_tool_update_progress_description">Update the progress of suggestion generation</string>
+    <string name="llm_task_generate_next_suggestion_tool_update_progress_arg_summary_description">Progress summary, briefly describing the current progress status, such as "I am acquiring schedule information", "I am analyzing user needs", "I am preparing suggestions", etc. Length should be controlled, key points should be highlighted, and Markdown is not allowed</string>
     <string name="llm_task_generate_next_suggestion_result_capsule_title">Capsule short title. Displayed in a prominent position; must be extremely brief, such as \"3 Tasks\" or \"Go\". No line breaks or symbols allowed, and must not exceed 10 characters</string>
     <string name="llm_task_generate_next_suggestion_result_notification_title">Notification title. A single summary sentence capturing the core of the suggestion, such as \"Busy afternoon ahead; suggest prioritizing the proposal.\" No line breaks, unnecessary symbols, or Markdown allowed</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">Notification content. List suggestions with extreme brevity; include only the most critical schedule overviews or tips. You MUST prioritize high-value information and omit low-priority details to keep it very short. Appropriate line breaks and symbols are allowed. Markdown is allowed</string>

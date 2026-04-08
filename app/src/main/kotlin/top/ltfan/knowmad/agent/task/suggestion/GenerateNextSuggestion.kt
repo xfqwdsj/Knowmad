@@ -45,20 +45,17 @@ import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
-import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.environmentSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
-import top.ltfan.knowmad.agent.task.summary.generateMessageSummary
 import top.ltfan.knowmad.agent.tool.ScheduleTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.data.chat.ChatData
@@ -74,6 +71,36 @@ import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 
 private val logger = Logger("GenerateNextSuggestion")
+
+private class UpdateProgress(
+    context: Context,
+    private val onSummary: (String) -> Unit,
+) : Tool<UpdateProgress.Args, String>(
+    argsType = typeToken<Args>(),
+    resultType = typeToken<String>(),
+    descriptor = ToolDescriptor(
+        name = "update_progress",
+        description = context.getString(R.string.llm_task_generate_next_suggestion_tool_update_progress_description),
+        requiredParameters = listOf(
+            ToolParameterDescriptor(
+                name = "summary",
+                description = context.getString(R.string.llm_task_generate_next_suggestion_tool_update_progress_arg_summary_description),
+                type = ToolParameterType.String,
+            ),
+        ),
+        optionalParameters = emptyList(),
+    ),
+) {
+    override suspend fun execute(args: Args): String {
+        onSummary(args.summary)
+        return "OK"
+    }
+
+    @Serializable
+    data class Args(
+        val summary: String,
+    )
+}
 
 private class SetResult(
     context: Context,
@@ -135,7 +162,7 @@ suspend fun Context.generateAndShowNextSuggestion(
     promptExecutor: PromptExecutor,
     model: LLModel,
     maxAgentIterations: Int = 50,
-    onSummary: ((String) -> Unit)? = null,
+    onSummary: (String) -> Unit,
 ) = coroutineScope {
     try {
         val context = applicationContext
@@ -190,6 +217,7 @@ suspend fun Context.generateAndShowNextSuggestion(
             tool(ScheduleTools.SearchSemestersTool(context.resources, scheduleDao))
             tool(ScheduleTools.QueryEventsTool(context.resources, scheduleDao))
             tool(ScheduleTools.SearchCoursesTool(context.resources, scheduleDao))
+            tool(UpdateProgress(context, onSummary))
             tool(SetResult(context))
         }
 
@@ -201,31 +229,7 @@ suspend fun Context.generateAndShowNextSuggestion(
         ) {
             install(EventHandler) {
                 onLLMCallStarting { logger.debug { "LLM call starting" } }
-                onLLMCallCompleted { completedContext ->
-                    logger.debug { "LLM call completed" }
-                    onSummary?.let { onSummary ->
-                        launch {
-                            try {
-                                val summary = generateMessageSummary(
-                                    contextMessages = completedContext.prompt.messages,
-                                    targetMessages = completedContext.responses,
-                                    executor = promptExecutor,
-                                    model = model,
-                                    resources = context.resources,
-                                )
-                                if (!isActive) return@launch
-                                if (summary != null) {
-                                    logger.debug { "Generated summary for LLM call" }
-                                    onSummary(summary)
-                                } else {
-                                    logger.warn { "Failed to generate summary for LLM call" }
-                                }
-                            } catch (e: CancellationException) {
-                                logger.debug(e) { "Next suggestion generation completed, cancelling summary generation" }
-                            }
-                        }
-                    }
-                }
+                onLLMCallCompleted { logger.debug { "LLM call completed" } }
                 onToolCallCompleted { logger.debug { "Tool call completed" } }
             }
         }
