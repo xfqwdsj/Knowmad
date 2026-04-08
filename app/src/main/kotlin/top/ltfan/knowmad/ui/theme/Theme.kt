@@ -23,6 +23,7 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -154,3 +155,13 @@ val ContentContainerColor @Composable inline get() = MaterialTheme.colorScheme.s
 val ListItemMaxWidth = 360.dp
 
 val TextFieldMaxWidth = 320.dp
+
+
+val TopAppBarColorsTransparent
+    @Composable inline get() = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+    )

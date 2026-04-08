@@ -34,6 +34,8 @@ compass = "3.0.2"
 dslUtilities = "1.0.4"
 hyperislandKit = "0.4.4"
 capsule = "1.1.1"
+haze = "1.7.2"
+backdrop = "2.0.0-alpha03"
 reorderable = "3.0.0"
 coil = "3.4.0"
 markdown = "0.39.2"
@@ -97,6 +99,9 @@ compass-geolocation = { module = "dev.jordond.compass:geolocation", version.ref 
 dslUtilities = { module = "top.ltfan.dslutilities:dsl-utilities", version.ref = "dslUtilities" }
 hyperislandKit = { module = "io.github.d4viddf:hyperisland_kit", version.ref = "hyperislandKit" }
 capsule = { module = "top.ltfan.capsule:capsule", version.ref = "capsule" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
+backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
@@ -167,6 +172,11 @@ all = [
     "capsule",
     # hyperislandKit
     "hyperislandKit",
+    # haze
+    "haze",
+    "haze-materials",
+    # backdrop
+    "backdrop",
     # reorderable
     "reorderable",
     # coil

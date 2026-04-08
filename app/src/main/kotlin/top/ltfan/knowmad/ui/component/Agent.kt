@@ -27,13 +27,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -54,6 +52,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -68,7 +67,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
@@ -84,13 +82,26 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
+import top.ltfan.knowmad.ui.util.appBarHaze
+import top.ltfan.knowmad.ui.util.contentHazeSource
 import top.ltfan.knowmad.ui.util.copy
+import top.ltfan.knowmad.ui.util.hazeEffectBottom
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
@@ -144,13 +155,40 @@ fun AgentMainScreen(
     val coroutineScope = rememberCoroutineScope()
     val layoutDirection = LocalLayoutDirection.current
 
+    val containerColor = ContainerColor.filledContainer
+
+    val hazeState = rememberHazeState()
+    val backdrop = rememberLayerBackdrop {
+        drawRect(containerColor)
+        drawContent()
+    }
+    val backdropForDrawer = rememberLayerBackdrop {
+        drawRect(containerColor)
+        drawContent()
+    }
+
     val currentConversation by viewModel.currentConversationFlow.collectAsState(null)
 
     ModalNavigationDrawer(
         drawerContent = {
+            val shape = DrawerDefaults.shape
+            val color = DrawerContainerColor
             ModalDrawerSheet(
-                viewModel.drawerState,
-                drawerContainerColor = DrawerContainerColor,
+                drawerState = viewModel.drawerState,
+                modifier = Modifier.drawBackdrop(
+                    backdrop = backdropForDrawer,
+                    shape = { shape },
+                    effects = {
+                        vibrancy()
+                        blur(4.dp.toPx())
+                        lens(16.dp.toPx(), 32.dp.toPx())
+                    },
+                    onDrawSurface = {
+                        drawRect(color.copy(alpha = 0.6f))
+                    },
+                ),
+                drawerContainerColor = Transparent,
+                drawerContentColor = contentColorFor(color),
                 windowInsets = AppWindowInsets.only { start } + contentPadding.copy(
                     layoutDirection,
                     top = 0.dp,
@@ -175,6 +213,7 @@ fun AgentMainScreen(
         scrimColor = DrawerScrimColor,
     ) {
         Scaffold(
+            modifier = Modifier.layerBackdrop(backdropForDrawer),
             topBar = {
                 var showDialog by remember { mutableStateOf(false) }
 
@@ -187,11 +226,13 @@ fun AgentMainScreen(
                             maxLines = 1,
                         )
                     },
-                    modifier = Modifier.clickable(
-                        onClick = { showDialog = true },
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                    ),
+                    modifier = Modifier
+                        .appBarHaze(hazeState)
+                        .clickable(
+                            onClick = { showDialog = true },
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                        ),
                     navigationIcon = {
                         if (isNewWindow) {
                             val activity = LocalActivity.current
@@ -262,10 +303,7 @@ fun AgentMainScreen(
                         }
                     },
                     windowInsets = AppWindowInsets.only { horizontal + top },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = ContainerColor,
-                        scrolledContainerColor = ContainerColor,
-                    ),
+                    colors = TopAppBarColorsTransparent,
                 )
 
                 if (showDialog) {
@@ -289,7 +327,7 @@ fun AgentMainScreen(
                     SnackbarHost()
                 }
             },
-            containerColor = ContainerColor.scaffoldContainer,
+            containerColor = ContainerColor.filledContainer,
             contentColor = ScaffoldContentColor,
             contentWindowInsets = AppWindowInsets,
         ) { scaffoldPaddingValues ->
@@ -300,6 +338,14 @@ fun AgentMainScreen(
 
             SubcomposeLayout { constraints ->
                 val inputPlaceables = subcompose("input") {
+                    val coroutineScope = rememberCoroutineScope()
+
+                    val interactiveHighlight = remember(coroutineScope) {
+                        BackdropInteractiveHighlight(coroutineScope)
+                    }
+
+                    val shape = MaterialTheme.shapes.medium
+                    val color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                     ChatInput(
                         textState = viewModel.chatMessageTextInputState,
                         sendEnabled = viewModel.canSendMessageUi,
@@ -318,35 +364,35 @@ fun AgentMainScreen(
                                 ),
                             )
                             .fillMaxWidth()
-                            .heightIn(max = 200.dp),
+                            .heightIn(max = 200.dp)
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { shape },
+                                effects = {
+                                    vibrancy()
+                                    blur(4.dp.toPx())
+                                    lens(16.dp.toPx(), 32.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    drawRect(color)
+                                },
+                            )
+                            .then(interactiveHighlight.modifier)
+                            .then(interactiveHighlight.gestureModifier),
                     )
                 }.fastMap { it.measure(constraints) }
 
                 val inputHeight = inputPlaceables.fastMaxOfOrNull { it.height } ?: 0
 
                 val scrimPlaceables = subcompose("scrim") {
-                    val color = ContainerColor.scaffoldContainer.copy(alpha = .8f)
-
                     Column(Modifier.fillMaxSize()) {
                         Spacer(
                             Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 64.dp)
-                                .fillMaxHeight()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color.Transparent,
-                                            color,
-                                        ),
-                                    ),
+                                .fillMaxSize()
+                                .hazeEffectBottom(
+                                    state = hazeState,
+                                    style = HazeMaterials.regular(),
                                 ),
-                        )
-                        Spacer(
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .background(color),
                         )
                     }
                 }.fastMap {
@@ -367,8 +413,9 @@ fun AgentMainScreen(
                     if (messages == null) {
                         Column(
                             modifier = Modifier
-                                .padding(padding)
-                                .fillMaxSize(),
+                                .fillMaxSize()
+                                .contentHazeSource(hazeState)
+                                .padding(padding),
                         ) {
 
                         }
@@ -390,7 +437,10 @@ fun AgentMainScreen(
                             getMessageKey = messages.itemKey { it.key },
                             getMessageAt = { viewModel.getMessage(messages[it]) },
                             mathJaxRendererState = appViewModel.mathJaxRendererState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .contentHazeSource(hazeState)
+                                .layerBackdrop(backdrop),
                             onPrevious = viewModel::messageOnPrevious,
                             onNext = viewModel::messageOnNext,
                             onRegenerate = viewModel::messageOnRegenerate,
@@ -541,7 +591,7 @@ fun AgentConfigScreen(
                 SnackbarHost()
             }
         },
-        containerColor = ContainerColor.scaffoldContainer,
+        containerColor = ContainerColor.filledContainer,
         contentColor = ScaffoldContentColor,
         contentWindowInsets = AppWindowInsets,
     ) { scaffoldPadding ->
@@ -595,7 +645,7 @@ private val ContainerColor
     @Composable inline get() = if (LocalAgentScreenTransparentContainer.current) LocalAgentScreenPreferredContainerColor.current.takeOrElse { Color.Transparent }
     else Color.Unspecified
 
-private val Color.scaffoldContainer
+private val Color.filledContainer
     @Composable inline get() = takeOrElse { MaterialTheme.colorScheme.background }
 
 private val ScaffoldContentColor

@@ -143,14 +143,11 @@ fun ChatInput(
     onSelectModel: (LLMConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    Box(
         modifier = Modifier
             .widthIn(max = 640.dp)
             .then(modifier)
             .padding(8.dp),
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
     ) {
         Column(Modifier.fillMaxWidth()) {
             OutlinedTextField(

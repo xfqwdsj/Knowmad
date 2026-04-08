@@ -124,6 +124,7 @@ kotlin {
         optIn.add("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
         optIn.add("androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi")
         optIn.add("com.google.accompanist.permissions.ExperimentalPermissionsApi")
+        optIn.add("dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi")
     }
 }
 
