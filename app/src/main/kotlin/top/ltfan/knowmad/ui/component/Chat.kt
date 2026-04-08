@@ -146,8 +146,7 @@ fun ChatInput(
     Box(
         modifier = Modifier
             .widthIn(max = 640.dp)
-            .then(modifier)
-            .padding(8.dp),
+            .then(modifier),
     ) {
         Column(Modifier.fillMaxWidth()) {
             OutlinedTextField(

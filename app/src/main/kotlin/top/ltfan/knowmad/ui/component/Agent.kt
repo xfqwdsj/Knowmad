@@ -365,6 +365,7 @@ fun AgentMainScreen(
                             )
                             .fillMaxWidth()
                             .heightIn(max = 200.dp)
+                            .padding(8.dp)
                             .drawBackdrop(
                                 backdrop = backdrop,
                                 shape = { shape },
