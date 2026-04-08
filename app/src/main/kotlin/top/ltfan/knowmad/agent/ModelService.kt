@@ -423,20 +423,22 @@ class ModelService : LifecycleService() {
             getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
         ) -> Long = ChatDao::insertMessageAndGet,
         beforeStart: (() -> Unit)? = null,
-        onEnd: (suspend (
+        onEnd: ((
             conversationId: Uuid,
             isNewConversation: Boolean,
         ) -> Unit)? = e@{ conversationId, isNewConversation ->
             if (!isNewConversation) return@e
             val service = chatAgentServiceFlow.value ?: return@e
-            val newName = generateConversationName(
-                conversationId = conversationId,
-                executor = service.promptExecutor,
-                model = service.agentConfig.model,
-            ) ?: return@e
-            val conversation = chatDao.getConversationById(conversationId) ?: return@e
-            val updated = conversation.copy(name = newName)
-            chatDao.updateConversation(updated, application)
+            defaultScope.launch {
+                val newName = generateConversationName(
+                    conversationId = conversationId,
+                    executor = service.promptExecutor,
+                    model = service.agentConfig.model,
+                ) ?: return@launch
+                val conversation = chatDao.getConversationById(conversationId) ?: return@launch
+                val updated = conversation.copy(name = newName)
+                chatDao.updateConversation(updated, application)
+            }
         },
     ) = defaultScope.asyncInterruptible task@{
         require(!insertEnvironmentContext || includeEnvironmentContext) {
