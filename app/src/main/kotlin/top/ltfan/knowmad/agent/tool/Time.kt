@@ -159,9 +159,14 @@ fun formatAgentTime(
     append(date.dayOfWeek.toJavaDayOfWeek().getDisplayName(FULL, locale))
     append(" ")
     append(tymeTermDay.getName())
-    append("第")
-    append(tymeTermDay.getDayIndex() + 1)
-    append("天 ")
+    append("节气")
+    tymeTermDay.getDayIndex().let { termDayIndex ->
+        if (termDayIndex < 1) return@let
+        append("后的第")
+        append(termDayIndex)
+        append("天")
+    }
+    append(" ")
     append(tymeLunarYear.getName())
     append(" ")
     append(tymeZodiac.getName())
