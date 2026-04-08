@@ -56,6 +56,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.environmentSystemPrompt
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.task.summary.generateMessageSummary
 import top.ltfan.knowmad.agent.tool.ScheduleTools
@@ -173,10 +174,12 @@ suspend fun Context.generateAndShowNextSuggestion(
 
         val agentConfig = AIAgentConfig(
             prompt = prompt("next-suggestion") {
-                system(
-                    context.getString(R.string.llm_task_generate_next_suggestion_prompt)
-                        .trimIndent().format(Clock.System.now().formatAgentTime(), prompt),
-                )
+                system {
+                    !context.resources.environmentSystemPrompt()
+                    br()
+                    !context.getString(R.string.llm_task_generate_next_suggestion_prompt)
+                        .trimIndent().format(Clock.System.now().formatAgentTime(), prompt)
+                }
             },
             model = model,
             maxAgentIterations = maxAgentIterations,
