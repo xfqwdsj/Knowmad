@@ -59,6 +59,7 @@ fun Context.showNextSuggestionNotification(
         setOngoing(true)
         setAutoCancel(false)
         setRequestPromotedOngoing(true)
+        setOnlyAlertOnce(true)
         setWhen(suggestion.createdAt.toEpochMilliseconds())
         setContentIntent(getViewSuggestionPendingIntent(suggestion))
         addAction(
