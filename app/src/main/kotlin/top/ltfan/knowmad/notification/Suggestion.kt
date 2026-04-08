@@ -19,7 +19,14 @@
 package top.ltfan.knowmad.notification
 
 import android.content.Context
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
+import io.github.d4viddf.hyperisland_kit.HyperAction
+import io.github.d4viddf.hyperisland_kit.HyperIslandNotification
+import io.github.d4viddf.hyperisland_kit.HyperPicture
+import io.github.d4viddf.hyperisland_kit.models.ImageTextInfoLeft
+import io.github.d4viddf.hyperisland_kit.models.PicInfo
+import io.github.d4viddf.hyperisland_kit.models.TextInfo
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.MainActivity.Companion.getViewSuggestionPendingIntent
 import top.ltfan.knowmad.R
@@ -50,7 +57,12 @@ fun Context.showNextSuggestionNotification(
 ) {
     val content = suggestion.notificationSummary ?: suggestion.notificationContent
 
-    val notification = aiNotificationChannel.withNotificationBuilder {
+    val notification = aiNotificationChannel.withNotificationBuilder { channel ->
+        val downgradingIntent = getSuggestionDowngradingPendingIntent(suggestion) ?: run {
+            logger.warn { "Failed to create downgrading intent for suggestion: $suggestion" }
+            return
+        }
+
         setSmallIcon(R.drawable.ic_launcher_foreground)
         setContentTitle(suggestion.capsuleTitle)
         setShortCriticalText(suggestion.capsuleTitle)
@@ -65,7 +77,57 @@ fun Context.showNextSuggestionNotification(
         addAction(
             R.drawable.keep_off_24px,
             getString(R.string.label_unpin),
-            getSuggestionDowngradingPendingIntent(suggestion),
+            downgradingIntent,
+        )
+
+        val context = this@showNextSuggestionNotification.applicationContext
+
+        val hyperIsland = HyperIslandNotification.Builder(
+            context = context,
+            businessName = channel.id,
+            ticker = channel.name.toString(),
+        ).apply {
+            val picKeySmallIsland = "small_island"
+
+            addPicture(HyperPicture(picKeySmallIsland, context, R.drawable.ic_launcher_foreground))
+
+            val actionKeyUnpin = "action_unpin"
+
+            addAction(
+                HyperAction(
+                    key = actionKeyUnpin,
+                    title = getString(R.string.label_unpin),
+                    pendingIntent = downgradingIntent,
+                    actionIntentType = 2,
+                ),
+            )
+
+            setSmallIsland(picKeySmallIsland)
+            setBigIslandInfo(
+                left = ImageTextInfoLeft(
+                    picInfo = PicInfo(pic = picKeySmallIsland),
+                    textInfo = TextInfo(
+                        title = getString(R.string.app_name),
+                        showHighlightColor = true,
+                    ),
+                ),
+                centerText = TextInfo(title = suggestion.capsuleTitle),
+            )
+            setBaseInfo(
+                title = suggestion.notificationTitle,
+                content = content,
+                type = 2,
+                actionKeys = listOf(actionKeyUnpin),
+            )
+
+            setAodConfig(title = suggestion.capsuleTitle)
+        }
+
+        addExtras(hyperIsland.buildResourceBundle())
+        addExtras(
+            Bundle().apply {
+                putString("miui.focus.param", hyperIsland.buildJsonParam())
+            },
         )
     }.build()
 

@@ -43,10 +43,12 @@ inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
 @OptIn(ExperimentalContracts::class)
 context(context: Context)
 inline fun NotificationChannelCompat.withNotificationBuilder(
-    block: NotificationCompat.Builder.() -> Unit,
+    block: NotificationCompat.Builder.(channel: NotificationChannelCompat) -> Unit,
 ): NotificationCompat.Builder {
     contract { callsInPlace(block, EXACTLY_ONCE) }
-    return NotificationCompat.Builder(context, id).apply(block)
+    return NotificationCompat.Builder(context, id).apply {
+        block(this@withNotificationBuilder)
+    }
 }
 
 @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
