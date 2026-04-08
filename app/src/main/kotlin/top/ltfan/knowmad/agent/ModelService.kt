@@ -45,6 +45,7 @@ import kotlinx.collections.immutable.plus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -466,6 +467,8 @@ class ModelService : LifecycleService() {
 
         val conversationMutex = Mutex()
 
+        var initialConversationNameGenerationJob: Job? = null
+
         val agentDeferred = appDatabase.withTransaction {
             bind {
                 var conversation =
@@ -596,7 +599,7 @@ class ModelService : LifecycleService() {
                     beforeStart?.invoke()
 
                     if (generateConversationNameFromInitialInput && databaseMessages.isEmpty()) {
-                        defaultScope.launch {
+                        initialConversationNameGenerationJob = defaultScope.launch {
                             // TODO: use configured executor and model
                             val title = generateConversationName(
                                 conversationId = conversationId,
@@ -668,6 +671,7 @@ class ModelService : LifecycleService() {
                 logger.debug { "Message completed" }
                 entity
             }.also {
+                initialConversationNameGenerationJob?.cancelAndJoin()
                 onEnd?.invoke(conversationId, isNewConversation)
                 showNotification(conversationId)
             }
