@@ -101,7 +101,7 @@ fun Context.showChatNotification(
     pushChatShortcut(conversationId, conversationName)
 
     val notification = aiNotificationChannel.withNotificationBuilder {
-        setSmallIcon(R.drawable.ic_launcher_foreground)
+        setSmallIcon(R.drawable.ic_logo)
         setStyle(resources.getMessagingStyle(messages))
         addAction(getReplyAction(conversationId, conversationName, quickReplies))
         setShortcutId(conversationId.toString())
@@ -127,7 +127,7 @@ fun Context.getBubbleMetadata(
 } else {
     NotificationCompat.BubbleMetadata.Builder(
         getChatPendingIntent(conversationId),
-        IconCompat.createWithResource(this, R.drawable.ic_launcher_foreground),
+        IconCompat.createWithResource(this, R.drawable.ic_logo),
     ).build()
 }
 

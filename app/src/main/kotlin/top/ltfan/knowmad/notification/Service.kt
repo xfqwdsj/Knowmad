@@ -38,7 +38,7 @@ inline fun <Result> Context.withAgentRunningNotification(
 ) = checkedNotificationPermission {
 
     val builder = aiNotificationChannel.withNotificationBuilder {
-        setSmallIcon(R.drawable.ic_launcher_foreground)
+        setSmallIcon(R.drawable.ic_logo)
         setContentTitle(getString(R.string.notification_agent_running_title))
         initialContent?.let { setContentText(it) }
         setShowWhen(false)

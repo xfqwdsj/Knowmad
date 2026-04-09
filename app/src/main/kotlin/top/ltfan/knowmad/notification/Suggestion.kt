@@ -65,7 +65,7 @@ fun Context.showNextSuggestionNotification(
             return
         }
 
-        setSmallIcon(R.drawable.ic_launcher_foreground)
+        setSmallIcon(R.drawable.ic_logo)
         setContentTitle(suggestion.capsuleTitle)
         setShortCriticalText(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
@@ -91,7 +91,7 @@ fun Context.showNextSuggestionNotification(
         ).apply {
             val picKeySmallIsland = "small_island"
 
-            addPicture(HyperPicture(picKeySmallIsland, context, R.drawable.ic_launcher_foreground))
+            addPicture(HyperPicture(picKeySmallIsland, context, R.drawable.ic_logo))
 
             val actionKeyUnpin = "action_unpin"
 
@@ -149,7 +149,7 @@ fun Context.downgradeNextSuggestionNotification(
     val content = suggestion.notificationSummary ?: suggestion.notificationContent
 
     val notification = aiNotificationChannel.withNotificationBuilder {
-        setSmallIcon(R.drawable.ic_launcher_foreground)
+        setSmallIcon(R.drawable.ic_logo)
         setContentTitle(suggestion.capsuleTitle)
         setShortCriticalText(suggestion.capsuleTitle)
         setSubText(suggestion.notificationTitle)
