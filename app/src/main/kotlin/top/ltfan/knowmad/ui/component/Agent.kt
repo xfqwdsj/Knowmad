@@ -51,7 +51,6 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -323,7 +322,7 @@ fun AgentMainScreen(
                     SnackbarHost()
                 }
             },
-            containerColor = ContainerColor.filledContainer,
+            containerColor = containerColor,
             contentColor = ScaffoldContentColor,
             contentWindowInsets = AppWindowInsets,
         ) { scaffoldPaddingValues ->
@@ -517,6 +516,8 @@ fun AgentConfigScreen(
 ) {
     val viewModel = LocalAgentViewModel.current
 
+    val hazeState = rememberHazeState()
+
     var isSelectingNewProvider by remember { mutableStateOf(false) }
     var creatingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
     var editingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
@@ -533,6 +534,7 @@ fun AgentConfigScreen(
                 title = {
                     Text(stringResource(R.string.llm_config_label_settings))
                 },
+                modifier = Modifier.appBarHaze(hazeState),
                 navigationIcon = {
                     TooltipBox(
                         TooltipDefaults.rememberTooltipPositionProvider(
@@ -573,10 +575,7 @@ fun AgentConfigScreen(
                     }
                 },
                 windowInsets = AppWindowInsets.only { horizontal + top },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ContainerColor,
-                    scrolledContainerColor = ContainerColor,
-                ),
+                colors = TopAppBarColorsTransparent,
             )
         },
         snackbarHost = {
@@ -601,7 +600,9 @@ fun AgentConfigScreen(
                     model = LLModel(provider = it.provider, id = ""),
                 )
             },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .contentHazeSource(hazeState),
             contentPadding = contentPadding,
         )
     }
