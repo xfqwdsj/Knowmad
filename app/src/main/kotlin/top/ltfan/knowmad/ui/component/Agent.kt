@@ -93,6 +93,7 @@ import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.BackdropEffectsHeavy
 import top.ltfan.knowmad.ui.util.BackdropEffectsMedium
 import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
@@ -178,7 +179,7 @@ fun AgentMainScreen(
                 modifier = Modifier.drawBackdrop(
                     backdrop = backdropForDrawer,
                     shape = { shape },
-                    effects = BackdropEffectsMedium,
+                    effects = BackdropEffectsHeavy,
                     exportedBackdrop = drawerBackdrop,
                     onDrawSurface = {
                         drawRect(color.copy(alpha = 0.6f))

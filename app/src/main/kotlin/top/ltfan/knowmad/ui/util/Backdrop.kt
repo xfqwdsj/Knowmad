@@ -35,3 +35,9 @@ val BackdropEffectsMedium: BackdropEffectScope.() -> Unit = {
     blur(4.dp.toPx())
     lens(16.dp.toPx(), 32.dp.toPx())
 }
+
+val BackdropEffectsHeavy: BackdropEffectScope.() -> Unit = {
+    vibrancy()
+    blur(12.dp.toPx())
+    lens(24.dp.toPx(), 36.dp.toPx())
+}
