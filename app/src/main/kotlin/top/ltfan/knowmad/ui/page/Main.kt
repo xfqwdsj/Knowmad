@@ -32,13 +32,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -61,6 +64,9 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
@@ -76,6 +82,8 @@ import top.ltfan.knowmad.ui.component.GenerateSuggestionIconButton
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.BackdropEffectsLight
+import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
@@ -90,6 +98,13 @@ class MainPage : Page() {
 
         val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
+
+        val backgroundColor = MaterialTheme.colorScheme.background
+
+        val backdrop = rememberLayerBackdrop {
+            drawRect(backgroundColor)
+            drawContent()
+        }
 
         Scaffold(
             modifier = localSharedTransitionScope {
@@ -161,23 +176,48 @@ class MainPage : Page() {
             },
             snackbarHost = { SnackbarHost() },
             floatingActionButton = {
+                val coroutineScope = rememberCoroutineScope()
+
+                val interactiveHighlight = remember(coroutineScope) {
+                    BackdropInteractiveHighlight(coroutineScope)
+                }
+
+                val shape = FloatingActionButtonDefaults.shape
+                val color = FloatingActionButtonDefaults.containerColor
                 MediumFloatingActionButton(
                     onClick = viewModel::switchStandaloneAgentScreen,
                     modifier = localSharedTransitionScope {
-                        Modifier.sharedBounds(
-                            rememberSharedContentState(AgentScreenSharedKey),
-                            LocalNavAnimatedContentScope.current,
-                            resizeMode = RemeasureToBounds,
-                        )
+                        Modifier
+                            .sharedBounds(
+                                rememberSharedContentState(AgentScreenSharedKey),
+                                LocalNavAnimatedContentScope.current,
+                                resizeMode = RemeasureToBounds,
+                            )
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { shape },
+                                effects = BackdropEffectsLight,
+                                onDrawSurface = {
+                                    drawRect(color.copy(alpha = 0.6f))
+                                },
+                            )
+                            .then(interactiveHighlight.modifier)
+                            .then(interactiveHighlight.gestureModifier)
                     },
+                    containerColor = Transparent,
+                    contentColor = contentColorFor(color),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     content = { AgentChatIcon() },
                 )
             },
+            containerColor = backgroundColor,
             contentWindowInsets = AppWindowInsets,
         ) {
             val contentPadding = it + contentPadding
             Calendar(
-                modifier = Modifier.padding(contentPadding),
+                modifier = Modifier
+                    .layerBackdrop(backdrop)
+                    .padding(contentPadding),
                 headerModifier = Modifier.padding(vertical = 4.dp),
                 state = viewModel.calendarState,
                 onSystemDateChanged = { lastDay, newDay ->
