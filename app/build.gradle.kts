@@ -99,6 +99,10 @@ android {
             excludes += "/META-INF/INDEX.LIST"
             excludes += "/META-INF/io.netty.versions.properties"
             excludes += "/META-INF/DEPENDENCIES"
+
+            // First found in djl
+            excludes += "native/**"
+            excludes += "com/sun/jna/**"
         }
     }
 }
