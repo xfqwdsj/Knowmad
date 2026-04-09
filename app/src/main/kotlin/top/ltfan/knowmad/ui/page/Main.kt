@@ -198,7 +198,8 @@ class MainPage : Page() {
                                 shape = { shape },
                                 effects = BackdropEffectsLight,
                                 onDrawSurface = {
-                                    drawRect(color.copy(alpha = 0.6f))
+                                    drawRect(color, blendMode = Hue)
+                                    drawRect(color.copy(alpha = 0.4f))
                                 },
                             )
                             .then(interactiveHighlight.modifier)
