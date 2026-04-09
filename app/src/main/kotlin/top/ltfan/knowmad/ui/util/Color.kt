@@ -22,6 +22,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.materialkolor.hct.Hct
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun Color.toHexString(
+    includeAlpha: Boolean = false,
+    uppercase: Boolean = true,
+): String {
+    val argb = this.toArgb()
+    val hex = if (includeAlpha) {
+        String.format("%08X", argb)
+    } else {
+        String.format("%06X", argb and 0xFFFFFF)
+    }
+    return if (uppercase) hex else hex.lowercase()
+}
+
 fun contractColorFor(
     backgroundColor: Color,
     toneDelta: Double = 60.0,

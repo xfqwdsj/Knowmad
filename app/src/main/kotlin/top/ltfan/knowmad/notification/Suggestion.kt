@@ -32,6 +32,8 @@ import top.ltfan.knowmad.MainActivity.Companion.getViewSuggestionPendingIntent
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.getSuggestionDowngradingPendingIntent
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionDowngrading
+import top.ltfan.knowmad.ui.theme.primaryDark
+import top.ltfan.knowmad.ui.util.toHexString
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -100,6 +102,10 @@ fun Context.showNextSuggestionNotification(
                     pendingIntent = downgradingIntent,
                     actionIntentType = 2,
                 ),
+            )
+
+            setIslandConfig(
+                highlightColor = "#" + primaryDark.toHexString(),
             )
 
             setSmallIsland(picKeySmallIsland)
