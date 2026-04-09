@@ -21,17 +21,15 @@ package top.ltfan.knowmad.ui.component
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.placeCursorAtEnd
@@ -42,9 +40,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +52,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,12 +75,22 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.ui.page.AgentConfigPage
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
+import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.SnackbarAction
+import top.ltfan.knowmad.ui.util.asWindowInsets
 import top.ltfan.knowmad.ui.util.copy
 import top.ltfan.knowmad.ui.util.detectLongPress
 import top.ltfan.knowmad.ui.util.detectPointerFirstDown
@@ -92,7 +103,10 @@ import top.ltfan.knowmad.util.asStringRes
 import kotlin.uuid.Uuid
 
 @Composable
-fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
+fun ConversationList(
+    contentPadding: PaddingValues = PaddingValues(),
+    backdrop: Backdrop = rememberLayerBackdrop(),
+) {
     val viewModel = LocalAgentViewModel.current
 
     ConversationList(
@@ -103,6 +117,7 @@ fun ConversationList(contentPadding: PaddingValues = PaddingValues()) {
         onEditConversation = viewModel::editConversation,
         onDeleteConversation = viewModel::deleteConversation,
         contentPadding = contentPadding,
+        backdrop = backdrop,
         onAutoGenerateName = viewModel::generateConversationName,
     )
 }
@@ -116,6 +131,7 @@ fun ConversationList(
     onEditConversation: (newEntity: ConversationEntity, onFinished: (() -> Unit)?) -> Unit,
     onDeleteConversation: (conversation: ConversationEntity, onDeleted: (onUndo: () -> Unit) -> Unit) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
+    backdrop: Backdrop = rememberLayerBackdrop(),
     onAutoGenerateName: (suspend (conversationId: Uuid) -> String?)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -124,54 +140,63 @@ fun ConversationList(
 
     val layoutDirection = LocalLayoutDirection.current
 
+    val listBackdrop = rememberLayerBackdrop()
+    val combinedBackdrop = rememberCombinedBackdrop(backdrop, listBackdrop)
+
     fun onEditConversation(newEntity: ConversationEntity, onFinished: (() -> Unit)? = null) {
         onEditConversation.invoke(newEntity, onFinished)
     }
 
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.padding(
-                contentPadding.copy(
-                    layoutDirection,
-                    bottom = 0.dp,
-                ),
-            ),
-        ) {
-            Spacer(Modifier.width(4.dp))
-            Spacer(Modifier.weight(1f))
+    Scaffold(
+        topBar = {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .padding(
+                        contentPadding.copy(
+                            layoutDirection,
+                            bottom = 0.dp,
+                        ),
+                    )
+                    .padding(horizontal = 8.dp)
+                    .fillMaxWidth()
+                    .height(TopAppBarDefaults.TopAppBarExpandedHeight),
+                horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TooltipBox(
-                    TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Below,
-                    ),
-                    tooltip = {
-                        PlainTooltip {
-                            Text(stringResource(R.string.llm_config_label_settings))
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onSettingsClick,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.settings_24px),
-                            contentDescription = stringResource(R.string.llm_config_label_settings),
-                        )
-                    }
+                val coroutineScope = rememberCoroutineScope()
+
+                val interactiveHighlight = remember(coroutineScope) {
+                    BackdropInteractiveHighlight(coroutineScope)
                 }
+
+                SettingsIconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .drawBackdrop(
+                            backdrop = combinedBackdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                vibrancy()
+                                blur(2.dp.toPx())
+                                lens(12.dp.toPx(), 24.dp.toPx())
+                            },
+                            shadow = null,
+                        )
+                        .then(interactiveHighlight.modifier)
+                        .then(interactiveHighlight.gestureModifier),
+                    contentDescriptionRes = R.string.llm_config_label_settings,
+                )
             }
-            Spacer(Modifier.width(4.dp))
-        }
-        Modifier.height(4.dp)
+        },
+        containerColor = Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        contentWindowInsets = contentPadding.asWindowInsets(),
+    ) { scaffoldPadding ->
         LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(16.dp) + contentPadding.copy(
+                .fillMaxSize()
+                .layerBackdrop(listBackdrop),
+            contentPadding = PaddingValues(16.dp) + scaffoldPadding + contentPadding.copy(
                 layoutDirection,
                 top = 0.dp,
             ),

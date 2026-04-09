@@ -18,6 +18,7 @@
 
 <resources>
     <string name="app_name">Knowmad</string>
+    <string name="label_settings">Settings</string>
     <string name="label_view">View</string>
     <string name="label_skip">Skip</string>
     <string name="label_skip_for_now">Skip for now</string>

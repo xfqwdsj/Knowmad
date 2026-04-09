@@ -171,6 +171,8 @@ fun AgentMainScreen(
 
     ModalNavigationDrawer(
         drawerContent = {
+            val drawerBackdrop = rememberLayerBackdrop()
+
             val shape = DrawerDefaults.shape
             val color = DrawerContainerColor
             ModalDrawerSheet(
@@ -183,6 +185,7 @@ fun AgentMainScreen(
                         blur(4.dp.toPx())
                         lens(16.dp.toPx(), 32.dp.toPx())
                     },
+                    exportedBackdrop = drawerBackdrop,
                     onDrawSurface = {
                         drawRect(color.copy(alpha = 0.6f))
                     },
@@ -201,10 +204,8 @@ fun AgentMainScreen(
                         layoutDirection,
                         start = 0.dp,
                         end = 0.dp,
-                    ) + PaddingValues(
-                        top = 16.dp,
                     )
-                    ConversationList(contentPadding)
+                    ConversationList(contentPadding, drawerBackdrop)
                 }
             }
         },

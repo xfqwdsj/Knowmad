@@ -50,6 +50,38 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 
 @Composable
+fun SettingsIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes contentDescriptionRes: Int? = R.string.label_settings,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                painterResource(R.drawable.settings_24px),
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
+            )
+        }
+    }
+}
+
+@Composable
 fun RetryIconButton(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
