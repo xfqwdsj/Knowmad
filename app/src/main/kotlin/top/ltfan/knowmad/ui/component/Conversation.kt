@@ -80,14 +80,12 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.chat.ConversationEntity
 import top.ltfan.knowmad.ui.page.AgentConfigPage
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
+import top.ltfan.knowmad.ui.util.BackdropEffectsLight
 import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.asWindowInsets
@@ -175,12 +173,7 @@ fun ConversationList(
                         .drawBackdrop(
                             backdrop = combinedBackdrop,
                             shape = { CircleShape },
-                            effects = {
-                                vibrancy()
-                                blur(2.dp.toPx())
-                                lens(12.dp.toPx(), 24.dp.toPx())
-                            },
-                            shadow = null,
+                            effects = BackdropEffectsLight,
                         )
                         .then(interactiveHighlight.modifier)
                         .then(interactiveHighlight.gestureModifier),

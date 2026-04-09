@@ -85,9 +85,6 @@ import androidx.paging.compose.itemKey
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
@@ -96,6 +93,7 @@ import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
+import top.ltfan.knowmad.ui.util.BackdropEffectsMedium
 import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
 import top.ltfan.knowmad.ui.util.appBarHaze
@@ -180,11 +178,7 @@ fun AgentMainScreen(
                 modifier = Modifier.drawBackdrop(
                     backdrop = backdropForDrawer,
                     shape = { shape },
-                    effects = {
-                        vibrancy()
-                        blur(4.dp.toPx())
-                        lens(16.dp.toPx(), 32.dp.toPx())
-                    },
+                    effects = BackdropEffectsMedium,
                     exportedBackdrop = drawerBackdrop,
                     onDrawSurface = {
                         drawRect(color.copy(alpha = 0.6f))
@@ -370,11 +364,7 @@ fun AgentMainScreen(
                             .drawBackdrop(
                                 backdrop = backdrop,
                                 shape = { shape },
-                                effects = {
-                                    vibrancy()
-                                    blur(4.dp.toPx())
-                                    lens(16.dp.toPx(), 32.dp.toPx())
-                                },
+                                effects = BackdropEffectsMedium,
                                 onDrawSurface = {
                                     drawRect(color)
                                 },
