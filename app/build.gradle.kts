@@ -34,16 +34,12 @@ android {
     val packageName = "top.ltfan.knowmad"
 
     namespace = packageName
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = packageName
-        minSdk = 26
-        targetSdk = 36
+        minSdk = 29
+        targetSdk = 37
         versionCode = 3
         versionName = "0.3.0"
     }
