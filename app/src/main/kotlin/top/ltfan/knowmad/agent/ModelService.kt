@@ -636,7 +636,7 @@ class ModelService : LifecycleService() {
                             },
                         )
                     }.also {
-                        launch {
+                        this@task.launch {
                             for (_ in updateChannel) {
                                 val result = chatDao.updateMessage(state.toEntity())
                                 if (result < 1) {
