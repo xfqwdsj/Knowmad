@@ -18,9 +18,18 @@
 
 package top.ltfan.knowmad.ui.util
 
+import android.os.Build
+import androidx.annotation.FloatRange
+import androidx.annotation.RequiresApi
+import androidx.collection.LruCache
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.effect
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
@@ -41,3 +50,43 @@ val BackdropEffectsHeavy: BackdropEffectScope.() -> Unit = {
     blur(12.dp.toPx())
     lens(24.dp.toPx(), 36.dp.toPx())
 }
+
+private val ProgressiveBlurEffectCache = LruCache<ProgressiveBlurEffectKey, RenderEffect>(64)
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+fun BackdropEffectScope.progressiveBlur(
+    @FloatRange(from = 0.0, fromInclusive = true) radius: Float,
+    data: LinearBrushData,
+) {
+    val size = size
+    if (!size.isSpecified) return
+
+    val key = ProgressiveBlurEffectKey(radius, size, data)
+    ProgressiveBlurEffectCache[key]?.let { effect ->
+        effect(effect)
+        return
+    }
+
+    val mask = data.createBrush().createShader(size)
+    val renderEffect = createBlurRenderEffect(size, radius, mask).asComposeRenderEffect()
+    ProgressiveBlurEffectCache.put(key, renderEffect)
+    effect(renderEffect)
+}
+
+inline fun BackdropEffectScope.progressiveBlurWithFallback(
+    @FloatRange(from = 0.0, fromInclusive = true) radius: Float,
+    data: LinearBrushData,
+    fallback: BackdropEffectScope.() -> Unit = { blur(radius) },
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        progressiveBlur(radius, data)
+    } else {
+        fallback()
+    }
+}
+
+private data class ProgressiveBlurEffectKey(
+    val radius: Float,
+    val size: Size,
+    val data: LinearBrushData,
+)

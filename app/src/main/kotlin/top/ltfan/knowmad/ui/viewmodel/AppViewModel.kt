@@ -28,7 +28,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
-import dev.chrisbanes.haze.HazeState
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -83,8 +82,6 @@ class AppViewModel(
     val backStack = NavBackStack<Route>()
     var appReady by mutableStateOf(false)
         private set
-
-    val hazeState = HazeState()
 
     private val wizardStateStore = WizardState.createDataStore()
     private val wizardStateFlow = wizardStateStore.dataStateFlow()

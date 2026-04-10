@@ -66,7 +66,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -84,8 +86,7 @@ import androidx.paging.compose.itemKey
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import dev.chrisbanes.haze.materials.HazeMaterials
-import dev.chrisbanes.haze.rememberHazeState
+import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
@@ -95,14 +96,13 @@ import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsHeavy
 import top.ltfan.knowmad.ui.util.BackdropEffectsMedium
 import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
+import top.ltfan.knowmad.ui.util.LinearBrushData
 import top.ltfan.knowmad.ui.util.WindowInsetsToPaddingValuesBox
-import top.ltfan.knowmad.ui.util.appBarHaze
-import top.ltfan.knowmad.ui.util.contentHazeSource
 import top.ltfan.knowmad.ui.util.copy
-import top.ltfan.knowmad.ui.util.hazeEffectBottom
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.only
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.ui.util.progressiveBlurWithFallback
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
@@ -155,7 +155,6 @@ fun AgentMainScreen(
 
     val containerColor = ContainerColor.filledContainer
 
-    val hazeState = rememberHazeState()
     val backdrop = rememberLayerBackdrop {
         drawRect(containerColor)
         drawContent()
@@ -222,7 +221,21 @@ fun AgentMainScreen(
                         )
                     },
                     modifier = Modifier
-                        .appBarHaze(hazeState)
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RectangleShape },
+                            effects = {
+                                vibrancy()
+                                progressiveBlurWithFallback(
+                                    radius = 48.dp.toPx(),
+                                    data = LinearBrushData(
+                                        start = Offset(0f, POSITIVE_INFINITY),
+                                    ),
+                                )
+                            },
+                            highlight = null,
+                            shadow = null,
+                        )
                         .clickable(
                             onClick = { showDialog = true },
                             indication = null,
@@ -381,9 +394,20 @@ fun AgentMainScreen(
                         Spacer(
                             Modifier
                                 .fillMaxSize()
-                                .hazeEffectBottom(
-                                    state = hazeState,
-                                    style = HazeMaterials.regular(),
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { RectangleShape },
+                                    effects = {
+                                        vibrancy()
+                                        progressiveBlurWithFallback(
+                                            radius = 48.dp.toPx(),
+                                            data = LinearBrushData(
+                                                end = Offset(0f, POSITIVE_INFINITY),
+                                            ),
+                                        )
+                                    },
+                                    highlight = null,
+                                    shadow = null,
                                 ),
                         )
                     }
@@ -406,7 +430,6 @@ fun AgentMainScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .contentHazeSource(hazeState)
                                 .padding(padding),
                         ) {
 
@@ -431,7 +454,6 @@ fun AgentMainScreen(
                             mathJaxRendererState = appViewModel.mathJaxRendererState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .contentHazeSource(hazeState)
                                 .layerBackdrop(backdrop),
                             onPrevious = viewModel::messageOnPrevious,
                             onNext = viewModel::messageOnNext,
@@ -516,7 +538,12 @@ fun AgentConfigScreen(
 ) {
     val viewModel = LocalAgentViewModel.current
 
-    val hazeState = rememberHazeState()
+    val containerColor = ContainerColor.filledContainer
+
+    val backdrop = rememberLayerBackdrop {
+        drawRect(containerColor)
+        drawContent()
+    }
 
     var isSelectingNewProvider by remember { mutableStateOf(false) }
     var creatingProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
@@ -534,7 +561,21 @@ fun AgentConfigScreen(
                 title = {
                     Text(stringResource(R.string.llm_config_label_settings))
                 },
-                modifier = Modifier.appBarHaze(hazeState),
+                modifier = Modifier.drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RectangleShape },
+                    effects = {
+                        vibrancy()
+                        progressiveBlurWithFallback(
+                            radius = 48.dp.toPx(),
+                            data = LinearBrushData(
+                                start = Offset(0f, POSITIVE_INFINITY),
+                            ),
+                        )
+                    },
+                    highlight = null,
+                    shadow = null,
+                ),
                 navigationIcon = {
                     TooltipBox(
                         TooltipDefaults.rememberTooltipPositionProvider(
@@ -583,7 +624,7 @@ fun AgentConfigScreen(
                 SnackbarHost()
             }
         },
-        containerColor = ContainerColor.filledContainer,
+        containerColor = containerColor,
         contentColor = ScaffoldContentColor,
         contentWindowInsets = AppWindowInsets,
     ) { scaffoldPadding ->
@@ -602,7 +643,7 @@ fun AgentConfigScreen(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .contentHazeSource(hazeState),
+                .layerBackdrop(backdrop),
             contentPadding = contentPadding,
         )
     }
