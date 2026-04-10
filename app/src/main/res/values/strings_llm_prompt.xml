@@ -88,7 +88,7 @@
         - The summary should be concise and clear, but there is no need to deliberately shorten it;
         - Summarize from the perspective of the role in the "target message";
         - Only allow outputting the summary text, prohibiting introductions such as "Summary:" or "Suggestion:";
-        - Prohibit using Markdown formatting and unnecessary punctuation.
+        - Prohibit using Markdown formatting.
 
         # Quick Reply Generation Rules
         - If the target message is a request or instruction, the summary can include brief reply suggestions to that request or instruction;
@@ -121,7 +121,7 @@
         - The summary should be concise and clear, but there is no need to deliberately shorten it;
         - Summarize from the perspective of the role in the "target message";
         - Only allow outputting the summary text, prohibiting introductions such as "Summary:" or "Suggestion:";
-        - Prohibit using Markdown formatting and unnecessary punctuation.
+        - Prohibit using Markdown formatting.
 
         # Context
         &lt;&lt;&lt;
