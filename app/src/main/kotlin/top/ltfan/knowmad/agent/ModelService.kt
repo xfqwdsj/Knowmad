@@ -654,9 +654,6 @@ class ModelService : LifecycleService() {
 
         val completed = try {
             agentDeferred?.await()
-        } catch (e: CancellationException) {
-            logger.info(e) { "Agent run cancelled" }
-            null
         } catch (e: Throwable) {
             logger.error(e) { "Agent run error" }
             null

@@ -158,7 +158,7 @@ open class JobInterruptibleTask(
     taskContext: CoroutineContext,
     val rootScope: CoroutineScope,
 ) : InterruptibleTask, CoroutineContext.Element {
-    override val coroutineContext = taskContext + job
+    override val coroutineContext by lazy { taskContext + this + job }
     override fun stop(cause: StopException) = job.cancel(cause)
 
     /**
@@ -271,9 +271,7 @@ inline fun <T> CoroutineScope.asyncInterruptible(
 
     val deferred = rootScope.async {
         try {
-            withContext(task) {
-                task.block()
-            }
+            task.block()
         } finally {
             job.complete()
         }
