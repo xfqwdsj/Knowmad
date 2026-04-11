@@ -22,23 +22,77 @@ import android.icu.text.MeasureFormat
 import android.icu.util.Measure
 import java.util.Locale
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 fun Duration.format(
     locale: Locale = Locale.getDefault(),
     width: MeasureFormat.FormatWidth = SHORT,
+    enableDays: Boolean = true,
+    enableHours: Boolean = true,
+    enableMinutes: Boolean = true,
+    enableSeconds: Boolean = true,
+    enableZero: Boolean = true,
 ): String {
-    val days = inWholeDays
-    val hours = inWholeHours % 24
-    val minutes = inWholeMinutes % 60
-    val seconds = inWholeSeconds % 60
+    if (!enableDays && !enableHours && !enableMinutes && !enableSeconds) return ""
+
+    val isNegative = this < Duration.ZERO
+    var remaining = if (isNegative) -this else this
+
+    val days = if (enableDays) {
+        val d = remaining.inWholeDays
+        remaining -= d.days
+        d
+    } else 0L
+
+    val hours = if (enableHours) {
+        val h = remaining.inWholeHours
+        remaining -= h.hours
+        h
+    } else 0L
+
+    val minutes = if (enableMinutes) {
+        val m = remaining.inWholeMinutes
+        remaining -= m.minutes
+        m
+    } else 0L
+
+    val seconds = if (enableSeconds) {
+        remaining.inWholeSeconds
+    } else 0L
+
+    val hasNonZero = days > 0 || hours > 0 || minutes > 0 || seconds > 0
 
     val measures = buildList {
-        if (days > 0) add(Measure(days, DAY))
-        if (hours > 0) add(Measure(hours, HOUR))
-        if (minutes > 0) add(Measure(minutes, MINUTE))
-        if (seconds > 0) add(Measure(seconds, SECOND))
-        if (isEmpty()) add(Measure(0, SECOND))
+        val sign = if (isNegative && hasNonZero) -1 else 1
+
+        if (enableDays && days > 0) add(Measure(days * sign, DAY))
+
+        if (enableHours && hours > 0) {
+            val value = if (isEmpty()) hours * sign else hours
+            add(Measure(value, HOUR))
+        }
+        if (enableMinutes && minutes > 0) {
+            val value = if (isEmpty()) minutes * sign else minutes
+            add(Measure(value, MINUTE))
+        }
+        if (enableSeconds && seconds > 0) {
+            val value = if (isEmpty()) seconds * sign else seconds
+            add(Measure(value, SECOND))
+        }
+
+        if (isEmpty() && enableZero) {
+            when {
+                enableSeconds -> add(Measure(0, SECOND))
+                enableMinutes -> add(Measure(0, MINUTE))
+                enableHours -> add(Measure(0, HOUR))
+                else -> add(Measure(0, DAY))
+            }
+        }
     }
+
+    if (measures.isEmpty()) return ""
 
     val format = MeasureFormat.getInstance(locale, width)
     return format.formatMeasures(*measures.toTypedArray())
