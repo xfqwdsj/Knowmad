@@ -82,7 +82,7 @@ fun Context.showClassProgressNotification(
         val hyperIsland = HyperIslandNotification.Builder(
             context = context,
             businessName = channel.id,
-            ticker = channel.name.toString(),
+            ticker = notification.status,
         ).apply {
             val picKeySmallIsland = "small_island"
 

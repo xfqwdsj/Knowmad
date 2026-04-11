@@ -87,7 +87,7 @@ fun Context.showNextSuggestionNotification(
         val hyperIsland = HyperIslandNotification.Builder(
             context = context,
             businessName = channel.id,
-            ticker = channel.name.toString(),
+            ticker = suggestion.capsuleTitle,
         ).apply {
             val picKeySmallIsland = "small_island"
 
