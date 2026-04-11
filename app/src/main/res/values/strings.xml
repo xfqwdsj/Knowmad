@@ -182,6 +182,10 @@
         <item quantity="other">Successfully modified %d events</item>
     </plurals>
     <string name="schedule_event_edit_notes_label_input">New Notes</string>
+    <string name="schedule_class_status_short_label_close_to_start">Class Soon</string>
+    <string name="schedule_class_status_short_label_in_progress">In Class</string>
+    <string name="schedule_class_status_short_label_close_to_end">Class Ending</string>
+    <string name="schedule_class_status_short_label_ended">Class Ended</string>
     <string name="schedule_import_from_icalendar_error_semester_insertion_failed">Error occurred while inserting semester %s into database</string>
     <string name="schedule_import_from_icalendar_error_recurrence_rule_insertion_failed">Error occurred while inserting rule %s into database</string>
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
@@ -194,5 +198,6 @@
     <string name="notification_rationale_dialog_message">To send timely reminders for you, we need permission to send notifications</string>
     <string name="notification_rationale_dialog_confirm_label">Grant Permission</string>
     <string name="notification_channel_ai_message_label">Messages from Noma</string>
+    <string name="notification_channel_class_progress_label">Class Progress Updates</string>
     <string name="notification_agent_running_title">Noma is thinking…</string>
 </resources>

@@ -178,6 +178,10 @@
         <item quantity="other">成功修改了%d个事件</item>
     </plurals>
     <string name="schedule_event_edit_notes_label_input">新的备注</string>
+    <string name="schedule_class_status_short_label_close_to_start">即将上课</string>
+    <string name="schedule_class_status_short_label_in_progress">正在上课</string>
+    <string name="schedule_class_status_short_label_close_to_end">即将下课</string>
+    <string name="schedule_class_status_short_label_ended">已下课</string>
     <string name="schedule_import_from_icalendar_error_semester_insertion_failed">向数据库插入学期%s时发生错误</string>
     <string name="schedule_import_from_icalendar_error_recurrence_rule_insertion_failed">向数据库插入规则%s时发生错误</string>
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">课程%s的学期与数据库中已存在的学期不匹配</string>
@@ -190,5 +194,6 @@
     <string name="notification_rationale_dialog_message">为了及时向您发送重要的提醒，我们需要访问您发送通知的权限</string>
     <string name="notification_rationale_dialog_confirm_label">授予权限</string>
     <string name="notification_channel_ai_message_label">诺玛的消息</string>
+    <string name="notification_channel_class_progress_label">上课进度提醒</string>
     <string name="notification_agent_running_title">诺玛正在思考……</string>
 </resources>

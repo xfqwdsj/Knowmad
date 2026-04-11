@@ -110,6 +110,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".notification.ClassProgressReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".notification.SuggestionRequestReceiver"
             android:exported="false" />
 

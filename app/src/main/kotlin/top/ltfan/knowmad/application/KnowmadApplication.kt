@@ -22,6 +22,7 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.sync.getOrCreateSyncAccount
 import top.ltfan.knowmad.util.isMainProcess
@@ -33,6 +34,7 @@ class KnowmadApplication : Application() {
             CoroutineScope(Dispatchers.IO).launch {
                 getOrCreateSyncAccount()
                 scheduleNextSuggestionGeneration(override = false)
+                scheduleClassProgressNotificationScheduling()
             }
         }
     }
