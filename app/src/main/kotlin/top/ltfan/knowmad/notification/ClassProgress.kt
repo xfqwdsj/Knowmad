@@ -64,13 +64,18 @@ fun Context.showClassProgressNotification(
         setShortCriticalText(notification.status)
         setContentText(notification.suggestion)
         setSubText(notification.name)
-        setStyle(progressStyle)
         setOngoing(true)
         setAutoCancel(false)
-        setRequestPromotedOngoing(true)
         setOnlyAlertOnce(true)
 
         val context = this@showClassProgressNotification.applicationContext
+
+        // Hyper Island will fail if we set the ProgressStyle.
+        // So we only set it when Hyper Island is not supported.
+        if (!HyperIslandNotification.isSupported(context)) {
+            setStyle(progressStyle)
+            setRequestPromotedOngoing(true)
+        }
 
         val hyperIsland = HyperIslandNotification.Builder(
             context = context,
@@ -81,8 +86,10 @@ fun Context.showClassProgressNotification(
 
             addPicture(HyperPicture(picKeySmallIsland, context, R.drawable.ic_logo))
 
+            val color = "#" + primaryDark.toHexString()
+
             setIslandConfig(
-                highlightColor = "#" + primaryDark.toHexString(),
+                highlightColor = color,
             )
             setEnableFloat(false)
 
@@ -98,6 +105,7 @@ fun Context.showClassProgressNotification(
                 progressText = ProgressTextInfo(
                     progressInfo = CircularProgressInfo(
                         progress = notification.progress,
+                        colorReach = color,
                     ),
                     textInfo = TextInfo(
                         title = notification.time,
@@ -116,6 +124,7 @@ fun Context.showClassProgressNotification(
             )
             setProgressBar(
                 progress = notification.progress,
+                color = color,
             )
 
             setAodConfig(title = notification.status)
