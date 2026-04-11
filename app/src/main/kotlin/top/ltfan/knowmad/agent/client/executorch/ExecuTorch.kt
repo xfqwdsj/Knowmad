@@ -21,7 +21,7 @@ package top.ltfan.knowmad.agent.client.executorch
 import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.executor.clients.LLMEmbeddingProvider
+import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
@@ -36,7 +36,7 @@ val ExecuTorchClientBasePath = AgentClientBasePath / "executorch"
 class ExecuTorchClient(
     private val downloadSource: DownloadSource,
     private val basePath: Path,
-) : LLMClient(), LLMEmbeddingProvider {
+) : LLMClient(), LLMEmbeddingProviderAPI {
     override suspend fun embed(text: String, model: LLModel): List<Double> {
         model.requireCapability(Embed)
 
