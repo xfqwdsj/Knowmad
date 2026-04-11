@@ -86,7 +86,6 @@ import androidx.paging.compose.itemKey
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
@@ -225,7 +224,6 @@ fun AgentMainScreen(
                             backdrop = backdrop,
                             shape = { RectangleShape },
                             effects = {
-                                vibrancy()
                                 progressiveBlurWithFallback(
                                     radius = 48.dp.toPx(),
                                     data = LinearBrushData(
@@ -398,7 +396,6 @@ fun AgentMainScreen(
                                     backdrop = backdrop,
                                     shape = { RectangleShape },
                                     effects = {
-                                        vibrancy()
                                         progressiveBlurWithFallback(
                                             radius = 48.dp.toPx(),
                                             data = LinearBrushData(
@@ -565,7 +562,6 @@ fun AgentConfigScreen(
                     backdrop = backdrop,
                     shape = { RectangleShape },
                     effects = {
-                        vibrancy()
                         progressiveBlurWithFallback(
                             radius = 48.dp.toPx(),
                             data = LinearBrushData(
