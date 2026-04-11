@@ -46,6 +46,7 @@ data class ClassProgressNotification(
     val location: String,
     val showLocationOutside: Boolean = false,
     @param:IntRange(from = 0, to = 100) val progress: Int,
+    val showProgressOutside: Boolean = true,
     val suggestion: String? = null,
 )
 
@@ -95,24 +96,28 @@ fun Context.showClassProgressNotification(
             setEnableFloat(false)
 
             setSmallIsland(picKeySmallIsland)
+            val textInfoRight = TextInfo(
+                title = notification.time,
+                content = if (notification.showLocationOutside) notification.location else null,
+            )
             setBigIslandInfo(
                 left = ImageTextInfoLeft(
                     picInfo = PicInfo(pic = picKeySmallIsland),
                     textInfo = TextInfo(
                         title = notification.status,
-                        content = if (notification.showLocationOutside) notification.location else null,
                         showHighlightColor = true,
                     ),
                 ),
-                progressText = ProgressTextInfo(
-                    progressInfo = CircularProgressInfo(
-                        progress = notification.progress,
-                        colorReach = color,
-                    ),
-                    textInfo = TextInfo(
-                        title = notification.time,
-                    ),
-                ),
+                centerText = if (!notification.showProgressOutside) textInfoRight else null,
+                progressText = if (notification.showProgressOutside) {
+                    ProgressTextInfo(
+                        progressInfo = CircularProgressInfo(
+                            progress = notification.progress,
+                            colorReach = color,
+                        ),
+                        textInfo = textInfoRight,
+                    )
+                } else null,
             )
             setBaseInfo(
                 title = notification.status,

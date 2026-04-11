@@ -115,6 +115,7 @@ class ClassProgressWorker(
                 time = time.format(enableSeconds = false),
                 location = event.location,
                 progress = 100,
+                showProgressOutside = false,
             )
             context.showClassProgressNotification(notification)
             return Result.success()
@@ -138,6 +139,7 @@ class ClassProgressWorker(
                 location = event.location,
                 showLocationOutside = true,
                 progress = 0,
+                showProgressOutside = false,
             )
             context.showClassProgressNotification(notification)
             return Result.success()
