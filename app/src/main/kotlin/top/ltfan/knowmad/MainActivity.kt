@@ -72,6 +72,8 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 
+private val logger = Logger("MainActivity")
+
 class MainActivity : KnowmadActivity() {
     val appPartial by lazy { intent?.getBooleanExtra(EXTRA_IS_PARTIAL, false) ?: false }
 
@@ -283,7 +285,6 @@ class MainActivity : KnowmadActivity() {
 
         const val EXTRA_NEXT_SUGGESTION_NOTIFICATION = "EXTRA_NEXT_SUGGESTION_NOTIFICATION"
 
-        private val logger = Logger("MainActivity")
         val pipEventFlow = MutableSharedFlow<PipEvent>()
 
         val Context.launchMainActivityInPipIntent

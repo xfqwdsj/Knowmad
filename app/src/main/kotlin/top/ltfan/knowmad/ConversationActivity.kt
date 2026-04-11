@@ -42,6 +42,8 @@ import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 import top.ltfan.knowmad.util.Logger
 
+private val logger = Logger("ConversationActivity")
+
 class ConversationActivity : KnowmadActivity() {
     val viewModel: AppViewModel by viewModels {
         viewModelFactory {
@@ -122,9 +124,5 @@ class ConversationActivity : KnowmadActivity() {
             }
             return
         }
-    }
-
-    companion object {
-        private val logger = Logger("ConversationActivity")
     }
 }

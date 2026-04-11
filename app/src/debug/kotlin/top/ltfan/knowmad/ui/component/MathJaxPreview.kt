@@ -30,9 +30,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.ktor.client.HttpClient
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
-import top.ltfan.knowmad.util.Logger
-
-private val logger = Logger("MathJaxPreview")
 
 @Preview
 @Composable

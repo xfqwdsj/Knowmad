@@ -34,6 +34,8 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Instant
 
+private val logger = Logger("TodayWidgetReceiver")
+
 class TodayWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = TodayWidget()
 
@@ -49,8 +51,6 @@ class TodayWidgetReceiver : GlanceAppWidgetReceiver() {
     }
 
     companion object {
-        private val logger = Logger("TodayWidgetReceiver")
-
         const val ACTION_UPDATE = "ACTION_UPDATE"
 
         val Context.updateIntent

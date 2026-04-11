@@ -123,7 +123,9 @@ class DataStoreMutableStateProperty<T>(
     coroutineScope: CoroutineScope,
     private val initialValue: T = dataStore.defaultValue,
 ) : ReadWriteProperty<Any?, T>, AutoCloseable {
-    private val logger = Logger("DataStoreMutableStateProperty")
+    companion object {
+        private val logger = Logger("DataStoreMutableStateProperty")
+    }
 
     private val job = SupervisorJob(coroutineScope.coroutineContext.job)
     private val coroutineScope = coroutineScope + job
@@ -273,7 +275,9 @@ class DatastoreSerializer<T>(
     override val defaultValue: T,
     val serializer: KSerializer<T>,
 ) : Serializer<T> {
-    private val logger = Logger("DatastoreSerializer")
+    companion object {
+        private val logger = Logger("DatastoreSerializer")
+    }
 
     private val cbor = Cbor {
         encodeDefaults = true

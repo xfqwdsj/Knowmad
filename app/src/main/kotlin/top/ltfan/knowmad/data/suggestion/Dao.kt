@@ -21,12 +21,9 @@ package top.ltfan.knowmad.data.suggestion
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
-
-private val logger = Logger("SuggestionDao")
 
 @Dao
 interface SuggestionDao {

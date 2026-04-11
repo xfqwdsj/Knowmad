@@ -91,13 +91,13 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
+private val logger = Logger("AgentViewModel")
+
 class AgentViewModel(
     app: KnowmadApplication,
     private val partial: Boolean = false,
 ) : AndroidViewModel<KnowmadApplication>(app) {
     private val defaultScope = viewModelScope + Dispatchers.Default
-
-    private val logger = Logger("AgentViewModel")
 
     val backStack = NavBackStack<AgentSubPage>(AgentMainPage())
 

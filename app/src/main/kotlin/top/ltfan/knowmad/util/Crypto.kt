@@ -27,12 +27,12 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
+private val logger = Logger("CryptoManager")
+
 open class CryptoManager private constructor(private val keyAlias: String) {
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
-
-        private val logger = Logger("CryptoManager")
     }
 
     object LLMApiKey : CryptoManager("knowmad_llm_api_key") {

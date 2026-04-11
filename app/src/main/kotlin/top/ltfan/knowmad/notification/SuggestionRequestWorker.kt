@@ -29,6 +29,8 @@ import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.resolv
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.util.Logger
 
+private val logger = Logger("SuggestionRequestWorker")
+
 class SuggestionRequestWorker(
     context: Context,
     params: WorkerParameters,
@@ -60,8 +62,6 @@ class SuggestionRequestWorker(
     }
 
     companion object {
-        private val logger = Logger("SuggestionRequestWorker")
-
         const val DATA_ACTION = "DATA_ACTION"
         const val DATA_PROMPT = "DATA_PROMPT"
         const val DATA_PENDING_SUGGESTION_ID = "DATA_PENDING_SUGGESTION_ID"

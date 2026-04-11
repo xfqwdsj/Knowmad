@@ -1068,7 +1068,9 @@ sealed interface AssistantMessageState {
         onUpdateConversationMeta: (ConversationMeta) -> Unit = {},
         onUpdate: Streaming.() -> Unit = {},
     ) : AssistantMessageState {
-        private val logger = Logger("StreamingState")
+        companion object {
+            private val logger = Logger("AssistantMessageState.Streaming")
+        }
 
         override val contents = mutableStateListOf<AssistantMessageContent>()
         override var completed by mutableStateOf(false)

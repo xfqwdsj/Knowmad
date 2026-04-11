@@ -43,6 +43,8 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
+private val logger = Logger("SuggestionRequestReceiver")
+
 class SuggestionRequestReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
@@ -59,8 +61,6 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private val logger = Logger("SuggestionRequestReceiver")
-
         const val ACTION_GENERATE = "GENERATE"
         const val ACTION_DOWNGRADE = "DOWNGRADE"
 

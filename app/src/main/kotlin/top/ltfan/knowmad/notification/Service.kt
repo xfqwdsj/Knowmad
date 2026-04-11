@@ -23,10 +23,7 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.util.Logger
 import kotlin.uuid.Uuid
-
-private val logger = Logger("ServiceNotification")
 
 val AgentRunningNotificationId =
     Uuid.parse("019c0c33-1400-79a1-b180-c0178365ec90").hashCode()

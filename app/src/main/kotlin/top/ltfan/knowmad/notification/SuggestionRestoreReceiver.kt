@@ -26,6 +26,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import top.ltfan.knowmad.util.Logger
 
+private val logger = Logger("SuggestionRestoreReceiver")
+
 class SuggestionRestoreReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
@@ -57,8 +59,6 @@ class SuggestionRestoreReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private val logger = Logger("SuggestionRestoreReceiver")
-
         private val SupportedActions = setOf(
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,

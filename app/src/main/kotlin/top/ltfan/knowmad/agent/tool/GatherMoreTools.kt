@@ -68,7 +68,9 @@ class GatherMoreToolsTool(
         ),
     ),
 ), SystemPromptInjectorTool, ChatAgentContextualInitializationTool {
-    private val logger = Logger("GatherMoreToolsTool")
+    companion object {
+        private val logger = Logger("GatherMoreToolsTool")
+    }
 
     private val registry = ToolRegistry(tools)
     private val managedTools = registry.tools.associateBy { it.name }

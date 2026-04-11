@@ -24,6 +24,8 @@ import androidx.work.WorkerParameters
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.util.Logger
 
+private val logger = Logger("SuggestionRestoreWorker")
+
 class SuggestionRestoreWorker(
     context: Context,
     params: WorkerParameters,
@@ -40,8 +42,6 @@ class SuggestionRestoreWorker(
     }
 
     companion object {
-        private val logger = Logger("SuggestionRestoreWorker")
-
         const val UNIQUE_WORK_NAME = "SuggestionRestoreWorker"
 
         const val DATA_ACTION = "DATA_ACTION"

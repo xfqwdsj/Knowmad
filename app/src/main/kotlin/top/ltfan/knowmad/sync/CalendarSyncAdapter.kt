@@ -50,9 +50,9 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(context, true) {
-    private val logger = Logger("CalendarSyncAdapter")
+private val logger = Logger("CalendarSyncAdapter")
 
+class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(context, true) {
     override fun onPerformSync(
         account: Account,
         extras: Bundle,

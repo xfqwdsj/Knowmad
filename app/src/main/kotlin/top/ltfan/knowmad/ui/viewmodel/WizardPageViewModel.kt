@@ -59,6 +59,8 @@ import top.ltfan.knowmad.util.asStringRes
 import kotlin.time.Clock
 import kotlin.time.Instant
 
+private val logger = Logger("WizardPageViewModel")
+
 class WizardPageViewModel(
     app: KnowmadApplication,
     firstPage: WizardSubPage,
@@ -69,8 +71,6 @@ class WizardPageViewModel(
     ) -> Unit,
     val onSkipWizard: () -> Unit,
 ) : AndroidViewModel<KnowmadApplication>(app) {
-    private val logger = Logger("WizardPageViewModel")
-
     val backStack: NavBackStack<WizardSubPage> = NavBackStack(firstPage)
 
     private val wizardDataStore = WizardData.createDataStore()

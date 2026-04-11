@@ -52,10 +52,10 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import android.graphics.Rect as AndroidRect
 
+private val logger = Logger("SemanticAnalysisService")
+
 @SuppressLint("AccessibilityPolicy")
 class SemanticAnalysisService : AccessibilityService(), CoroutineScope {
-    private val logger = Logger("SemanticAnalysisService")
-
     private var cacheTree: Triple<Int, Node, Instant>? = null
 
     private val serviceInfoMutex = Mutex()
