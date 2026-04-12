@@ -47,7 +47,6 @@ class OverlayContentScene<T : Any>(
         if (key != other.key) return false
         if (entries != other.entries) return false
         if (previousEntries != other.previousEntries) return false
-        if (content != other.content) return false
 
         return true
     }
@@ -56,7 +55,6 @@ class OverlayContentScene<T : Any>(
         var result = key.hashCode()
         result = 31 * result + entries.hashCode()
         result = 31 * result + previousEntries.hashCode()
-        result = 31 * result + content.hashCode()
         return result
     }
 
