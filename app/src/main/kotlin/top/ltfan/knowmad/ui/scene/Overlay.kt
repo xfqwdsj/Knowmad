@@ -18,15 +18,17 @@
 
 package top.ltfan.knowmad.ui.scene
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.util.fastForEachIndexed
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 
 class OverlayContentScene<T : Any>(
@@ -35,7 +37,18 @@ class OverlayContentScene<T : Any>(
     override val previousEntries: List<NavEntry<T>>,
 ) : Scene<T> {
     override val content: @Composable () -> Unit = {
-        entries.fastForEach { it.Content() }
+        val animatedContentScope = LocalNavAnimatedContentScope.current
+
+        entries.fastForEachIndexed { i, entry ->
+            if (i >= entries.size - 1) return@fastForEachIndexed
+            entry.Content()
+        }
+
+        with(animatedContentScope) {
+            Box(Modifier.animateEnterExit()) {
+                entries.last().Content()
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -84,9 +97,9 @@ class OverlayContentSceneStrategy<T : Any> : SceneStrategy<T> {
 
     companion object {
         fun overlayContent(): Map<String, Any> = mapOf(KEY to true) +
-                NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() } +
-                NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() } +
-                NavDisplay.predictivePopTransitionSpec { fadeIn() togetherWith fadeOut() }
+                NavDisplay.transitionSpec { EnterTransition.None togetherWith None } +
+                NavDisplay.popTransitionSpec { EnterTransition.None togetherWith None } +
+                NavDisplay.predictivePopTransitionSpec { EnterTransition.None togetherWith None }
 
         private const val KEY = "overlay-content"
     }
