@@ -617,12 +617,12 @@ object ScheduleTools {
         @Serializable
         @SerialName("Args")
         data class Args(
-            val semesterId: String?,
-            val name: String?,
-            val instructor: String?,
-            val location: String?,
-            val iCalendarAcknowledgement: String?,
-            val list: List<Data>?,
+            val semesterId: String? = null,
+            val name: String? = null,
+            val instructor: String? = null,
+            val location: String? = null,
+            val iCalendarAcknowledgement: String? = null,
+            val list: List<Data>? = null,
         ) {
             @Serializable
             @SerialName("Data")
@@ -1166,19 +1166,19 @@ object ScheduleTools {
         @Serializable
         @SerialName("Args")
         data class Args(
-            val semesterId: String?,
-            val startTime: String?,
-            val endTime: String?,
-            val courseId: String?,
-            val name: String?,
-            val instructor: String?,
-            val location: String?,
-            val color: String?,
-            val reminders: List<ReminderData>?,
-            val notes: String?,
+            val semesterId: String? = null,
+            val startTime: String? = null,
+            val endTime: String? = null,
+            val courseId: String? = null,
+            val name: String? = null,
+            val instructor: String? = null,
+            val location: String? = null,
+            val color: String? = null,
+            val reminders: List<ReminderData>? = null,
+            val notes: String? = null,
             val priority: ICalendarPriority = None,
-            val iCalendarAcknowledgement: String?,
-            val list: List<Data>?,
+            val iCalendarAcknowledgement: String? = null,
+            val list: List<Data>? = null,
         ) {
             @Serializable
             @SerialName("Data")
