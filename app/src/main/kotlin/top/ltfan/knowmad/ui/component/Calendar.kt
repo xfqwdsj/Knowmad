@@ -605,9 +605,8 @@ fun Event(
         (@Composable {
             Text(
                 text = event.name,
-                modifier = Modifier
-                    .basicMarquee(iterations = Int.MAX_VALUE)
-                    .padding(2.dp),
+                modifier = Modifier.padding(2.dp),
+                overflow = Ellipsis,
                 softWrap = false,
                 maxLines = 1,
                 style = MaterialTheme.typography.bodySmallEmphasized,
