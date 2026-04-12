@@ -35,21 +35,12 @@ import androidx.compose.ui.unit.dp
 fun Dialog(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    scrim: @Composable BoxScope.() -> Unit = {
+    background: @Composable BoxScope.() -> Unit = {
         Spacer(
             modifier = Modifier
                 .fillMaxSize()
                 .background(color = Color.Black.copy(alpha = 0.5f))
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.changes.any { it.changedToUp() }) {
-                                onDismissRequest()
-                            }
-                        }
-                    }
-                },
+                .dialogBackground(onDismissRequest),
         )
     },
     content: @Composable BoxScope.() -> Unit,
@@ -58,12 +49,27 @@ fun Dialog(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        scrim()
+        background()
         content()
     }
 }
 
-fun Modifier.dialogContent() = pointerInput(Unit) {
+@Suppress("NOTHING_TO_INLINE")
+inline fun Modifier.dialogBackground(
+    crossinline onDismissRequest: () -> Unit,
+) = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent()
+            if (event.changes.any { it.changedToUp() }) {
+                onDismissRequest()
+            }
+        }
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Modifier.dialogContent() = pointerInput(Unit) {
     awaitPointerEventScope {
         while (true) {
             awaitPointerEvent().changes.asSequence()
