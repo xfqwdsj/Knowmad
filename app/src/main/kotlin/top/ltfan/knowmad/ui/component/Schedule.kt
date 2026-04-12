@@ -765,7 +765,7 @@ fun EventsDialogContent(
         Surface(
             modifier = modifier
                 .sizeIn(minWidth = DialogMinWidth, maxWidth = DialogMaxWidth)
-                .dialogContent(),
+                .dialogContentPointerInput(),
             shape = shape,
             tonalElevation = 6.dp,
             shadowElevation = 6.dp,

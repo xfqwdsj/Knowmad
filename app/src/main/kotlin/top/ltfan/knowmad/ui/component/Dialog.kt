@@ -35,12 +35,12 @@ import androidx.compose.ui.unit.dp
 fun Dialog(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    background: @Composable BoxScope.() -> Unit = {
+    background: @Composable BoxScope.(onDismissRequest: () -> Unit) -> Unit = {
         Spacer(
             modifier = Modifier
                 .fillMaxSize()
-                .background(color = Color.Black.copy(alpha = 0.5f))
-                .dialogBackground(onDismissRequest),
+                .dialogBackgroundColor()
+                .dialogBackgroundPointerInput(onDismissRequest),
         )
     },
     content: @Composable BoxScope.() -> Unit,
@@ -49,13 +49,16 @@ fun Dialog(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        background()
+        background(onDismissRequest)
         content()
     }
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun Modifier.dialogBackground(
+inline fun Modifier.dialogBackgroundColor() = background(DialogBackgroundColor)
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Modifier.dialogBackgroundPointerInput(
     crossinline onDismissRequest: () -> Unit,
 ) = pointerInput(Unit) {
     awaitPointerEventScope {
@@ -69,7 +72,7 @@ inline fun Modifier.dialogBackground(
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun Modifier.dialogContent() = pointerInput(Unit) {
+inline fun Modifier.dialogContentPointerInput() = pointerInput(Unit) {
     awaitPointerEventScope {
         while (true) {
             awaitPointerEvent().changes.asSequence()
@@ -78,6 +81,8 @@ inline fun Modifier.dialogContent() = pointerInput(Unit) {
         }
     }
 }
+
+val DialogBackgroundColor = Color.Black.copy(alpha = 0.5f)
 
 val DialogMinWidth = 280.dp
 val DialogMaxWidth = 560.dp
