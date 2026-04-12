@@ -21,7 +21,10 @@ package top.ltfan.knowmad.ui.scene
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.navigation3.runtime.NavEntry
@@ -30,6 +33,9 @@ import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 class OverlayContentScene<T : Any>(
     override val key: Any,
@@ -39,14 +45,24 @@ class OverlayContentScene<T : Any>(
     override val content: @Composable () -> Unit = {
         val animatedContentScope = LocalNavAnimatedContentScope.current
 
-        entries.fastForEachIndexed { i, entry ->
-            if (i >= entries.size - 1) return@fastForEachIndexed
-            entry.Content()
+        val background = MaterialTheme.colorScheme.background
+        val backdrop = rememberLayerBackdrop {
+            drawRect(background)
+            drawContent()
         }
 
-        with(animatedContentScope) {
-            Box(Modifier.animateEnterExit()) {
-                entries.last().Content()
+        Box(Modifier.layerBackdrop(backdrop)) {
+            entries.fastForEachIndexed { i, entry ->
+                if (i >= entries.size - 1) return@fastForEachIndexed
+                entry.Content()
+            }
+        }
+
+        CompositionLocalProvider(LocalOverlayContentBackdrop provides backdrop) {
+            with(animatedContentScope) {
+                Box(Modifier.animateEnterExit()) {
+                    entries.last().Content()
+                }
             }
         }
     }
@@ -104,3 +120,5 @@ class OverlayContentSceneStrategy<T : Any> : SceneStrategy<T> {
         private const val KEY = "overlay-content"
     }
 }
+
+val LocalOverlayContentBackdrop = staticCompositionLocalOf<Backdrop?> { null }
