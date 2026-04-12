@@ -118,7 +118,6 @@ class EventsDialogPage(
                 NavDisplay(
                     backStack = viewModel.backStack,
                     contentAlignment = Alignment.TopCenter,
-                    sharedTransitionScope = this,
                     sizeTransform = SizeTransform(),
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                     popTransitionSpec = { fadeIn() togetherWith fadeOut() },

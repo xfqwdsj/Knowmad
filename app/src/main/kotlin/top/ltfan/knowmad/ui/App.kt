@@ -43,7 +43,6 @@ import top.ltfan.knowmad.ui.component.rememberIsInPictureInPictureMode
 import top.ltfan.knowmad.ui.page.Page
 import top.ltfan.knowmad.ui.page.expanded
 import top.ltfan.knowmad.ui.scene.OverlayContentSceneStrategy
-import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
 
 @Composable
@@ -68,7 +67,6 @@ fun AppContent() {
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
                     sceneStrategies = listOf(overlayContentStrategy),
-                    sharedTransitionScope = localSharedTransitionScope { this },
                     entryProvider = { it.navEntry() },
                 )
             }
