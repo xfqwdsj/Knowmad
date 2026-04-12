@@ -41,6 +41,7 @@ import kotlin.uuid.Uuid
 data class ClassProgressNotification(
     val eventId: Uuid,
     val status: String,
+    val statusShort: String,
     val name: String,
     val time: String,
     val location: String,
@@ -63,7 +64,7 @@ fun Context.showClassProgressNotification(
 
         setSmallIcon(R.drawable.ic_logo)
         setContentTitle("${notification.status} \u2022 ${notification.time} \u2022 ${notification.location}")
-        setShortCriticalText(notification.status)
+        setShortCriticalText(notification.statusShort)
         setContentText(notification.suggestion)
         setSubText(notification.name)
         setOngoing(true)

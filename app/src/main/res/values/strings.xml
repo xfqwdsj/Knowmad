@@ -182,10 +182,14 @@
         <item quantity="other">Successfully modified %d events</item>
     </plurals>
     <string name="schedule_event_edit_notes_label_input">New Notes</string>
+    <string name="schedule_class_status_label_close_to_start">Class Starting Soon</string>
+    <string name="schedule_class_status_label_in_progress">In Class</string>
+    <string name="schedule_class_status_label_close_to_end">Class Ending Soon</string>
+    <string name="schedule_class_status_label_ended">Class Ended</string>
     <string name="schedule_class_status_short_label_close_to_start">Class Soon</string>
-    <string name="schedule_class_status_short_label_in_progress">In Class</string>
-    <string name="schedule_class_status_short_label_close_to_end">Class Ending</string>
-    <string name="schedule_class_status_short_label_ended">Class Ended</string>
+    <string name="schedule_class_status_short_label_in_progress">@string/schedule_class_status_label_in_progress</string>
+    <string name="schedule_class_status_short_label_close_to_end">Cls Ending</string>
+    <string name="schedule_class_status_short_label_ended">Cls Ended</string>
     <string name="schedule_import_from_icalendar_error_semester_insertion_failed">Error occurred while inserting semester %s into database</string>
     <string name="schedule_import_from_icalendar_error_recurrence_rule_insertion_failed">Error occurred while inserting rule %s into database</string>
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>

@@ -178,10 +178,14 @@
         <item quantity="other">成功修改了%d个事件</item>
     </plurals>
     <string name="schedule_event_edit_notes_label_input">新的备注</string>
-    <string name="schedule_class_status_short_label_close_to_start">即将上课</string>
-    <string name="schedule_class_status_short_label_in_progress">正在上课</string>
-    <string name="schedule_class_status_short_label_close_to_end">即将下课</string>
-    <string name="schedule_class_status_short_label_ended">已下课</string>
+    <string name="schedule_class_status_label_close_to_start">即将上课</string>
+    <string name="schedule_class_status_label_in_progress">正在上课</string>
+    <string name="schedule_class_status_label_close_to_end">即将下课</string>
+    <string name="schedule_class_status_label_ended">已下课</string>
+    <string name="schedule_class_status_short_label_close_to_start">@string/schedule_class_status_label_close_to_start</string>
+    <string name="schedule_class_status_short_label_in_progress">@string/schedule_class_status_label_in_progress</string>
+    <string name="schedule_class_status_short_label_close_to_end">@string/schedule_class_status_label_close_to_end</string>
+    <string name="schedule_class_status_short_label_ended">@string/schedule_class_status_label_ended</string>
     <string name="schedule_import_from_icalendar_error_semester_insertion_failed">向数据库插入学期%s时发生错误</string>
     <string name="schedule_import_from_icalendar_error_recurrence_rule_insertion_failed">向数据库插入规则%s时发生错误</string>
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">课程%s的学期与数据库中已存在的学期不匹配</string>

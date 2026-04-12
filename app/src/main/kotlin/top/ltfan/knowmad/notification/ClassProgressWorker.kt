@@ -110,7 +110,8 @@ class ClassProgressWorker(
 
             val notification = ClassProgressNotification(
                 eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_short_label_ended),
+                status = context.getString(R.string.schedule_class_status_label_ended),
+                statusShort = context.getString(R.string.schedule_class_status_short_label_ended),
                 name = event.name,
                 time = time.format(enableSeconds = false),
                 location = event.location,
@@ -133,7 +134,8 @@ class ClassProgressWorker(
             val time = event.startTime - now
             val notification = ClassProgressNotification(
                 eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_short_label_close_to_start),
+                status = context.getString(R.string.schedule_class_status_label_close_to_start),
+                statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_start),
                 name = event.name,
                 time = time.format(enableSeconds = false),
                 location = event.location,
@@ -155,7 +157,8 @@ class ClassProgressWorker(
         if (remaining <= data.endThreshold) {
             val notification = ClassProgressNotification(
                 eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_short_label_close_to_end),
+                status = context.getString(R.string.schedule_class_status_label_close_to_end),
+                statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_end),
                 name = event.name,
                 time = remaining.format(enableSeconds = false),
                 location = event.location,
@@ -167,7 +170,8 @@ class ClassProgressWorker(
 
         val notification = ClassProgressNotification(
             eventId = data.eventId,
-            status = context.getString(R.string.schedule_class_status_short_label_in_progress),
+            status = context.getString(R.string.schedule_class_status_label_in_progress),
+            statusShort = context.getString(R.string.schedule_class_status_short_label_in_progress),
             name = event.name,
             time = started.format(enableSeconds = false),
             location = event.location,
