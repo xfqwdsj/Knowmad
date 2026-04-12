@@ -33,23 +33,38 @@ import com.kyant.backdrop.effects.effect
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
-val BackdropEffectsLight: BackdropEffectScope.() -> Unit = {
+@Suppress("NOTHING_TO_INLINE")
+inline fun BackdropEffectScope.appLightEffects(
+    @FloatRange(from = 0.0, to = 1.0) progress: Float = 1f,
+) {
     vibrancy()
-    blur(2.dp.toPx())
-    lens(12.dp.toPx(), 24.dp.toPx())
+    blur(2.dp.toPx() * progress)
+    lens(12.dp.toPx() * progress, 24.dp.toPx() * progress)
 }
 
-val BackdropEffectsMedium: BackdropEffectScope.() -> Unit = {
+val BackdropEffectsLight: BackdropEffectScope.() -> Unit = BackdropEffectScope::appLightEffects
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun BackdropEffectScope.appMediumEffects(
+    @FloatRange(from = 0.0, to = 1.0) progress: Float = 1f,
+) {
     vibrancy()
-    blur(4.dp.toPx())
-    lens(16.dp.toPx(), 32.dp.toPx())
+    blur(4.dp.toPx() * progress)
+    lens(16.dp.toPx() * progress, 32.dp.toPx() * progress)
 }
 
-val BackdropEffectsHeavy: BackdropEffectScope.() -> Unit = {
+val BackdropEffectsMedium: BackdropEffectScope.() -> Unit = BackdropEffectScope::appMediumEffects
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun BackdropEffectScope.appHeavyEffects(
+    @FloatRange(from = 0.0, to = 1.0) progress: Float = 1f,
+) {
     vibrancy()
-    blur(12.dp.toPx())
-    lens(24.dp.toPx(), 36.dp.toPx())
+    blur(12.dp.toPx() * progress)
+    lens(24.dp.toPx() * progress, 36.dp.toPx() * progress)
 }
+
+val BackdropEffectsHeavy: BackdropEffectScope.() -> Unit = BackdropEffectScope::appHeavyEffects
 
 private val ProgressiveBlurEffectCache = LruCache<ProgressiveBlurEffectKey, RenderEffect>(64)
 
