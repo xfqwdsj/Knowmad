@@ -259,7 +259,7 @@ class MainPage : Page() {
 
         if (calendarPermissionsState.allPermissionsGranted) {
             LaunchedEffect(Unit) {
-                viewModel.application.syncEvents()
+                context.syncEvents()
             }
         } else {
             if (calendarPermissionsState.shouldShowRationale) {

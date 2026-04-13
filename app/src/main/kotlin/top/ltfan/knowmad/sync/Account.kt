@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 suspend fun Context.getOrCreateSyncAccount(): Account = withContext(Dispatchers.IO) {
-    val accountManager = AccountManager.get(this@getOrCreateSyncAccount)
+    val accountManager = AccountManager.get(applicationContext)
     val accounts = accountManager.getAccountsByType(SyncAccount.ACCOUNT_TYPE)
     if (accounts.isNotEmpty()) {
         if (accounts.size > 1) {
