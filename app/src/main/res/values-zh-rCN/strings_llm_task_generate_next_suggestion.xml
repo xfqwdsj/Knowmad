@@ -73,9 +73,9 @@
     <string name="llm_task_generate_next_suggestion_tool_update_progress_description">更新建议生成的进度</string>
     <string name="llm_task_generate_next_suggestion_tool_update_progress_arg_summary_description">进度摘要，简要描述当前的进度状态，如“我正在获取日程信息”“我正在分析用户需求”“我正在准备建议”等。需要控制长度，突出重点，不允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_capsule_title">胶囊短标题，将展示在醒目位置，必须极其简短，如“3项待办”“准备出发”。不允许超过5个字，不允许换行和符号</string>
-    <string name="llm_task_generate_next_suggestion_result_notification_title">通知标题，总结性的一句话，概括建议的核心内容，如“今天下午行程较紧，建议先处理方案”。不允许换行和非必要的符号，不允许Markdown</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_title">通知标题，总结性的一句话，概括建议的核心内容，如“建议先处理方案”。不允许换行和非必要的符号，不允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_notification_content">通知内容，简要列举建议的内容，可以包括日程概览、温馨提示等。需要控制长度，舍去低优先级的建议。允许适当的换行和符号，允许Markdown</string>
-    <string name="llm_task_generate_next_suggestion_result_notification_summary">通知摘要，突出最重要的内容。不允许Markdown</string>
+    <string name="llm_task_generate_next_suggestion_result_notification_summary">通知摘要，突出最重要的内容，如“今天下午日程安排紧张，建议合理安排时间”。不允许Markdown</string>
     <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">建议的下一次生成建议的时间，格式为ISO 8601的日期时间字符串，如“2020&#8211;01&#8211;01T12:00:00Z”，也可指定其他偏移，建议使用用户的时区。这个字段是可选的，但强烈建议根据用户的日程和习惯提供一个合理的时间，以便系统能够在适当的时候再次生成建议；时间间隔不宜过短（如10分钟，紧急情况除外），以免频繁打扰用户，也不宜过长（如2小时，休息时间、繁忙时间除外），以免建议失去时效性</string>
     <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_prompt">建议的下一次生成建议时提供给智能助手的提示语，帮助智能助手理解为什么在这个时间点生成建议，以及需要关注的重点内容，如“用户即将下课，可以提供一些关于如何利用课后时间的建议，或者简单的问候”。这个字段是可选的，但强烈建议提供，并将其编写得尽可能具体和有指导性，以帮助智能助手在下一次生成建议时能够更好地满足用户的需求和情境</string>
     <string name="llm_task_generate_next_suggestion_prompt_default">本次生成建议没有特定的提示语，智能助手可以根据已知的上下文信息和一般的用户需求来生成建议</string>
