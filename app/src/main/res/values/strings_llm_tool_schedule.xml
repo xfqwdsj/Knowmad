@@ -28,7 +28,7 @@
 
     <string name="llm_tool_schedule_query_semesters_description">Query semesters that overlap with the given date range or all existing semesters</string>
     <string name="llm_tool_schedule_query_semesters_arg_start_date_description">Start date for the query (yyyy-MM-dd), set to today if not specified; leave both two fields blank when user explicitly requests to query all semesters</string>
-    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">End date for the query (yyyy-MM-dd), leave blank to query up to end of startDate</string>
+    <string name="llm_tool_schedule_query_semesters_arg_end_date_description">End date for the query (yyyy-MM-dd), leave blank to query up to startDate only</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_not_found">No semesters found</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_start_date">Invalid startDate format, expected yyyy-MM-dd</string>
     <string name="llm_tool_schedule_query_semesters_result_failure_reason_invalid_end_date">Invalid endDate format, expected yyyy-MM-dd</string>
@@ -64,7 +64,7 @@
     <string name="llm_tool_schedule_update_semester_result_failure_reason_internal_error">Internal error while updating semester</string>
     <string name="llm_tool_schedule_update_semester_result_failure_reason_update_failed">Failed to update semester</string>
 
-    <string name="llm_tool_schedule_search_courses_description">Search courses in a semester by full-text query</string>
+    <string name="llm_tool_schedule_search_courses_description">Search courses by full-text query</string>
     <string name="llm_tool_schedule_search_courses_arg_query_description">Full-text query string to search courses</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">Query cannot be empty</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">Internal error while searching courses</string>
@@ -82,14 +82,14 @@
     <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">Internal error while creating course</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_insertion_failed">Failed to create course</string>
 
-    <string name="llm_tool_schedule_query_events_description">Query events in a semester within a time range</string>
+    <string name="llm_tool_schedule_query_events_description">Query events within a time range</string>
     <string name="llm_tool_schedule_query_events_arg_start_time_description">Start time (ISO-8601 with Offset)</string>
-    <string name="llm_tool_schedule_query_events_arg_end_time_description">End time (ISO-8601 with Offset)</string>
+    <string name="llm_tool_schedule_query_events_arg_end_time_description">End time (ISO-8601 with Offset), leave blank to query events that are ongoing at the startTime</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_start_time">Invalid startTime format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_end_time">Invalid endTime format, expected ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_internal_error">Internal error while querying events</string>
 
-    <string name="llm_tool_schedule_search_events_description">Search events in a semester by full-text query</string>
+    <string name="llm_tool_schedule_search_events_description">Search events by full-text query</string>
     <string name="llm_tool_schedule_search_events_arg_query_description">Full-text query string to search events</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">Query cannot be empty</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">Internal error while searching events</string>

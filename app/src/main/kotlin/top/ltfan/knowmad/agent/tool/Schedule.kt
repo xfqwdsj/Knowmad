@@ -771,6 +771,8 @@ object ScheduleTools {
                     description = resources.getString(R.string.llm_tool_schedule_query_events_arg_start_time_description),
                     type = ToolParameterType.String,
                 ),
+            ),
+            optionalParameters = listOf(
                 ToolParameterDescriptor(
                     name = "endTime",
                     description = resources.getString(R.string.llm_tool_schedule_query_events_arg_end_time_description),
@@ -793,7 +795,7 @@ object ScheduleTools {
 
         @Serializable
         @SerialName("Args")
-        data class Args(val startTime: String, val endTime: String)
+        data class Args(val startTime: String, val endTime: String = startTime)
 
         @Serializable
         sealed interface Result {

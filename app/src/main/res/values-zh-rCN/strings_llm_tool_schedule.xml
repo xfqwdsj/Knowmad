@@ -64,7 +64,7 @@
     <string name="llm_tool_schedule_update_semester_result_failure_reason_internal_error">更新学期时发生内部错误</string>
     <string name="llm_tool_schedule_update_semester_result_failure_reason_update_failed">更新学期失败</string>
 
-    <string name="llm_tool_schedule_search_courses_description">在学期内通过全文搜索课程</string>
+    <string name="llm_tool_schedule_search_courses_description">通过全文搜索课程</string>
     <string name="llm_tool_schedule_search_courses_arg_query_description">搜索课程的全文查询字符串</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_empty_query">查询内容不能为空</string>
     <string name="llm_tool_schedule_search_courses_result_failure_reason_internal_error">搜索课程时发生内部错误</string>
@@ -82,14 +82,14 @@
     <string name="llm_tool_schedule_create_course_result_failure_reason_internal_error">创建课程时发生内部错误</string>
     <string name="llm_tool_schedule_create_course_result_failure_reason_insertion_failed">创建课程失败</string>
 
-    <string name="llm_tool_schedule_query_events_description">查询学期内指定时间范围的事件</string>
+    <string name="llm_tool_schedule_query_events_description">查询指定时间范围的事件</string>
     <string name="llm_tool_schedule_query_events_arg_start_time_description">开始时间（ISO-8601 with Offset）</string>
-    <string name="llm_tool_schedule_query_events_arg_end_time_description">结束时间（ISO-8601 with Offset）</string>
+    <string name="llm_tool_schedule_query_events_arg_end_time_description">结束时间（ISO-8601 with Offset），留空则查询startTime时正在进行的事件</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_start_time">startTime格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_invalid_end_time">endTime格式无效，期望ISO-8601 with Offset</string>
     <string name="llm_tool_schedule_query_events_result_failure_reason_internal_error">查询事件时发生内部错误</string>
 
-    <string name="llm_tool_schedule_search_events_description">在学期内通过全文搜索事件</string>
+    <string name="llm_tool_schedule_search_events_description">通过全文搜索事件</string>
     <string name="llm_tool_schedule_search_events_arg_query_description">搜索事件的全文查询字符串</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_empty_query">查询内容不能为空</string>
     <string name="llm_tool_schedule_search_events_result_failure_reason_internal_error">搜索事件时发生内部错误</string>
