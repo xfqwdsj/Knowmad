@@ -44,6 +44,7 @@ private val logger = Logger("NextSuggestion")
 @Serializable
 data class NextSuggestionNotification(
     val capsuleTitle: String,
+    val capsuleSubtitle: String? = null,
     val notificationTitle: String,
     val notificationContent: String,
     val notificationSummary: String? = null,
@@ -113,11 +114,17 @@ fun Context.showNextSuggestionNotification(
                 left = ImageTextInfoLeft(
                     picInfo = PicInfo(pic = picKeySmallIsland),
                     textInfo = TextInfo(
-                        title = getString(R.string.app_name),
+                        title = if (suggestion.capsuleSubtitle != null) {
+                            suggestion.capsuleTitle
+                        } else {
+                            getString(R.string.app_name)
+                        },
                         showHighlightColor = true,
                     ),
                 ),
-                centerText = TextInfo(title = suggestion.capsuleTitle),
+                centerText = TextInfo(
+                    title = suggestion.capsuleSubtitle ?: suggestion.capsuleTitle,
+                ),
             )
             setBaseInfo(
                 title = suggestion.notificationTitle,

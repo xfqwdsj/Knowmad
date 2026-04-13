@@ -129,6 +129,11 @@ private class SetResult(
         ),
         optionalParameters = listOf(
             ToolParameterDescriptor(
+                name = "capsuleSubtitle",
+                description = context.getString(R.string.llm_task_generate_next_suggestion_result_capsule_subtitle),
+                type = ToolParameterType.String,
+            ),
+            ToolParameterDescriptor(
                 name = "notificationSummary",
                 description = context.getString(R.string.llm_task_generate_next_suggestion_result_notification_summary),
                 type = ToolParameterType.String,
