@@ -75,6 +75,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreenSharedKey
 import top.ltfan.knowmad.ui.component.Calendar
@@ -343,6 +344,7 @@ class MainPage : Page() {
                 if (!context.canScheduleExactAlarms) {
                     showAlarmPermissionRationale = true
                 } else {
+                    context.scheduleNextSuggestionGeneration()
                     context.scheduleClassProgressNotificationScheduling()
                 }
             }
