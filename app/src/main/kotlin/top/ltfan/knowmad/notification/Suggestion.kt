@@ -83,7 +83,7 @@ fun Context.showNextSuggestionNotification(
             downgradingIntent,
         )
 
-        val context = this@showNextSuggestionNotification.applicationContext
+        val context = applicationContext
 
         val hyperIsland = HyperIslandNotification.Builder(
             context = context,

@@ -71,7 +71,7 @@ fun Context.showClassProgressNotification(
         setAutoCancel(false)
         setOnlyAlertOnce(true)
 
-        val context = this@showClassProgressNotification.applicationContext
+        val context = applicationContext
 
         // Hyper Island will fail if we set the ProgressStyle.
         // So we only set it when Hyper Island is not supported.
