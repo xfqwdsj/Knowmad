@@ -90,7 +90,8 @@ class TodayWidget : GlanceAppWidget() {
                         text = context.getString(R.string.schedule_event_list_label_widget_no_events),
                         modifier = GlanceModifier.padding(16.dp),
                         style = AppTypography.titleLargeEmphasized
-                            .toGlanceTextStyle(GlanceTheme.colors.secondary),
+                            .toGlanceTextStyle(GlanceTheme.colors.secondary)
+                            .copy(textAlign = Center),
                     )
                     return@Box
                 }
