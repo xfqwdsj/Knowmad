@@ -30,6 +30,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import com.kizitonwose.calendar.core.plusDays
 import kotlinx.datetime.TimeZone
@@ -87,6 +88,7 @@ class TodayWidget : GlanceAppWidget() {
                 ) {
                     Text(
                         text = context.getString(R.string.schedule_event_list_label_widget_no_events),
+                        modifier = GlanceModifier.padding(16.dp),
                         style = AppTypography.titleLargeEmphasized
                             .toGlanceTextStyle(GlanceTheme.colors.secondary),
                     )
