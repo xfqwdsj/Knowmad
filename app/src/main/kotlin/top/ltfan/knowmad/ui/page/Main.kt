@@ -74,6 +74,7 @@ import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.data.schedule.syncEvents
+import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.ui.component.AgentChatIcon
 import top.ltfan.knowmad.ui.component.AgentScreenSharedKey
 import top.ltfan.knowmad.ui.component.Calendar
@@ -87,7 +88,8 @@ import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
 import top.ltfan.knowmad.ui.util.plus
 import top.ltfan.knowmad.ui.viewmodel.LocalAppViewModel
-import top.ltfan.knowmad.util.checkOrRequestExactAlarmPermission
+import top.ltfan.knowmad.util.canScheduleExactAlarms
+import top.ltfan.knowmad.util.checkOrRequestExactAlarmsPermission
 
 @Serializable
 class MainPage : Page() {
@@ -96,6 +98,7 @@ class MainPage : Page() {
     override fun Content() {
         val viewModel = LocalAppViewModel.current
 
+        val context = LocalContext.current
         val configuration = LocalConfiguration.current
         val coroutineScope = rememberCoroutineScope()
 
@@ -153,7 +156,6 @@ class MainPage : Page() {
 
                         GenerateSuggestionIconButton(
                             onClick = {
-                                context.checkOrRequestExactAlarmPermission()
                                 val request =
                                     GenerateNextSuggestionWorker.buildRequest(prompt)
                                 WorkManager.getInstance(context).enqueue(request)
@@ -280,11 +282,17 @@ class MainPage : Page() {
                             showCalendarPermissionRationale = false
                             calendarPermissionsState.launchMultiplePermissionRequest()
                         },
-                        content = { Text(stringResource(R.string.schedule_sync_rationale_dialog_confirm_label)) },
+                        content = { Text(stringResource(R.string.permission_request_confirm_label)) },
                     )
                 },
-                title = { Text(stringResource(R.string.schedule_sync_rationale_dialog_title)) },
-                text = { Text(stringResource(R.string.schedule_sync_rationale_dialog_message)) },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showCalendarPermissionRationale = false },
+                        content = { Text(stringResource(android.R.string.cancel)) },
+                    )
+                },
+                title = { Text(stringResource(R.string.permission_request_calendar_title)) },
+                text = { Text(stringResource(R.string.permission_request_calendar_message)) },
             )
         }
 
@@ -314,11 +322,51 @@ class MainPage : Page() {
                                 showNotificationPermissionRationale = false
                                 notificationPermissionState.launchPermissionRequest()
                             },
-                            content = { Text(stringResource(R.string.notification_rationale_dialog_confirm_label)) },
+                            content = { Text(stringResource(R.string.permission_request_confirm_label)) },
                         )
                     },
-                    title = { Text(stringResource(R.string.notification_rationale_dialog_title)) },
-                    text = { Text(stringResource(R.string.notification_rationale_dialog_message)) },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showNotificationPermissionRationale = false },
+                            content = { Text(stringResource(android.R.string.cancel)) },
+                        )
+                    },
+                    title = { Text(stringResource(R.string.permission_request_notification_title)) },
+                    text = { Text(stringResource(R.string.permission_request_notification_message)) },
+                )
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            var showAlarmPermissionRationale by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                if (!context.canScheduleExactAlarms) {
+                    showAlarmPermissionRationale = true
+                } else {
+                    context.scheduleClassProgressNotificationScheduling()
+                }
+            }
+
+            if (showAlarmPermissionRationale) {
+                AlertDialog(
+                    onDismissRequest = { showAlarmPermissionRationale = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showAlarmPermissionRationale = false
+                                context.checkOrRequestExactAlarmsPermission()
+                            },
+                            content = { Text(stringResource(R.string.permission_request_confirm_label)) },
+                        )
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showAlarmPermissionRationale = false },
+                            content = { Text(stringResource(android.R.string.cancel)) },
+                        )
+                    },
+                    title = { Text(stringResource(R.string.permission_request_alarm_title)) },
+                    text = { Text(stringResource(R.string.permission_request_alarm_message)) },
                 )
             }
         }

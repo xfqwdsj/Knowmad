@@ -195,13 +195,14 @@
     <string name="schedule_import_from_icalendar_error_course_semester_mismatch">Semester of course %s does not match the existing semester in database</string>
     <string name="schedule_import_from_icalendar_error_course_insertion_failed">Error occurred while inserting course %s into database</string>
     <string name="schedule_import_from_icalendar_error_event_insertion_failed">Error occurred while inserting event %s into database</string>
-    <string name="schedule_sync_rationale_dialog_title">Calendar Permission Required</string>
-    <string name="schedule_sync_rationale_dialog_message">To sync your schedule with your calendar, we need permission to access your calendar. We will only read and write events related to your schedule and will not access any other calendar data</string>
-    <string name="schedule_sync_rationale_dialog_confirm_label">Grant Permission</string>
-    <string name="notification_rationale_dialog_title">Notification Permission Required</string>
-    <string name="notification_rationale_dialog_message">To send timely reminders for you, we need permission to send notifications</string>
-    <string name="notification_rationale_dialog_confirm_label">Grant Permission</string>
     <string name="notification_channel_ai_message_label">Messages from Noma</string>
     <string name="notification_channel_class_progress_label">Class Progress Updates</string>
     <string name="notification_agent_running_title">Noma is thinking…</string>
+    <string name="permission_request_calendar_title">Calendar Permission Required</string>
+    <string name="permission_request_calendar_message">To sync your schedule with your calendar, we need permission to access your calendar. We will only read and write events related to your schedule and will not access any other calendar data</string>
+    <string name="permission_request_notification_title">Notification Permission Required</string>
+    <string name="permission_request_notification_message">To send timely reminders and suggestions for you, we need permission to send notifications</string>
+    <string name="permission_request_alarm_title">Alarm Permission Required</string>
+    <string name="permission_request_alarm_message">To ensure timely delivery of reminders and suggestions, we need permission to set alarms. We will not set actual alarms, but use this permission to ensure that reminders can be delivered on time</string>
+    <string name="permission_request_confirm_label">Grant Permission</string>
 </resources>

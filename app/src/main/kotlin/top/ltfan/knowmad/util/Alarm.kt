@@ -24,16 +24,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 
-fun Context.checkOrRequestExactAlarmPermission() {
+val Context.canScheduleExactAlarms
+    @RequiresApi(Build.VERSION_CODES.S) inline get() = getSystemService<AlarmManager>()?.canScheduleExactAlarms() == true
+
+fun Context.checkOrRequestExactAlarmsPermission() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-    val alarmManager = getSystemService<AlarmManager>()
-    if (alarmManager?.canScheduleExactAlarms() == true) return
+    if (canScheduleExactAlarms) return
     val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
         data = "package:$packageName".toUri()
-        if (this@checkOrRequestExactAlarmPermission !is Activity) {
+        if (this@checkOrRequestExactAlarmsPermission !is Activity) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
