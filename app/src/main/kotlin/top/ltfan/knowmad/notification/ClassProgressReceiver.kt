@@ -133,11 +133,7 @@ class ClassProgressReceiver : BroadcastReceiver() {
             val calendar = Calendar.getInstance().apply(buildCalendar)
 
             val pendingIntent = PendingIntentCompat.getBroadcast(
-                context,
-                0,
-                intent,
-                flags,
-                false,
+                context, 0, intent, flags, false,
             ) ?: run {
                 logger.error { "Failed to create pending intent for class progress notification scheduling" }
                 return
@@ -213,28 +209,54 @@ class ClassProgressReceiver : BroadcastReceiver() {
         fun Context.enqueueClassProgressNotificationHandling(intent: Intent) {
             val context = applicationContext
 
-            val data = when (intent.action) {
-                ACTION_SCHEDULE -> ClassProgressWorker.Data.Schedule(
-                    leadTime = intent.getLongExtra(EXTRA_LEAD_TIME, 0).milliseconds,
-                    horizon = intent.getLongExtra(EXTRA_HORIZON, 0).milliseconds,
-                    updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds,
-                )
+            val manager = WorkManager.getInstance(context)
 
-                ACTION_SHOW -> ClassProgressWorker.Data.Show(
-                    eventId = Uuid.parse(intent.getStringExtra(EXTRA_EVENT_ID) ?: return),
-                    endThreshold = intent.getLongExtra(EXTRA_END_THRESHOLD, 0).milliseconds,
-                    stayDuration = intent.getLongExtra(EXTRA_STAY_DURATION, 0).milliseconds,
-                    updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds,
-                )
+            when (intent.action) {
+                ACTION_SCHEDULE -> {
+                    val leadTime = intent.getLongExtra(EXTRA_LEAD_TIME, 0).milliseconds
+                    val horizon = intent.getLongExtra(EXTRA_HORIZON, 0).milliseconds
+                    val updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds
+
+                    val data = ClassProgressWorker.Data.Schedule(
+                        leadTime = leadTime,
+                        horizon = horizon,
+                        updateInterval = updateInterval,
+                    )
+
+                    val request = ClassProgressWorker.buildRequest(data)
+                    manager.enqueueUniqueWork(
+                        uniqueWorkName = "ClassProgressWorker_Schedule",
+                        existingWorkPolicy = REPLACE,
+                        request = request,
+                    )
+                }
+
+                ACTION_SHOW -> {
+                    val eventId = Uuid.parse(intent.getStringExtra(EXTRA_EVENT_ID) ?: return)
+                    val endThreshold = intent.getLongExtra(EXTRA_END_THRESHOLD, 0).milliseconds
+                    val stayDuration = intent.getLongExtra(EXTRA_STAY_DURATION, 0).milliseconds
+                    val updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds
+
+                    val data = ClassProgressWorker.Data.Show(
+                        eventId = eventId,
+                        endThreshold = endThreshold,
+                        stayDuration = stayDuration,
+                        updateInterval = updateInterval,
+                    )
+
+                    val request = ClassProgressWorker.buildRequest(data)
+                    manager.enqueueUniqueWork(
+                        uniqueWorkName = "ClassProgressWorker_Show_$eventId",
+                        existingWorkPolicy = KEEP,
+                        request = request,
+                    )
+                }
 
                 else -> {
                     logger.warn { "Unknown action ${intent.action} received in ClassProgressReceiver, skipping" }
                     return
                 }
             }
-
-            val request = ClassProgressWorker.buildRequest(data)
-            WorkManager.getInstance(context).enqueue(request)
         }
     }
 }
