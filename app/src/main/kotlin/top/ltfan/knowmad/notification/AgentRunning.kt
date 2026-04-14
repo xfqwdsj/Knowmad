@@ -21,7 +21,6 @@ package top.ltfan.knowmad.notification
 import android.app.Notification
 import android.content.Context
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import top.ltfan.knowmad.R
 import kotlin.uuid.Uuid
 
@@ -32,7 +31,7 @@ inline fun <Result> Context.withAgentRunningNotification(
     initialContent: String? = null,
     notificationId: Int = AgentRunningNotificationId,
     block: AgentRunningNotificationScope.() -> Result,
-) = checkedNotificationPermission {
+): Result? {
     val builder = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_logo)
         setContentTitle(getString(R.string.notification_agent_running_title))
@@ -43,26 +42,18 @@ inline fun <Result> Context.withAgentRunningNotification(
         setOnlyAlertOnce(true)
     }
 
-    val manager = NotificationManagerCompat.from(this)
     val notification = builder.build()
-    manager.notify(notificationId, notification)
-
-    val scope = AgentRunningNotificationScope(this, manager, builder, notificationId, notification)
-
-    try {
-        scope.block()
-    } finally {
-        manager.cancel(notificationId)
+    return withNotification(notificationId, notification) {
+        AgentRunningNotificationScope(this, builder, notificationId, notification).block()
     }
 }
 
 class AgentRunningNotificationScope(
     context: Context,
-    manager: NotificationManagerCompat,
     builder: NotificationCompat.Builder,
     notificationId: Int,
     notification: Notification,
-) : NotificationScope(context, manager, builder, notificationId, notification) {
+) : NotificationScope(context, builder, notificationId, notification) {
     fun updateContent(content: String) {
         val updatedNotification = builder.setContentText(content).build()
         context.checkedNotificationPermission {

@@ -40,6 +40,20 @@ inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
     return block()
 }
 
+inline fun <R> Context.withNotification(
+    notificationId: Int,
+    notification: Notification,
+    block: () -> R,
+) = checkedNotificationPermission {
+    val manager = NotificationManagerCompat.from(this)
+    manager.notify(notificationId, notification)
+    try {
+        block()
+    } finally {
+        manager.cancel(notificationId)
+    }
+}
+
 @OptIn(ExperimentalContracts::class)
 context(context: Context)
 inline fun NotificationChannelCompat.withNotificationBuilder(

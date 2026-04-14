@@ -25,13 +25,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 
-abstract class NotificationScope(
+open class NotificationScope(
     protected val context: Context,
-    protected val manager: NotificationManagerCompat,
     protected val builder: NotificationCompat.Builder,
     val notificationId: Int,
     notification: Notification,
 ) {
+    protected val manager = NotificationManagerCompat.from(context)
+
     var notification = notification
         protected set
 
