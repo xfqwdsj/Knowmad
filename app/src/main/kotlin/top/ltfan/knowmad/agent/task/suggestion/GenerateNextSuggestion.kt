@@ -39,7 +39,6 @@ import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import ai.koog.serialization.typeToken
 import android.content.Context
 import android.content.pm.ServiceInfo
-import android.os.Build
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
@@ -266,15 +265,11 @@ class GenerateNextSuggestionWorker(
             val context = applicationContext
 
             context.withAgentRunningNotification {
-                val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ForegroundInfo(
-                        notificationId,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                    )
-                } else {
-                    ForegroundInfo(notificationId, notification)
-                }
+                val foregroundInfo = ForegroundInfo(
+                    notificationId,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                )
                 setForeground(foregroundInfo)
 
                 val database = context.appDatabase
