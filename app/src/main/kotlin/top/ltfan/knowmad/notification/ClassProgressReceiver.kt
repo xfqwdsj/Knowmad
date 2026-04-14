@@ -187,70 +187,27 @@ class ClassProgressReceiver : BroadcastReceiver() {
                 val eventId = event.id
                 val scheduledTime = event.startTime - leadTime
 
-                val showIntent =
-                    context.getShowPendingIntent(
-                        eventId,
-                        endThreshold,
-                        stayDuration,
-                        updateInterval,
-                        flags,
-                    )
-                        ?: run {
-                            logger.warn { "Failed to create show intent for event $eventId, skipping scheduling notification" }
-                            return@fastForEach
-                        }
-
-                logger.debug { "Scheduling class progress notification for event $eventId at $scheduledTime" }
-
-                AlarmManagerCompat.setExactAndAllowWhileIdle(
-                    alarmManager,
-                    AlarmManager.RTC_WAKEUP,
-                    scheduledTime.toEpochMilliseconds(),
-                    showIntent,
-                )
-            }
-        }
-
-        fun Context.rescheduleClassProgressNotification(
-            eventId: Uuid,
-            endThreshold: Duration,
-            stayDuration: Duration,
-            time: Instant,
-            updateInterval: Duration,
-            @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
-        ) {
-            val context = applicationContext
-
-            val alarmManager = context.getSystemService<AlarmManager>() ?: run {
-                logger.error { "Failed to get AlarmManager for rescheduling class progress notification" }
-                return
-            }
-
-            if (!AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
-                logger.warn { "Cannot schedule exact alarms, skipping rescheduling class progress notification" }
-                return
-            }
-
-            val showIntent =
-                context.getShowPendingIntent(
+                val showIntent = context.getShowPendingIntent(
                     eventId,
                     endThreshold,
                     stayDuration,
                     updateInterval,
                     flags,
                 ) ?: run {
-                    logger.warn { "Failed to create show intent for event $eventId, skipping rescheduling notification" }
-                    return
+                    logger.warn { "Failed to create show intent for event $eventId, skipping scheduling notification" }
+                    return@fastForEach
                 }
 
-            logger.debug { "Rescheduling class progress notification for event $eventId at $time" }
+                logger.debug { "Scheduling class progress notification for event $eventId at $scheduledTime" }
 
-            AlarmManagerCompat.setExactAndAllowWhileIdle(
-                alarmManager,
-                AlarmManager.RTC_WAKEUP,
-                time.toEpochMilliseconds(),
-                showIntent,
-            )
+                // `setExact` will fire the alarm immediately if the scheduled time is in the past,
+                // so we don't need to check if the scheduled time is before now.
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    scheduledTime.toEpochMilliseconds(),
+                    showIntent,
+                )
+            }
         }
 
         fun Context.enqueueClassProgressNotificationHandling(intent: Intent) {

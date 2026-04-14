@@ -19,15 +19,17 @@
 package top.ltfan.knowmad.notification
 
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.work.CoroutineWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
-import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.rescheduleClassProgressNotification
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotification
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.ui.util.format
@@ -35,6 +37,7 @@ import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlin.time.times
 import kotlin.uuid.Uuid
 import androidx.work.Data as WorkData
@@ -75,111 +78,120 @@ class ClassProgressWorker(
             return Result.failure()
         }
 
-        val now = Clock.System.now()
+        val notificationData = buildNotificationData(data) ?: return Result.success()
+
+        context.withClassProgressNotification(notificationData) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                setForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                setForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            }
+
+            while (true) {
+                val newData = try {
+                    buildNotificationData(data) ?: run {
+                        logger.debug { "Class with ID ${data.eventId} ended, stopping worker" }
+                        return Result.success()
+                    }
+                } catch (_: Failure) {
+                    logger.debug { "Stopping ClassProgressWorker due to failure in building notification data" }
+                    return Result.failure()
+                }
+                update(newData)
+            }
+        }
+
+        return Result.failure()
+    }
+
+    private suspend fun buildNotificationData(
+        data: Data.Show,
+        now: Instant = Clock.System.now(),
+    ): ClassProgressNotificationData? {
+        val context = applicationContext
 
         val dao = context.appDatabase.scheduleDao()
 
         val event = dao.getEventById(data.eventId) ?: run {
             logger.error { "No event found with ID ${data.eventId} for ClassProgressWorker" }
-            return Result.failure()
+            throw Failure()
         }
 
         if (event !is Course) {
             logger.error { "Event with ID ${data.eventId} is not a Course, cannot show class progress notification" }
-            return Result.failure()
+            throw Failure()
         }
 
         val currentPeriod = ((now - event.startTime) / data.updateInterval).toInt()
-        val nextUpdateTime = event.startTime + (currentPeriod + 1) * data.updateInterval
+        val delayTime = (event.startTime + currentPeriod * data.updateInterval) - now
+        delay(delayTime)
 
-        if (now > event.endTime) {
-            val time = now - event.endTime
-            if (time > data.stayDuration) {
-                logger.debug { "Class with ID ${data.eventId} ended, canceling notification" }
-                context.cancelClassProgressNotification(data.eventId)
-                return Result.success()
+        return when {
+            now > event.endTime -> {
+                val time = now - event.endTime
+                if (time > data.stayDuration) return null
+
+                ClassProgressNotificationData(
+                    eventId = data.eventId,
+                    status = context.getString(R.string.schedule_class_status_label_ended),
+                    statusShort = context.getString(R.string.schedule_class_status_short_label_ended),
+                    name = event.name,
+                    time = time.format(enableSeconds = false),
+                    location = event.location,
+                    progress = 100,
+                    showProgressOutside = false,
+                )
             }
 
-            context.rescheduleClassProgressNotification(
-                eventId = data.eventId,
-                endThreshold = data.endThreshold,
-                stayDuration = data.stayDuration,
-                time = nextUpdateTime,
-                updateInterval = data.updateInterval,
-            )
+            now < event.startTime -> {
+                val time = event.startTime - now
+                ClassProgressNotificationData(
+                    eventId = data.eventId,
+                    status = context.getString(R.string.schedule_class_status_label_close_to_start),
+                    statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_start),
+                    name = event.name,
+                    time = time.format(enableSeconds = false),
+                    location = event.location,
+                    showLocationOutside = true,
+                    progress = 0,
+                    showProgressOutside = false,
+                )
+            }
 
-            val notification = ClassProgressNotification(
-                eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_label_ended),
-                statusShort = context.getString(R.string.schedule_class_status_short_label_ended),
-                name = event.name,
-                time = time.format(enableSeconds = false),
-                location = event.location,
-                progress = 100,
-                showProgressOutside = false,
-            )
-            context.showClassProgressNotification(notification)
-            return Result.success()
+            else -> {
+                val started = now - event.startTime
+                val remaining = event.endTime - now
+                val totalDuration = event.endTime - event.startTime
+                val progress = if (totalDuration > ZERO) {
+                    ((started / totalDuration) * 100).toInt().coerceIn(0, 100)
+                } else 100
+
+                if (remaining <= data.endThreshold) {
+                    ClassProgressNotificationData(
+                        eventId = data.eventId,
+                        status = context.getString(R.string.schedule_class_status_label_close_to_end),
+                        statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_end),
+                        name = event.name,
+                        time = remaining.format(enableSeconds = false),
+                        location = event.location,
+                        progress = progress,
+                    )
+                } else {
+                    ClassProgressNotificationData(
+                        eventId = data.eventId,
+                        status = context.getString(R.string.schedule_class_status_label_in_progress),
+                        statusShort = context.getString(R.string.schedule_class_status_short_label_in_progress),
+                        name = event.name,
+                        time = started.format(enableSeconds = false),
+                        location = event.location,
+                        progress = progress,
+                    )
+                }
+            }
         }
-
-        context.rescheduleClassProgressNotification(
-            eventId = data.eventId,
-            endThreshold = data.endThreshold,
-            stayDuration = data.stayDuration,
-            time = nextUpdateTime,
-            updateInterval = data.updateInterval,
-        )
-
-        if (now < event.startTime) {
-            val time = event.startTime - now
-            val notification = ClassProgressNotification(
-                eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_label_close_to_start),
-                statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_start),
-                name = event.name,
-                time = time.format(enableSeconds = false),
-                location = event.location,
-                showLocationOutside = true,
-                progress = 0,
-                showProgressOutside = false,
-            )
-            context.showClassProgressNotification(notification)
-            return Result.success()
-        }
-
-        val started = now - event.startTime
-        val remaining = event.endTime - now
-        val totalDuration = event.endTime - event.startTime
-        val progress = if (totalDuration > ZERO) {
-            ((started / totalDuration) * 100).toInt().coerceIn(0, 100)
-        } else 100
-
-        if (remaining <= data.endThreshold) {
-            val notification = ClassProgressNotification(
-                eventId = data.eventId,
-                status = context.getString(R.string.schedule_class_status_label_close_to_end),
-                statusShort = context.getString(R.string.schedule_class_status_short_label_close_to_end),
-                name = event.name,
-                time = remaining.format(enableSeconds = false),
-                location = event.location,
-                progress = progress,
-            )
-            context.showClassProgressNotification(notification)
-            return Result.success()
-        }
-
-        val notification = ClassProgressNotification(
-            eventId = data.eventId,
-            status = context.getString(R.string.schedule_class_status_label_in_progress),
-            statusShort = context.getString(R.string.schedule_class_status_short_label_in_progress),
-            name = event.name,
-            time = started.format(enableSeconds = false),
-            location = event.location,
-            progress = progress,
-        )
-        context.showClassProgressNotification(notification)
-        return Result.success()
     }
+
+    private class Failure : Throwable()
 
     companion object {
         const val DATA = "DATA"

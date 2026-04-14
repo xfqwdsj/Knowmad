@@ -18,7 +18,7 @@
 
 package top.ltfan.knowmad.notification
 
-import android.app.Notification
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -29,12 +29,23 @@ open class NotificationScope(
     protected val context: Context,
     protected val builder: NotificationCompat.Builder,
     val notificationId: Int,
-    notification: Notification,
 ) {
-    protected val manager = NotificationManagerCompat.from(context)
+    private val manager = NotificationManagerCompat.from(context)
 
-    var notification = notification
-        protected set
+    @SuppressLint("MissingPermission")
+    var notification = run {
+        builder.build().also {
+            context.checkedNotificationPermission {
+                manager.notify(notificationId, it)
+            }
+        }
+    }
+        protected set(value) {
+            field = value
+            context.checkedNotificationPermission {
+                manager.notify(notificationId, value)
+            }
+        }
 
     context(coroutineWorker: CoroutineWorker)
     suspend inline fun setForeground(foregroundServiceType: Int) {

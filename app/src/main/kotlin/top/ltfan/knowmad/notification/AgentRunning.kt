@@ -18,7 +18,6 @@
 
 package top.ltfan.knowmad.notification
 
-import android.app.Notification
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import top.ltfan.knowmad.R
@@ -42,9 +41,8 @@ inline fun <Result> Context.withAgentRunningNotification(
         setOnlyAlertOnce(true)
     }
 
-    val notification = builder.build()
-    return withNotification(notificationId, notification) {
-        AgentRunningNotificationScope(this, builder, notificationId, notification).block()
+    return withNotification(notificationId, builder) {
+        AgentRunningNotificationScope(this, builder, notificationId).block()
     }
 }
 
@@ -52,13 +50,8 @@ class AgentRunningNotificationScope(
     context: Context,
     builder: NotificationCompat.Builder,
     notificationId: Int,
-    notification: Notification,
-) : NotificationScope(context, builder, notificationId, notification) {
+) : NotificationScope(context, builder, notificationId) {
     fun updateContent(content: String) {
-        val updatedNotification = builder.setContentText(content).build()
-        context.checkedNotificationPermission {
-            manager.notify(notificationId, updatedNotification)
-            notification = updatedNotification
-        }
+        notification = builder.setContentText(content).build()
     }
 }

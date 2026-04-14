@@ -38,7 +38,7 @@ import top.ltfan.knowmad.ui.util.toHexString
 import kotlin.uuid.Uuid
 
 @Serializable
-data class ClassProgressNotification(
+data class ClassProgressNotificationData(
     val eventId: Uuid,
     val status: String,
     val statusShort: String,
@@ -51,39 +51,28 @@ data class ClassProgressNotification(
     val suggestion: String? = null,
 )
 
-fun Context.showClassProgressNotification(
-    notification: ClassProgressNotification,
-) {
-    val notificationId = notification.eventId.hashCode()
+inline fun <Result> Context.withClassProgressNotification(
+    data: ClassProgressNotificationData,
+    block: ClassProgressNotificationScope.() -> Result,
+): Result? {
+    val context = applicationContext
 
-    val notification = classProgressNotificationChannel.withNotificationBuilder { channel ->
-        val progressStyle = NotificationCompat.ProgressStyle().kotlinApply {
-            setProgress(notification.progress)
-            addProgressSegment(NotificationCompat.ProgressStyle.Segment(100))
-        }
+    val notificationId = data.eventId.hashCode()
 
-        setSmallIcon(R.drawable.ic_logo)
-        setContentTitle("${notification.status} \u2022 ${notification.time} \u2022 ${notification.location}")
-        setShortCriticalText(notification.statusShort)
-        setContentText(notification.suggestion)
-        setSubText(notification.name)
-        setOngoing(true)
-        setAutoCancel(false)
-        setOnlyAlertOnce(true)
+    val useHyperIsland = HyperIslandNotification.isSupported(context)
 
-        val context = applicationContext
+    // Hyper Island will fail if we set the ProgressStyle.
+    // So we only set it when Hyper Island is not supported.
+    val progressStyle = if (!useHyperIsland) {
+        NotificationCompat.ProgressStyle()
+            .addProgressSegment(NotificationCompat.ProgressStyle.Segment(100))
+    } else null
 
-        // Hyper Island will fail if we set the ProgressStyle.
-        // So we only set it when Hyper Island is not supported.
-        if (!HyperIslandNotification.isSupported(context)) {
-            setStyle(progressStyle)
-            setRequestPromotedOngoing(true)
-        }
-
-        val hyperIsland = HyperIslandNotification.Builder(
+    val hyperIsland = if (useHyperIsland) {
+        HyperIslandNotification.Builder(
             context = context,
-            businessName = channel.id,
-            ticker = notification.status,
+            businessName = classProgressNotificationChannel.id,
+            ticker = data.status,
         ).apply {
             val picKeySmallIsland = "small_island"
 
@@ -97,23 +86,81 @@ fun Context.showClassProgressNotification(
             setEnableFloat(false)
 
             setSmallIsland(picKeySmallIsland)
+        }
+    } else null
+
+    val builder = classProgressNotificationChannel.withNotificationBuilder {
+        setSmallIcon(R.drawable.ic_logo)
+        setOngoing(true)
+        setAutoCancel(false)
+        setOnlyAlertOnce(true)
+
+        if (hyperIsland == null) {
+            setRequestPromotedOngoing(true)
+        }
+    }.applyClassProgressData(data, progressStyle, hyperIsland)
+
+    return withNotification(notificationId, builder) {
+        ClassProgressNotificationScope(
+            this,
+            builder,
+            progressStyle,
+            hyperIsland,
+            notificationId,
+        ).block()
+    }
+}
+
+class ClassProgressNotificationScope(
+    context: Context,
+    builder: NotificationCompat.Builder,
+    val progressStyle: NotificationCompat.ProgressStyle?,
+    val hyperIsland: HyperIslandNotification?,
+    notificationId: Int,
+) : NotificationScope(context, builder, notificationId) {
+    fun update(data: ClassProgressNotificationData) {
+        notification = builder.applyClassProgressData(data, progressStyle, hyperIsland).build()
+    }
+}
+
+fun NotificationCompat.Builder.applyClassProgressData(
+    data: ClassProgressNotificationData,
+    progressStyle: NotificationCompat.ProgressStyle?,
+    hyperIsland: HyperIslandNotification?,
+) = apply {
+    setContentTitle("${data.status} \u2022 ${data.time} \u2022 ${data.location}")
+    setShortCriticalText(data.statusShort)
+    setContentText(data.suggestion)
+    setSubText(data.name)
+
+    progressStyle?.let {
+        it.setProgress(data.progress)
+        setStyle(it)
+    }
+
+    hyperIsland?.let {
+        it.apply {
+            val picKeySmallIsland = "small_island"
+
+            val color = "#" + primaryDark.toHexString()
+
             val textInfoRight = TextInfo(
-                title = notification.time,
-                content = if (notification.showLocationOutside) notification.location else null,
+                title = data.time,
+                content = if (data.showLocationOutside) data.location else null,
             )
             setBigIslandInfo(
                 left = ImageTextInfoLeft(
                     picInfo = PicInfo(pic = picKeySmallIsland),
                     textInfo = TextInfo(
-                        title = notification.status,
+                        title = data.status,
                         showHighlightColor = true,
                     ),
                 ),
-                centerText = if (!notification.showProgressOutside) textInfoRight else null,
-                progressText = if (notification.showProgressOutside) {
+                centerText = if (!data.showProgressOutside) textInfoRight else null,
+                progressText = if (data.showProgressOutside) {
                     ProgressTextInfo(
                         progressInfo = CircularProgressInfo(
-                            progress = notification.progress,
+                            progress = data.progress,
                             colorReach = color,
                         ),
                         textInfo = textInfoRight,
@@ -121,40 +168,29 @@ fun Context.showClassProgressNotification(
                 } else null,
             )
             setBaseInfo(
-                title = notification.status,
-                subTitle = notification.time,
-                extraTitle = notification.location,
-                content = notification.name,
-                subContent = notification.suggestion,
+                title = data.status,
+                subTitle = data.time,
+                extraTitle = data.location,
+                content = data.name,
+                subContent = data.suggestion,
                 showDivider = true,
                 showContentDivider = true,
             )
             setProgressBar(
-                progress = notification.progress,
+                progress = data.progress,
                 color = color,
             )
 
-            setAodConfig(title = notification.status)
+            setAodConfig(title = data.status)
         }
 
-        addExtras(hyperIsland.buildResourceBundle())
+        addExtras(it.buildResourceBundle())
         addExtras(
             Bundle().apply {
-                putString("miui.focus.param", hyperIsland.buildJsonParam())
+                putString("miui.focus.param", it.buildJsonParam())
             },
         )
-    }.build()
-
-    checkedNotificationPermission {
-        notification.notifyCompat(notificationId)
     }
-}
-
-fun Context.cancelClassProgressNotification(
-    eventId: Uuid,
-) {
-    val notificationId = eventId.hashCode()
-    NotificationManagerCompat.from(this).cancel(notificationId)
 }
 
 private const val ClassProgressChannelId = "class_progress"
@@ -170,10 +206,3 @@ val Context.classProgressNotificationChannel: NotificationChannelCompat
         NotificationManagerCompat.from(this).createNotificationChannel(channel)
         return channel
     }
-
-private inline fun NotificationCompat.ProgressStyle.kotlinApply(
-    block: NotificationCompat.ProgressStyle.() -> Unit,
-) = run {
-    block()
-    this
-}

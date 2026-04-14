@@ -42,11 +42,11 @@ inline fun <R> Context.checkedNotificationPermission(block: () -> R): R? {
 
 inline fun <R> Context.withNotification(
     notificationId: Int,
-    notification: Notification,
+    builder: NotificationCompat.Builder,
     block: () -> R,
 ) = checkedNotificationPermission {
     val manager = NotificationManagerCompat.from(this)
-    manager.notify(notificationId, notification)
+    manager.notify(notificationId, builder.build())
     try {
         block()
     } finally {
