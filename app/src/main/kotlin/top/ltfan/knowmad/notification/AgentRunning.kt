@@ -57,15 +57,12 @@ inline fun <Result> Context.withAgentRunningNotification(
 }
 
 class AgentRunningNotificationScope(
-    private val context: Context,
-    private val manager: NotificationManagerCompat,
-    private val builder: NotificationCompat.Builder,
-    val notificationId: Int,
+    context: Context,
+    manager: NotificationManagerCompat,
+    builder: NotificationCompat.Builder,
+    notificationId: Int,
     notification: Notification,
-) {
-    var notification = notification
-        private set
-
+) : NotificationScope(context, manager, builder, notificationId, notification) {
     fun updateContent(content: String) {
         val updatedNotification = builder.setContentText(content).build()
         context.checkedNotificationPermission {

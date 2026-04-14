@@ -41,7 +41,6 @@ import android.content.Context
 import android.content.pm.ServiceInfo
 import androidx.work.CoroutineWorker
 import androidx.work.Data
-import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.cancelChildren
@@ -265,12 +264,7 @@ class GenerateNextSuggestionWorker(
             val context = applicationContext
 
             context.withAgentRunningNotification {
-                val foregroundInfo = ForegroundInfo(
-                    notificationId,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                )
-                setForeground(foregroundInfo)
+                setForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
 
                 val database = context.appDatabase
                 val llmConfigDao = database.llmConfigDao()
