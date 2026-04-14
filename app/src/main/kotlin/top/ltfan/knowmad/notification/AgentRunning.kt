@@ -33,7 +33,6 @@ inline fun <Result> Context.withAgentRunningNotification(
     notificationId: Int = AgentRunningNotificationId,
     block: AgentRunningNotificationScope.() -> Result,
 ) = checkedNotificationPermission {
-
     val builder = aiNotificationChannel.withNotificationBuilder {
         setSmallIcon(R.drawable.ic_logo)
         setContentTitle(getString(R.string.notification_agent_running_title))
@@ -62,12 +61,16 @@ class AgentRunningNotificationScope(
     private val manager: NotificationManagerCompat,
     private val builder: NotificationCompat.Builder,
     val notificationId: Int,
-    var notification: Notification,
+    notification: Notification,
 ) {
+    var notification = notification
+        private set
+
     fun updateContent(content: String) {
         val updatedNotification = builder.setContentText(content).build()
         context.checkedNotificationPermission {
             manager.notify(notificationId, updatedNotification)
+            notification = updatedNotification
         }
     }
 }
