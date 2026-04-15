@@ -94,6 +94,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,7 +104,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -112,7 +112,6 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -166,6 +165,7 @@ import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
+import top.ltfan.knowmad.ui.util.rememberOffsetToDpOffset
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
@@ -384,8 +384,6 @@ fun SemesterInformation(
     onBackup: (suspend () -> String)? = null,
     onDelete: (suspend () -> Unit)? = null,
 ) {
-    val density = LocalDensity.current
-
     val coroutineScope = rememberCoroutineScope()
 
     val dateFormatter = remember(locale) {
@@ -407,15 +405,7 @@ fun SemesterInformation(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
-    val menuOffset = remember(density, menuOriginalOffset) {
-        with(density) {
-            DpOffset(
-                x = menuOriginalOffset.x.toDp(),
-                y = menuOriginalOffset.y.toDp(),
-            )
-        }
-    }
+    val menuOffset = rememberOffsetToDpOffset()
 
     Surface(
         modifier = modifier,
@@ -430,7 +420,7 @@ fun SemesterInformation(
                     onLongClick = { showMenu = true },
                     onClick = { onSelectionChange?.invoke(!selected) },
                 )
-                .detectLongPress { menuOriginalOffset = it.position }
+                .detectLongPress { menuOffset.originalOffset = it.position }
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) content@{
@@ -567,10 +557,11 @@ fun SemesterInformation(
         var backupContent by remember { mutableStateOf<String?>(null) }
 
         Box {
+            val offset by menuOffset.offsetFlow.collectAsState(Zero)
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
-                offset = menuOffset,
+                offset = offset,
             ) {
                 DropdownMenuItem(
                     text = { Text(semester.name) },
@@ -1237,7 +1228,6 @@ fun DetailedEvent(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     additionalContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
 
     val coroutineScope = rememberCoroutineScope()
@@ -1259,15 +1249,7 @@ fun DetailedEvent(
     } ?: animateDpAsState(if (selected) 4.dp else 0.dp)
 
     var showMenu by remember { mutableStateOf(false) }
-    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
-    val menuOffset = remember(density, menuOriginalOffset) {
-        with(density) {
-            DpOffset(
-                x = menuOriginalOffset.x.toDp(),
-                y = menuOriginalOffset.y.toDp(),
-            )
-        }
-    }
+    val menuOffset = rememberOffsetToDpOffset()
 
     Box {
         localSharedTransitionScope {
@@ -1282,7 +1264,7 @@ fun DetailedEvent(
                         onFinish = { it.consume() },
                     ) {
                         hapticFeedback.performHapticFeedback(LongPress)
-                        menuOriginalOffset = it.position
+                        menuOffset.originalOffset = it.position
                         showMenu = true
                     }
                     .run {
@@ -1369,6 +1351,7 @@ fun DetailedEvent(
         }
 
         Box {
+            val offset by menuOffset.offsetFlow.collectAsState(Zero)
             EventDropdownMenu(
                 event = event,
                 expanded = showMenu,
@@ -1388,7 +1371,7 @@ fun DetailedEvent(
                         }
                     }
                 },
-                offset = menuOffset,
+                offset = offset,
             )
         }
     }

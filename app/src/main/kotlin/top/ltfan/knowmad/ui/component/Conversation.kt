@@ -56,6 +56,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,13 +66,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -94,6 +92,7 @@ import top.ltfan.knowmad.ui.util.detectLongPress
 import top.ltfan.knowmad.ui.util.detectPointerFirstDown
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.plus
+import top.ltfan.knowmad.ui.util.rememberOffsetToDpOffset
 import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
@@ -202,21 +201,12 @@ fun ConversationList(
             ) { index ->
                 val conversation = conversations[index] ?: return@items
 
-                val density = LocalDensity.current
                 val hapticFeedback = LocalHapticFeedback.current
 
                 var showDialog by remember { mutableStateOf(false) }
 
                 var showMenu by remember { mutableStateOf(false) }
-                var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
-                val menuOffset = remember(density, menuOriginalOffset) {
-                    with(density) {
-                        DpOffset(
-                            x = menuOriginalOffset.x.toDp(),
-                            y = menuOriginalOffset.y.toDp(),
-                        )
-                    }
-                }
+                val menuOffset = rememberOffsetToDpOffset()
 
                 Box {
                     NavigationDrawerItem(
@@ -235,7 +225,7 @@ fun ConversationList(
                                 requireUnconsumed = false,
                                 pass = Initial,
                             ) {
-                                menuOriginalOffset = it.position
+                                menuOffset.originalOffset = it.position
                             }
                             .detectLongPress(
                                 requireUnconsumed = false,
@@ -270,10 +260,11 @@ fun ConversationList(
                     )
 
                     Box {
+                        val offset by menuOffset.offsetFlow.collectAsState(Zero)
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            offset = menuOffset,
+                            offset = offset,
                         ) {
                             DropdownMenuItem(
                                 text = { Text(conversation.name) },

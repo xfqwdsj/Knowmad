@@ -79,7 +79,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -122,6 +121,7 @@ import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.util.detectPointerFirstDown
 import top.ltfan.knowmad.ui.util.itemThemedShape
+import top.ltfan.knowmad.ui.util.rememberOffsetToDpOffset
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.RemendProcessor
@@ -894,18 +894,8 @@ fun UserMessage(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val density = LocalDensity.current
-
     var menuExpanded by remember { mutableStateOf(false) }
-    var menuOriginalOffset by remember { mutableStateOf(Offset.Zero) }
-    val menuOffset = remember(density, menuOriginalOffset) {
-        with(density) {
-            DpOffset(
-                x = menuOriginalOffset.x.toDp(),
-                y = menuOriginalOffset.y.toDp(),
-            )
-        }
-    }
+    val menuOffset = rememberOffsetToDpOffset()
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -920,17 +910,18 @@ fun UserMessage(
                     onLongClick = { menuExpanded = true },
                     onClick = {},
                 )
-                .detectPointerFirstDown { menuOriginalOffset = it.position },
+                .detectPointerFirstDown { menuOffset.originalOffset = it.position },
         ) {
             UserMessageContent(
                 content = content,
                 modifier = Modifier.padding(16.dp),
             )
             Box {
+                val offset by menuOffset.offsetFlow.collectAsState(Zero)
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                    offset = menuOffset,
+                    offset = offset,
                 ) {
                     val coroutineScope = rememberCoroutineScope()
                     val clipboard = LocalClipboard.current
