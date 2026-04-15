@@ -304,23 +304,10 @@ fun WebViewBottomController(
                         )
                     }
                 }
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Above,
-                    ),
-                    tooltip = { PlainTooltip { Text(stringResource(R.string.label_back)) } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = { navigator.navigateBack() },
-                        enabled = navigator.canGoBack,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.arrow_back_24px),
-                            contentDescription = stringResource(R.string.label_back),
-                        )
-                    }
-                }
+                ArrowBackIconButton(
+                    onClick = navigator::navigateBack,
+                    enabled = navigator.canGoBack,
+                )
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                         TooltipAnchorPosition.Above,

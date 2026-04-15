@@ -573,25 +573,10 @@ fun AgentConfigScreen(
                     shadow = null,
                 ),
                 navigationIcon = {
-                    TooltipBox(
-                        TooltipDefaults.rememberTooltipPositionProvider(
-                            TooltipAnchorPosition.Below,
-                        ),
-                        tooltip = {
-                            PlainTooltip { Text(stringResource(R.string.label_back)) }
-                        },
-                        state = rememberTooltipState(),
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.backStack.removeLastOrNull() },
-                            enabled = viewModel.backStack.size > 1,
-                        ) {
-                            Icon(
-                                painterResource(R.drawable.arrow_back_24px),
-                                contentDescription = stringResource(R.string.label_back),
-                            )
-                        }
-                    }
+                    ArrowBackIconButton(
+                        onClick = viewModel.backStack::removeLastOrNull,
+                        enabled = viewModel.backStack.size > 1,
+                    )
                 },
                 actions = {
                     TooltipBox(

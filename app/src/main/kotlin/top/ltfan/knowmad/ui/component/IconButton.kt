@@ -392,6 +392,38 @@ fun ExpandOrCollapseIconButton(
 }
 
 @Composable
+fun ArrowBackIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes contentDescriptionRes: Int? = R.string.label_back,
+    @StringRes tooltipTextRes: Int? = contentDescriptionRes,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Above,
+        ),
+        tooltip = {
+            tooltipTextRes?.let { PlainTooltip { Text(stringResource(it)) } }
+        },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+        ) {
+            Icon(
+                painterResource(R.drawable.arrow_back_24px),
+                contentDescription = contentDescriptionRes?.let { stringResource(it) },
+                modifier = iconModifier,
+            )
+        }
+    }
+}
+
+@Composable
 fun BackChevronIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
