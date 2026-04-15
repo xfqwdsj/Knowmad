@@ -70,6 +70,7 @@ import top.ltfan.knowmad.data.chat.allLoaded
 import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
+import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.ui.component.AssistantMessageState
@@ -109,6 +110,30 @@ class AgentViewModel(
     val chatDataStore = ChatData.createDataStore()
     val chatDataStateFlow = chatDataStore.dataStateFlow()
     val chatData = chatDataStore.asMutableState(chatDataStateFlow.value)
+
+    private val llmDataStore = LLMData.createDataStore()
+    val llmDataStateFlow = llmDataStore.dataStateFlow()
+    private val llmDataState = llmDataStore.asMutableState(llmDataStateFlow.value)
+
+    var conversationNameGenerationModelId by llmDataState.transform(
+        transformIn = { conversationNameGenerationModelId },
+        transformOut = { copy(conversationNameGenerationModelId = it) },
+    )
+
+    var recurrenceRuleSummaryGenerationModelId by llmDataState.transform(
+        transformIn = { recurrenceRuleSummaryGenerationModelId },
+        transformOut = { copy(recurrenceRuleSummaryGenerationModelId = it) },
+    )
+
+    var errorExplanationModelId by llmDataState.transform(
+        transformIn = { errorExplanationModelId },
+        transformOut = { copy(errorExplanationModelId = it) },
+    )
+
+    var nextSuggestionGenerationModelId by llmDataState.transform(
+        transformIn = { nextSuggestionGenerationModelId },
+        transformOut = { copy(nextSuggestionGenerationModelId = it) },
+    )
 
     val drawerState = DrawerState(DrawerValue.Closed)
     var savedMessagesFirstVisibleItemIndex by mutableIntStateOf(0)

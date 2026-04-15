@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="settings_model_task_type_simple_label">Simple</string>
+    <string name="settings_model_task_type_simple_summary">Simple tasks with lower requirements for the model\'s understanding and generation capabilities, suitable for smaller and faster models</string>
+    <string name="settings_model_task_type_medium_label">Medium</string>
+    <string name="settings_model_task_type_medium_summary">Tasks of medium complexity with certain requirements for the model\'s understanding and generation capabilities, suitable for medium-sized models</string>
+    <string name="settings_model_task_type_complex_label">Complex</string>
+    <string name="settings_model_task_type_complex_summary">Complex tasks running under the Agent architecture, requiring models with strong understanding and generation capabilities</string>
+    <string name="settings_model_label_not_set">Not Set</string>
+    <string name="settings_model_conversation_name_generation_label">Conversation Name Generation</string>
+    <string name="settings_model_conversation_name_generation_summary">Model used for generating conversation names</string>
+    <string name="settings_model_recurrence_rule_summary_generation_label">Recurrence Rule Summary Generation</string>
+    <string name="settings_model_recurrence_rule_summary_generation_summary">Model used for generating summaries of schedule recurrence rules</string>
+    <string name="settings_model_error_explanation_label">Error Explanation</string>
+    <string name="settings_model_error_explanation_summary">Model used for explaining errors</string>
+    <string name="settings_model_next_suggestion_generation_label">Next Suggestion Generation</string>
+    <string name="settings_model_next_suggestion_generation_summary">Model used for generating next step suggestions</string>
+    <string name="settings_next_suggestion_enabled_label">Enable Next Step Suggestions</string>
+    <string name="settings_next_suggestion_enabled_summary">When enabled, Noma will provide suggestions at appropriate times</string>
+    <string name="settings_class_progress_enabled_label">Enable Class Progress Notifications</string>
+    <string name="settings_class_progress_enabled_summary">When enabled, we will send you real-time class progress notifications to help you better keep track of your course progress</string>
+</resources>

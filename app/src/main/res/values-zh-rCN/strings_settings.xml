@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Knowmad - Knowledge nomad
+  ~ Copyright (C) 2026 LTFan (aka xfqwdsj)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <string name="settings_model_task_type_simple_label">简单</string>
+    <string name="settings_model_task_type_simple_summary">简单任务，对模型的理解和生成能力要求较低，适合使用较小、较快的模型</string>
+    <string name="settings_model_task_type_medium_label">中等</string>
+    <string name="settings_model_task_type_medium_summary">中等复杂度的任务，对模型的理解和生成能力有一定要求，适合使用中等规模的模型</string>
+    <string name="settings_model_task_type_complex_label">复杂</string>
+    <string name="settings_model_task_type_complex_summary">复杂的、运行在Agent架构下的任务，要求模型具有较强的理解和生成能力</string>
+    <string name="settings_model_label_not_set">未设置</string>
+    <string name="settings_model_conversation_name_generation_label">对话名称生成</string>
+    <string name="settings_model_conversation_name_generation_summary">用于生成对话名称的模型</string>
+    <string name="settings_model_recurrence_rule_summary_generation_label">重复规则摘要生成</string>
+    <string name="settings_model_recurrence_rule_summary_generation_summary">用于对日程重复规则生成摘要的模型</string>
+    <string name="settings_model_error_explanation_label">错误解释</string>
+    <string name="settings_model_error_explanation_summary">用于解释错误的模型</string>
+    <string name="settings_model_next_suggestion_generation_label">下一步建议生成</string>
+    <string name="settings_model_next_suggestion_generation_summary">用于生成下一步建议的模型</string>
+    <string name="settings_next_suggestion_enabled_label">启用下一步建议</string>
+    <string name="settings_next_suggestion_enabled_summary">启用后，诺玛将在合适的时机为您提供建议</string>
+    <string name="settings_class_progress_enabled_label">启用上课进度通知</string>
+    <string name="settings_class_progress_enabled_summary">启用后，我们将会为您推送实时上课进度通知，帮助您更好地掌握课程进度</string>
+</resources>

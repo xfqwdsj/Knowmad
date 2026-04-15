@@ -80,16 +80,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -120,7 +116,6 @@ import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.model.UnknownLLModel
 import top.ltfan.knowmad.ui.util.detectPointerFirstDown
-import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.rememberOffsetToDpOffset
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
@@ -208,8 +203,6 @@ fun ChatModelSelector(
     onSelectModel: (LLMConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     val size = SplitButtonDefaults.ExtraSmallContainerHeight
     val colors = ButtonDefaults.textButtonColors()
     val border = null
@@ -254,89 +247,16 @@ fun ChatModelSelector(
                 )
             }
 
-            var expandedProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = {
+            ModelSelectorDropdownMenu(
+                showMenu = expanded,
+                onShowMenuChange = { expanded = it },
+                providers = providers,
+                getModels = getModels,
+                onSelectModel = {
+                    onSelectModel(it)
                     expanded = false
-                    expandedProvider = null
                 },
-            ) {
-                if (providers.isEmpty()) {
-                    DropdownMenuItem(
-                        onClick = {},
-                        text = { Text(stringResource(R.string.chat_input_model_label_no_providers)) },
-                        enabled = false,
-                    )
-                    return@DropdownMenu
-                }
-
-                providers.forEachIndexed { index, provider ->
-                    var models by remember { mutableStateOf<List<LLMConfigEntity>?>(null) }
-
-                    val density = LocalDensity.current
-                    val layoutDirection = LocalLayoutDirection.current
-                    var offset by remember { mutableStateOf(DpOffset.Zero) }
-
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        DropdownMenuItem(
-                            onClick = {
-                                coroutineScope.launch {
-                                    models = getModels(provider)
-                                    expandedProvider = provider
-                                }
-                            },
-                            text = { Text(provider.name) },
-                            shape = MenuDefaults.itemThemedShape(
-                                index,
-                                providers.size,
-                            ),
-                            modifier = Modifier.onGloballyPositioned {
-                                with(density) {
-                                    val factor = if (layoutDirection == Ltr) 1 else -1
-                                    offset = DpOffset(
-                                        it.size.width.toDp() * factor,
-                                        0.dp,
-                                    )
-                                }
-                            },
-                        )
-
-                        DropdownMenu(
-                            expanded = expandedProvider == provider && models != null,
-                            onDismissRequest = { expandedProvider = null },
-                            offset = offset,
-                        ) {
-                            val models = models
-
-                            if (models.isNullOrEmpty()) {
-                                DropdownMenuItem(
-                                    onClick = {},
-                                    text = { Text(stringResource(R.string.chat_input_model_label_no_models)) },
-                                    enabled = false,
-                                )
-                                return@DropdownMenu
-                            }
-
-                            models.forEachIndexed { modelIndex, model ->
-                                DropdownMenuItem(
-                                    onClick = {
-                                        onSelectModel(model)
-                                        expandedProvider = null
-                                        expanded = false
-                                    },
-                                    text = { Text(model.name) },
-                                    shape = MenuDefaults.itemThemedShape(
-                                        modelIndex,
-                                        models.size,
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            )
         },
         modifier = modifier,
     )

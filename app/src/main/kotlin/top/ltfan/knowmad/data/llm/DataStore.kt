@@ -26,6 +26,8 @@ import kotlin.uuid.Uuid
 data class LLMData(
     val conversationNameGenerationModelId: Uuid? = null,
     val recurrenceRuleSummaryGenerationModelId: Uuid? = null,
+    val errorExplanationModelId: Uuid? = null,
+    val nextSuggestionGenerationModelId: Uuid? = null,
 ) {
     companion object : DataStoreCompanion<LLMData>() {
         override val fileName = "llm_data"

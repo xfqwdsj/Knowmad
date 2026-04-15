@@ -43,7 +43,6 @@ import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMConfigEntry
-import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.data.schedule.exportICalendar
@@ -52,6 +51,8 @@ import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.data.schedule.toICalendar
 import top.ltfan.knowmad.data.schedule.writeCustomized
 import top.ltfan.knowmad.data.schedule.writeStandard
+import top.ltfan.knowmad.data.task.ClassProgressConfiguration
+import top.ltfan.knowmad.data.task.NextSuggestionConfiguration
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
@@ -110,18 +111,24 @@ class AppViewModel(
         }
     }
 
-    private val llmDataStore = LLMData.createDataStore()
-    private val llmDataStateFlow = llmDataStore.dataStateFlow()
-    private val llmDataState = llmDataStore.asMutableState(llmDataStateFlow.value)
+    private val nextSuggestionConfigurationStore = NextSuggestionConfiguration.createDataStore()
+    private val nextSuggestionConfigurationFlow = nextSuggestionConfigurationStore.dataStateFlow()
+    private val nextSuggestionConfiguration =
+        nextSuggestionConfigurationStore.asMutableState(nextSuggestionConfigurationFlow.value)
 
-    var conversationNameGenerationModelId by llmDataState.transform(
-        transformIn = { conversationNameGenerationModelId },
-        transformOut = { copy(conversationNameGenerationModelId = it) },
+    var nextSuggestionEnabled by nextSuggestionConfiguration.transform(
+        transformIn = { enabled },
+        transformOut = { copy(enabled = it) },
     )
 
-    var recurrenceRuleSummaryGenerationModelId by llmDataState.transform(
-        transformIn = { recurrenceRuleSummaryGenerationModelId },
-        transformOut = { copy(recurrenceRuleSummaryGenerationModelId = it) },
+    private val classProgressConfigurationStore = ClassProgressConfiguration.createDataStore()
+    private val classProgressConfigurationFlow = classProgressConfigurationStore.dataStateFlow()
+    private val classProgressConfiguration =
+        classProgressConfigurationStore.asMutableState(classProgressConfigurationFlow.value)
+
+    var classProgressEnabled by classProgressConfiguration.transform(
+        transformIn = { enabled },
+        transformOut = { copy(enabled = it) },
     )
 
     private val httpClient = HttpClient().also {

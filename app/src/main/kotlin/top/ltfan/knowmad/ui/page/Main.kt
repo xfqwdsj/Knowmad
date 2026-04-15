@@ -82,6 +82,7 @@ import top.ltfan.knowmad.ui.component.Calendar
 import top.ltfan.knowmad.ui.component.CloseFullscreenIconButton
 import top.ltfan.knowmad.ui.component.GenerateSuggestionIconButton
 import top.ltfan.knowmad.ui.component.MonthBottomSheetContent
+import top.ltfan.knowmad.ui.component.SettingsIconButton
 import top.ltfan.knowmad.ui.component.SnackbarHost
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsLight
@@ -151,6 +152,7 @@ class MainPage : Page() {
                         onClick = {},
                     ),
                     actions = {
+                        val activity = LocalActivity.current
                         val context = LocalContext.current
                         val prompt =
                             stringResource(R.string.llm_task_generate_next_suggestion_prompt_manual)
@@ -163,7 +165,6 @@ class MainPage : Page() {
                             },
                         )
 
-                        val activity = LocalActivity.current
                         if (activity != null) {
                             CloseFullscreenIconButton(
                                 onClick = {
@@ -174,6 +175,12 @@ class MainPage : Page() {
                                 contentDescriptionRes = R.string.companion_mode_label_enter,
                             )
                         }
+
+                        SettingsIconButton(
+                            onClick = {
+                                viewModel.backStack += SettingsPage()
+                            },
+                        )
                     },
                 )
             },
