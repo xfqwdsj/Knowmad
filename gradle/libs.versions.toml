@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.20"
 kotlinx-coroutines = "1.10.2"
-kotlinx-serialization = "1.10.0"
+kotlinx-serialization = "1.11.0"
 kotlinx-collections-immutable = "0.4.0"
 kotlinx-datetime = "0.7.1"
 ksp = "2.3.5"
@@ -38,12 +38,12 @@ capsule = "1.1.1"
 backdrop = "2.0.0-alpha03"
 reorderable = "3.0.0"
 coil = "3.4.0"
-markdown = "0.39.2"
+markdown = "0.40.2"
 omnical = "0.1.0-alpha03"
 calendar = "2.10.1"
 tyme = "1.4.4"
 webview = "2.0.3"
-quickjs = "1.0.3"
+quickjs = "1.0.5"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }

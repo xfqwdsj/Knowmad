@@ -584,6 +584,7 @@ fun MarkdownParagraph(
         ) {
             MarkdownText(
                 styledText,
+                node,
                 modifier = modifier,
                 style = style,
             )
