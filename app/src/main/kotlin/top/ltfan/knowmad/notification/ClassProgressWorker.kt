@@ -129,6 +129,13 @@ class ClassProgressWorker(
             throw Failure()
         }
 
+        val validTimeRange =
+            (event.startTime - configuration.leadTime)..(event.endTime + configuration.stayDuration)
+        if (now !in validTimeRange) {
+            logger.debug { "Current time $now is outside of valid range $validTimeRange for event ${data.eventId}, skipping notification update" }
+            throw Failure()
+        }
+
         val currentPeriod = ((now - event.startTime) / configuration.updateInterval).toInt()
         val delayTime = (event.startTime + currentPeriod * configuration.updateInterval) - now
         delay(delayTime)
