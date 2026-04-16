@@ -29,6 +29,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerDefaults
@@ -70,15 +72,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.util.fastMap
-import androidx.compose.ui.util.fastMaxOfOrNull
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -328,22 +326,27 @@ fun AgentMainScreen(
                     }
                 }
             },
-            snackbarHost = {
-                if (LocalAgentScreenIsStandalone.current) {
-                    SnackbarHost()
-                }
-            },
-            containerColor = containerColor,
-            contentColor = ScaffoldContentColor,
-            contentWindowInsets = AppWindowInsets,
-        ) { scaffoldPaddingValues ->
-            val safeContentPadding = scaffoldPaddingValues + contentPadding
-            val contentPadding = safeContentPadding + PaddingValues(16.dp)
+            bottomBar = {
+                Box {
+                    Spacer(
+                        Modifier
+                            .matchParentSize()
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RectangleShape },
+                                effects = {
+                                    progressiveBlurWithFallback(
+                                        radius = 48.dp.toPx(),
+                                        data = LinearBrushData(
+                                            end = Offset(0f, POSITIVE_INFINITY),
+                                        ),
+                                    )
+                                },
+                                highlight = null,
+                                shadow = null,
+                            ),
+                    )
 
-            val messages = viewModel.currentMessagesFlow?.collectAsLazyPagingItems()
-
-            SubcomposeLayout { constraints ->
-                val inputPlaceables = subcompose("input") {
                     val coroutineScope = rememberCoroutineScope()
 
                     val interactiveHighlight = remember(coroutineScope) {
@@ -369,6 +372,8 @@ fun AgentMainScreen(
                                     top = 0.dp,
                                 ),
                             )
+                            .padding(16.dp)
+                            .windowInsetsPadding(AppWindowInsets.only { horizontal + bottom })
                             .fillMaxWidth()
                             .heightIn(max = 200.dp)
                             .padding(8.dp)
@@ -383,147 +388,102 @@ fun AgentMainScreen(
                             .then(interactiveHighlight.modifier)
                             .then(interactiveHighlight.gestureModifier),
                     )
-                }.fastMap { it.measure(constraints) }
-
-                val inputHeight = inputPlaceables.fastMaxOfOrNull { it.height } ?: 0
-
-                val scrimPlaceables = subcompose("scrim") {
-                    Column(Modifier.fillMaxSize()) {
-                        Spacer(
-                            Modifier
-                                .fillMaxSize()
-                                .drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { RectangleShape },
-                                    effects = {
-                                        progressiveBlurWithFallback(
-                                            radius = 48.dp.toPx(),
-                                            data = LinearBrushData(
-                                                end = Offset(0f, POSITIVE_INFINITY),
-                                            ),
-                                        )
-                                    },
-                                    highlight = null,
-                                    shadow = null,
-                                ),
-                        )
-                    }
-                }.fastMap {
-                    it.measure(
-                        constraints.copy(
-                            minHeight = inputHeight,
-                            maxHeight = inputHeight,
-                        ),
-                    )
                 }
-
-                val listPlaceables = subcompose("messageList") {
-                    val padding = contentPadding.copy(
-                        layoutDirection,
-                        bottom = inputHeight.toDp(),
-                    )
-
-                    if (messages == null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(padding),
-                        ) {
-
-                        }
-                        return@subcompose
-                    }
-
-                    val lazyListState = if (!isNewWindow) {
-                        rememberLazyListState(
-                            initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
-                            initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
-                        )
-                    } else {
-                        rememberLazyListState()
-                    }
-
-                    CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
-                        ChatMessageList(
-                            getMessageCount = { messages.itemCount },
-                            getMessageKey = messages.itemKey { it.key },
-                            getMessageAt = { viewModel.getMessage(messages[it]) },
-                            mathJaxRendererState = appViewModel.mathJaxRendererState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .layerBackdrop(backdrop),
-                            onPrevious = viewModel::messageOnPrevious,
-                            onNext = viewModel::messageOnNext,
-                            onRegenerate = viewModel::messageOnRegenerate,
-                            initialReasoningVisibility = viewModel.defaultReasoningVisibility,
-                            onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
-                            initialToolVisibility = viewModel.defaultToolVisibility,
-                            onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
-                            contentPadding = padding,
-                            lazyListState = lazyListState,
-                            assistantMessageStates = viewModel.assistantMessageStates,
-                            runnableCodeComponents = viewModel.runnableCodeComponents,
-                            runCode = viewModel::runAssistantCode,
-                        )
-                    }
-
-                    if (!isNewWindow) {
-                        LaunchedEffect(lazyListState) {
-                            snapshotFlow {
-                                lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
-                            }
-                                .collect { (index, offset) ->
-                                    viewModel.savedMessagesFirstVisibleItemIndex = index
-                                    viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
-                                }
-                        }
-                    }
-
-                    var isAtBottom by remember { mutableStateOf(true) }
-
-                    val isScrolling = lazyListState.isScrollInProgress
-                    LaunchedEffect(isScrolling) {
-                        if (!isScrolling) {
-                            isAtBottom =
-                                lazyListState.firstVisibleItemIndex == 0 &&
-                                        lazyListState.firstVisibleItemScrollOffset == 0
-                        }
-                    }
-
-                    val currentFirstMessageKey = messages.itemSnapshotList.firstOrNull()?.key
-                    LaunchedEffect(currentFirstMessageKey) {
-                        if (isAtBottom) {
-                            lazyListState.animateScrollToItem(0)
-                        }
-                    }
-
-                    var isFirstTimeScroll by remember { mutableStateOf(true) }
-                    LaunchedEffect(viewModel.currentConversationId) {
-                        if (isFirstTimeScroll) {
-                            isFirstTimeScroll = false
-                            return@LaunchedEffect
-                        }
-                        lazyListState.requestScrollToItem(0)
-                    }
-                }.fastMap { it.measure(constraints) }
-
-                layout(constraints.maxWidth, constraints.maxHeight) {
-                    listPlaceables.fastForEach {
-                        it.placeRelative(0, 0)
-                    }
-                    scrimPlaceables.fastForEach {
-                        it.placeRelative(
-                            0,
-                            constraints.maxHeight - it.height,
-                        )
-                    }
-                    inputPlaceables.fastForEach {
-                        it.placeRelative(
-                            (constraints.maxWidth - it.width) / 2,
-                            constraints.maxHeight - it.height,
-                        )
-                    }
+            },
+            snackbarHost = {
+                if (LocalAgentScreenIsStandalone.current) {
+                    SnackbarHost()
                 }
+            },
+            containerColor = containerColor,
+            contentColor = ScaffoldContentColor,
+            contentWindowInsets = AppWindowInsets,
+        ) { scaffoldPadding ->
+            val contentPadding = scaffoldPadding + contentPadding + PaddingValues(16.dp)
+
+            val messages = viewModel.currentMessagesFlow?.collectAsLazyPagingItems()
+
+            if (messages == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                ) {
+
+                }
+                return@Scaffold
+            }
+
+            val lazyListState = if (!isNewWindow) {
+                rememberLazyListState(
+                    initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
+                    initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
+                )
+            } else {
+                rememberLazyListState()
+            }
+
+            CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
+                ChatMessageList(
+                    getMessageCount = { messages.itemCount },
+                    getMessageKey = messages.itemKey { it.key },
+                    getMessageAt = { viewModel.getMessage(messages[it]) },
+                    mathJaxRendererState = appViewModel.mathJaxRendererState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(backdrop),
+                    onPrevious = viewModel::messageOnPrevious,
+                    onNext = viewModel::messageOnNext,
+                    onRegenerate = viewModel::messageOnRegenerate,
+                    initialReasoningVisibility = viewModel.defaultReasoningVisibility,
+                    onAnyReasoningVisibilityChange = viewModel::defaultReasoningVisibility::set,
+                    initialToolVisibility = viewModel.defaultToolVisibility,
+                    onAnyToolVisibilityChange = viewModel::defaultToolVisibility::set,
+                    contentPadding = contentPadding,
+                    lazyListState = lazyListState,
+                    assistantMessageStates = viewModel.assistantMessageStates,
+                    runnableCodeComponents = viewModel.runnableCodeComponents,
+                    runCode = viewModel::runAssistantCode,
+                )
+            }
+
+            if (!isNewWindow) {
+                LaunchedEffect(lazyListState) {
+                    snapshotFlow {
+                        lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
+                    }
+                        .collect { (index, offset) ->
+                            viewModel.savedMessagesFirstVisibleItemIndex = index
+                            viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
+                        }
+                }
+            }
+
+            var isAtBottom by remember { mutableStateOf(true) }
+
+            val isScrolling = lazyListState.isScrollInProgress
+            LaunchedEffect(isScrolling) {
+                if (!isScrolling) {
+                    isAtBottom =
+                        lazyListState.firstVisibleItemIndex == 0 &&
+                                lazyListState.firstVisibleItemScrollOffset == 0
+                }
+            }
+
+            val currentFirstMessageKey = messages.itemSnapshotList.firstOrNull()?.key
+            LaunchedEffect(currentFirstMessageKey) {
+                if (isAtBottom) {
+                    lazyListState.animateScrollToItem(0)
+                }
+            }
+
+            var isFirstTimeScroll by remember { mutableStateOf(true) }
+            LaunchedEffect(viewModel.currentConversationId) {
+                if (isFirstTimeScroll) {
+                    isFirstTimeScroll = false
+                    return@LaunchedEffect
+                }
+                lazyListState.requestScrollToItem(0)
             }
         }
     }
