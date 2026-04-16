@@ -236,8 +236,8 @@ abstract class DataStoreCompanion<T> {
 
     private var _instance: AppDataStore<T>? = null
 
-    context(context: Context)
     fun createDataStore(
+        context: Context,
         coroutineScope: CoroutineScope,
     ) = synchronized(lock) {
         _instance ?: AppDataStore(
@@ -250,14 +250,20 @@ abstract class DataStoreCompanion<T> {
         }
     }
 
-    @JvmName("_createDataStore")
+    @JvmName("_createDataStore_context")
+    context(context: Context)
+    fun createDataStore(coroutineScope: CoroutineScope) = createDataStore(context, coroutineScope)
+
+    @JvmName("_createDataStore_coroutineScope")
+    context(coroutineScope: CoroutineScope)
+    fun createDataStore(context: Context) = createDataStore(context, coroutineScope)
+
+    @JvmName("_createDataStore_context_coroutineScope")
     context(context: Context, coroutineScope: CoroutineScope)
-    fun createDataStore() = context(context) { createDataStore(coroutineScope) }
+    fun createDataStore() = createDataStore(context, coroutineScope)
 
     context(viewModel: AndroidViewModel<*>)
-    fun createDataStore() = context(viewModel.application) {
-        createDataStore(viewModel.viewModelScope)
-    }
+    fun createDataStore() = createDataStore(viewModel.application, viewModel.viewModelScope)
 
     context(lifecycle: LifecycleOwner, context: Context)
     fun createDataStore() = createDataStore(lifecycle.lifecycleScope)
