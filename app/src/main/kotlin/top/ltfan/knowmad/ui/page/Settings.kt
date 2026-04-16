@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.ui.component.ArrowBackIconButton
@@ -51,6 +53,7 @@ import top.ltfan.knowmad.ui.component.ModelSelectorDropdownMenuContent
 import top.ltfan.knowmad.ui.component.SettingItemDropdown
 import top.ltfan.knowmad.ui.component.SettingsBadge
 import top.ltfan.knowmad.ui.component.SettingsItemSwitch
+import top.ltfan.knowmad.ui.component.SettingsItemTimePicker
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsLight
@@ -318,6 +321,22 @@ class SettingsPage : Page() {
                     onCheckedChange = viewModel::nextSuggestionEnabled::set,
                     summary = stringResource(R.string.settings_next_suggestion_enabled_summary),
                 )
+                run {
+                    val time = viewModel.nextSuggestionFallbackTime
+                    val state = rememberTimePickerState(
+                        initialHour = time.hour,
+                        initialMinute = time.minute,
+                    )
+                    SettingsItemTimePicker(
+                        title = stringResource(R.string.settings_next_suggestion_fallback_time_label),
+                        state = state,
+                        onConfirm = {
+                            viewModel.nextSuggestionFallbackTime =
+                                LocalTime(state.hour, state.minute)
+                        },
+                        summary = stringResource(R.string.settings_next_suggestion_fallback_time_summary),
+                    )
+                }
             }
         }
     }

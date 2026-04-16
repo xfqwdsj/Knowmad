@@ -38,6 +38,8 @@
     <string name="settings_chat_default_tool_visibility_summary">启用后，聊天中的工具消息将默认展开，方便您查看模型使用工具的过程和结果</string>
     <string name="settings_next_suggestion_enabled_label">启用下一步建议</string>
     <string name="settings_next_suggestion_enabled_summary">启用后，诺玛将在合适的时机为您提供建议</string>
+    <string name="settings_next_suggestion_fallback_time_label">默认生成时间</string>
+    <string name="settings_next_suggestion_fallback_time_summary">如果生成建议的时间链条意外断裂，诺玛将在每天的这个时间重新开始生成建议，确保您每天都能收到建议</string>
     <string name="settings_class_progress_enabled_label">启用上课进度通知</string>
     <string name="settings_class_progress_enabled_summary">启用后，我们将会为您推送实时上课进度通知，帮助您更好地掌握课程进度</string>
 </resources>

@@ -121,6 +121,11 @@ class AppViewModel(
         transformOut = { copy(enabled = it) },
     )
 
+    var nextSuggestionFallbackTime by nextSuggestionConfiguration.transform(
+        transformIn = { fallbackTime },
+        transformOut = { copy(fallbackTime = it) },
+    )
+
     private val classProgressConfigurationStore = ClassProgressConfiguration.createDataStore()
     private val classProgressConfigurationFlow = classProgressConfigurationStore.dataStateFlow()
     private val classProgressConfiguration =

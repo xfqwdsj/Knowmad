@@ -38,6 +38,8 @@
     <string name="settings_chat_default_tool_visibility_summary">When enabled, tool messages in chats will be expanded by default, making it easier for you to see the process and results of the model using tools</string>
     <string name="settings_next_suggestion_enabled_label">Enable Next Step Suggestions</string>
     <string name="settings_next_suggestion_enabled_summary">When enabled, Noma will provide suggestions at appropriate times</string>
+    <string name="settings_next_suggestion_fallback_time_label">Default Generation Time</string>
+    <string name="settings_next_suggestion_fallback_time_summary">If the time chain for generating suggestions is unexpectedly broken, Noma will restart generating suggestions at this time every day to ensure that you receive suggestions every day</string>
     <string name="settings_class_progress_enabled_label">Enable Class Progress Notifications</string>
     <string name="settings_class_progress_enabled_summary">When enabled, we will send you real-time class progress notifications to help you better keep track of your course progress</string>
 </resources>
