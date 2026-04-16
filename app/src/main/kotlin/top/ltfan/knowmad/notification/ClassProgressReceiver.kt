@@ -29,14 +29,12 @@ import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
 import androidx.work.WorkManager
+import kotlinx.coroutines.flow.first
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.schedule.Event
+import top.ltfan.knowmad.data.task.ClassProgressConfiguration
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -54,33 +52,11 @@ class ClassProgressReceiver : BroadcastReceiver() {
         const val ACTION_SCHEDULE = "SCHEDULE"
         const val ACTION_SHOW = "SHOW"
 
-        const val EXTRA_UPDATE_INTERVAL = "EXTRA_UPDATE_INTERVAL"
-
-        const val EXTRA_LEAD_TIME = "EXTRA_LEAD_TIME"
-        const val EXTRA_HORIZON = "EXTRA_HORIZON"
-
         const val EXTRA_EVENT_ID = "EXTRA_EVENT_ID"
-        const val EXTRA_END_THRESHOLD = "EXTRA_END_THRESHOLD"
-        const val EXTRA_STAY_DURATION = "EXTRA_STAY_DURATION"
-
-        @Suppress("NOTHING_TO_INLINE")
-        private inline fun Context.getScheduleIntent(
-            leadTime: Duration,
-            horizon: Duration,
-            updateInterval: Duration,
-        ) = Intent(applicationContext, ClassProgressReceiver::class.java).apply {
-            action = ACTION_SCHEDULE
-            putExtra(EXTRA_LEAD_TIME, leadTime.inWholeMilliseconds)
-            putExtra(EXTRA_HORIZON, horizon.inWholeMilliseconds)
-            putExtra(EXTRA_UPDATE_INTERVAL, updateInterval.inWholeMilliseconds)
-        }
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun Context.getShowPendingIntent(
             eventId: Uuid,
-            endThreshold: Duration,
-            stayDuration: Duration,
-            updateInterval: Duration,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) = PendingIntentCompat.getBroadcast(
             applicationContext,
@@ -88,32 +64,27 @@ class ClassProgressReceiver : BroadcastReceiver() {
             Intent(applicationContext, ClassProgressReceiver::class.java).apply {
                 action = ACTION_SHOW
                 putExtra(EXTRA_EVENT_ID, eventId.toString())
-                putExtra(EXTRA_END_THRESHOLD, endThreshold.inWholeMilliseconds)
-                putExtra(EXTRA_STAY_DURATION, stayDuration.inWholeMilliseconds)
-                putExtra(EXTRA_UPDATE_INTERVAL, updateInterval.inWholeMilliseconds)
             },
             flags,
             false,
         )
 
-        fun Context.scheduleClassProgressNotificationScheduling(
-            leadTime: Duration = 30.minutes,
-            horizon: Duration = 7.days,
-            updateInterval: Duration = 1.minutes,
+        suspend fun Context.scheduleClassProgressNotificationScheduling(
             runImmediately: Boolean = true,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
-            buildCalendar: Calendar.() -> Unit = {
-                set(Calendar.HOUR_OF_DAY, 7)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                if (before(Calendar.getInstance())) {
-                    add(Calendar.DATE, 1)
-                }
-            },
         ) {
             val context = applicationContext
 
-            val intent = context.getScheduleIntent(leadTime, horizon, updateInterval)
+            val configuration = ClassProgressConfiguration.createDataStore().data.first()
+
+            if (!configuration.enabled) {
+                logger.debug { "Class progress notification is disabled in configuration, skipping scheduling" }
+                return
+            }
+
+            val intent = Intent(context, ClassProgressReceiver::class.java).apply {
+                action = ACTION_SCHEDULE
+            }
 
             if (runImmediately) {
                 logger.debug { "Running class progress notification scheduling immediately" }
@@ -130,7 +101,16 @@ class ClassProgressReceiver : BroadcastReceiver() {
                 return
             }
 
-            val calendar = Calendar.getInstance().apply(buildCalendar)
+            val scheduledTime = configuration.scheduledUpdateTime
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, scheduledTime.hour)
+                set(Calendar.MINUTE, scheduledTime.minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (before(Calendar.getInstance())) {
+                    add(Calendar.DATE, 1)
+                }
+            }
 
             val pendingIntent = PendingIntentCompat.getBroadcast(
                 context, 0, intent, flags, false,
@@ -149,18 +129,20 @@ class ClassProgressReceiver : BroadcastReceiver() {
         }
 
         suspend fun Context.scheduleClassProgressNotification(
-            leadTime: Duration = 30.minutes,
-            horizon: Duration = 7.days,
             now: Instant = Clock.System.now(),
-            endThreshold: Duration = 5.minutes,
-            stayDuration: Duration = 5.minutes,
-            updateInterval: Duration = 1.minutes,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
         ) {
             val context = applicationContext
+            val configuration = ClassProgressConfiguration.createDataStore().data.first()
+
+            if (!configuration.enabled) {
+                logger.debug { "Class progress notification is disabled in configuration, skipping scheduling" }
+                return
+            }
+
             val dao = context.appDatabase.scheduleDao()
 
-            val queryEndTime = now + horizon
+            val queryEndTime = now + configuration.schedulingHorizon
 
             val events = dao.getEventsInRange(now, queryEndTime)
                 .filterIsInstance<Event.Course>()
@@ -181,14 +163,11 @@ class ClassProgressReceiver : BroadcastReceiver() {
 
             events.fastForEach { event ->
                 val eventId = event.id
-                val scheduledTime = event.startTime - leadTime
+                val scheduledTime = event.startTime - configuration.leadTime
 
                 val showIntent = context.getShowPendingIntent(
-                    eventId,
-                    endThreshold,
-                    stayDuration,
-                    updateInterval,
-                    flags,
+                    eventId = eventId,
+                    flags = flags,
                 ) ?: run {
                     logger.warn { "Failed to create show intent for event $eventId, skipping scheduling notification" }
                     return@fastForEach
@@ -213,15 +192,7 @@ class ClassProgressReceiver : BroadcastReceiver() {
 
             when (intent.action) {
                 ACTION_SCHEDULE -> {
-                    val leadTime = intent.getLongExtra(EXTRA_LEAD_TIME, 0).milliseconds
-                    val horizon = intent.getLongExtra(EXTRA_HORIZON, 0).milliseconds
-                    val updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds
-
-                    val data = ClassProgressWorker.Data.Schedule(
-                        leadTime = leadTime,
-                        horizon = horizon,
-                        updateInterval = updateInterval,
-                    )
+                    val data = ClassProgressWorker.Data.Schedule
 
                     val request = ClassProgressWorker.buildRequest(data)
                     manager.enqueueUniqueWork(
@@ -233,16 +204,8 @@ class ClassProgressReceiver : BroadcastReceiver() {
 
                 ACTION_SHOW -> {
                     val eventId = Uuid.parse(intent.getStringExtra(EXTRA_EVENT_ID) ?: return)
-                    val endThreshold = intent.getLongExtra(EXTRA_END_THRESHOLD, 0).milliseconds
-                    val stayDuration = intent.getLongExtra(EXTRA_STAY_DURATION, 0).milliseconds
-                    val updateInterval = intent.getLongExtra(EXTRA_UPDATE_INTERVAL, 0).milliseconds
 
-                    val data = ClassProgressWorker.Data.Show(
-                        eventId = eventId,
-                        endThreshold = endThreshold,
-                        stayDuration = stayDuration,
-                        updateInterval = updateInterval,
-                    )
+                    val data = ClassProgressWorker.Data.Show(eventId)
 
                     val request = ClassProgressWorker.buildRequest(data)
                     manager.enqueueUniqueWork(

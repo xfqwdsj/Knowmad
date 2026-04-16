@@ -56,7 +56,9 @@ import top.ltfan.knowmad.data.task.NextSuggestionConfiguration
 import top.ltfan.knowmad.data.transform
 import top.ltfan.knowmad.data.wizard.FirstJoinedData
 import top.ltfan.knowmad.data.wizard.WizardState
+import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.notification.NextSuggestionNotification
+import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.ui.component.CalendarState
 import top.ltfan.knowmad.ui.component.MathJaxRenderer
 import top.ltfan.knowmad.ui.component.MathJaxRendererState
@@ -116,6 +118,14 @@ class AppViewModel(
     private val nextSuggestionConfiguration =
         nextSuggestionConfigurationStore.asMutableState(nextSuggestionConfigurationFlow.value)
 
+    init {
+        viewModelScope.launch {
+            nextSuggestionConfigurationStore.data.collect {
+                application.scheduleNextSuggestionGeneration()
+            }
+        }
+    }
+
     var nextSuggestionEnabled by nextSuggestionConfiguration.transform(
         transformIn = { enabled },
         transformOut = { copy(enabled = it) },
@@ -130,6 +140,14 @@ class AppViewModel(
     private val classProgressConfigurationFlow = classProgressConfigurationStore.dataStateFlow()
     private val classProgressConfiguration =
         classProgressConfigurationStore.asMutableState(classProgressConfigurationFlow.value)
+
+    init {
+        viewModelScope.launch {
+            classProgressConfigurationStore.data.collect {
+                application.scheduleClassProgressNotificationScheduling()
+            }
+        }
+    }
 
     var classProgressEnabled by classProgressConfiguration.transform(
         transformIn = { enabled },

@@ -23,20 +23,25 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.database.sqlite.SQLiteConstraintException
 import android.icu.util.Calendar
 import android.os.SystemClock
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.getSystemService
 import androidx.work.WorkManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.suggestion.PendingSuggestionEntity
 import top.ltfan.knowmad.data.suggestion.SuggestionDao
+import top.ltfan.knowmad.data.task.NextSuggestionConfiguration
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.tryWithLock
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -133,20 +138,48 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
             )
         }
 
+        suspend fun Context.cancelNextSuggestionGeneration() {
+            val dao = applicationContext.appDatabase.suggestionDao()
+
+            val deleted = dao.deleteAllPendingSuggestions()
+            if (deleted > 0) {
+                logger.debug { "Deleted $deleted pending suggestions from database when canceling next suggestion generation" }
+            }
+
+            val pendingIntent = getGenerationIntent(
+                pendingSuggestionId = null,
+                prompt = null,
+            ) ?: run {
+                logger.warn { "Failed to create pending intent for canceling next suggestion generation, cannot cancel" }
+                return
+            }
+
+            val alarmManager = getSystemService<AlarmManager>() ?: run {
+                logger.error { "Failed to get AlarmManager for canceling next suggestion generation" }
+                return
+            }
+
+            logger.debug { "Canceling scheduled next suggestion generation" }
+            alarmManager.cancel(pendingIntent)
+        }
+
+        private val schedulingMutex = Mutex()
         suspend fun Context.scheduleNextSuggestionGeneration(
             prompt: String? = null,
             override: Boolean = true,
             @PendingIntentCompat.Flags flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
-            buildCalendar: Calendar.() -> Unit = {
-                set(Calendar.HOUR_OF_DAY, 7)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                if (before(Calendar.getInstance())) {
-                    add(Calendar.DATE, 1)
-                }
-            },
-        ) {
+            buildCalendar: (Calendar.() -> Unit)? = null,
+        ): Unit = schedulingMutex.tryWithLock {
             val context = applicationContext
+
+            val configuration = NextSuggestionConfiguration.createDataStore(context).data.first()
+
+            if (!configuration.enabled) {
+                logger.debug { "Next suggestion generation is disabled in configuration, skipping scheduling" }
+                cancelNextSuggestionGeneration()
+                return
+            }
+
             val dao = context.appDatabase.suggestionDao()
 
             if (!override) {
@@ -167,15 +200,40 @@ class SuggestionRequestReceiver : BroadcastReceiver() {
 
             val prompt = prompt ?: defaultPrompt
 
-            val calendar = Calendar.getInstance().apply(buildCalendar)
+            val calendar = Calendar.getInstance().apply {
+                if (buildCalendar != null) {
+                    buildCalendar()
+                    return@apply
+                }
+
+                val scheduledTime = configuration.fallbackTime
+                set(Calendar.HOUR_OF_DAY, scheduledTime.hour)
+                set(Calendar.MINUTE, scheduledTime.minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (before(Calendar.getInstance())) {
+                    add(Calendar.DATE, 1)
+                }
+            }
             val time = Instant.fromEpochMilliseconds(calendar.timeInMillis)
             val pendingSuggestion = PendingSuggestionEntity(
                 expected = time,
                 prompt = prompt,
             )
-            dao.insertPendingSuggestion(pendingSuggestion)
+
+            try {
+                dao.insertPendingSuggestion(pendingSuggestion)
+            } catch (e: SQLiteConstraintException) {
+                logger.warn(e) { "Failed to insert pending suggestion due to constraint violation, this would never happen under normal circumstances " }
+                return
+            } catch (e: Throwable) {
+                logger.error(e) { "Failed to insert pending suggestion for next suggestion generation" }
+                return
+            }
 
             context.scheduleSuggestionGenerationAlarm(pendingSuggestion, flags)
+        } ?: run {
+            logger.debug { "Another scheduling operation is in progress, skipping this scheduling request" }
         }
 
         fun Context.enqueueSuggestionRequestHandling(intent: Intent) {

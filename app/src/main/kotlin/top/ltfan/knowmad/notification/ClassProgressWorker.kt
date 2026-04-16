@@ -25,18 +25,19 @@ import androidx.work.CoroutineWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
+import top.ltfan.knowmad.data.task.ClassProgressConfiguration
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotification
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.time.times
 import kotlin.uuid.Uuid
@@ -59,17 +60,8 @@ class ClassProgressWorker(
         }
 
         if (data is Schedule) {
-            context.scheduleClassProgressNotification(
-                leadTime = data.leadTime,
-                horizon = data.horizon,
-                updateInterval = data.updateInterval,
-            )
-            context.scheduleClassProgressNotificationScheduling(
-                leadTime = data.leadTime,
-                horizon = data.horizon,
-                updateInterval = data.updateInterval,
-                runImmediately = false,
-            )
+            context.scheduleClassProgressNotification()
+            context.scheduleClassProgressNotificationScheduling(runImmediately = false)
             return Result.success()
         }
 
@@ -78,7 +70,15 @@ class ClassProgressWorker(
             return Result.failure()
         }
 
-        val notificationData = buildNotificationData(data) ?: return Result.success()
+        val notificationData = try {
+            buildNotificationData(data) ?: run {
+                logger.debug { "Class with ID ${data.eventId} ended, no need to show notification" }
+                return Result.success()
+            }
+        } catch (_: Failure) {
+            logger.debug { "Stopping ClassProgressWorker due to failure in building notification data" }
+            return Result.failure()
+        }
 
         context.withClassProgressNotification(notificationData) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -110,6 +110,13 @@ class ClassProgressWorker(
     ): ClassProgressNotificationData? {
         val context = applicationContext
 
+        val configuration = ClassProgressConfiguration.createDataStore(context).data.first()
+
+        if (!configuration.enabled) {
+            logger.debug { "Class progress notification is disabled in configuration, skipping notification update" }
+            throw Failure()
+        }
+
         val dao = context.appDatabase.scheduleDao()
 
         val event = dao.getEventById(data.eventId) ?: run {
@@ -122,14 +129,14 @@ class ClassProgressWorker(
             throw Failure()
         }
 
-        val currentPeriod = ((now - event.startTime) / data.updateInterval).toInt()
-        val delayTime = (event.startTime + currentPeriod * data.updateInterval) - now
+        val currentPeriod = ((now - event.startTime) / configuration.updateInterval).toInt()
+        val delayTime = (event.startTime + currentPeriod * configuration.updateInterval) - now
         delay(delayTime)
 
         return when {
             now > event.endTime -> {
                 val time = now - event.endTime
-                if (time > data.stayDuration) return null
+                if (time > configuration.stayDuration) return null
 
                 ClassProgressNotificationData(
                     eventId = data.eventId,
@@ -166,7 +173,7 @@ class ClassProgressWorker(
                     ((started / totalDuration) * 100).toInt().coerceIn(0, 100)
                 } else 100
 
-                if (remaining <= data.endThreshold) {
+                if (remaining <= configuration.endThreshold) {
                     ClassProgressNotificationData(
                         eventId = data.eventId,
                         status = context.getString(R.string.schedule_class_status_label_close_to_end),
@@ -209,18 +216,9 @@ class ClassProgressWorker(
     @Serializable
     sealed interface Data {
         @Serializable
-        data class Schedule(
-            val leadTime: Duration,
-            val horizon: Duration,
-            val updateInterval: Duration,
-        ) : Data
+        data object Schedule : Data
 
         @Serializable
-        data class Show(
-            val eventId: Uuid,
-            val endThreshold: Duration,
-            val stayDuration: Duration,
-            val updateInterval: Duration,
-        ) : Data
+        data class Show(val eventId: Uuid) : Data
     }
 }
