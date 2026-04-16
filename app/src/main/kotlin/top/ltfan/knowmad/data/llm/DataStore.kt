@@ -25,6 +25,7 @@ import kotlin.uuid.Uuid
 @Serializable
 data class LLMData(
     val conversationNameGenerationModelId: Uuid? = null,
+    val conversationSummaryGenerationModelId: Uuid? = null,
     val recurrenceRuleSummaryGenerationModelId: Uuid? = null,
     val errorExplanationModelId: Uuid? = null,
     val nextSuggestionGenerationModelId: Uuid? = null,

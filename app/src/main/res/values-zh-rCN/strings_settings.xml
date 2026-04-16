@@ -26,6 +26,8 @@
     <string name="settings_model_label_not_set">未设置</string>
     <string name="settings_model_conversation_name_generation_label">对话名称生成</string>
     <string name="settings_model_conversation_name_generation_summary">用于生成对话名称的模型</string>
+    <string name="settings_model_conversation_summary_generation_label">对话摘要生成</string>
+    <string name="settings_model_conversation_summary_generation_summary">用于生成对话摘要的模型</string>
     <string name="settings_model_recurrence_rule_summary_generation_label">重复规则摘要生成</string>
     <string name="settings_model_recurrence_rule_summary_generation_summary">用于对日程重复规则生成摘要的模型</string>
     <string name="settings_model_error_explanation_label">错误解释</string>

@@ -26,6 +26,8 @@
     <string name="settings_model_label_not_set">Not Set</string>
     <string name="settings_model_conversation_name_generation_label">Conversation Name Generation</string>
     <string name="settings_model_conversation_name_generation_summary">Model used for generating conversation names</string>
+    <string name="settings_model_conversation_summary_generation_label">Conversation Summary Generation</string>
+    <string name="settings_model_conversation_summary_generation_summary">Model used for generating conversation summaries</string>
     <string name="settings_model_recurrence_rule_summary_generation_label">Recurrence Rule Summary Generation</string>
     <string name="settings_model_recurrence_rule_summary_generation_summary">Model used for generating summaries of schedule recurrence rules</string>
     <string name="settings_model_error_explanation_label">Error Explanation</string>

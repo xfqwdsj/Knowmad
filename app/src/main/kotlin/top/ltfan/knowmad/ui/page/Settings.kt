@@ -201,6 +201,36 @@ class SettingsPage : Page() {
 
                 run {
                     val model: LLMConfigEntity? by produceState(null) {
+                        viewModel.llmDataStateFlow.map { it.conversationSummaryGenerationModelId }
+                            .distinctUntilChanged()
+                            .map { it?.let { id -> viewModel.llmConfigDao.getModelById(id) } }
+                            .collect { value = it }
+                    }
+                    var showMenu by remember { mutableStateOf(false) }
+                    SettingItemDropdown(
+                        title = stringResource(R.string.settings_model_conversation_summary_generation_label),
+                        selectedValue = model?.name
+                            ?: stringResource(R.string.settings_model_label_not_set),
+                        showMenu = showMenu,
+                        onShowMenuChange = { showMenu = it },
+                        overlineContent = mediumBadge,
+                        summary = stringResource(R.string.settings_model_conversation_summary_generation_summary),
+                    ) {
+                        ModelSelectorDropdownMenuContent(
+                            showMenu = showMenu,
+                            onShowMenuChange = { showMenu = it },
+                            providers = viewModel.providers,
+                            getModels = viewModel::getModels,
+                            onSelectModel = { selectedModel ->
+                                viewModel.conversationSummaryGenerationModelId = selectedModel.id
+                                showMenu = false
+                            },
+                        )
+                    }
+                }
+
+                run {
+                    val model: LLMConfigEntity? by produceState(null) {
                         viewModel.llmDataStateFlow.map { it.recurrenceRuleSummaryGenerationModelId }
                             .distinctUntilChanged()
                             .map { it?.let { id -> viewModel.llmConfigDao.getModelById(id) } }
