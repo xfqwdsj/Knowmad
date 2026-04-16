@@ -228,6 +228,10 @@ class DataStoreMutableStateProperty<T>(
 }
 
 abstract class DataStoreCompanion<T> {
+    companion object {
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    }
+
     abstract val fileName: String
     abstract val default: T
     abstract fun serializer(): KSerializer<T>
@@ -236,15 +240,13 @@ abstract class DataStoreCompanion<T> {
 
     private var _instance: AppDataStore<T>? = null
 
-    fun createDataStore(
-        context: Context,
-        coroutineScope: CoroutineScope,
-    ) = synchronized(lock) {
+    fun createDataStore(context: Context) = synchronized(lock) {
+        val context = context.applicationContext
         _instance ?: AppDataStore(
             serializer = serializer(),
             defaultValue = default,
-            scope = coroutineScope + Dispatchers.IO,
-            produceFile = { context.applicationContext.dataStoreFile(fileName) },
+            scope = scope,
+            produceFile = { context.dataStoreFile(fileName) },
         ).also {
             _instance = it
         }
@@ -252,29 +254,21 @@ abstract class DataStoreCompanion<T> {
 
     @JvmName("_createDataStore_context")
     context(context: Context)
-    fun createDataStore(coroutineScope: CoroutineScope) = createDataStore(context, coroutineScope)
-
-    @JvmName("_createDataStore_coroutineScope")
-    context(coroutineScope: CoroutineScope)
-    fun createDataStore(context: Context) = createDataStore(context, coroutineScope)
-
-    @JvmName("_createDataStore_context_coroutineScope")
-    context(context: Context, coroutineScope: CoroutineScope)
-    fun createDataStore() = createDataStore(context, coroutineScope)
+    fun createDataStore() = createDataStore(context)
 
     context(viewModel: AndroidViewModel<*>)
-    fun createDataStore() = createDataStore(viewModel.application, viewModel.viewModelScope)
+    fun createDataStore() = createDataStore(viewModel.application)
 
-    context(lifecycle: LifecycleOwner, context: Context)
-    fun createDataStore() = createDataStore(lifecycle.lifecycleScope)
-
-    context(viewModel: AndroidViewModel<*>)
-    fun deleteFile() {
-        val file = viewModel.application.dataStoreFile(fileName)
+    fun deleteFile(context: Context) {
+        val file = context.dataStoreFile(fileName)
         if (file.exists()) {
             file.delete()
         }
     }
+
+    @JvmName("_deleteFile_context")
+    context(context: Context)
+    fun deleteFile() = deleteFile(context)
 }
 
 class DatastoreSerializer<T>(
