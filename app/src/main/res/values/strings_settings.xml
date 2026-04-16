@@ -32,6 +32,10 @@
     <string name="settings_model_error_explanation_summary">Model used for explaining errors</string>
     <string name="settings_model_next_suggestion_generation_label">Next Suggestion Generation</string>
     <string name="settings_model_next_suggestion_generation_summary">Model used for generating next step suggestions</string>
+    <string name="settings_chat_default_reasoning_visibility_label">Expand Reasoning Messages by Default</string>
+    <string name="settings_chat_default_reasoning_visibility_summary">When enabled, reasoning messages in chats will be expanded by default, making it easier for you to see the model\'s thought process</string>
+    <string name="settings_chat_default_tool_visibility_label">Expand Tool Messages by Default</string>
+    <string name="settings_chat_default_tool_visibility_summary">When enabled, tool messages in chats will be expanded by default, making it easier for you to see the process and results of the model using tools</string>
     <string name="settings_next_suggestion_enabled_label">Enable Next Step Suggestions</string>
     <string name="settings_next_suggestion_enabled_summary">When enabled, Noma will provide suggestions at appropriate times</string>
     <string name="settings_class_progress_enabled_label">Enable Class Progress Notifications</string>

@@ -32,6 +32,10 @@
     <string name="settings_model_error_explanation_summary">用于解释错误的模型</string>
     <string name="settings_model_next_suggestion_generation_label">下一步建议生成</string>
     <string name="settings_model_next_suggestion_generation_summary">用于生成下一步建议的模型</string>
+    <string name="settings_chat_default_reasoning_visibility_label">默认展开推理消息</string>
+    <string name="settings_chat_default_reasoning_visibility_summary">启用后，聊天中的推理消息将默认展开，方便您查看模型的思考过程</string>
+    <string name="settings_chat_default_tool_visibility_label">默认展开工具消息</string>
+    <string name="settings_chat_default_tool_visibility_summary">启用后，聊天中的工具消息将默认展开，方便您查看模型使用工具的过程和结果</string>
     <string name="settings_next_suggestion_enabled_label">启用下一步建议</string>
     <string name="settings_next_suggestion_enabled_summary">启用后，诺玛将在合适的时机为您提供建议</string>
     <string name="settings_class_progress_enabled_label">启用上课进度通知</string>

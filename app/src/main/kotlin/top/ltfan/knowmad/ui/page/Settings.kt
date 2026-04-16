@@ -122,6 +122,7 @@ class SettingsPage : Page() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 modelSettings()
+                chatSettings()
                 nextSuggestionSettings()
                 classProgressSettings()
             }
@@ -279,6 +280,28 @@ class SettingsPage : Page() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun LazyListScope.chatSettings() {
+        item {
+            val viewModel = LocalAgentViewModel.current
+
+            Card {
+                SettingsItemSwitch(
+                    title = stringResource(R.string.settings_chat_default_reasoning_visibility_label),
+                    checked = viewModel.defaultReasoningVisibility,
+                    onCheckedChange = viewModel::defaultReasoningVisibility::set,
+                    summary = stringResource(R.string.settings_chat_default_reasoning_visibility_summary),
+                )
+                SettingsItemSwitch(
+                    title = stringResource(R.string.settings_chat_default_tool_visibility_label),
+                    checked = viewModel.defaultToolVisibility,
+                    onCheckedChange = viewModel::defaultToolVisibility::set,
+                    summary = stringResource(R.string.settings_chat_default_tool_visibility_summary),
+                )
             }
         }
     }
