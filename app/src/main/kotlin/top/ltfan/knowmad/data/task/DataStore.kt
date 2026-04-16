@@ -40,8 +40,8 @@ data class NextSuggestionConfiguration(
 data class ClassProgressConfiguration(
     val enabled: Boolean = true,
     val scheduledUpdateTime: LocalTime = LocalTime(7, 0),
-    val leadTime: Duration = 30.minutes,
     val schedulingHorizon: Duration = 7.days,
+    val leadTime: Duration = 30.minutes,
     val endThreshold: Duration = 5.minutes,
     val stayDuration: Duration = 5.minutes,
     val updateInterval: Duration = 1.minutes,
