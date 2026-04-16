@@ -331,6 +331,30 @@ fun OpenUriIconButton(
 }
 
 @Composable
+fun ArrowDropUpIcon(
+    modifier: Modifier = Modifier,
+    @StringRes contentDescriptionRes: Int? = R.string.label_collapse,
+) {
+    Icon(
+        painterResource(R.drawable.arrow_drop_up_24px),
+        contentDescription = contentDescriptionRes?.let { stringResource(it) },
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ArrowDropDownIcon(
+    modifier: Modifier = Modifier,
+    @StringRes contentDescriptionRes: Int? = R.string.label_expand,
+) {
+    Icon(
+        painterResource(R.drawable.arrow_drop_down_24px),
+        contentDescription = contentDescriptionRes?.let { stringResource(it) },
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun ExpandOrCollapseIconButton(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
@@ -371,21 +395,17 @@ fun ExpandOrCollapseIconButton(
                 targetState = expanded,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
             ) { expanded ->
-                Icon(
-                    painterResource(
-                        if (!expanded) R.drawable.arrow_drop_down_24px
-                        else R.drawable.arrow_drop_up_24px,
-                    ),
-                    contentDescription = stringResource(
-                        if (expanded) expandedContentDescriptionRes
-                        else collapsedContentDescriptionRes,
-                    ),
-                    modifier = iconModifier
-                        .rotate(
-                            if (!expanded) expandIconRotation
-                            else collapseIconRotation,
-                        ),
-                )
+                if (!expanded) {
+                    ArrowDropDownIcon(
+                        modifier = iconModifier.rotate(expandIconRotation),
+                        contentDescriptionRes = collapsedContentDescriptionRes,
+                    )
+                } else {
+                    ArrowDropUpIcon(
+                        modifier = iconModifier.rotate(collapseIconRotation),
+                        contentDescriptionRes = expandedContentDescriptionRes,
+                    )
+                }
             }
         }
     }
