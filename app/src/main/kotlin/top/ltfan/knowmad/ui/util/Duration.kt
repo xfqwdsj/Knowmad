@@ -20,11 +20,9 @@ package top.ltfan.knowmad.ui.util
 
 import android.icu.text.MeasureFormat
 import android.icu.util.Measure
+import top.ltfan.knowmad.ui.util.DurationParts.Companion.toParts
 import java.util.Locale
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
 
 fun Duration.format(
     locale: Locale = Locale.getDefault(),
@@ -37,35 +35,17 @@ fun Duration.format(
 ): String {
     if (!enableDays && !enableHours && !enableMinutes && !enableSeconds) return ""
 
-    val isNegative = this < Duration.ZERO
-    var remaining = if (isNegative) -this else this
-
-    val days = if (enableDays) {
-        val d = remaining.inWholeDays
-        remaining -= d.days
-        d
-    } else 0L
-
-    val hours = if (enableHours) {
-        val h = remaining.inWholeHours
-        remaining -= h.hours
-        h
-    } else 0L
-
-    val minutes = if (enableMinutes) {
-        val m = remaining.inWholeMinutes
-        remaining -= m.minutes
-        m
-    } else 0L
-
-    val seconds = if (enableSeconds) {
-        remaining.inWholeSeconds
-    } else 0L
+    val (sign, days, hours, minutes, seconds) = toParts(
+        enableDays = enableDays,
+        enableHours = enableHours,
+        enableMinutes = enableMinutes,
+        enableSeconds = enableSeconds,
+    )
 
     val hasNonZero = days > 0 || hours > 0 || minutes > 0 || seconds > 0
 
     val measures = buildList {
-        val sign = if (isNegative && hasNonZero) -1 else 1
+        val sign = if (sign < 0 && hasNonZero) -1 else 1
 
         if (enableDays && days > 0) add(Measure(days * sign, DAY))
 
