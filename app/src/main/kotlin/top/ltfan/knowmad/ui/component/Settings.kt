@@ -21,9 +21,11 @@ package top.ltfan.knowmad.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ListItem
@@ -32,6 +34,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemElevation
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Switch
@@ -80,7 +83,14 @@ fun SettingsItem(
         modifier = modifier,
         enabled = enabled,
         leadingContent = leadingContent,
-        trailingContent = trailingContent,
+        trailingContent = trailingContent?.let {
+            {
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodyMedium,
+                    content = it,
+                )
+            }
+        },
         overlineContent = overlineContent,
         supportingContent = supportingContent,
         verticalAlignment = verticalAlignment,
@@ -122,7 +132,15 @@ fun SettingItemDropdown(
                 menuOffset.originalOffset = it.position
             },
             enabled = enabled,
-            trailingContent = { Text(selectedValue) },
+            trailingContent = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(selectedValue)
+                    ArrowDropDownIcon()
+                }
+            },
             overlineContent = overlineContent,
             supportingContent = summary?.let { { Text(it) } },
             verticalAlignment = verticalAlignment,
