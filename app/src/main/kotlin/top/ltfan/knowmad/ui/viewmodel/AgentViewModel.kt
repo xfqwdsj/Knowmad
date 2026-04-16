@@ -120,6 +120,11 @@ class AgentViewModel(
         transformOut = { copy(conversationNameGenerationModelId = it) },
     )
 
+    var conversationSummaryGenerationModelId by llmDataState.transform(
+        transformIn = { conversationSummaryGenerationModelId },
+        transformOut = { copy(conversationSummaryGenerationModelId = it) },
+    )
+
     var recurrenceRuleSummaryGenerationModelId by llmDataState.transform(
         transformIn = { recurrenceRuleSummaryGenerationModelId },
         transformOut = { copy(recurrenceRuleSummaryGenerationModelId = it) },
@@ -294,12 +299,7 @@ class AgentViewModel(
 
     suspend fun generateConversationName(conversationId: Uuid): String? {
         val service = modelService.value ?: return null
-        val chatAgentService = service.chatAgentServiceFlow.value ?: return null
-        return service.generateConversationName(
-            conversationId = conversationId,
-            executor = chatAgentService.promptExecutor,
-            model = chatAgentService.agentConfig.model,
-        )
+        return service.generateConversationName(conversationId)
     }
 
     fun deleteConversation(
@@ -600,17 +600,13 @@ class AgentViewModel(
         },
     )
 
-    suspend inline fun generateErrorExplanation(
+    suspend fun generateErrorExplanation(
         errorMessage: String,
-        crossinline onAppendExplanation: (String) -> Unit,
+        onAppendExplanation: (String) -> Unit,
     ) {
         val service = modelService.value ?: return
-        val chatAgentService = service.chatAgentServiceFlow.value ?: return
-
         service.generateErrorExplanation(
             errorMessage = errorMessage,
-            executor = chatAgentService.promptExecutor,
-            model = chatAgentService.agentConfig.model,
             onAppendExplanation = onAppendExplanation,
         )
     }

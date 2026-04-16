@@ -22,8 +22,6 @@ import ai.koog.agents.core.agent.exception.AIAgentMaxNumberOfIterationsReachedEx
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
@@ -84,6 +82,7 @@ import top.ltfan.knowmad.data.chat.UiMessage
 import top.ltfan.knowmad.data.chat.allStored
 import top.ltfan.knowmad.data.chat.toUiMessage
 import top.ltfan.knowmad.data.database.AppDatabase
+import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.notification.NotificationMessage
 import top.ltfan.knowmad.notification.ReplyReceiver
@@ -187,35 +186,7 @@ class ModelService : LifecycleService() {
         return conversation
     }
 
-    suspend inline fun generateErrorExplanation(
-        errorMessage: String,
-        executor: PromptExecutor,
-        model: LLModel,
-        crossinline onAppendExplanation: (String) -> Unit,
-    ) {
-        val prompt = prompt("error-explanation") {
-            system(application.resources.environmentSystemPrompt())
-            system(
-                application.getString(R.string.llm_prompt_generate_error_explanation)
-                    .trimIndent().format(errorMessage.trim()),
-            )
-        }
-
-        executor.executeStreaming(
-            model = model,
-            prompt = prompt,
-        ).collect {
-            if (it is TextDelta) {
-                onAppendExplanation(it.text)
-            }
-        }
-    }
-
-    suspend fun generateConversationName(
-        conversationId: Uuid,
-        executor: PromptExecutor,
-        model: LLModel,
-    ) = withContext(Dispatchers.Default) {
+    suspend fun generateConversationName(conversationId: Uuid) = withContext(Dispatchers.Default) {
         val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
             .asSequence()
             .flatMap { it.message.parts }
@@ -239,6 +210,29 @@ class ModelService : LifecycleService() {
             )
         }
 
+        val modelId = LLMData.createDataStore().data.first().conversationNameGenerationModelId
+
+        val (executor, model) = if (modelId == null) {
+            logger.warn { "No model selected for conversation name generation, using chat selected model" }
+
+            val service = chatAgentServiceFlow.value ?: run {
+                logger.error { "Chat agent service not available for conversation name generation" }
+                return@withContext null
+            }
+
+            service.promptExecutor to service.agentConfig.model
+        } else {
+            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
+                logger.error { "Selected model for conversation name generation not found in database" }
+                return@withContext null
+            }
+            val providerEntity = llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
+                logger.error { "Provider for selected model for conversation name generation not found in database" }
+                return@withContext null
+            }
+            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        }
+
         executor.runPromptForSimpleResult(
             model = model,
             prompt = prompt,
@@ -252,8 +246,6 @@ class ModelService : LifecycleService() {
 
     suspend fun generateAssistantMessageSummary(
         conversationId: Uuid,
-        executor: PromptExecutor,
-        model: LLModel,
     ) = withContext(Dispatchers.Default) {
         var assistantMessage: String? = null
 
@@ -297,6 +289,31 @@ class ModelService : LifecycleService() {
             )
         }
 
+        val modelId =
+            LLMData.createDataStore().data.first().conversationSummaryGenerationModelId
+
+        val (executor, model) = if (modelId == null) {
+            logger.warn { "No model selected for assistant message summary generation, using chat selected model" }
+
+            val service = chatAgentServiceFlow.value ?: run {
+                logger.error { "Chat agent service not available for assistant message summary generation" }
+                return@withContext null
+            }
+
+            service.promptExecutor to service.agentConfig.model
+        } else {
+            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
+                logger.error { "Selected model for assistant message summary generation not found in database" }
+                return@withContext null
+            }
+            val providerEntity =
+                llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
+                    logger.error { "Provider for selected model for assistant message summary generation not found in database" }
+                    return@withContext null
+                }
+            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        }
+
         executor.runPrompt(
             model = model,
             prompt = prompt,
@@ -305,6 +322,51 @@ class ModelService : LifecycleService() {
             onFailure = { logger.error(it) { "Error generating assistant message summary" } },
         )?.mapNotNull {
             it.toNotificationMessage(application.resources)
+        }
+    }
+
+    suspend fun generateErrorExplanation(
+        errorMessage: String,
+        onAppendExplanation: (String) -> Unit,
+    ) = withContext(Dispatchers.Default) {
+        val prompt = prompt("error-explanation") {
+            system(application.resources.environmentSystemPrompt())
+            system(
+                application.getString(R.string.llm_prompt_generate_error_explanation)
+                    .trimIndent().format(errorMessage.trim()),
+            )
+        }
+
+        val modelId = LLMData.createDataStore().data.first().errorExplanationModelId
+
+        val (executor, model) = if (modelId == null) {
+            logger.warn { "No model selected for error explanation generation, using chat selected model" }
+
+            val service = chatAgentServiceFlow.value ?: run {
+                logger.error { "Chat agent service not available for error explanation generation" }
+                return@withContext
+            }
+
+            service.promptExecutor to service.agentConfig.model
+        } else {
+            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
+                logger.error { "Selected model for error explanation generation not found in database" }
+                return@withContext
+            }
+            val providerEntity = llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
+                logger.error { "Provider for selected model for error explanation generation not found in database" }
+                return@withContext
+            }
+            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        }
+
+        executor.executeStreaming(
+            model = model,
+            prompt = prompt,
+        ).collect {
+            if (it is TextDelta) {
+                onAppendExplanation(it.text)
+            }
         }
     }
 
@@ -431,11 +493,7 @@ class ModelService : LifecycleService() {
             if (!isNewConversation) return@e
             val service = chatAgentServiceFlow.value ?: return@e
             defaultScope.launch {
-                val newName = generateConversationName(
-                    conversationId = conversationId,
-                    executor = service.promptExecutor,
-                    model = service.agentConfig.model,
-                ) ?: return@launch
+                val newName = generateConversationName(conversationId) ?: return@launch
                 val conversation = chatDao.getConversationById(conversationId) ?: return@launch
                 val updated = conversation.copy(name = newName)
                 chatDao.updateConversation(updated, application)
@@ -600,12 +658,7 @@ class ModelService : LifecycleService() {
 
                     if (generateConversationNameFromInitialInput && databaseMessages.isEmpty()) {
                         initialConversationNameGenerationJob = defaultScope.launch {
-                            // TODO: use configured executor and model
-                            val title = generateConversationName(
-                                conversationId = conversationId,
-                                executor = service.promptExecutor,
-                                model = service.agentConfig.model,
-                            ) ?: return@launch
+                            val title = generateConversationName(conversationId) ?: return@launch
                             conversationMutex.withLock {
                                 val updated = conversation.copy(name = title)
                                 chatDao.updateConversation(updated, application)
@@ -737,12 +790,8 @@ class ModelService : LifecycleService() {
 
     fun showNotification(conversationId: Uuid) {
         lifecycleScope.launch {
-            val service = chatAgentServiceFlow.filterNotNull().first()
-            val summary = generateAssistantMessageSummary(
-                conversationId = conversationId,
-                executor = service.promptExecutor,
-                model = service.agentConfig.model,
-            )?.toMutableList() ?: return@launch
+            val summary =
+                generateAssistantMessageSummary(conversationId)?.toMutableList() ?: return@launch
             val quickReplies = withContext(Dispatchers.Default) {
                 summary.extractQuickReplies().takeIf { it.isNotEmpty() }
             }
