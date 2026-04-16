@@ -42,4 +42,16 @@
     <string name="settings_next_suggestion_fallback_time_summary">如果生成建议的时间链条意外断裂，诺玛将在每天的这个时间重新开始生成建议，确保您每天都能收到建议</string>
     <string name="settings_class_progress_enabled_label">启用上课进度通知</string>
     <string name="settings_class_progress_enabled_summary">启用后，我们将会为您推送实时上课进度通知，帮助您更好地掌握课程进度</string>
+    <string name="settings_class_progress_scheduled_update_time_label">更新时间</string>
+    <string name="settings_class_progress_scheduled_update_time_summary">我们将在每天的该时间获取您的课程并在系统中创建定时任务来启动上课进度通知</string>
+    <string name="settings_class_progress_scheduling_horizon_label">时间范围</string>
+    <string name="settings_class_progress_scheduling_horizon_summary">每次更新时，一次性获取的课程的时间范围</string>
+    <string name="settings_class_progress_lead_time_label">通知提前时间</string>
+    <string name="settings_class_progress_lead_time_summary">我们将在课程开始前的该时间向您发送上课进度通知</string>
+    <string name="settings_class_progress_end_threshold_label">结束阈值</string>
+    <string name="settings_class_progress_end_threshold_summary">当前距离结束的时间被视为即将下课的阈值</string>
+    <string name="settings_class_progress_stay_duration_label">停留时长</string>
+    <string name="settings_class_progress_stay_duration_summary">下课后通知保留的时长</string>
+    <string name="settings_class_progress_update_interval_label">更新间隔</string>
+    <string name="settings_class_progress_update_interval_summary">上课进度通知更新的时间间隔</string>
 </resources>

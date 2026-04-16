@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.ui.component
 
 import android.icu.text.DateFormat
+import android.icu.text.MeasureFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -71,9 +72,10 @@ import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.detectPointerFirstDown
 import top.ltfan.knowmad.ui.util.rememberOffsetToDpOffset
 import java.util.Calendar
+import kotlin.time.Duration
 
 @Composable
-fun SettingsItem(
+fun SettingItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -139,7 +141,7 @@ fun SettingItemDropdown(
     val menuOffset = rememberOffsetToDpOffset()
 
     Box {
-        SettingsItem(
+        SettingItem(
             onClick = { onShowMenuChange(true) },
             modifier = modifier.detectPointerFirstDown(pass = Initial) {
                 menuOffset.originalOffset = it.position
@@ -178,7 +180,7 @@ fun SettingItemDropdown(
 }
 
 @Composable
-fun SettingsItemSwitch(
+fun SettingItemSwitch(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -193,7 +195,7 @@ fun SettingsItemSwitch(
     contentPadding: PaddingValues = ListItemDefaults.ContentPadding,
     interactionSource: MutableInteractionSource? = null,
 ) {
-    SettingsItem(
+    SettingItem(
         onClick = { onCheckedChange(!checked) },
         modifier = modifier,
         enabled = enabled,
@@ -217,9 +219,10 @@ fun SettingsItemSwitch(
 }
 
 @Composable
-fun SettingsItemTimePicker(
+fun SettingItemTimePicker(
     title: String,
     state: TimePickerState,
+    value: Pair<Int, Int>,
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -238,15 +241,15 @@ fun SettingsItemTimePicker(
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
-    SettingsItem(
+    SettingItem(
         onClick = { showDialog = true },
         modifier = modifier,
         enabled = enabled,
         trailingContent = {
-            val currentTime = remember(format, state.hour, state.minute) {
+            val currentTime = remember(format, value.first, value.second) {
                 val calendar = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, state.hour)
-                    set(Calendar.MINUTE, state.minute)
+                    set(Calendar.HOUR_OF_DAY, value.first)
+                    set(Calendar.MINUTE, value.second)
                 }
                 format.format(calendar.time)
             }
@@ -287,7 +290,74 @@ fun SettingsItemTimePicker(
         )
 
         SideEffect {
+            state.hour = value.first
+            state.minute = value.second
             state.selection = Hour
+        }
+    }
+}
+
+@Composable
+fun SettingItemDurationInput(
+    title: String,
+    state: DurationInputState,
+    value: Duration,
+    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    locale: Locale = LocalLocale.current,
+    formatWidth: MeasureFormat.FormatWidth = SHORT,
+    overlineContent: (@Composable (() -> Unit))? = null,
+    summary: String? = null,
+    verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    shapes: ListItemShapes = ListItemDefaults.shapes(),
+    colors: ListItemColors = ListItemDefaults.colors(containerColor = Transparent),
+    elevation: ListItemElevation = ListItemDefaults.elevation(),
+    contentPadding: PaddingValues = ListItemDefaults.ContentPadding,
+    interactionSource: MutableInteractionSource? = null,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    SettingItem(
+        onClick = { showDialog = true },
+        modifier = modifier,
+        enabled = enabled,
+        trailingContent = { Text(state.format(locale.platformLocale, formatWidth, value)) },
+        overlineContent = overlineContent,
+        supportingContent = summary?.let { { Text(it) } },
+        verticalAlignment = verticalAlignment,
+        shapes = shapes,
+        colors = colors,
+        elevation = elevation,
+        contentPadding = contentPadding,
+        interactionSource = interactionSource,
+        content = { Text(title) },
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                        showDialog = false
+                    },
+                    content = { Text(stringResource(android.R.string.ok)) },
+                )
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDialog = false },
+                    content = { Text(stringResource(android.R.string.cancel)) },
+                )
+            },
+            title = { Text(title) },
+            text = { DurationInput(state) },
+        )
+
+        SideEffect {
+            state.value = value
         }
     }
 }

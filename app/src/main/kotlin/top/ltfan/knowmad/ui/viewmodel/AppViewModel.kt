@@ -136,6 +136,36 @@ class AppViewModel(
         transformOut = { copy(enabled = it) },
     )
 
+    var classProgressScheduledUpdateTime by classProgressConfiguration.transform(
+        transformIn = { scheduledUpdateTime },
+        transformOut = { copy(scheduledUpdateTime = it) },
+    )
+
+    var classProgressSchedulingHorizon by classProgressConfiguration.transform(
+        transformIn = { schedulingHorizon },
+        transformOut = { copy(schedulingHorizon = it) },
+    )
+
+    var classProgressLeadTime by classProgressConfiguration.transform(
+        transformIn = { leadTime },
+        transformOut = { copy(leadTime = it) },
+    )
+
+    var classProgressEndThreshold by classProgressConfiguration.transform(
+        transformIn = { endThreshold },
+        transformOut = { copy(endThreshold = it) },
+    )
+
+    var classProgressStayDuration by classProgressConfiguration.transform(
+        transformIn = { stayDuration },
+        transformOut = { copy(stayDuration = it) },
+    )
+
+    var classProgressUpdateInterval by classProgressConfiguration.transform(
+        transformIn = { updateInterval },
+        transformOut = { copy(updateInterval = it) },
+    )
+
     private val httpClient = HttpClient().also {
         addCloseable(it)
     }

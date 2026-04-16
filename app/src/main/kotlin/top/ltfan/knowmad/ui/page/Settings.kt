@@ -50,11 +50,13 @@ import kotlinx.datetime.LocalTime
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.ui.component.ArrowBackIconButton
+import top.ltfan.knowmad.ui.component.DurationInputState
 import top.ltfan.knowmad.ui.component.ModelSelectorDropdownMenuContent
 import top.ltfan.knowmad.ui.component.SettingItemDropdown
+import top.ltfan.knowmad.ui.component.SettingItemDurationInput
+import top.ltfan.knowmad.ui.component.SettingItemSwitch
+import top.ltfan.knowmad.ui.component.SettingItemTimePicker
 import top.ltfan.knowmad.ui.component.SettingsBadge
-import top.ltfan.knowmad.ui.component.SettingsItemSwitch
-import top.ltfan.knowmad.ui.component.SettingsItemTimePicker
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsLight
@@ -296,13 +298,13 @@ class SettingsPage : Page() {
             val viewModel = LocalAgentViewModel.current
 
             Card {
-                SettingsItemSwitch(
+                SettingItemSwitch(
                     title = stringResource(R.string.settings_chat_default_reasoning_visibility_label),
                     checked = viewModel.defaultReasoningVisibility,
                     onCheckedChange = viewModel::defaultReasoningVisibility::set,
                     summary = stringResource(R.string.settings_chat_default_reasoning_visibility_summary),
                 )
-                SettingsItemSwitch(
+                SettingItemSwitch(
                     title = stringResource(R.string.settings_chat_default_tool_visibility_label),
                     checked = viewModel.defaultToolVisibility,
                     onCheckedChange = viewModel::defaultToolVisibility::set,
@@ -318,7 +320,7 @@ class SettingsPage : Page() {
             val viewModel = LocalAppViewModel.current
 
             Card {
-                SettingsItemSwitch(
+                SettingItemSwitch(
                     title = stringResource(R.string.settings_next_suggestion_enabled_label),
                     checked = viewModel.nextSuggestionEnabled,
                     onCheckedChange = viewModel::nextSuggestionEnabled::set,
@@ -330,9 +332,10 @@ class SettingsPage : Page() {
                         initialHour = time.hour,
                         initialMinute = time.minute,
                     )
-                    SettingsItemTimePicker(
+                    SettingItemTimePicker(
                         title = stringResource(R.string.settings_next_suggestion_fallback_time_label),
                         state = state,
+                        value = time.hour to time.minute,
                         onConfirm = {
                             viewModel.nextSuggestionFallbackTime =
                                 LocalTime(state.hour, state.minute)
@@ -350,12 +353,119 @@ class SettingsPage : Page() {
             val viewModel = LocalAppViewModel.current
 
             Card {
-                SettingsItemSwitch(
+                SettingItemSwitch(
                     title = stringResource(R.string.settings_class_progress_enabled_label),
                     checked = viewModel.classProgressEnabled,
                     onCheckedChange = viewModel::classProgressEnabled::set,
                     summary = stringResource(R.string.settings_class_progress_enabled_summary),
                 )
+                run {
+                    val time = viewModel.classProgressScheduledUpdateTime
+                    val state = rememberTimePickerState(
+                        initialHour = time.hour,
+                        initialMinute = time.minute,
+                    )
+                    SettingItemTimePicker(
+                        title = stringResource(R.string.settings_class_progress_scheduled_update_time_label),
+                        state = state,
+                        value = time.hour to time.minute,
+                        onConfirm = {
+                            viewModel.classProgressScheduledUpdateTime =
+                                LocalTime(state.hour, state.minute)
+                        },
+                        summary = stringResource(R.string.settings_class_progress_scheduled_update_time_summary),
+                    )
+                }
+                run {
+                    val duration = viewModel.classProgressSchedulingHorizon
+                    val state = remember {
+                        DurationInputState(
+                            initialValue = duration,
+                            initialHourEnabled = false,
+                            initialMinuteEnabled = false,
+                            initialSecondEnabled = false,
+                        )
+                    }
+                    SettingItemDurationInput(
+                        title = stringResource(R.string.settings_class_progress_scheduling_horizon_label),
+                        state = state,
+                        value = duration,
+                        onConfirm = { viewModel.classProgressSchedulingHorizon = state.value },
+                        summary = stringResource(R.string.settings_class_progress_scheduling_horizon_summary),
+                    )
+                }
+                run {
+                    val duration = viewModel.classProgressLeadTime
+                    val state = remember {
+                        DurationInputState(
+                            initialValue = duration,
+                            initialDayEnabled = false,
+                            initialHourEnabled = false,
+                            initialSecondEnabled = false,
+                        )
+                    }
+                    SettingItemDurationInput(
+                        title = stringResource(R.string.settings_class_progress_lead_time_label),
+                        state = state,
+                        value = duration,
+                        onConfirm = { viewModel.classProgressLeadTime = state.value },
+                        summary = stringResource(R.string.settings_class_progress_lead_time_summary),
+                    )
+                }
+                run {
+                    val duration = viewModel.classProgressEndThreshold
+                    val state = remember {
+                        DurationInputState(
+                            initialValue = duration,
+                            initialDayEnabled = false,
+                            initialHourEnabled = false,
+                            initialSecondEnabled = false,
+                        )
+                    }
+                    SettingItemDurationInput(
+                        title = stringResource(R.string.settings_class_progress_end_threshold_label),
+                        state = state,
+                        value = duration,
+                        onConfirm = { viewModel.classProgressEndThreshold = state.value },
+                        summary = stringResource(R.string.settings_class_progress_end_threshold_summary),
+                    )
+                }
+                run {
+                    val duration = viewModel.classProgressStayDuration
+                    val state = remember {
+                        DurationInputState(
+                            initialValue = duration,
+                            initialDayEnabled = false,
+                            initialHourEnabled = false,
+                            initialSecondEnabled = false,
+                        )
+                    }
+                    SettingItemDurationInput(
+                        title = stringResource(R.string.settings_class_progress_stay_duration_label),
+                        state = state,
+                        value = duration,
+                        onConfirm = { viewModel.classProgressStayDuration = state.value },
+                        summary = stringResource(R.string.settings_class_progress_stay_duration_summary),
+                    )
+                }
+                run {
+                    val duration = viewModel.classProgressUpdateInterval
+                    val state = remember {
+                        DurationInputState(
+                            initialValue = duration,
+                            initialDayEnabled = false,
+                            initialHourEnabled = false,
+                            initialSecondEnabled = false,
+                        )
+                    }
+                    SettingItemDurationInput(
+                        title = stringResource(R.string.settings_class_progress_update_interval_label),
+                        state = state,
+                        value = duration,
+                        onConfirm = { viewModel.classProgressUpdateInterval = state.value },
+                        summary = stringResource(R.string.settings_class_progress_update_interval_summary),
+                    )
+                }
             }
         }
     }

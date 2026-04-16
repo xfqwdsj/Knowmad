@@ -42,4 +42,16 @@
     <string name="settings_next_suggestion_fallback_time_summary">If the time chain for generating suggestions is unexpectedly broken, Noma will restart generating suggestions at this time every day to ensure that you receive suggestions every day</string>
     <string name="settings_class_progress_enabled_label">Enable Class Progress Notifications</string>
     <string name="settings_class_progress_enabled_summary">When enabled, we will send you real-time class progress notifications to help you better keep track of your course progress</string>
+    <string name="settings_class_progress_scheduled_update_time_label">Scheduled Update Time</string>
+    <string name="settings_class_progress_scheduled_update_time_summary">At this time every day, we will fetch your courses and create scheduled tasks in the system to start class progress notifications</string>
+    <string name="settings_class_progress_scheduling_horizon_label">Scheduling Horizon</string>
+    <string name="settings_class_progress_scheduling_horizon_summary">The time range for courses fetched at once each task they are scheduled</string>
+    <string name="settings_class_progress_lead_time_label">Notification Lead Time</string>
+    <string name="settings_class_progress_lead_time_summary">We will send you class progress notifications at this time before the class starts</string>
+    <string name="settings_class_progress_end_threshold_label">End Threshold</string>
+    <string name="settings_class_progress_end_threshold_summary">The time until the end of the class that is considered as the threshold for the class to be about to end</string>
+    <string name="settings_class_progress_stay_duration_label">Stay Duration</string>
+    <string name="settings_class_progress_stay_duration_summary">The duration that the notification will be kept after the class ends</string>
+    <string name="settings_class_progress_update_interval_label">Update Interval</string>
+    <string name="settings_class_progress_update_interval_summary">The time interval for class progress notification updates</string>
 </resources>
