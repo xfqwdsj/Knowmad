@@ -20,6 +20,7 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
@@ -102,10 +103,12 @@ class SettingsPage : Page() {
                         ArrowBackIconButton(
                             onClick = viewModel.backStack::removeLastOrNull,
                             modifier = Modifier
+                                .padding(start = 8.dp)
                                 .drawBackdrop(
                                     backdrop = appBarBackdrop,
                                     shape = { CircleShape },
                                     effects = BackdropEffectsLight,
+                                    shadow = null,
                                 )
                                 .then(interactiveHighlight.modifier)
                                 .then(interactiveHighlight.gestureModifier),
