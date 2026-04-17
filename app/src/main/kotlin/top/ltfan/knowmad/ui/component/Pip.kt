@@ -77,8 +77,6 @@ import androidx.compose.ui.util.fastCoerceAtLeast
 import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.itemKey
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
@@ -129,7 +127,7 @@ fun PictureInPicture() {
             },
             contentWindowInsets = WindowInsets(),
         ) { padding ->
-            val messages = agentViewModel.currentMessagesFlow?.collectAsLazyPagingItems()
+            val messages by agentViewModel.currentMessagesFlow.collectAsState(emptyList())
 
             CompositionLocalProvider(LocalPadding provides padding) {
                 AnimatedContent(
@@ -144,107 +142,105 @@ fun PictureInPicture() {
                         return@AnimatedContent
                     }
                     Box(Modifier.fillMaxSize()) {
-                        if (messages != null) {
-                            val state = rememberLazyListState()
+                        val state = rememberLazyListState()
 
-                            ChatMessageList(
-                                getMessageCount = { messages.itemCount },
-                                getMessageKey = messages.itemKey { it.key },
-                                getMessageAt = { agentViewModel.getMessage(messages[it]) },
-                                mathJaxRendererState = appViewModel.mathJaxRendererState,
-                                modifier = Modifier.fillMaxSize(),
-                                initialReasoningVisibility = false,
-                                initialToolVisibility = false,
-                                contentPadding = padding,
-                                lazyListState = state,
-                                assistantMessageStates = agentViewModel.assistantMessageStates,
-                                allowAssistantMessageActions = false,
-                            )
+                        ChatMessageList(
+                            getMessageCount = { messages.size },
+                            getMessageKey = { messages[it].key },
+                            getMessageAt = { agentViewModel.getMessage(messages[it]) },
+                            mathJaxRendererState = appViewModel.mathJaxRendererState,
+                            modifier = Modifier.fillMaxSize(),
+                            initialReasoningVisibility = false,
+                            initialToolVisibility = false,
+                            contentPadding = padding,
+                            lazyListState = state,
+                            assistantMessageStates = agentViewModel.assistantMessageStates,
+                            allowAssistantMessageActions = false,
+                        )
 
-                            LaunchedEffect(state, agentViewModel.canSendMessage) {
-                                if (agentViewModel.canSendMessage) return@LaunchedEffect
-                                snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect {
-                                    state.requestScrollToItem(0)
+                        LaunchedEffect(state, agentViewModel.canSendMessage) {
+                            if (agentViewModel.canSendMessage) return@LaunchedEffect
+                            snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect {
+                                state.requestScrollToItem(0)
+                            }
+                        }
+
+                        LaunchedEffect(state) {
+                            var lastTime: Instant? = null
+
+                            val backJob = SupervisorJob(coroutineContext.job)
+                            val backScope = this + backJob
+
+                            val baseDuration = 1.seconds
+                            val stepDuration = 0.5.seconds
+                            val resetTime = 2.seconds
+                            val backThreshold = 5.seconds
+
+                            val minimumFactor = -1f
+                            val maximumFactor = 3f
+
+                            fun calcValue(
+                                lastTime: Instant?,
+                                setLastTime: ((Instant) -> Unit)? = null,
+                            ): Float {
+                                val now = Clock.System.now()
+                                val delta = if (lastTime == null) {
+                                    baseDuration - stepDuration
+                                } else {
+                                    now - lastTime
+                                }
+                                setLastTime?.invoke(now)
+
+                                val step = state.layoutInfo.viewportSize.height / 2
+
+                                val minimumValue = step * minimumFactor
+                                val maximumValue = step * maximumFactor
+
+                                return ((baseDuration - delta) / stepDuration * step).toFloat()
+                                    .fastCoerceAtLeast(minimumValue)
+                                    .fastCoerceAtMost(maximumValue)
+                            }
+
+                            launch {
+                                while (true) {
+                                    val value = calcValue(lastTime)
+
+                                    if (value >= 0) {
+                                        agentViewModel.pipUpdateActions(
+                                            PipActions.scrollUp(agentViewModel),
+                                        )
+                                    } else {
+                                        agentViewModel.pipUpdateActions(
+                                            PipActions.scrollDown(agentViewModel),
+                                        )
+                                    }
+
+                                    delay(100.milliseconds)
                                 }
                             }
 
-                            LaunchedEffect(state) {
-                                var lastTime: Instant? = null
+                            for (_ in agentViewModel.pipScrollEvents) {
+                                backJob.cancelChildren()
 
-                                val backJob = SupervisorJob(coroutineContext.job)
-                                val backScope = this + backJob
+                                val value = calcValue(lastTime) { lastTime = it }
 
-                                val baseDuration = 1.seconds
-                                val stepDuration = 0.5.seconds
-                                val resetTime = 2.seconds
-                                val backThreshold = 5.seconds
+                                backScope.launch {
+                                    delay(resetTime)
+                                    lastTime = null
+                                }
 
-                                val minimumFactor = -1f
-                                val maximumFactor = 3f
-
-                                fun calcValue(
-                                    lastTime: Instant?,
-                                    setLastTime: ((Instant) -> Unit)? = null,
-                                ): Float {
-                                    val now = Clock.System.now()
-                                    val delta = if (lastTime == null) {
-                                        baseDuration - stepDuration
-                                    } else {
-                                        now - lastTime
-                                    }
-                                    setLastTime?.invoke(now)
-
-                                    val step = state.layoutInfo.viewportSize.height / 2
-
-                                    val minimumValue = step * minimumFactor
-                                    val maximumValue = step * maximumFactor
-
-                                    return ((baseDuration - delta) / stepDuration * step).toFloat()
-                                        .fastCoerceAtLeast(minimumValue)
-                                        .fastCoerceAtMost(maximumValue)
+                                backScope.launch {
+                                    delay(backThreshold)
+                                    state.animateScrollToItem(0)
                                 }
 
                                 launch {
-                                    while (true) {
-                                        val value = calcValue(lastTime)
-
-                                        if (value >= 0) {
-                                            agentViewModel.pipUpdateActions(
-                                                PipActions.scrollUp(agentViewModel),
-                                            )
-                                        } else {
-                                            agentViewModel.pipUpdateActions(
-                                                PipActions.scrollDown(agentViewModel),
-                                            )
-                                        }
-
-                                        delay(100.milliseconds)
-                                    }
-                                }
-
-                                for (_ in agentViewModel.pipScrollEvents) {
-                                    backJob.cancelChildren()
-
-                                    val value = calcValue(lastTime) { lastTime = it }
-
-                                    backScope.launch {
-                                        delay(resetTime)
-                                        lastTime = null
-                                    }
-
-                                    backScope.launch {
-                                        delay(backThreshold)
-                                        state.animateScrollToItem(0)
-                                    }
-
-                                    launch {
-                                        state.animateScrollBy(
-                                            value = value,
-                                            animationSpec = spring(
-                                                stiffness = Spring.StiffnessLow,
-                                            ),
-                                        )
-                                    }
+                                    state.animateScrollBy(
+                                        value = value,
+                                        animationSpec = spring(
+                                            stiffness = Spring.StiffnessLow,
+                                        ),
+                                    )
                                 }
                             }
                         }

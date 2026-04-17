@@ -280,8 +280,7 @@ fun ChatMessageList(
     lazyListState: LazyListState = rememberLazyListState(),
     assistantMessageStates: MutableMap<Any, AssistantMessageState> = remember { mutableStateMapOf() },
     allowAssistantMessageActions: Boolean = true,
-    topToBottom: Boolean = false,
-    reverseIndexing: Boolean = false,
+    topToBottom: Boolean = true,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     runnableCodeComponents: Set<List<String>>? = null,
     runCode: ((
@@ -304,8 +303,7 @@ fun ChatMessageList(
         items(
             count = getMessageCount(),
             key = getMessageKey,
-        ) {
-            val index = if (!reverseIndexing) it else getMessageCount() - 1 - it
+        ) { index ->
             val key = getMessageKey(index)
             when (val data = getMessageAt(index) ?: return@items) {
                 is AssistantStreamingMessage -> {

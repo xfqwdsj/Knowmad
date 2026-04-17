@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,8 +33,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
-import androidx.paging.PagingData
-import androidx.paging.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -141,8 +138,6 @@ class AgentViewModel(
     )
 
     val drawerState = DrawerState(DrawerValue.Closed)
-    var savedMessagesFirstVisibleItemIndex by mutableIntStateOf(0)
-    var savedMessagesFirstVisibleItemScrollOffset by mutableIntStateOf(0)
     val assistantMessageStates
         get() = modelService.value?.assistantMessageStates
             ?: SnapshotLruCache<Any, AssistantMessageState>(
@@ -204,10 +199,9 @@ class AgentViewModel(
                         chatDao.getMessageCountFlowInCurrentTreeByConversation(it)
                     } ?: flowOf(0),
                     messagesFlow = id?.let { id ->
-                        PagingLazyListState {
-                            chatDao.getMessagesPagingByConversationReversed(id)
-                        }.flow.map { data -> data.map { it.copy(message = it.message.allLoaded()) } }
-                    },
+                        chatDao.getAllMessagesByConversation(id)
+                            .map { data -> data.map { it.copy(message = it.message.allLoaded()) } }
+                    } ?: flowOf(emptyList()),
                 )
             } catch (e: Throwable) {
                 logger.error(e) { "Error loading conversation and chat data for conversation id $id" }
@@ -268,7 +262,8 @@ class AgentViewModel(
             conversationId = message.conversationId,
             parts = emptyList(),
             getAllMessages = { conversationId ->
-                getAllMessagesByConversationOnce(conversationId).dropLastWhile { it.key == message.key }
+                getAllMessagesByConversation(conversationId).first()
+                    .dropLastWhile { it.key == message.key }
             },
             includeEnvironmentContext = true,
             insertEnvironmentContext = false,
@@ -615,13 +610,13 @@ class AgentViewModel(
 data class ConversationAndChatData(
     val conversationFlow: Flow<ConversationEntity?>,
     val messageCountFlow: Flow<Int>,
-    val messagesFlow: Flow<PagingData<MessageWithFilesAndBranchInfo>>?,
+    val messagesFlow: Flow<List<MessageWithFilesAndBranchInfo>>,
 ) {
     companion object {
         val Empty = ConversationAndChatData(
             conversationFlow = flowOf(null),
             messageCountFlow = flowOf(0),
-            messagesFlow = null,
+            messagesFlow = flowOf(emptyList()),
         )
     }
 }

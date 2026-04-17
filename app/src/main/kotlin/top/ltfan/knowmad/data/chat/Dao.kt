@@ -246,85 +246,6 @@ interface ChatDao : FtsDao {
     @Transaction
     @Query(
         """
-            WITH
-            Root AS (
-                SELECT m.*
-                FROM MessageEntity m
-                WHERE m.conversationId = :conversationId
-                  AND m.parentId IS NULL
-                LIMIT 1
-            ),
-
-            SelectedDown AS (
-                SELECT r.*
-                FROM Root r
-
-                UNION ALL
-
-                SELECT child.*
-                FROM SelectedDown parent
-                JOIN MessageBranchSelectionEntity bs
-                  ON bs.conversationId = :conversationId
-                 AND bs.parentId = parent.id
-                JOIN MessageEntity child
-                  ON child.id = bs.selectedChildId
-                 AND child.conversationId = parent.conversationId
-            ),
-
-            Leaf AS (
-                SELECT sd.id, sd.depth, sd.createdAt
-                FROM SelectedDown sd
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM MessageBranchSelectionEntity bs2
-                    WHERE bs2.conversationId = :conversationId
-                      AND bs2.parentId = sd.id
-                )
-                ORDER BY sd.depth DESC, sd.createdAt DESC
-                LIMIT 1
-            ),
-
-            SelectedPathReverse AS (
-                SELECT m.*
-                FROM MessageEntity m
-                JOIN Leaf l ON m.id = l.id
-
-                UNION ALL
-
-                SELECT parent.*
-                FROM MessageEntity parent
-                JOIN SelectedPathReverse child
-                  ON parent.id = child.parentId
-                 AND parent.conversationId = child.conversationId
-            )
-
-            SELECT 
-                sp.*,
-
-                (
-                    SELECT COUNT(*) + 1
-                    FROM MessageEntity s
-                    WHERE ( (s.parentId = sp.parentId) OR (s.parentId IS NULL AND sp.parentId IS NULL) )
-                      AND s.conversationId = sp.conversationId
-                      AND ( s.createdAt < sp.createdAt OR (s.createdAt = sp.createdAt AND s.id < sp.id) )
-                ) AS branchIndex,
-
-                (
-                    SELECT COUNT(*)
-                    FROM MessageEntity s
-                    WHERE ( (s.parentId = sp.parentId) OR (s.parentId IS NULL AND sp.parentId IS NULL) )
-                      AND s.conversationId = sp.conversationId
-                ) AS branchCount
-
-            FROM SelectedPathReverse sp
-            ORDER BY sp.depth DESC
-        """,
-    )
-    fun getMessagesPagingByConversationReversed(conversationId: Uuid): PagingSource<Int, MessageWithFilesAndBranchInfo>
-
-    @Transaction
-    @Query(
-        """
         WITH RECURSIVE SelectedPath AS (
             SELECT * FROM MessageEntity
             WHERE conversationId = :conversationId AND parentId IS NULL
@@ -357,7 +278,7 @@ interface ChatDao : FtsDao {
         ORDER BY sp.depth ASC
     """,
     )
-    suspend fun getAllMessagesByConversationOnce(conversationId: Uuid): List<MessageWithFilesAndBranchInfo>
+    fun getAllMessagesByConversation(conversationId: Uuid): Flow<List<MessageWithFilesAndBranchInfo>>
 
     @Query(
         """

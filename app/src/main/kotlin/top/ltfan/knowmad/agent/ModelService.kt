@@ -203,7 +203,7 @@ class ModelService : LifecycleService() {
     }
 
     suspend fun generateConversationName(conversationId: Uuid) = withContext(Dispatchers.Default) {
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
+        val chatMessages = chatDao.getAllMessagesByConversation(conversationId).first().reversed()
             .asSequence()
             .flatMap { it.message.parts }
             .filterIsInstance<UiMessage.Koog>()
@@ -252,7 +252,7 @@ class ModelService : LifecycleService() {
     ) = withContext(Dispatchers.Default) {
         var assistantMessage: String? = null
 
-        val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
+        val chatMessages = chatDao.getAllMessagesByConversation(conversationId).first().reversed()
             .asSequence()
             .map { it.message }
             .mapNotNull { entity ->
@@ -450,7 +450,9 @@ class ModelService : LifecycleService() {
         onNewConversation: ((ConversationEntity) -> Unit)? = null,
         getAllMessages: suspend ChatDao.(
             conversationId: Uuid,
-        ) -> List<MessageWithFilesAndBranchInfo> = ChatDao::getAllMessagesByConversationOnce,
+        ) -> List<MessageWithFilesAndBranchInfo> = {
+            getAllMessagesByConversation(it).first()
+        },
         includeEnvironmentContext: Boolean = true,
         insertEnvironmentContext: Boolean = includeEnvironmentContext,
         contextMessages: List<UiMessage>? = null,

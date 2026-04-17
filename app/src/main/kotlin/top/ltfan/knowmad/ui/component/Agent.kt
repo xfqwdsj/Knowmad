@@ -38,7 +38,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.Icon
@@ -64,6 +64,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -77,13 +78,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastCoerceAtLeast
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.itemKey
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
@@ -401,9 +402,9 @@ fun AgentMainScreen(
         ) { scaffoldPadding ->
             val contentPadding = scaffoldPadding + contentPadding + PaddingValues(16.dp)
 
-            val messages = viewModel.currentMessagesFlow?.collectAsLazyPagingItems()
+            val messages by viewModel.currentMessagesFlow.collectAsState(emptyList())
 
-            if (messages == null) {
+            if (messages.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -414,19 +415,22 @@ fun AgentMainScreen(
                 return@Scaffold
             }
 
-            val lazyListState = if (!isNewWindow) {
-                rememberLazyListState(
-                    initialFirstVisibleItemIndex = viewModel.savedMessagesFirstVisibleItemIndex,
-                    initialFirstVisibleItemScrollOffset = viewModel.savedMessagesFirstVisibleItemScrollOffset,
+            val lazyListState = rememberSaveable(
+                messages.firstOrNull()?.conversationId,
+                saver = LazyListState.Saver,
+            ) {
+                val index = messages.indexOfLast { it.message.role == User }.takeIf { it >= 0 }
+                    ?: (messages.size - 1).fastCoerceAtLeast(0)
+                LazyListState(
+                    firstVisibleItemIndex = index,
+                    firstVisibleItemScrollOffset = 0,
                 )
-            } else {
-                rememberLazyListState()
             }
 
             CompositionLocalProvider(LocalMarkdownRunCodeEnabled provides viewModel.runCodeEnabled) {
                 ChatMessageList(
-                    getMessageCount = { messages.itemCount },
-                    getMessageKey = messages.itemKey { it.key },
+                    getMessageCount = { messages.size },
+                    getMessageKey = { messages[it].key },
                     getMessageAt = { viewModel.getMessage(messages[it]) },
                     mathJaxRendererState = appViewModel.mathJaxRendererState,
                     modifier = Modifier
@@ -445,43 +449,43 @@ fun AgentMainScreen(
                 )
             }
 
-            if (!isNewWindow) {
-                LaunchedEffect(lazyListState) {
-                    snapshotFlow {
-                        lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
+            val scrollInfoFlow = remember(lazyListState) {
+                snapshotFlow {
+                    val info = lazyListState.layoutInfo
+                    val last = info.visibleItemsInfo.lastOrNull()
+                    Triple(
+                        last?.index,
+                        last?.size,
+                        lazyListState.canScrollForward,
+                    )
+                }
+            }
+
+            var shouldScrollToBottom by remember(viewModel.currentConversationId) {
+                mutableStateOf(false)
+            }
+
+            run {
+                var flag by remember { mutableStateOf(true) }
+                val isScrolling = lazyListState.isScrollInProgress
+                LaunchedEffect(isScrolling) {
+                    if (flag) {
+                        flag = false
+                        return@LaunchedEffect
                     }
-                        .collect { (index, offset) ->
-                            viewModel.savedMessagesFirstVisibleItemIndex = index
-                            viewModel.savedMessagesFirstVisibleItemScrollOffset = offset
-                        }
+                    if (!isScrolling) {
+                        shouldScrollToBottom = !lazyListState.canScrollForward
+                    }
                 }
             }
 
-            var isAtBottom by remember { mutableStateOf(true) }
+            LaunchedEffect(scrollInfoFlow, shouldScrollToBottom) {
+                if (!shouldScrollToBottom) return@LaunchedEffect
 
-            val isScrolling = lazyListState.isScrollInProgress
-            LaunchedEffect(isScrolling) {
-                if (!isScrolling) {
-                    isAtBottom =
-                        lazyListState.firstVisibleItemIndex == 0 &&
-                                lazyListState.firstVisibleItemScrollOffset == 0
+                scrollInfoFlow.conflate().collect { (index, size, _) ->
+                    if (index == null || size == null) return@collect
+                    lazyListState.animateScrollToItem(index, size)
                 }
-            }
-
-            val currentFirstMessageKey = messages.itemSnapshotList.firstOrNull()?.key
-            LaunchedEffect(currentFirstMessageKey) {
-                if (isAtBottom) {
-                    lazyListState.animateScrollToItem(0)
-                }
-            }
-
-            var isFirstTimeScroll by remember { mutableStateOf(true) }
-            LaunchedEffect(viewModel.currentConversationId) {
-                if (isFirstTimeScroll) {
-                    isFirstTimeScroll = false
-                    return@LaunchedEffect
-                }
-                lazyListState.requestScrollToItem(0)
             }
         }
     }
