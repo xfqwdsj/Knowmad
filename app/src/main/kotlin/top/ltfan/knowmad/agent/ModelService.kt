@@ -186,6 +186,22 @@ class ModelService : LifecycleService() {
         return conversation
     }
 
+    private suspend inline fun modelWithFallback(
+        modelId: Uuid?,
+        task: String,
+    ) = if (modelId == null) {
+        logger.warn { "No model selected for $task, using chat selected model" }
+        val service = chatAgentServiceFlow.value
+            ?: error("Chat agent service not available for $task")
+        service.promptExecutor to service.agentConfig.model
+    } else {
+        val modelEntity = llmConfigDao.getModelById(modelId)
+            ?: error("Selected model for $task not found in database")
+        val providerEntity = llmConfigDao.getProviderById(modelEntity.providerConfigId)
+            ?: error("Provider for selected model for $task not found in database")
+        MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+    }
+
     suspend fun generateConversationName(conversationId: Uuid) = withContext(Dispatchers.Default) {
         val chatMessages = chatDao.getAllMessagesByConversationOnce(conversationId).reversed()
             .asSequence()
@@ -210,27 +226,14 @@ class ModelService : LifecycleService() {
             )
         }
 
-        val modelId = LLMData.createDataStore().data.first().conversationNameGenerationModelId
-
-        val (executor, model) = if (modelId == null) {
-            logger.warn { "No model selected for conversation name generation, using chat selected model" }
-
-            val service = chatAgentServiceFlow.value ?: run {
-                logger.error { "Chat agent service not available for conversation name generation" }
-                return@withContext null
-            }
-
-            service.promptExecutor to service.agentConfig.model
-        } else {
-            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
-                logger.error { "Selected model for conversation name generation not found in database" }
-                return@withContext null
-            }
-            val providerEntity = llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
-                logger.error { "Provider for selected model for conversation name generation not found in database" }
-                return@withContext null
-            }
-            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        val (executor, model) = try {
+            modelWithFallback(
+                modelId = LLMData.createDataStore().data.first().conversationNameGenerationModelId,
+                task = "conversation name generation",
+            )
+        } catch (e: Throwable) {
+            logger.error(e) { "Error setting up model for conversation name generation, aborting generation" }
+            return@withContext null
         }
 
         executor.runPromptForSimpleResult(
@@ -289,29 +292,14 @@ class ModelService : LifecycleService() {
             )
         }
 
-        val modelId =
-            LLMData.createDataStore().data.first().conversationSummaryGenerationModelId
-
-        val (executor, model) = if (modelId == null) {
-            logger.warn { "No model selected for assistant message summary generation, using chat selected model" }
-
-            val service = chatAgentServiceFlow.value ?: run {
-                logger.error { "Chat agent service not available for assistant message summary generation" }
-                return@withContext null
-            }
-
-            service.promptExecutor to service.agentConfig.model
-        } else {
-            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
-                logger.error { "Selected model for assistant message summary generation not found in database" }
-                return@withContext null
-            }
-            val providerEntity =
-                llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
-                    logger.error { "Provider for selected model for assistant message summary generation not found in database" }
-                    return@withContext null
-                }
-            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        val (executor, model) = try {
+            modelWithFallback(
+                modelId = LLMData.createDataStore().data.first().conversationSummaryGenerationModelId,
+                task = "assistant message summary generation",
+            )
+        } catch (e: Throwable) {
+            logger.error(e) { "Error setting up model for assistant message summary generation, aborting generation" }
+            return@withContext null
         }
 
         executor.runPrompt(
@@ -337,27 +325,14 @@ class ModelService : LifecycleService() {
             )
         }
 
-        val modelId = LLMData.createDataStore().data.first().errorExplanationModelId
-
-        val (executor, model) = if (modelId == null) {
-            logger.warn { "No model selected for error explanation generation, using chat selected model" }
-
-            val service = chatAgentServiceFlow.value ?: run {
-                logger.error { "Chat agent service not available for error explanation generation" }
-                return@withContext
-            }
-
-            service.promptExecutor to service.agentConfig.model
-        } else {
-            val modelEntity = llmConfigDao.getModelById(modelId) ?: run {
-                logger.error { "Selected model for error explanation generation not found in database" }
-                return@withContext
-            }
-            val providerEntity = llmConfigDao.getProviderById(modelEntity.providerConfigId) ?: run {
-                logger.error { "Provider for selected model for error explanation generation not found in database" }
-                return@withContext
-            }
-            MultiLLMPromptExecutor(providerEntity.toClient()) to modelEntity.model
+        val (executor, model) = try {
+            modelWithFallback(
+                modelId = LLMData.createDataStore().data.first().errorExplanationModelId,
+                task = "error explanation generation",
+            )
+        } catch (e: Throwable) {
+            logger.error(e) { "Error setting up model for error explanation generation, aborting generation" }
+            return@withContext
         }
 
         executor.executeStreaming(
