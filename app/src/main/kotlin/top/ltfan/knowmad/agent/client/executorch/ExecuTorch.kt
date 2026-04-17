@@ -94,4 +94,6 @@ class ExecuTorchClient(
     }
 }
 
-object ExecuTorchLLMProvider : LLMProvider("km-executorch", "Knowmad ExecuTorch")
+object ExecuTorchLLMProvider : LLMProvider("km-executorch", "Knowmad ExecuTorch") {
+    val models inline get() = Qwen3Embedding06BModels.models
+}
