@@ -31,7 +31,7 @@ abstract class LocalModels : LLModelDefinitions {
         get() = modelInfos.keys.toList()
 
     final override fun addCustomModel(model: LLModel) {
-        throw UnsupportedOperationException("addCustomModel is not supported in LocalModels")
+        throw UnsupportedOperationException("addCustomModel(LLModel) is not supported in LocalModels")
     }
 
     abstract fun addCustomModel(model: LLModel, info: LocalModelInfo)
