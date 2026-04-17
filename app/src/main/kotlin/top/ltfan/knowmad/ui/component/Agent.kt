@@ -419,10 +419,8 @@ fun AgentMainScreen(
                 messages.firstOrNull()?.conversationId,
                 saver = LazyListState.Saver,
             ) {
-                val index = messages.indexOfLast { it.message.role == User }.takeIf { it >= 0 }
-                    ?: (messages.size - 1).fastCoerceAtLeast(0)
                 LazyListState(
-                    firstVisibleItemIndex = index,
+                    firstVisibleItemIndex = (messages.size - 1).fastCoerceAtLeast(0),
                     firstVisibleItemScrollOffset = 0,
                 )
             }
@@ -449,42 +447,55 @@ fun AgentMainScreen(
                 )
             }
 
+            var followBottom by remember(lazyListState) { mutableStateOf(true) }
+
+            data class ScrollInfo(
+                val index: Int?,
+                val size: Int?,
+                val heightOffset: Int,
+                val canScrollForward: Boolean,
+            )
+
             val scrollInfoFlow = remember(lazyListState) {
                 snapshotFlow {
                     val info = lazyListState.layoutInfo
                     val last = info.visibleItemsInfo.lastOrNull()
-                    Triple(
-                        last?.index,
-                        last?.size,
-                        lazyListState.canScrollForward,
+
+                    ScrollInfo(
+                        index = last?.index,
+                        size = last?.size,
+                        heightOffset = info.beforeContentPadding + info.afterContentPadding - info.viewportSize.height,
+                        canScrollForward = lazyListState.canScrollForward,
                     )
                 }
             }
 
-            var shouldScrollToBottom by remember(viewModel.currentConversationId) {
-                mutableStateOf(false)
-            }
-
-            run {
-                var flag by remember { mutableStateOf(true) }
-                val isScrolling = lazyListState.isScrollInProgress
-                LaunchedEffect(isScrolling) {
-                    if (flag) {
-                        flag = false
-                        return@LaunchedEffect
-                    }
-                    if (!isScrolling) {
-                        shouldScrollToBottom = !lazyListState.canScrollForward
-                    }
-                }
-            }
-
-            LaunchedEffect(scrollInfoFlow, shouldScrollToBottom) {
-                if (!shouldScrollToBottom) return@LaunchedEffect
-
-                scrollInfoFlow.conflate().collect { (index, size, _) ->
+            LaunchedEffect(scrollInfoFlow) {
+                scrollInfoFlow.conflate().collect { (index, size, heightOffset, canScrollForward) ->
                     if (index == null || size == null) return@collect
-                    lazyListState.animateScrollToItem(index, size)
+
+                    val atBottom = !canScrollForward
+
+                    if (lazyListState.isScrollInProgress) {
+                        if (!atBottom) {
+                            followBottom = false
+                        }
+                        return@collect
+                    }
+
+                    if (atBottom) {
+                        followBottom = true
+                    } else if (!followBottom) {
+                        return@collect
+                    }
+
+                    val requestedOffset = heightOffset + size
+                    if (
+                        index == lazyListState.firstVisibleItemIndex &&
+                        requestedOffset == lazyListState.firstVisibleItemScrollOffset
+                    ) return@collect
+
+                    lazyListState.requestScrollToItem(index, requestedOffset)
                 }
             }
         }
