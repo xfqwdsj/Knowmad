@@ -18,7 +18,7 @@
 
 package top.ltfan.knowmad.agent.client
 
-enum class DownloadSource {
-    HuggingFace,
-    ModelScope,
+enum class DownloadSource(val testUrl: String) {
+    HuggingFace("https://huggingface.co/"),
+    ModelScope("https://modelscope.cn/"),
 }
