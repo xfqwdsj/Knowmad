@@ -41,25 +41,6 @@ private val logger = Logger("Qwen3Embedding06BModels")
 object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
     override val basePath = ExecuTorchClientBasePath / "qwen3_embedding_0.6b"
 
-    override val modelInfos = mapOf(
-        ModelInfo(
-            idSuffix = "8da4w_128",
-            contextLength = 128,
-        ).entry,
-        ModelInfo(
-            idSuffix = "8da4w_256",
-            contextLength = 256,
-        ).entry,
-        ModelInfo(
-            idSuffix = "8da4w_512",
-            contextLength = 512,
-        ).entry,
-        ModelInfo(
-            idSuffix = "8da4w_1024",
-            contextLength = 1024,
-        ).entry,
-    )
-
     override val tokenizerDownloader = Downloader {
         DownloadSource.ModelScope { basePath ->
             ModelScopeApi {
@@ -120,6 +101,25 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
             }
         }
     }
+
+    override val modelInfos = mapOf(
+        ModelInfo(
+            idSuffix = "8da4w_128",
+            contextLength = 128,
+        ).entry,
+        ModelInfo(
+            idSuffix = "8da4w_256",
+            contextLength = 256,
+        ).entry,
+        ModelInfo(
+            idSuffix = "8da4w_512",
+            contextLength = 512,
+        ).entry,
+        ModelInfo(
+            idSuffix = "8da4w_1024",
+            contextLength = 1024,
+        ).entry,
+    )
 
     override fun addCustomModel(model: LLModel, info: LocalModelInfo) {
         throw UnsupportedOperationException("Custom models are not supported in Qwen3Embedding06BModels")
