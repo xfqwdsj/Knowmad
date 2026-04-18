@@ -63,15 +63,10 @@ fun LLMProviderInfo(
         checked = checked,
         onCheckedChange = onCheckedChange,
         modifier = modifier,
-        leadingContent = {
-            LLMProviderIcon(info)
-        },
-        supportingContent = {
-            Text(stringResource(info.description))
-        },
-    ) {
-        Text(stringResource(info.label))
-    }
+        leadingContent = { LLMProviderIcon(info) },
+        supportingContent = { Text(stringResource(info.description)) },
+        content = { Text(stringResource(info.label)) },
+    )
 }
 
 @Composable
@@ -96,7 +91,7 @@ fun LLMProviderNameTextField(
 fun LLMProviderApiKeyTextField(
     state: TextFieldState,
     isUsingPlaintext: Boolean,
-    providerInfo: LLMProviderInfo?,
+    providerInfo: LLMProviderInfo.Web?,
     onRetryCryptoKeyInitialization: () -> Unit,
     notChanged: Boolean = false,
 ) {
@@ -178,7 +173,7 @@ fun LLMProviderApiKeyTextField(
 fun LLMProviderBaseUrlTextField(
     baseUrl: String,
     onBaseUrlChange: (String) -> Unit,
-    providerInfo: LLMProviderInfo?,
+    providerInfo: LLMProviderInfo.Web?,
 ) {
     TextField(
         value = baseUrl,
@@ -186,20 +181,10 @@ fun LLMProviderBaseUrlTextField(
         modifier = Modifier
             .widthIn(max = TextFieldMaxWidth)
             .fillMaxWidth(),
-        label = {
-            Text(stringResource(R.string.llm_api_base_url_input_label))
-        },
-        placeholder = providerInfo?.let { providerInfo ->
-            {
-                Text(providerInfo.defaultBaseUrl)
-            }
-        },
-        trailingIcon = {
-            PasteIconButton(onPaste = { onBaseUrlChange(it.trim()) })
-        },
-        supportingText = {
-            Text(stringResource(R.string.llm_api_base_url_input_message))
-        },
+        label = { Text(stringResource(R.string.llm_api_base_url_input_label)) },
+        placeholder = providerInfo?.let { providerInfo -> { Text(providerInfo.defaultBaseUrl) } },
+        trailingIcon = { PasteIconButton(onPaste = { onBaseUrlChange(it.trim()) }) },
+        supportingText = { Text(stringResource(R.string.llm_api_base_url_input_message)) },
         singleLine = true,
     )
 }

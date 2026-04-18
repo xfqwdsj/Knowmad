@@ -19,7 +19,6 @@
 package top.ltfan.knowmad.data.llm
 
 import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.executor.clients.LLModelDefinitions
 import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
@@ -47,7 +46,11 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModuleBuilder
 import kotlinx.serialization.serializer
+import okio.Path
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.client.DownloadSource
+import top.ltfan.knowmad.agent.client.executorch.ExecuTorchClient
+import top.ltfan.knowmad.agent.client.executorch.ExecuTorchLLMProvider
 import top.ltfan.knowmad.util.CryptoManager
 import kotlin.uuid.Uuid
 
@@ -58,7 +61,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_deepseek_description,
         defaultBaseUrl = "https://api.deepseek.com",
         platformUrl = "https://platform.deepseek.com",
-        predefinedModels = DeepSeekModels,
+        predefinedModels = DeepSeekModels.models,
         getModelCapabilitiesUrl = { "https://api-docs.deepseek.com/quick_start/pricing" },
     ) { apiKey, baseUrl ->
         DeepSeekLLMClient(
@@ -74,7 +77,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_openai_description,
         defaultBaseUrl = "https://api.openai.com",
         platformUrl = "https://platform.openai.com",
-        predefinedModels = OpenAIModels,
+        predefinedModels = OpenAIModels.models,
         getModelCapabilitiesUrl = { id -> "https://platform.openai.com/docs/models/$id" },
     ) { apiKey, baseUrl ->
         OpenAILLMClient(
@@ -90,7 +93,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_anthropic_description,
         defaultBaseUrl = "https://api.anthropic.com",
         platformUrl = "https://console.anthropic.com",
-        predefinedModels = AnthropicModels,
+        predefinedModels = AnthropicModels.models,
         getModelCapabilitiesUrl = { "https://platform.claude.com/docs/en/about-claude/models/overview" },
     ) { apiKey, baseUrl ->
         AnthropicLLMClient(
@@ -106,7 +109,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_google_description,
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
         platformUrl = "https://aistudio.google.com/",
-        predefinedModels = GoogleModels,
+        predefinedModels = GoogleModels.models,
         getModelCapabilitiesUrl = { "https://ai.google.dev/gemini-api/docs/models" },
     ) { apiKey, baseUrl ->
         GoogleLLMClient(
@@ -122,7 +125,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_openrouter_description,
         defaultBaseUrl = "https://openrouter.ai",
         platformUrl = "https://openrouter.ai/keys",
-        predefinedModels = OpenRouterModels,
+        predefinedModels = OpenRouterModels.models,
         getModelCapabilitiesUrl = { id -> "https://openrouter.ai/$id" },
     ) { apiKey, baseUrl ->
         OpenRouterLLMClient(
@@ -138,7 +141,7 @@ val SupportedLLMProviders = mapOf(
         description = R.string.llm_provider_alibaba_description,
         defaultBaseUrl = "https://dashscope.aliyuncs.com/",
         platformUrl = "https://dashscope.aliyun.com/",
-        predefinedModels = DashscopeModels,
+        predefinedModels = DashscopeModels.models,
         getModelCapabilitiesUrl = { "https://dashscope.console.aliyun.com/model" },
     ) { apiKey, baseUrl ->
         DashscopeLLMClient(
@@ -148,20 +151,53 @@ val SupportedLLMProviders = mapOf(
             ),
         )
     },
+    ExecuTorchLLMProvider to LLMProviderInfo.App(
+        icon = R.drawable.ic_logo,
+        label = R.string.llm_provider_executorch_label,
+        description = R.string.llm_provider_executorch_description,
+        predefinedModels = ExecuTorchLLMProvider.models,
+        polymorphic = {
+            polymorphic(
+                LLMProvider::class,
+                ExecuTorchLLMProvider::class,
+                serializer(),
+            )
+        },
+        convertToClient = ::ExecuTorchClient,
+    ),
 )
 
 @Immutable
-data class LLMProviderInfo(
-    @param:DrawableRes val icon: Int,
-    @param:StringRes val label: Int,
-    @param:StringRes val description: Int,
-    val defaultBaseUrl: String,
-    val platformUrl: String,
-    val predefinedModels: LLModelDefinitions,
-    val getModelCapabilitiesUrl: (id: String) -> String,
-    val polymorphic: SerializersModuleBuilder.() -> Unit,
-    val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
-)
+sealed interface LLMProviderInfo {
+    val icon: Int
+    val label: Int
+    val description: Int
+    val predefinedModels: List<LLModel>
+    val polymorphic: SerializersModuleBuilder.() -> Unit
+
+    @Immutable
+    data class Web(
+        @param:DrawableRes override val icon: Int,
+        @param:StringRes override val label: Int,
+        @param:StringRes override val description: Int,
+        val defaultBaseUrl: String,
+        val platformUrl: String,
+        override val predefinedModels: List<LLModel>,
+        val getModelCapabilitiesUrl: (id: String) -> String,
+        override val polymorphic: SerializersModuleBuilder.() -> Unit,
+        val convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
+    ) : LLMProviderInfo
+
+    @Immutable
+    data class App(
+        @param:DrawableRes override val icon: Int,
+        @param:StringRes override val label: Int,
+        @param:StringRes override val description: Int,
+        override val predefinedModels: List<LLModel>,
+        override val polymorphic: SerializersModuleBuilder.() -> Unit,
+        val convertToClient: (downloadSource: DownloadSource, basePath: Path) -> LLMClient,
+    ) : LLMProviderInfo
+}
 
 private inline fun <reified T : LLMProvider> T.info(
     @DrawableRes icon: Int,
@@ -169,10 +205,10 @@ private inline fun <reified T : LLMProvider> T.info(
     @StringRes description: Int,
     defaultBaseUrl: String,
     platformUrl: String,
-    predefinedModels: LLModelDefinitions,
+    predefinedModels: List<LLModel>,
     noinline getModelCapabilitiesUrl: (id: String) -> String,
     noinline convertToClient: (apiKey: String, baseUrl: String?) -> LLMClient,
-) = this to LLMProviderInfo(
+) = this to LLMProviderInfo.Web(
     icon = icon,
     label = label,
     description = description,
@@ -388,7 +424,7 @@ data class LLMConfigEntry(
     }
 }
 
-fun LLMProviderConfigEntity.toClient() = SupportedLLMProviders[provider]
+fun LLMProviderConfigEntity.toClient() = (SupportedLLMProviders[provider] as? Web)
     ?.convertToClient(decryptedApiKey, baseUrl) ?: error("Unsupported LLM Provider: $provider")
 
 val LLMProviderConfigEntity.decryptedApiKey: String

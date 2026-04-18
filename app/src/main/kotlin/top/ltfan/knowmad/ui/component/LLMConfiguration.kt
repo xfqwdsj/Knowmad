@@ -233,7 +233,7 @@ fun LLMProviderConfigEditingDialog(
     onDismissRequest: () -> Unit,
     isNew: Boolean = false,
 ) {
-    val info = SupportedLLMProviders[entity.provider] ?: return
+    val info = (SupportedLLMProviders[entity.provider] as? Web) ?: return
 
     val viewModel = LocalAgentViewModel.current
 
@@ -306,8 +306,8 @@ fun LLMConfigEditingDialog(
 ) {
     val viewModel = LocalAgentViewModel.current
 
-    val info = SupportedLLMProviders[provider.provider] ?: return
-    val predefinedModelsMap = remember { info.predefinedModels.models.associateBy { it.id } }
+    val info = (SupportedLLMProviders[provider.provider] as? Web) ?: return
+    val predefinedModelsMap = remember { info.predefinedModels.associateBy { it.id } }
 
     var knownModelsMap by remember { mutableStateOf(predefinedModelsMap) }
     val knownModelIds by remember { derivedStateOf { knownModelsMap.keys.toList() } }

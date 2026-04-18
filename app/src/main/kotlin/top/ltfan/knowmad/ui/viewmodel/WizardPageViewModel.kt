@@ -140,7 +140,7 @@ class WizardPageViewModel(
             }
         }
 
-    val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider]
+    val currentProviderInfo inline get() = SupportedLLMProviders[selectedProvider] as? Web
 
     private var _baseUrl by wizardData.transform(
         transformIn = { baseUrl },
@@ -175,7 +175,7 @@ class WizardPageViewModel(
             return
         }
 
-        val predefined = info.predefinedModels.models.associateBy { it.id }
+        val predefined = info.predefinedModels.associateBy { it.id }
         knownModelsMap = predefined
 
         val apiModels = try {

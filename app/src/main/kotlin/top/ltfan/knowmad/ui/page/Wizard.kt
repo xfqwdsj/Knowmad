@@ -429,6 +429,7 @@ class WizardProviderPage : WizardSubPage() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 for ((provider, info) in SupportedLLMProviders) {
+                    if (info !is Web) continue // We only allow web-based providers in the wizard
                     LLMProviderInfo(
                         info = info,
                         modifier = Modifier
