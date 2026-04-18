@@ -25,6 +25,7 @@ import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
+import kotlinx.serialization.Serializable
 import okio.Path
 import org.pytorch.executorch.Module
 import top.ltfan.knowmad.agent.client.AgentClientBasePath
@@ -94,6 +95,7 @@ class ExecuTorchClient(
     }
 }
 
+@Serializable
 object ExecuTorchLLMProvider : LLMProvider("km-executorch", "Knowmad ExecuTorch") {
     val models inline get() = Qwen3Embedding06BModels.models
 }
