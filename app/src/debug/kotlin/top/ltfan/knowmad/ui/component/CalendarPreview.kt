@@ -23,10 +23,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,19 +32,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import top.ltfan.knowmad.data.schedule.Event
 import top.ltfan.knowmad.data.schedule.SemesterEntity
 import top.ltfan.knowmad.ui.theme.AppTheme
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.omnical.icalendar.ICalendarColor
-import java.util.Locale
-import kotlin.random.Random
 import kotlin.time.Instant
 
 @Preview
@@ -61,8 +57,6 @@ fun CalendarPreview() {
         )
     }
 
-    val coroutineScope = rememberCoroutineScope()
-
     val state = rememberCalendarState()
 
     AppTheme {
@@ -75,17 +69,6 @@ fun CalendarPreview() {
                     .height(800.dp),
             ) {
                 Row {
-                    Button(
-                        onClick = {
-                            coroutineScope.launch {
-                                state.animateToMode(
-                                    if (state.currentMode == Month) Week else Month,
-                                )
-                            }
-                        },
-                    ) {
-                        Text("Toggle Mode")
-                    }
                     Slider(
                         value = height / 700.dp,
                         onValueChange = { height = it * 700.dp },
@@ -96,7 +79,7 @@ fun CalendarPreview() {
                         .fillMaxWidth()
                         .height(height),
                     state = state,
-                    locale = Locale.getDefault(),
+                    locale = LocalLocale.current.platformLocale,
                     getEvents = { _, _ ->
                         flowOf(
                             listOf(
