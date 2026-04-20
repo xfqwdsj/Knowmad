@@ -22,12 +22,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -99,7 +96,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.kizitonwose.calendar.compose.HorizontalCalendar
-import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
 import com.kizitonwose.calendar.core.OutDateStyle
 import com.kizitonwose.calendar.core.daysOfWeek
@@ -168,8 +164,6 @@ fun Calendar(
 
     val tick = remember { MutableStateFlow(0u) }
 
-    val transition = rememberTransition(state.transitionState)
-
     val allEvents by remember {
         snapshotFlow { state.currentMonth to state.timeZone }.flatMapLatest { (month, timeZone) ->
             val startTime = month.minusMonth().firstDay.atStartOfDayIn(timeZone)
@@ -179,89 +173,46 @@ fun Calendar(
     }.collectAsState(initial = emptyList())
 
     CompositionLocalProvider(LocalDaySecondaryTextTick provides tick) {
-        transition.AnimatedContent(
-            modifier = modifier,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-        ) { mode ->
-            when (mode) {
-                Month -> HorizontalCalendar(
-                    modifier = Modifier.fillMaxSize(),
-                    state = state.monthCalendarState,
-                    contentHeightMode = Fill,
-                    dayContent = { day ->
-                        val events = remember(day, state.timeZone, allEvents) {
-                            if (day.position != MonthDate) return@remember null
-                            val startTime = day.date.atStartOfDayIn(state.timeZone)
-                            val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
-                            allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
+        // TODO: replace with self-implemented calendar to support week mode and better performance
+        HorizontalCalendar(
+            modifier = modifier.fillMaxSize(),
+            state = state.monthCalendarState,
+            contentHeightMode = Fill,
+            dayContent = { day ->
+                val events = remember(day, state.timeZone, allEvents) {
+                    if (day.position != MonthDate) return@remember null
+                    val startTime = day.date.atStartOfDayIn(state.timeZone)
+                    val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
+                    allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
+                }
+
+                Day(
+                    date = day.date,
+                    onClick = onDayClick?.let { callback ->
+                        { callback(day.date, events) }
+                    },
+                    events = events,
+                    onEventClick = onEventClick?.let { callback ->
+                        { clicked, events ->
+                            callback(day.date, clicked, events)
                         }
-
-                        Day(
-                            date = day.date,
-                            onClick = onDayClick?.let { callback ->
-                                { callback(day.date, events) }
-                            },
-                            events = events,
-                            onEventClick = onEventClick?.let { callback ->
-                                { clicked, events ->
-                                    callback(day.date, clicked, events)
-                                }
-                            },
-                            outOfMonth = day.position != MonthDate,
-                            border = if (day.date == today) BorderStroke(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            ) else null,
-                        )
                     },
-                    monthHeader = {
-                        WeekHeader(
-                            modifier = headerModifier,
-                            daysOfWeek = state.daysOfWeek,
-                            locale = locale,
-                            textStyle = headerTextStyle,
-                        )
-                    },
+                    outOfMonth = day.position != MonthDate,
+                    border = if (day.date == today) BorderStroke(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    ) else null,
                 )
-
-                Week -> WeekCalendar(
-                    modifier = Modifier.fillMaxSize(),
-                    state = state.weekCalendarState,
-                    dayContent = { day ->
-                        val events = remember(day, state.timeZone, allEvents) {
-                            val startTime = day.date.atStartOfDayIn(state.timeZone)
-                            val endTime = day.date.plusDays(1).atStartOfDayIn(state.timeZone)
-                            allEvents.filter { it.startTime <= endTime && it.endTime >= startTime }
-                        }
-
-                        Day(
-                            date = day.date,
-                            onClick = onDayClick?.let { callback ->
-                                { callback(day.date, events) }
-                            },
-                            hasEvents = events.isNotEmpty(),
-                            onEventClick = onEventClick?.let { callback ->
-                                { clicked, events ->
-                                    callback(day.date, clicked, events)
-                                }
-                            },
-                            border = if (day.date == today) BorderStroke(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            ) else null,
-                        )
-                    },
-                    weekHeader = {
-                        WeekHeader(
-                            modifier = headerModifier,
-                            daysOfWeek = state.daysOfWeek,
-                            locale = locale,
-                            textStyle = headerTextStyle,
-                        )
-                    },
+            },
+            monthHeader = {
+                WeekHeader(
+                    modifier = headerModifier,
+                    daysOfWeek = state.daysOfWeek,
+                    locale = locale,
+                    textStyle = headerTextStyle,
                 )
-            }
-        }
+            },
+        )
     }
 
     LaunchedEffect(today) {
@@ -724,24 +675,6 @@ class CalendarState(
         daysOfWeek.first(),
         null,
     )
-
-    val transitionState = SeekableTransitionState<CalendarDisplayMode>(Month)
-    val currentMode get() = transitionState.currentState
-
-    suspend fun snapToMode(mode: CalendarDisplayMode) {
-        transitionState.snapTo(mode)
-    }
-
-    suspend fun seekToMode(
-        @FloatRange(from = 0.0, to = 1.0) fraction: Float,
-        targetMode: CalendarDisplayMode = transitionState.targetState,
-    ) {
-        transitionState.seekTo(fraction, targetMode)
-    }
-
-    suspend fun animateToMode(mode: CalendarDisplayMode) {
-        transitionState.animateTo(mode)
-    }
 
     var timeZone by mutableStateOf(initialTimeZone)
     var today by mutableStateOf(LocalDate.now(timeZone = timeZone))
