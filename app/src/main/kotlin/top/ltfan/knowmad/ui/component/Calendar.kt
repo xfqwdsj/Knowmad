@@ -442,18 +442,30 @@ fun Events(
         val activeIds = remember(events) { events.map { it.id }.toSet() }
 
         SideEffect {
-            val currentPoolMap = mutableMapOf<Uuid, Int>()
-            internalRenderList.fastForEachIndexed { index, event ->
-                currentPoolMap[event.id] = index
-            }
+            var iIdx = 0
 
             events.fastForEach { newEvent ->
-                val poolIndex = currentPoolMap[newEvent.id]
-                if (poolIndex == null) {
-                    internalRenderList.add(newEvent)
-                } else if (internalRenderList[poolIndex] !== newEvent) {
-                    internalRenderList[poolIndex] = newEvent
+                while (iIdx < internalRenderList.size && !activeIds.contains(internalRenderList[iIdx].id)) {
+                    iIdx++
                 }
+
+                if (iIdx < internalRenderList.size) {
+                    if (internalRenderList[iIdx].id == newEvent.id) {
+                        if (internalRenderList[iIdx] !== newEvent) {
+                            internalRenderList[iIdx] = newEvent
+                        }
+                    } else {
+                        val existingIdx = internalRenderList.indexOfFirst { it.id == newEvent.id }
+                        if (existingIdx != -1) {
+                            internalRenderList.removeAt(existingIdx)
+                        }
+                        internalRenderList.add(iIdx, newEvent)
+                    }
+                } else {
+                    internalRenderList.add(newEvent)
+                }
+
+                iIdx++
             }
         }
 
