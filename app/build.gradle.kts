@@ -311,6 +311,49 @@ abstract class DownloadRemendTask : DefaultTask() {
     }
 }
 
+abstract class DownloadDjlSoTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    init {
+        outputDir.convention(
+            project.layout.buildDirectory.dir("generated/jniLibs/${name}"),
+        )
+    }
+
+    private val baseUrl = "https://publish.djl.ai/tokenizers/0.21.0/jnilib/0.36.0/android"
+
+    private val abis = listOf(
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64",
+    )
+
+    @TaskAction
+    fun download() {
+        val root = outputDir.get().asFile
+
+        abis.forEach { abi ->
+            val url = "$baseUrl/$abi/libdjl_tokenizer.so"
+            val target = File(root, "$abi/libdjl_tokenizer.so")
+
+            if (target.exists()) {
+                println("Skip existing $abi")
+                return@forEach
+            }
+
+            println("Downloading $abi from $url")
+
+            target.parentFile.mkdirs()
+
+            URI(url).toURL().openStream().use { input ->
+                target.outputStream().use { input.copyTo(it) }
+            }
+        }
+    }
+}
+
 androidComponents {
     onVariants { variant ->
         val mathJaxProvider = tasks.register<DownloadMathJaxTask>(
@@ -341,6 +384,21 @@ androidComponents {
         variant.sources.assets?.addGeneratedSourceDirectory(
             remendProvider,
             DownloadRemendTask::outputDir,
+        )
+
+        val djlSoProvider = tasks.register<DownloadDjlSoTask>(
+            "downloadDjlSo${
+                variant.name.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(
+                        Locale.getDefault(),
+                    ) else it.toString()
+                }
+            }",
+        )
+
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(
+            djlSoProvider,
+            DownloadDjlSoTask::outputDir,
         )
     }
 }

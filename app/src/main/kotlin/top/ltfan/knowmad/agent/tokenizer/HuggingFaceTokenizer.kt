@@ -28,6 +28,10 @@ class HuggingFaceTokenizer(
     val tokenizerConfigJson: Path? = null,
     val options: Map<String, String> = emptyMap(),
 ) : Tokenizer {
+    init {
+        System.setProperty("OPT_OUT_TRACKING", "true")
+    }
+
     private val tokenizer by lazy {
         HuggingFaceTokenizer.newInstance(
             tokenizerJson.toNioPath().inputStream(),

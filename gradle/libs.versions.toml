@@ -29,7 +29,6 @@ logging = "8.0.01"
 ktor = "3.4.2"
 koog = "0.8.0"
 djl = "0.36.0"
-djl-android-tokenizer = "0.33.0"
 executorch = "1.2.0"
 compass = "3.0.2"
 dslUtilities = "1.0.4"
@@ -94,7 +93,6 @@ ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotia
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 koog = { module = "ai.koog:koog-agents", version.ref = "koog" }
 djl-huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers", version.ref = "djl" }
-djl-android-tokenizer = { module = "ai.djl.android:tokenizer-native", version.ref = "djl-android-tokenizer" }
 executorch = { module = "org.pytorch:executorch-android", version.ref = "executorch" }
 compass-geolocation = { module = "dev.jordond.compass:geolocation", version.ref = "compass" }
 dslUtilities = { module = "top.ltfan.dslutilities:dsl-utilities", version.ref = "dslUtilities" }
@@ -162,7 +160,6 @@ all = [
     "koog",
     # djl
     "djl-huggingface-tokenizers",
-    "djl-android-tokenizer",
     # executorch
     "executorch",
     # compass

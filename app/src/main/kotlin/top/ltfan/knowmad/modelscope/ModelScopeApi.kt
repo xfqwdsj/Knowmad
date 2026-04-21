@@ -20,8 +20,10 @@ package top.ltfan.knowmad.modelscope
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.request.prepareGet
 import io.ktor.http.path
 import io.ktor.serialization.kotlinx.json.json
 import top.ltfan.knowmad.util.Json
@@ -39,6 +41,14 @@ class ModelScopeApi private constructor() : AutoCloseable {
         }
     }
 
+    private val downloadClient = HttpClient(CIO) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = MAX_VALUE
+            connectTimeoutMillis = MAX_VALUE
+            socketTimeoutMillis = MAX_VALUE
+        }
+    }
+
     suspend fun listFiles(
         repoId: String,
         revision: String? = null,
@@ -48,7 +58,7 @@ class ModelScopeApi private constructor() : AutoCloseable {
         url {
             protocol = HTTPS
             host = "modelscope.cn"
-            path("/api/v1/models/", repoId, "/repo/files")
+            path("/api/v1/models", repoId, "repo/files")
             if (revision != null) {
                 parameters.append("Revision", revision)
             }
@@ -61,15 +71,15 @@ class ModelScopeApi private constructor() : AutoCloseable {
         }
     }
 
-    suspend fun getFile(
+    suspend fun prepareGetFile(
         repoId: String,
         filePath: String,
         revision: String? = null,
-    ) = client.get {
+    ) = downloadClient.prepareGet {
         url {
             protocol = HTTPS
             host = "modelscope.cn"
-            path("/api/v1/models/", repoId, "/repo")
+            path("/api/v1/models", repoId, "repo")
             parameters.append("FilePath", filePath)
             if (revision != null) {
                 parameters.append("Revision", revision)
@@ -79,6 +89,7 @@ class ModelScopeApi private constructor() : AutoCloseable {
 
     override fun close() {
         client.close()
+        downloadClient.close()
     }
 
     companion object {

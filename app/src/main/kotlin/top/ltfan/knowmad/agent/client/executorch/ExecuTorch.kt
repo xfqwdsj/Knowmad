@@ -41,8 +41,6 @@ class ExecuTorchClient(
     override suspend fun embed(text: String, model: LLModel): List<Double> {
         model.requireCapability(Embed)
 
-        val basePath = basePath / ExecuTorchClientBasePath
-
         val info = modelInfos[model]
 
         require(info != null) { "Model ${model.id} is not recognized by ExecuTorchClient" }
@@ -51,7 +49,7 @@ class ExecuTorchClient(
             error("Model ${model.id} is currently not available")
         }
 
-        val modelPath = basePath / model.id
+        val modelPath = basePath / ExecuTorchClientBasePath / model.id
 
         return info.createTokenizer(basePath).use { tokenizer ->
             val (ids, attentionMask) = tokenizer.encode(text)
@@ -62,7 +60,7 @@ class ExecuTorchClient(
             val module = Module.load(modelPath.toString())
 
             module.forward(idsEValue, attentionMaskEValue)
-                .first().toTensor().dataAsDoubleArray.toList().also {
+                .first().toTensor().dataAsFloatArray.map { it.toDouble() }.also {
                     module.destroy()
                 }
         }

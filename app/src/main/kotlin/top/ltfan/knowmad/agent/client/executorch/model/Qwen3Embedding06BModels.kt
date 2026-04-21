@@ -21,7 +21,9 @@ package top.ltfan.knowmad.agent.client.executorch.model
 import ai.koog.prompt.llm.LLModel
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.isSuccess
-import io.ktor.utils.io.jvm.javaio.copyTo
+import io.ktor.util.cio.use
+import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.copyTo
 import okio.FileSystem
 import okio.Path
 import top.ltfan.knowmad.agent.client.DownloadSource
@@ -34,7 +36,6 @@ import top.ltfan.knowmad.agent.client.executorch.ExecuTorchLLMProvider
 import top.ltfan.knowmad.agent.tokenizer.HuggingFaceTokenizer
 import top.ltfan.knowmad.modelscope.ModelScopeApi
 import top.ltfan.knowmad.util.Logger
-import kotlin.io.path.outputStream
 
 private val logger = Logger("Qwen3Embedding06BModels")
 
@@ -46,46 +47,55 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
             ModelScopeApi {
                 val repoId = "Qwen/Qwen3-Embedding-0.6B"
 
+                val fs = FileSystem.SYSTEM
                 val basePath = basePath / Qwen3Embedding06BModels.basePath
 
                 run {
                     val fileName = "tokenizer.json"
                     val path = basePath / fileName
 
-                    val response = getFile(
+                    path.parent?.let { fs.createDirectories(it) } ?: run {
+                        logger.warn { "Tokenizer file path $path does not have a parent directory" }
+                    }
+
+                    prepareGetFile(
                         repoId = repoId,
                         filePath = fileName,
-                    )
+                    ).execute { response ->
+                        if (!response.status.isSuccess()) {
+                            throw RuntimeException("Failed to download tokenizer: ${response.status}")
+                        }
 
-                    if (!response.status.isSuccess()) {
-                        throw RuntimeException("Failed to download tokenizer: ${response.status}")
+                        path.toFile().writeChannel().use {
+                            response.bodyAsChannel().copyTo(this)
+                        }
+
+                        logger.debug { "Downloaded tokenizer to $path" }
                     }
-
-                    path.toNioPath().outputStream().use { output ->
-                        response.bodyAsChannel().copyTo(output)
-                    }
-
-                    logger.debug { "Downloaded tokenizer to $path" }
                 }
 
                 run {
                     val fileName = "tokenizer_config.json"
                     val path = basePath / fileName
 
-                    val response = getFile(
+                    path.parent?.let { fs.createDirectories(it) } ?: run {
+                        logger.warn { "Tokenizer config file path $path does not have a parent directory" }
+                    }
+
+                    prepareGetFile(
                         repoId = repoId,
                         filePath = fileName,
-                    )
+                    ).execute { response ->
+                        if (!response.status.isSuccess()) {
+                            throw RuntimeException("Failed to download tokenizer config: ${response.status}")
+                        }
 
-                    if (!response.status.isSuccess()) {
-                        throw RuntimeException("Failed to download tokenizer config: ${response.status}")
+                        path.toFile().writeChannel().use {
+                            response.bodyAsChannel().copyTo(this)
+                        }
+
+                        logger.debug { "Downloaded tokenizer config to $path" }
                     }
-
-                    path.toNioPath().outputStream().use { output ->
-                        response.bodyAsChannel().copyTo(output)
-                    }
-
-                    logger.debug { "Downloaded tokenizer config to $path" }
                 }
             }
         } validateWith { basePath, enforce ->
@@ -95,8 +105,8 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
             val configPath = basePath / Qwen3Embedding06BModels.basePath / "tokenizer_config.json"
 
             when {
-                !fs.exists(tokenizerPath) -> Downloader.ValidationResult.Existing.Invalid("Tokenizer file not found at $tokenizerPath")
-                !fs.exists(configPath) -> Downloader.ValidationResult.Existing.Invalid("Tokenizer config file not found at $configPath")
+                !fs.exists(tokenizerPath) -> Downloader.ValidationResult.NotExisting("Tokenizer file not found at $tokenizerPath")
+                !fs.exists(configPath) -> Downloader.ValidationResult.NotExisting("Tokenizer config file not found at $configPath")
                 else -> Downloader.ValidationResult.Existing.NotValidated
             }
         }
@@ -143,23 +153,29 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
         override val downloader = tokenizerDownloader then Downloader {
             DownloadSource.ModelScope { basePath ->
                 ModelScopeApi {
+                    val fs = FileSystem.SYSTEM
+
                     val basePath = basePath / Qwen3Embedding06BModels.basePath
                     val path = basePath / fileName
 
-                    val response = getFile(
+                    path.parent?.let { fs.createDirectories(it) } ?: run {
+                        logger.warn { "Model file path $path does not have a parent directory" }
+                    }
+
+                    prepareGetFile(
                         repoId = "HMLTFan/qwen3-embedding-0.6b-cpu-int8-dynamic-8da4w-executorch",
                         filePath = fileName,
-                    )
+                    ).execute { response ->
+                        if (!response.status.isSuccess()) {
+                            throw RuntimeException("Failed to download model ${model.id}: ${response.status}")
+                        }
 
-                    if (!response.status.isSuccess()) {
-                        throw RuntimeException("Failed to download model ${model.id}: ${response.status}")
+                        path.toFile().writeChannel().use {
+                            response.bodyAsChannel().copyTo(this)
+                        }
+
+                        logger.debug { "Downloaded model ${model.id} to $path" }
                     }
-
-                    path.toNioPath().outputStream().use { output ->
-                        response.bodyAsChannel().copyTo(output)
-                    }
-
-                    logger.debug { "Downloaded model ${model.id} to $path" }
                 }
             } validateWith { basePath, enforce ->
                 val fs = FileSystem.SYSTEM
@@ -167,7 +183,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                 val path = basePath / Qwen3Embedding06BModels.basePath / fileName
 
                 when {
-                    !fs.exists(path) -> Downloader.ValidationResult.Existing.Invalid("Model file not found at $path")
+                    !fs.exists(path) -> Downloader.ValidationResult.NotExisting("Model file not found at $path")
                     else -> Downloader.ValidationResult.Existing.NotValidated
                 }
             }
