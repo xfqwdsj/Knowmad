@@ -102,7 +102,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
@@ -118,7 +117,9 @@ import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.ast.getTextInNode
+import org.intellij.markdown.flavours.MarkdownFlavourDescriptor
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
+import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import top.ltfan.knowmad.ui.util.rememberEx
 
 typealias MarkdownSuccessContent = @Composable (
@@ -633,8 +634,9 @@ fun MarkdownView(
     mathResults: Map<String, Result<MathJaxRenderResult>?>? = null,
     mathFontSize: MathJaxFontSize = remember { MathJaxFontSize() },
     success: MarkdownSuccessContent = DefaultMarkdownSuccessContent,
+    flavour: MarkdownFlavourDescriptor = remember { GFMFlavourDescriptor() },
 ) {
-    val markdownState = rememberMarkdownState(markdown, retainState = true)
+    val markdownState = rememberMarkdownState(markdown, retainState = true, flavour = flavour)
     MarkdownView(
         markdownState,
         mathJaxRendererState = mathJaxRendererState,
@@ -659,7 +661,7 @@ fun MarkdownView(
     val blockParsing = LocalMarkdownViewBlockParsing.current
     val initialState = remember(blockParsing) {
         if (blockParsing) {
-            runBlocking(Dispatchers.Default) { stateFlow.first { it !is State.Loading } }
+            runBlocking(Dispatchers.Default) { stateFlow.first { it !is Loading } }
         } else {
             stateFlow.value
         }
@@ -749,20 +751,22 @@ sealed interface SavedMarkdownState {
         coroutineScope: CoroutineScope,
         markdownFlow: Flow<String>,
         override val mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+        val flavour: MarkdownFlavourDescriptor = GFMFlavourDescriptor(),
     ) : SavedMarkdownState {
         private val originalState =
-            markdownFlow.flatMapLatest { parseMarkdownFlow(it) }.flowOn(Dispatchers.Default)
+            markdownFlow.flatMapLatest { parseMarkdownFlow(it, flavour = flavour) }
+                .flowOn(Dispatchers.Default)
                 .stateIn(
                     coroutineScope + Dispatchers.Default,
-                    SharingStarted.Eagerly,
+                    Eagerly,
                     State.Loading(),
                 )
 
-        override val state = originalState.filter { it !is State.Loading }
-            .stateIn(coroutineScope + Dispatchers.Default, SharingStarted.Eagerly, State.Loading())
+        override val state = originalState.filter { it !is Loading }
+            .stateIn(coroutineScope + Dispatchers.Default, Eagerly, State.Loading())
 
         suspend fun fixed() = Fixed(
-            state = originalState.first { it !is State.Loading },
+            state = originalState.first { it !is Loading },
             mathResults = mathResults,
         )
     }
@@ -779,9 +783,11 @@ sealed interface SavedMarkdownState {
         suspend fun Fixed(
             markdownText: String,
             mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+            flavor: MarkdownFlavourDescriptor = GFMFlavourDescriptor(),
         ): Fixed {
-            val state = parseMarkdownFlow(markdownText).flowOn(Dispatchers.Default)
-                .first { it !is State.Loading }
+            val state = parseMarkdownFlow(markdownText, flavour = flavor)
+                .flowOn(Dispatchers.Default)
+                .first { it !is Loading }
             return Fixed(state, mathResults)
         }
     }
@@ -791,20 +797,23 @@ fun SavedMarkdownState(
     coroutineScope: CoroutineScope,
     markdownFlow: Flow<String>,
     mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+    flavour: MarkdownFlavourDescriptor = GFMFlavourDescriptor(),
 ) = SavedMarkdownState.Dynamic(
     coroutineScope,
     markdownFlow,
     mathResults,
+    flavour,
 )
 
 @Composable
 fun rememberSavedMarkdownState(
     markdownFlow: Flow<String>,
     mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = remember { mutableStateMapOf() },
+    flavour: MarkdownFlavourDescriptor = remember { GFMFlavourDescriptor() },
 ): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
-    return remember(coroutineScope, markdownFlow, mathResults) {
-        SavedMarkdownState(coroutineScope, markdownFlow, mathResults)
+    return remember(coroutineScope, markdownFlow, mathResults, flavour) {
+        SavedMarkdownState(coroutineScope, markdownFlow, mathResults, flavour)
     }
 }
 
@@ -812,6 +821,7 @@ fun rememberSavedMarkdownState(
 fun rememberSavedMarkdownState(
     markdownText: String,
     mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = remember { mutableStateMapOf() },
+    flavour: MarkdownFlavourDescriptor = remember { GFMFlavourDescriptor() },
 ): SavedMarkdownState {
     val coroutineScope = rememberCoroutineScope()
 
@@ -821,8 +831,8 @@ fun rememberSavedMarkdownState(
         flow.value = markdownText
     }
 
-    return remember(coroutineScope, flow, mathResults) {
-        SavedMarkdownState(coroutineScope, flow, mathResults)
+    return remember(coroutineScope, flow, mathResults, flavour) {
+        SavedMarkdownState(coroutineScope, flow, mathResults, flavour)
     }
 }
 
@@ -830,10 +840,12 @@ context(viewModel: ViewModel)
 fun SavedMarkdownState(
     markdownFlow: Flow<String>,
     mathResults: MutableMap<String, Result<MathJaxRenderResult>?> = mutableStateMapOf(),
+    flavour: MarkdownFlavourDescriptor = GFMFlavourDescriptor(),
 ) = SavedMarkdownState(
     viewModel.viewModelScope,
     markdownFlow,
     mathResults,
+    flavour,
 )
 
 fun interface MarkdownCodeFenceRunner {
