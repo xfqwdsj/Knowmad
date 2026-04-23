@@ -90,7 +90,7 @@ class Downloader(
         return Downloader(combinedFunctions, combinedValidations)
     }
 
-    class DownloaderBuilder {
+    class Builder {
         private val functions = mutableMapOf<DownloadSource, PersistentList<DownloadFunction>>()
         private val validations = mutableMapOf<DownloadSource, PersistentList<ValidationFunction>>()
 
@@ -122,7 +122,7 @@ class Downloader(
     }
 
     companion object {
-        operator fun invoke(builderAction: DownloaderBuilder.() -> Unit) =
-            DownloaderBuilder().apply(builderAction).build()
+        operator fun invoke(builderAction: Builder.() -> Unit) =
+            Builder().apply(builderAction).build()
     }
 }
