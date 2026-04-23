@@ -50,8 +50,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import top.ltfan.knowmad.ui.util.DurationParts.Companion.toParts
-import top.ltfan.knowmad.ui.util.format
+import top.ltfan.knowmad.util.DurationParts.Companion.toParts
+import top.ltfan.knowmad.util.format
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours

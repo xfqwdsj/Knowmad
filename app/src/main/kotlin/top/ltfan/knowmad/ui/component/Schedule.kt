@@ -161,7 +161,6 @@ import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
 import top.ltfan.knowmad.ui.util.SnackbarAction
 import top.ltfan.knowmad.ui.util.contractColorFor
 import top.ltfan.knowmad.ui.util.detectLongPress
-import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.ui.util.itemThemedShape
 import top.ltfan.knowmad.ui.util.leadingItemThemedShape
 import top.ltfan.knowmad.ui.util.localSharedTransitionScope
@@ -170,6 +169,7 @@ import top.ltfan.knowmad.ui.util.trailingItemThemedShape
 import top.ltfan.knowmad.ui.viewmodel.GlobalViewModel
 import top.ltfan.knowmad.ui.viewmodel.LocalAgentViewModel
 import top.ltfan.knowmad.util.asStringRes
+import top.ltfan.knowmad.util.format
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarPriority
 import java.time.format.DateTimeFormatter

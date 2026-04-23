@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.ui.util
+package top.ltfan.knowmad.util
 
 import android.icu.text.MeasureFormat
 import android.icu.util.Measure
-import top.ltfan.knowmad.ui.util.DurationParts.Companion.toParts
+import top.ltfan.knowmad.util.DurationParts.Companion.toParts
 import java.util.Locale
 import kotlin.time.Duration
 

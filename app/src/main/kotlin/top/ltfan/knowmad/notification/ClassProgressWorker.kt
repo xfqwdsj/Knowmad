@@ -34,9 +34,9 @@ import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.task.ClassProgressConfiguration
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotification
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
-import top.ltfan.knowmad.ui.util.format
 import top.ltfan.knowmad.util.Cbor
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.format
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.time.times

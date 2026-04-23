@@ -35,7 +35,7 @@ import kotlinx.datetime.toLocalDateTime
 import top.ltfan.knowmad.MainActivity
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.sync.requestCalendarSync
-import top.ltfan.knowmad.ui.util.format
+import top.ltfan.knowmad.util.format
 import top.ltfan.knowmad.widget.TodayWidget
 import top.ltfan.omnical.icalendar.ICalendarColor
 import top.ltfan.omnical.icalendar.ICalendarTrigger
