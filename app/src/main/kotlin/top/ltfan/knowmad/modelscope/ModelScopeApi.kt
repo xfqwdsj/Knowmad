@@ -20,6 +20,7 @@ package top.ltfan.knowmad.modelscope
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.BodyProgress
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestBuilder
@@ -53,6 +54,7 @@ class ModelScopeApi private constructor() : AutoCloseable {
                 connectTimeoutMillis = MAX_VALUE
                 socketTimeoutMillis = MAX_VALUE
             }
+            install(BodyProgress)
         }
     }
     private val downloadClient inline get() = lazyDownloadClient.value

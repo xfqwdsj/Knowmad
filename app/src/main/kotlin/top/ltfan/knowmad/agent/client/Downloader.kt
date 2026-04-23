@@ -19,13 +19,14 @@
 package top.ltfan.knowmad.agent.client
 
 import androidx.compose.ui.util.fastForEach
+import io.ktor.client.content.ProgressListener
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import okio.Path
 
-private typealias DownloadFunction = suspend (basePath: Path) -> Unit
-private typealias ValidationFunction = suspend (basePath: Path, enforce: Boolean) -> Downloader.ValidationResult
+private typealias DownloadFunction = suspend Downloader.Data.Download.() -> Unit
+private typealias ValidationFunction = suspend Downloader.Data.Validation.() -> Downloader.ValidationResult
 
 class Downloader(
     private val functions: Map<DownloadSource, PersistentList<DownloadFunction>>,
@@ -35,11 +36,16 @@ class Downloader(
 
     val supportedSources get() = functions.keys
 
-    suspend fun download(source: DownloadSource, basePath: Path) {
+    suspend fun download(
+        source: DownloadSource,
+        basePath: Path,
+        progressListener: ProgressListener? = null,
+    ) {
         val functions = functions[source]
             ?: throw IllegalArgumentException("Unsupported download source: $source")
 
-        functions.fastForEach { it(basePath) }
+        val data = Data.Download(basePath, progressListener)
+        functions.fastForEach { it(data) }
     }
 
     suspend fun validate(
@@ -50,10 +56,12 @@ class Downloader(
         val validationFunctions = validations[source]
         if (validationFunctions.isNullOrEmpty()) return NoValidation
 
+        val data = Data.Validation(basePath, enforce)
+
         var currentExistingResult: ValidationResult.Existing? = null
 
         for (validation in validationFunctions) {
-            when (val result = validation(basePath, enforce)) {
+            when (val result = validation(data)) {
                 is ValidationResult.Existing.Invalid -> return result
                 is NotExisting -> return result
 
@@ -88,6 +96,20 @@ class Downloader(
         }
 
         return Downloader(combinedFunctions, combinedValidations)
+    }
+
+    sealed interface Data {
+        val basePath: Path
+
+        data class Download(
+            override val basePath: Path,
+            val progressListener: ProgressListener? = null,
+        ) : Data
+
+        data class Validation(
+            override val basePath: Path,
+            val enforce: Boolean = false,
+        ) : Data
     }
 
     class Builder {

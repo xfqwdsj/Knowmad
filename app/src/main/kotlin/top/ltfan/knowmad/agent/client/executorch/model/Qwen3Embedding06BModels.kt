@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.agent.client.executorch.model
 
 import ai.koog.prompt.llm.LLModel
+import io.ktor.client.plugins.onDownload
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.isSuccess
 import io.ktor.util.cio.use
@@ -43,7 +44,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
     override val basePath = ExecuTorchClientBasePath / "qwen3_embedding_0.6b"
 
     override val tokenizerDownloader = Downloader {
-        DownloadSource.ModelScope { basePath ->
+        DownloadSource.ModelScope {
             ModelScopeApi {
                 val repoId = "Qwen/Qwen3-Embedding-0.6B"
 
@@ -61,6 +62,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     prepareGetFile(
                         repoId = repoId,
                         filePath = fileName,
+                        buildRequest = { onDownload(progressListener) },
                     ).execute { response ->
                         if (!response.status.isSuccess()) {
                             throw RuntimeException("Failed to download tokenizer: ${response.status}")
@@ -85,6 +87,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     prepareGetFile(
                         repoId = repoId,
                         filePath = fileName,
+                        buildRequest = { onDownload(progressListener) },
                     ).execute { response ->
                         if (!response.status.isSuccess()) {
                             throw RuntimeException("Failed to download tokenizer config: ${response.status}")
@@ -98,7 +101,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     }
                 }
             }
-        } validateWith { basePath, enforce ->
+        } validateWith {
             val fs = FileSystem.SYSTEM
 
             val tokenizerPath = basePath / Qwen3Embedding06BModels.basePath / "tokenizer.json"
@@ -151,7 +154,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
         val entry = model to this as LocalModelInfo
 
         override val downloader = tokenizerDownloader then Downloader {
-            DownloadSource.ModelScope { basePath ->
+            DownloadSource.ModelScope {
                 ModelScopeApi {
                     val fs = FileSystem.SYSTEM
 
@@ -165,6 +168,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     prepareGetFile(
                         repoId = "HMLTFan/qwen3-embedding-0.6b-cpu-int8-dynamic-8da4w-executorch",
                         filePath = fileName,
+                        buildRequest = { onDownload(progressListener) },
                     ).execute { response ->
                         if (!response.status.isSuccess()) {
                             throw RuntimeException("Failed to download model ${model.id}: ${response.status}")
@@ -177,7 +181,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                         logger.debug { "Downloaded model ${model.id} to $path" }
                     }
                 }
-            } validateWith { basePath, enforce ->
+            } validateWith {
                 val fs = FileSystem.SYSTEM
 
                 val path = basePath / Qwen3Embedding06BModels.basePath / fileName
