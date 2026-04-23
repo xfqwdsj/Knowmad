@@ -29,7 +29,7 @@ val HashComputationDispatcher = Dispatchers.Default.limitedParallelism(
     Runtime.getRuntime().availableProcessors(),
 )
 
-suspend fun HashingSource.useResultBlackholeReading(): ByteString {
+suspend fun HashingSource.calculateHashAndClose(): ByteString {
     withContext(Dispatchers.IO) {
         use { source ->
             source.buffer().use { bufferedSource ->

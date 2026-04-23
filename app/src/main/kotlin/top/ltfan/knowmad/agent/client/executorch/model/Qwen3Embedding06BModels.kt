@@ -39,7 +39,7 @@ import top.ltfan.knowmad.agent.tokenizer.HuggingFaceTokenizer
 import top.ltfan.knowmad.modelscope.ModelScopeApi
 import top.ltfan.knowmad.modelscope.ModelScopeFilesResponse
 import top.ltfan.knowmad.util.Logger
-import top.ltfan.knowmad.util.useResultBlackholeReading
+import top.ltfan.knowmad.util.calculateHashAndClose
 
 private val logger = Logger("Qwen3Embedding06BModels")
 
@@ -159,7 +159,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     if (level == SizeOnly) return@run
 
                     val sha256 = HashingSource.sha256(fs.source(tokenizerPath))
-                        .useResultBlackholeReading().hex()
+                        .calculateHashAndClose().hex()
                     if (sha256 != file.sha256) {
                         return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer file SHA256 mismatch: local $sha256, remote ${file.sha256}")
                     }
@@ -177,7 +177,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     if (level == SizeOnly) return@run
 
                     val sha256 = HashingSource.sha256(fs.source(configPath))
-                        .useResultBlackholeReading().hex()
+                        .calculateHashAndClose().hex()
                     if (sha256 != file.sha256) {
                         return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer config file SHA256 mismatch: local $sha256, remote ${file.sha256}")
                     }
@@ -291,7 +291,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                     if (level == SizeOnly) return@ModelScopeApi Downloader.ValidationResult.Existing.Valid
 
                     val sha256 = HashingSource.sha256(fs.source(path))
-                        .useResultBlackholeReading().hex()
+                        .calculateHashAndClose().hex()
                     if (sha256 != file.sha256) {
                         return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Model file SHA256 mismatch: local $sha256, remote ${file.sha256}")
                     }
