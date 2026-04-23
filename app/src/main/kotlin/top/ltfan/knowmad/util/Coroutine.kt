@@ -21,7 +21,6 @@ package top.ltfan.knowmad.util
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.InternalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -29,10 +28,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
-
-val HashComputationDispatcher = Dispatchers.Default.limitedParallelism(
-    Runtime.getRuntime().availableProcessors(),
-)
 
 /**
  * A [CancellationException] subtype that signals an **intentional,

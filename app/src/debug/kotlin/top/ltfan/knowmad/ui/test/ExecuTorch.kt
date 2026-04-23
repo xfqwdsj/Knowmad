@@ -107,6 +107,7 @@ fun ExecuTorch() {
                                 result = client.modelInfos[selectedModel]?.downloader?.validate(
                                     ModelScope,
                                     basePath,
+                                    SizeAndHash,
                                 )
                             }
                         },

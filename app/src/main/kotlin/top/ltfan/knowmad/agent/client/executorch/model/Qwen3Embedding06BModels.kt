@@ -19,6 +19,7 @@
 package top.ltfan.knowmad.agent.client.executorch.model
 
 import ai.koog.prompt.llm.LLModel
+import io.ktor.client.call.body
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.isSuccess
@@ -26,6 +27,7 @@ import io.ktor.util.cio.use
 import io.ktor.util.cio.writeChannel
 import io.ktor.utils.io.copyTo
 import okio.FileSystem
+import okio.HashingSource
 import okio.Path
 import top.ltfan.knowmad.agent.client.DownloadSource
 import top.ltfan.knowmad.agent.client.Downloader
@@ -36,7 +38,9 @@ import top.ltfan.knowmad.agent.client.executorch.ExecuTorchClientBasePath
 import top.ltfan.knowmad.agent.client.executorch.ExecuTorchLLMProvider
 import top.ltfan.knowmad.agent.tokenizer.HuggingFaceTokenizer
 import top.ltfan.knowmad.modelscope.ModelScopeApi
+import top.ltfan.knowmad.modelscope.ModelScopeFilesResponse
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.useResultBlackholeReading
 
 private val logger = Logger("Qwen3Embedding06BModels")
 
@@ -44,7 +48,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
     override val basePath = ExecuTorchClientBasePath / "qwen3_embedding_0.6b"
 
     override val tokenizerDownloader = Downloader {
-        DownloadSource.ModelScope {
+        DownloadSource.ModelScope(Tokenizer) {
             ModelScopeApi {
                 val repoId = "Qwen/Qwen3-Embedding-0.6B"
 
@@ -103,14 +107,88 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
             }
         } validateWith {
             val fs = FileSystem.SYSTEM
+            val basePath = basePath / Qwen3Embedding06BModels.basePath
 
-            val tokenizerPath = basePath / Qwen3Embedding06BModels.basePath / "tokenizer.json"
-            val configPath = basePath / Qwen3Embedding06BModels.basePath / "tokenizer_config.json"
+            val tokenizerName = "tokenizer.json"
+            val configName = "tokenizer_config.json"
+
+            val tokenizerPath = basePath / tokenizerName
+            val configPath = basePath / configName
 
             when {
-                !fs.exists(tokenizerPath) -> Downloader.ValidationResult.NotExisting("Tokenizer file not found at $tokenizerPath")
-                !fs.exists(configPath) -> Downloader.ValidationResult.NotExisting("Tokenizer config file not found at $configPath")
-                else -> Downloader.ValidationResult.Existing.NotValidated
+                !fs.exists(tokenizerPath) -> {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Tokenizer file not found at $tokenizerPath")
+                }
+
+                !fs.exists(configPath) -> {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Tokenizer config file not found at $configPath")
+                }
+            }
+
+            val tokenizerSize = fs.metadata(tokenizerPath).size ?: 0L
+            val configSize = fs.metadata(configPath).size ?: 0L
+
+            when {
+                tokenizerSize == 0L -> {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Tokenizer file at $tokenizerPath is empty")
+                }
+
+                configSize == 0L -> {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Tokenizer config file at $configPath is empty")
+                }
+            }
+
+            if (level == Offline) return@validateWith Downloader.ValidationResult.Existing.NotValidated
+
+            ModelScopeApi {
+                val repoId = "Qwen/Qwen3-Embedding-0.6B"
+
+                val response = listFiles(repoId, recursive = true).body<ModelScopeFilesResponse>()
+
+                if (!response.success || response.data == null) {
+                    logger.warn { "Failed to list files in model scope repo $repoId: ${response.message}" }
+                    return@ModelScopeApi Downloader.ValidationResult.Existing.NotValidated
+                }
+
+                val files = response.data.files.associateBy { it.name }
+
+                run {
+                    val file = files[tokenizerName]
+                    if (file == null) {
+                        logger.warn { "Tokenizer file $tokenizerName not found in model scope repo $repoId" }
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.NotValidated
+                    }
+                    if (file.size != tokenizerSize) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer file size mismatch: local size $tokenizerSize, remote size ${file.size}")
+                    }
+                    if (level == SizeOnly) return@run
+
+                    val sha256 = HashingSource.sha256(fs.source(tokenizerPath))
+                        .useResultBlackholeReading().hex()
+                    if (sha256 != file.sha256) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer file SHA256 mismatch: local $sha256, remote ${file.sha256}")
+                    }
+                }
+
+                run {
+                    val file = files[configName]
+                    if (file == null) {
+                        logger.warn { "Tokenizer config file $configName not found in model scope repo $repoId" }
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.NotValidated
+                    }
+                    if (file.size != configSize) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer config file size mismatch: local size $configSize, remote size ${file.size}")
+                    }
+                    if (level == SizeOnly) return@run
+
+                    val sha256 = HashingSource.sha256(fs.source(configPath))
+                        .useResultBlackholeReading().hex()
+                    if (sha256 != file.sha256) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Tokenizer config file SHA256 mismatch: local $sha256, remote ${file.sha256}")
+                    }
+                }
+
+                Downloader.ValidationResult.Existing.Valid
             }
         }
     }
@@ -154,7 +232,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
         val entry = model to this as LocalModelInfo
 
         override val downloader = tokenizerDownloader then Downloader {
-            DownloadSource.ModelScope {
+            DownloadSource.ModelScope(Model) {
                 ModelScopeApi {
                     val fs = FileSystem.SYSTEM
 
@@ -183,12 +261,49 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                 }
             } validateWith {
                 val fs = FileSystem.SYSTEM
+                val basePath = basePath / Qwen3Embedding06BModels.basePath
 
-                val path = basePath / Qwen3Embedding06BModels.basePath / fileName
+                val path = basePath / fileName
 
-                when {
-                    !fs.exists(path) -> Downloader.ValidationResult.NotExisting("Model file not found at $path")
-                    else -> Downloader.ValidationResult.Existing.NotValidated
+                if (!fs.exists(path)) {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Model file not found at $path")
+                }
+
+                val size = fs.metadata(path).size ?: 0L
+                if (size == 0L) {
+                    return@validateWith Downloader.ValidationResult.NotExisting("Model file at $path is empty")
+                }
+
+                if (level == Offline) return@validateWith Downloader.ValidationResult.Existing.NotValidated
+
+                ModelScopeApi {
+                    val repoId = "HMLTFan/qwen3-embedding-0.6b-cpu-int8-dynamic-8da4w-executorch"
+
+                    val response =
+                        listFiles(repoId, recursive = true).body<ModelScopeFilesResponse>()
+
+                    if (!response.success || response.data == null) {
+                        logger.warn { "Failed to list files in model scope repo $repoId: ${response.message}" }
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.NotValidated
+                    }
+
+                    val file = response.data.files.find { it.name == fileName }
+                    if (file == null) {
+                        logger.warn { "Model file $fileName not found in model scope repo $repoId" }
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.NotValidated
+                    }
+                    if (file.size != size) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Model file size mismatch: local size $size, remote size ${file.size}")
+                    }
+                    if (level == SizeOnly) return@ModelScopeApi Downloader.ValidationResult.Existing.Valid
+
+                    val sha256 = HashingSource.sha256(fs.source(path))
+                        .useResultBlackholeReading().hex()
+                    if (sha256 != file.sha256) {
+                        return@ModelScopeApi Downloader.ValidationResult.Existing.Invalid("Model file SHA256 mismatch: local $sha256, remote ${file.sha256}")
+                    }
+
+                    Downloader.ValidationResult.Existing.Valid
                 }
             }
         }

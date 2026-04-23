@@ -29,8 +29,8 @@ private typealias DownloadFunction = suspend Downloader.Data.Download.() -> Unit
 private typealias ValidationFunction = suspend Downloader.Data.Validation.() -> Downloader.ValidationResult
 
 class Downloader(
-    private val functions: Map<DownloadSource, PersistentList<DownloadFunction>>,
-    validations: Map<DownloadSource, PersistentList<ValidationFunction>> = emptyMap(),
+    private val functions: Map<DownloadSource, PersistentList<Pair<FunctionRole, DownloadFunction>>>,
+    validations: Map<DownloadSource, PersistentList<Pair<FunctionRole, ValidationFunction>>> = emptyMap(),
 ) {
     private val validations = validations.filterKeys { it in functions }
 
@@ -39,29 +39,36 @@ class Downloader(
     suspend fun download(
         source: DownloadSource,
         basePath: Path,
+        skip: Set<FunctionRole>? = null,
         progressListener: ProgressListener? = null,
     ) {
         val functions = functions[source]
             ?: throw IllegalArgumentException("Unsupported download source: $source")
 
         val data = Data.Download(basePath, progressListener)
-        functions.fastForEach { it(data) }
+        functions.fastForEach { (role, download) ->
+            if (skip == null || role !in skip) {
+                download(data)
+            }
+        }
     }
 
     suspend fun validate(
         source: DownloadSource,
         basePath: Path,
-        enforce: Boolean = false,
+        level: ValidationLevel = Offline,
+        skip: Set<FunctionRole>? = null,
     ): ValidationResult {
         val validationFunctions = validations[source]
         if (validationFunctions.isNullOrEmpty()) return NoValidation
 
-        val data = Data.Validation(basePath, enforce)
+        val data = Data.Validation(basePath, level)
 
         var currentExistingResult: ValidationResult.Existing? = null
 
-        for (validation in validationFunctions) {
-            when (val result = validation(data)) {
+        for ((role, validate) in validationFunctions) {
+            if (skip != null && role in skip) continue
+            when (val result = validate(data)) {
                 is ValidationResult.Existing.Invalid -> return result
                 is NotExisting -> return result
 
@@ -108,27 +115,41 @@ class Downloader(
 
         data class Validation(
             override val basePath: Path,
-            val enforce: Boolean = false,
+            val level: ValidationLevel = Offline,
         ) : Data
     }
 
     class Builder {
-        private val functions = mutableMapOf<DownloadSource, PersistentList<DownloadFunction>>()
-        private val validations = mutableMapOf<DownloadSource, PersistentList<ValidationFunction>>()
+        private val functions =
+            mutableMapOf<DownloadSource, PersistentList<Pair<FunctionRole, DownloadFunction>>>()
+        private val validations =
+            mutableMapOf<DownloadSource, PersistentList<Pair<FunctionRole, ValidationFunction>>>()
 
-        operator fun DownloadSource.invoke(downloadFunc: DownloadFunction): Chain {
-            functions[this] = persistentListOf(downloadFunc)
-            return Chain(this)
+        operator fun DownloadSource.invoke(
+            role: FunctionRole,
+            downloadFunc: DownloadFunction,
+        ): Chain {
+            functions[this] = persistentListOf(role to downloadFunc)
+            return Chain(this, role)
         }
 
         fun build() = Downloader(functions, validations)
 
-        inner class Chain(private val source: DownloadSource) {
+        inner class Chain(
+            private val source: DownloadSource,
+            private val role: FunctionRole,
+        ) {
             infix fun validateWith(validationFunc: ValidationFunction): Chain {
-                validations[source] = persistentListOf(validationFunc)
+                validations[source] = persistentListOf(role to validationFunc)
                 return this
             }
         }
+    }
+
+    enum class ValidationLevel {
+        Offline,
+        SizeOnly,
+        SizeAndHash,
     }
 
     sealed interface ValidationResult {
@@ -141,6 +162,11 @@ class Downloader(
         data class NotExisting(val reason: String) : ValidationResult
 
         data object NoValidation : ValidationResult
+    }
+
+    enum class FunctionRole {
+        Tokenizer,
+        Model,
     }
 
     companion object {
