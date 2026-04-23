@@ -23,9 +23,8 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.isSuccess
-import io.ktor.util.cio.use
 import io.ktor.util.cio.writeChannel
-import io.ktor.utils.io.copyTo
+import io.ktor.utils.io.copyAndClose
 import okio.FileSystem
 import okio.HashingSource
 import okio.Path
@@ -72,9 +71,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download tokenizer: ${response.status}")
                         }
 
-                        path.toFile().writeChannel().use {
-                            response.bodyAsChannel().copyTo(this)
-                        }
+                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
 
                         logger.debug { "Downloaded tokenizer to $path" }
                     }
@@ -97,9 +94,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download tokenizer config: ${response.status}")
                         }
 
-                        path.toFile().writeChannel().use {
-                            response.bodyAsChannel().copyTo(this)
-                        }
+                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
 
                         logger.debug { "Downloaded tokenizer config to $path" }
                     }
@@ -252,9 +247,7 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download model ${model.id}: ${response.status}")
                         }
 
-                        path.toFile().writeChannel().use {
-                            response.bodyAsChannel().copyTo(this)
-                        }
+                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
 
                         logger.debug { "Downloaded model ${model.id} to $path" }
                     }
