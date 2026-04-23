@@ -22,8 +22,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.prepareGet
+import io.ktor.http.URLBuilder
 import io.ktor.http.path
 import io.ktor.serialization.kotlinx.json.json
 import top.ltfan.knowmad.util.Json
@@ -31,21 +33,47 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 class ModelScopeApi private constructor() : AutoCloseable {
-    private val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                },
-            )
+    private val lazyClient = lazy {
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                    },
+                )
+            }
         }
     }
+    private val client inline get() = lazyClient.value
 
-    private val downloadClient = HttpClient(CIO) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = MAX_VALUE
-            connectTimeoutMillis = MAX_VALUE
-            socketTimeoutMillis = MAX_VALUE
+    private val lazyDownloadClient = lazy {
+        HttpClient(CIO) {
+            install(HttpTimeout) {
+                requestTimeoutMillis = MAX_VALUE
+                connectTimeoutMillis = MAX_VALUE
+                socketTimeoutMillis = MAX_VALUE
+            }
+        }
+    }
+    private val downloadClient inline get() = lazyDownloadClient.value
+
+    fun URLBuilder.listFilesUrl(
+        repoId: String,
+        revision: String? = null,
+        recursive: Boolean = false,
+        root: String? = null,
+    ) {
+        protocol = HTTPS
+        host = "modelscope.cn"
+        path("/api/v1/models", repoId, "repo/files")
+        if (revision != null) {
+            parameters.append("Revision", revision)
+        }
+        if (recursive) {
+            parameters.append("Recursive", "true")
+        }
+        if (root != null) {
+            parameters.append("Root", root)
         }
     }
 
@@ -54,20 +82,23 @@ class ModelScopeApi private constructor() : AutoCloseable {
         revision: String? = null,
         recursive: Boolean = false,
         root: String? = null,
+        buildRequest: (HttpRequestBuilder.() -> Unit)? = null,
     ) = client.get {
-        url {
-            protocol = HTTPS
-            host = "modelscope.cn"
-            path("/api/v1/models", repoId, "repo/files")
-            if (revision != null) {
-                parameters.append("Revision", revision)
-            }
-            if (recursive) {
-                parameters.append("Recursive", "true")
-            }
-            if (root != null) {
-                parameters.append("Root", root)
-            }
+        url.listFilesUrl(repoId, revision, recursive, root)
+        buildRequest?.invoke(this)
+    }
+
+    fun URLBuilder.getFileUrl(
+        repoId: String,
+        filePath: String,
+        revision: String? = null,
+    ) {
+        protocol = HTTPS
+        host = "modelscope.cn"
+        path("/api/v1/models", repoId, "repo")
+        parameters.append("FilePath", filePath)
+        if (revision != null) {
+            parameters.append("Revision", revision)
         }
     }
 
@@ -75,21 +106,19 @@ class ModelScopeApi private constructor() : AutoCloseable {
         repoId: String,
         filePath: String,
         revision: String? = null,
+        buildRequest: (HttpRequestBuilder.() -> Unit)? = null,
     ) = downloadClient.prepareGet {
-        url {
-            protocol = HTTPS
-            host = "modelscope.cn"
-            path("/api/v1/models", repoId, "repo")
-            parameters.append("FilePath", filePath)
-            if (revision != null) {
-                parameters.append("Revision", revision)
-            }
-        }
+        url.getFileUrl(repoId, filePath, revision)
+        buildRequest?.invoke(this)
     }
 
     override fun close() {
-        client.close()
-        downloadClient.close()
+        if (lazyClient.isInitialized()) {
+            client.close()
+        }
+        if (lazyDownloadClient.isInitialized()) {
+            downloadClient.close()
+        }
     }
 
     companion object {
