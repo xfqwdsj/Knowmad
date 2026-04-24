@@ -52,7 +52,7 @@ fun ExecuTorch() {
     val basePath = remember { context.filesDir.toOkioPath() }
     val client = remember { ExecuTorchClient(ModelScope, basePath) }
 
-    var selectedModel by remember { mutableStateOf(client.modelInfos.keys.first()) }
+    var selectedModel by remember { mutableStateOf(ExecuTorchClient.modelInfos.keys.first()) }
 
     var isDownloading by remember { mutableStateOf(false) }
 
@@ -68,7 +68,7 @@ fun ExecuTorch() {
             ) {
                 Text("Selected model: ${selectedModel.id}")
                 Text("Available models:")
-                client.modelInfos.keys.forEach { model ->
+                ExecuTorchClient.modelInfos.keys.forEach { model ->
                     Text(model.id)
                     TextButton(onClick = { selectedModel = model }) {
                         Text("Select")
@@ -84,7 +84,7 @@ fun ExecuTorch() {
                             coroutineScope.launch {
                                 isDownloading = true
                                 try {
-                                    client.modelInfos[selectedModel]?.downloader?.download(
+                                    ExecuTorchClient.modelInfos[selectedModel]?.downloader?.download(
                                         ModelScope,
                                         basePath,
                                     )
@@ -104,11 +104,12 @@ fun ExecuTorch() {
                     TextButton(
                         onClick = {
                             coroutineScope.launch {
-                                result = client.modelInfos[selectedModel]?.downloader?.validate(
-                                    ModelScope,
-                                    basePath,
-                                    SizeAndHash,
-                                )
+                                result =
+                                    ExecuTorchClient.modelInfos[selectedModel]?.downloader?.validate(
+                                        ModelScope,
+                                        basePath,
+                                        SizeAndHash,
+                                    )
                             }
                         },
                         content = { Text("Validate") },

@@ -77,12 +77,6 @@ class ExecuTorchClient(
 
     override fun llmProvider() = ExecuTorchLLMProvider
 
-    val models = setOf(
-        Qwen3Embedding06BModels,
-    )
-
-    val modelInfos = models.flatMap { it.modelInfos.entries }.associate { it.key to it.value }
-
     override suspend fun models() = modelInfos.keys.toList()
 
     override fun close() {}
@@ -90,6 +84,14 @@ class ExecuTorchClient(
     @Suppress("NOTHING_TO_INLINE")
     private inline fun LLModel.requireCapability(capability: LLMCapability) {
         require(supports(capability)) { "Model $id does not support capability $capability" }
+    }
+
+    companion object {
+        val models = setOf(
+            Qwen3Embedding06BModels,
+        )
+
+        val modelInfos = models.flatMap { it.modelInfos.entries }.associate { it.key to it.value }
     }
 }
 
