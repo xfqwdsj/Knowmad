@@ -32,6 +32,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.Icon
@@ -52,7 +54,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -84,6 +85,7 @@ import androidx.navigationevent.NavigationEvent
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
+import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
@@ -94,6 +96,7 @@ import top.ltfan.knowmad.ui.page.OnDeviceModelPage
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsHeavy
+import top.ltfan.knowmad.ui.util.BackdropEffectsLight
 import top.ltfan.knowmad.ui.util.BackdropEffectsMedium
 import top.ltfan.knowmad.ui.util.BackdropInteractiveHighlight
 import top.ltfan.knowmad.ui.util.LinearBrushData
@@ -150,7 +153,6 @@ fun AgentMainScreen(
 
     val isNewWindow = LocalAgentScreenIsNewWindow.current
 
-    val coroutineScope = rememberCoroutineScope()
     val layoutDirection = LocalLayoutDirection.current
 
     val containerColor = ContainerColor.filledContainer
@@ -209,6 +211,8 @@ fun AgentMainScreen(
         Scaffold(
             modifier = Modifier.layerBackdrop(backdropForDrawer),
             topBar = {
+                val appBarBackdrop = rememberLayerBackdrop()
+
                 var showDialog by remember { mutableStateOf(false) }
 
                 CenterAlignedTopAppBar(
@@ -234,6 +238,7 @@ fun AgentMainScreen(
                             },
                             highlight = null,
                             shadow = null,
+                            exportedBackdrop = appBarBackdrop,
                         )
                         .clickable(
                             onClick = { showDialog = true },
@@ -241,70 +246,102 @@ fun AgentMainScreen(
                             interactionSource = remember { MutableInteractionSource() },
                         ),
                     navigationIcon = {
-                        if (isNewWindow) {
-                            val activity = LocalActivity.current
-                            if (activity != null) {
-                                CloseIconButton(onClick = activity::finish)
-                            }
-                            return@CenterAlignedTopAppBar
+                        val coroutineScope = rememberCoroutineScope()
+                        val interactiveHighlight = remember(coroutineScope) {
+                            BackdropInteractiveHighlight(coroutineScope)
                         }
-                        TooltipBox(
-                            TooltipDefaults.rememberTooltipPositionProvider(
-                                TooltipAnchorPosition.Below,
-                            ),
-                            tooltip = {
-                                PlainTooltip {
-                                    Text(stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close))
-                                }
-                            },
-                            state = rememberTooltipState(),
-                        ) {
-                            IconButton(
-                                onClick = { coroutineScope.launch { viewModel.toggleDrawer() } },
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.menu_24px),
-                                    contentDescription = stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close),
+                        Box(
+                            modifier = Modifier
+                                .drawBackdrop(
+                                    backdrop = appBarBackdrop,
+                                    shape = { CircleShape },
+                                    effects = BackdropEffectsLight,
+                                    shadow = null,
                                 )
+                                .then(interactiveHighlight.modifier)
+                                .then(interactiveHighlight.gestureModifier),
+                        ) {
+                            if (isNewWindow) {
+                                val activity = LocalActivity.current
+                                if (activity != null) {
+                                    CloseIconButton(onClick = activity::finish)
+                                }
+                                return@CenterAlignedTopAppBar
                             }
-                        }
-                    },
-                    actions = {
-                        if (!LocalAgentScreenIsStandalone.current || appViewModel.canExitStandaloneAgentScreen) {
                             TooltipBox(
                                 TooltipDefaults.rememberTooltipPositionProvider(
                                     TooltipAnchorPosition.Below,
                                 ),
                                 tooltip = {
                                     PlainTooltip {
-                                        Text(stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter))
+                                        Text(stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close))
                                     }
                                 },
                                 state = rememberTooltipState(),
                             ) {
-                                IconButton(onClick = appViewModel::switchStandaloneAgentScreen) {
+                                IconButton(
+                                    onClick = { coroutineScope.launch { viewModel.toggleDrawer() } },
+                                ) {
                                     Icon(
-                                        painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
-                                        contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
+                                        painterResource(R.drawable.menu_24px),
+                                        contentDescription = stringResource(if (viewModel.drawerState.isClosed) R.string.agent_drawer_label_open else R.string.agent_drawer_label_close),
                                     )
                                 }
                             }
                         }
-                        if (!isNewWindow) {
-                            TooltipBox(
-                                TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Below,
-                                ),
-                                tooltip = {
-                                    PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
-                                },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(onClick = viewModel::newConversation) {
-                                    Icon(
-                                        painterResource(R.drawable.edit_square_24px),
-                                        contentDescription = stringResource(R.string.agent_conversation_label_new),
-                                    )
+                    },
+                    actions = {
+                        val coroutineScope = rememberCoroutineScope()
+                        val interactiveHighlight = remember(coroutineScope) {
+                            BackdropInteractiveHighlight(coroutineScope)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .drawBackdrop(
+                                    backdrop = appBarBackdrop,
+                                    shape = { ContinuousCapsule },
+                                    effects = BackdropEffectsLight,
+                                    shadow = null,
+                                )
+                                .then(interactiveHighlight.modifier)
+                                .then(interactiveHighlight.gestureModifier),
+                        ) {
+                            if (!LocalAgentScreenIsStandalone.current || appViewModel.canExitStandaloneAgentScreen) {
+                                TooltipBox(
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip {
+                                            Text(stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter))
+                                        }
+                                    },
+                                    state = rememberTooltipState(),
+                                ) {
+                                    IconButton(onClick = appViewModel::switchStandaloneAgentScreen) {
+                                        Icon(
+                                            painterResource(if (LocalAgentScreenIsStandalone.current) R.drawable.fullscreen_exit_24px else R.drawable.fullscreen_24px),
+                                            contentDescription = stringResource(if (LocalAgentScreenIsStandalone.current) R.string.agent_standalone_label_exit else R.string.agent_standalone_label_enter),
+                                        )
+                                    }
+                                }
+                            }
+                            if (!isNewWindow) {
+                                TooltipBox(
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip { Text(stringResource(R.string.agent_conversation_label_new)) }
+                                    },
+                                    state = rememberTooltipState(),
+                                ) {
+                                    IconButton(onClick = viewModel::newConversation) {
+                                        Icon(
+                                            painterResource(R.drawable.edit_square_24px),
+                                            contentDescription = stringResource(R.string.agent_conversation_label_new),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -530,10 +567,9 @@ fun AgentConfigScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringResource(R.string.llm_config_label_settings))
-                },
+            val appBarBackdrop = rememberLayerBackdrop()
+            CenterAlignedTopAppBar(
+                title = { Text(stringResource(R.string.llm_config_label_settings)) },
                 modifier = Modifier.drawBackdrop(
                     backdrop = backdrop,
                     shape = { RectangleShape },
@@ -547,14 +583,32 @@ fun AgentConfigScreen(
                     },
                     highlight = null,
                     shadow = null,
+                    exportedBackdrop = appBarBackdrop,
                 ),
                 navigationIcon = {
+                    val coroutineScope = rememberCoroutineScope()
+                    val interactiveHighlight = remember(coroutineScope) {
+                        BackdropInteractiveHighlight(coroutineScope)
+                    }
                     ArrowBackIconButton(
                         onClick = viewModel.backStack::removeLastOrNull,
+                        modifier = Modifier
+                            .drawBackdrop(
+                                backdrop = appBarBackdrop,
+                                shape = { CircleShape },
+                                effects = BackdropEffectsLight,
+                                shadow = null,
+                            )
+                            .then(interactiveHighlight.modifier)
+                            .then(interactiveHighlight.gestureModifier),
                         enabled = viewModel.backStack.size > 1,
                     )
                 },
                 actions = {
+                    val coroutineScope = rememberCoroutineScope()
+                    val interactiveHighlight = remember(coroutineScope) {
+                        BackdropInteractiveHighlight(coroutineScope)
+                    }
                     TooltipBox(
                         TooltipDefaults.rememberTooltipPositionProvider(
                             TooltipAnchorPosition.Below,
@@ -563,6 +617,15 @@ fun AgentConfigScreen(
                             PlainTooltip { Text(stringResource(R.string.llm_provider_label_add)) }
                         },
                         state = rememberTooltipState(),
+                        modifier = Modifier
+                            .drawBackdrop(
+                                backdrop = appBarBackdrop,
+                                shape = { ContinuousCapsule },
+                                effects = BackdropEffectsLight,
+                                shadow = null,
+                            )
+                            .then(interactiveHighlight.modifier)
+                            .then(interactiveHighlight.gestureModifier),
                     ) {
                         IconButton(onClick = { isSelectingNewProvider = true }) {
                             Icon(

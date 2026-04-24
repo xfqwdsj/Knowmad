@@ -162,11 +162,8 @@ private fun OnDeviceModelScreenContent(
     Scaffold(
         topBar = {
             val appBarBackdrop = rememberLayerBackdrop()
-
             CenterAlignedTopAppBar(
-                title = {
-                    Text(stringResource(R.string.on_device_model_label))
-                },
+                title = { Text(stringResource(R.string.on_device_model_label)) },
                 modifier = Modifier.drawBackdrop(
                     backdrop = backdrop,
                     shape = { RectangleShape },
@@ -185,11 +182,9 @@ private fun OnDeviceModelScreenContent(
                     val interactiveHighlight = remember(coroutineScope) {
                         BackdropInteractiveHighlight(coroutineScope)
                     }
-
                     ArrowBackIconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .padding(start = 8.dp)
                             .drawBackdrop(
                                 backdrop = appBarBackdrop,
                                 shape = { CircleShape },
@@ -205,11 +200,9 @@ private fun OnDeviceModelScreenContent(
                     val interactiveHighlight = remember(coroutineScope) {
                         BackdropInteractiveHighlight(coroutineScope)
                     }
-
                     IconButton(
                         onClick = { showSourceDialog = true },
                         modifier = Modifier
-                            .padding(end = 8.dp)
                             .drawBackdrop(
                                 backdrop = appBarBackdrop,
                                 shape = { CircleShape },

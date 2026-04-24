@@ -20,14 +20,14 @@ package top.ltfan.knowmad.ui.page
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -82,8 +82,8 @@ class SettingsPage : Page() {
         Scaffold(
             topBar = {
                 val appBarBackdrop = rememberLayerBackdrop()
-                TopAppBar(
-                    title = {},
+                CenterAlignedTopAppBar(
+                    title = { Text(text = stringResource(R.string.label_settings)) },
                     modifier = Modifier.drawBackdrop(
                         backdrop = backdrop,
                         shape = { RectangleShape },
@@ -105,7 +105,6 @@ class SettingsPage : Page() {
                         ArrowBackIconButton(
                             onClick = viewModel.backStack::removeLastOrNull,
                             modifier = Modifier
-                                .padding(start = 8.dp)
                                 .drawBackdrop(
                                     backdrop = appBarBackdrop,
                                     shape = { CircleShape },
