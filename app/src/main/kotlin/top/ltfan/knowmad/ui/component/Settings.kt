@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
@@ -39,6 +39,8 @@ import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorPosition
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -169,10 +171,13 @@ fun SettingItemDropdown(
 
         Box {
             val offset by menuOffset.offsetFlow.collectAsState(Zero)
-            DropdownMenu(
+            DropdownMenuPopup(
                 expanded = showMenu,
                 onDismissRequest = { onShowMenuChange(false) },
-                offset = offset,
+                popupPositionProvider = MenuDefaults.rememberDropdownMenuPopupPositionProvider(
+                    dropdownMenuAnchorPosition = MenuAnchorPosition.Below,
+                    offset = offset,
+                ),
                 content = menuContent,
             )
         }

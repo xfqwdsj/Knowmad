@@ -228,6 +228,17 @@ fun ChatModelSelector(
                     )
                 }
             }
+
+            ModelSelectorDropdownMenu(
+                showMenu = expanded,
+                onShowMenuChange = { expanded = it },
+                providers = providers,
+                getModels = getModels,
+                onSelectModel = {
+                    onSelectModel(it)
+                    expanded = false
+                },
+            )
         },
         trailingButton = {
             SplitButtonDefaults.TrailingButton(
@@ -246,17 +257,6 @@ fun ChatModelSelector(
                     ),
                 )
             }
-
-            ModelSelectorDropdownMenu(
-                showMenu = expanded,
-                onShowMenuChange = { expanded = it },
-                providers = providers,
-                getModels = getModels,
-                onSelectModel = {
-                    onSelectModel(it)
-                    expanded = false
-                },
-            )
         },
         modifier = modifier,
     )

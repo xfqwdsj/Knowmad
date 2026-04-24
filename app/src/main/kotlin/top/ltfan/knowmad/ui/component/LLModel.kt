@@ -26,8 +26,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MenuDefaults
@@ -42,19 +43,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.LayoutDirection.Ltr
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
 import top.ltfan.knowmad.ui.theme.TextFieldMaxWidth
+import top.ltfan.knowmad.ui.util.groupThemedShape
 import top.ltfan.knowmad.ui.util.itemThemedShape
 
 @Composable
@@ -184,12 +180,10 @@ fun ModelSelectorDropdownMenu(
     providers: List<LLMProviderConfigEntity>,
     getModels: suspend (provider: LLMProviderConfigEntity) -> List<LLMConfigEntity>,
     onSelectModel: (LLMConfigEntity) -> Unit,
-    offset: DpOffset = Zero,
 ) {
-    DropdownMenu(
+    DropdownMenuPopup(
         expanded = showMenu,
         onDismissRequest = { onShowMenuChange(false) },
-        offset = offset,
     ) {
         ModelSelectorDropdownMenuContent(
             showMenu = showMenu,
@@ -209,79 +203,76 @@ fun ModelSelectorDropdownMenuContent(
     getModels: suspend (provider: LLMProviderConfigEntity) -> List<LLMConfigEntity>,
     onSelectModel: (LLMConfigEntity) -> Unit,
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    DropdownMenuGroup(
+        shapes = MenuDefaults.groupThemedShape(0, 1),
+    ) {
+        val coroutineScope = rememberCoroutineScope()
 
-    var expandedProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
+        var expandedProvider by remember { mutableStateOf<LLMProviderConfigEntity?>(null) }
 
-    LaunchedEffect(showMenu) {
-        if (!showMenu) {
-            expandedProvider = null
+        LaunchedEffect(showMenu) {
+            if (!showMenu) {
+                expandedProvider = null
+            }
         }
-    }
 
-    if (providers.isEmpty()) {
-        DropdownMenuItem(
-            onClick = {},
-            text = { Text(stringResource(R.string.chat_input_model_label_no_providers)) },
-            enabled = false,
-        )
-        return
-    }
-
-    providers.forEachIndexed { index, provider ->
-        var models by remember { mutableStateOf<List<LLMConfigEntity>?>(null) }
-
-        val density = LocalDensity.current
-        val layoutDirection = LocalLayoutDirection.current
-        var offset by remember { mutableStateOf(DpOffset.Zero) }
-
-        Box(contentAlignment = Alignment.BottomEnd) {
+        if (providers.isEmpty()) {
             DropdownMenuItem(
-                onClick = {
-                    coroutineScope.launch {
-                        models = getModels(provider)
-                        expandedProvider = provider
-                    }
-                },
-                text = { Text(provider.name) },
-                shape = MenuDefaults.itemThemedShape(index, providers.size),
-                modifier = Modifier.onGloballyPositioned {
-                    with(density) {
-                        val factor = if (layoutDirection == Ltr) 1 else -1
-                        offset = DpOffset(
-                            it.size.width.toDp() * factor,
-                            0.dp,
-                        )
-                    }
-                },
+                onClick = {},
+                text = { Text(stringResource(R.string.chat_input_model_label_no_providers)) },
+                enabled = false,
             )
+            return@DropdownMenuGroup
+        }
 
-            DropdownMenu(
-                expanded = showMenu && expandedProvider == provider && models != null,
-                onDismissRequest = { expandedProvider = null },
-                offset = offset,
-            ) {
-                val savedModels = models
+        providers.forEachIndexed { index, provider ->
+            var models by remember { mutableStateOf<List<LLMConfigEntity>?>(null) }
 
-                if (savedModels.isNullOrEmpty()) {
-                    DropdownMenuItem(
-                        onClick = {},
-                        text = { Text(stringResource(R.string.chat_input_model_label_no_models)) },
-                        enabled = false,
-                    )
-                    return@DropdownMenu
-                }
+            Box {
+                DropdownMenuItem(
+                    onClick = {
+                        coroutineScope.launch {
+                            models = getModels(provider)
+                            expandedProvider = provider
+                        }
+                    },
+                    text = { Text(provider.name) },
+                    shape = MenuDefaults.itemThemedShape(index, providers.size),
+                )
 
-                savedModels.forEachIndexed { modelIndex, model ->
-                    DropdownMenuItem(
-                        onClick = {
-                            onSelectModel(model)
-                            expandedProvider = null
-                            onShowMenuChange(false)
-                        },
-                        text = { Text(model.name) },
-                        shape = MenuDefaults.itemThemedShape(modelIndex, savedModels.size),
-                    )
+                DropdownMenuPopup(
+                    expanded = showMenu && expandedProvider == provider && models != null,
+                    onDismissRequest = { expandedProvider = null },
+                    popupPositionProvider = MenuDefaults.rememberDropdownMenuPopupPositionProvider(
+                        End,
+                    ),
+                ) {
+                    DropdownMenuGroup(
+                        shapes = MenuDefaults.groupThemedShape(0, 1),
+                    ) {
+                        val savedModels = models
+
+                        if (savedModels.isNullOrEmpty()) {
+                            DropdownMenuItem(
+                                onClick = {},
+                                text = { Text(stringResource(R.string.chat_input_model_label_no_models)) },
+                                enabled = false,
+                            )
+                            return@DropdownMenuGroup
+                        }
+
+                        savedModels.forEachIndexed { modelIndex, model ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    onSelectModel(model)
+                                    expandedProvider = null
+                                    onShowMenuChange(false)
+                                },
+                                text = { Text(model.name) },
+                                shape = MenuDefaults.itemThemedShape(modelIndex, savedModels.size),
+                            )
+                        }
+                    }
                 }
             }
         }
