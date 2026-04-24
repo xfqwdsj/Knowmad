@@ -16,12 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.agent.client
+package top.ltfan.knowmad.ui.page
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.ui.component.OnDeviceModelScreen
+import kotlin.uuid.Uuid
 
 @Serializable
-enum class DownloadSource(val testUrl: String) {
-    HuggingFace("https://huggingface.co/"),
-    ModelScope("https://modelscope.cn/"),
+class OnDeviceModelPage(val providerConfigId: Uuid) : Page() {
+    @Composable
+    context(contentPadding: PaddingValues)
+    override fun Content() {
+        OnDeviceModelScreen(contentPadding = contentPadding)
+    }
 }

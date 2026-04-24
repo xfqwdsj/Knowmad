@@ -16,12 +16,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package top.ltfan.knowmad.agent.client
+package top.ltfan.knowmad.data.ondevice
 
 import kotlinx.serialization.Serializable
+import top.ltfan.knowmad.agent.client.DownloadSource
+import top.ltfan.knowmad.data.DataStoreCompanion
 
 @Serializable
-enum class DownloadSource(val testUrl: String) {
-    HuggingFace("https://huggingface.co/"),
-    ModelScope("https://modelscope.cn/"),
+data class DownloadSourceOrder(
+    val sources: List<DownloadSource> = DownloadSource.entries,
+) {
+    companion object : DataStoreCompanion<DownloadSourceOrder>() {
+        override val fileName = "ondevice_model_download_source_order"
+        override val default = DownloadSourceOrder()
+    }
+
+    fun toOrderedSources(): List<DownloadSource> {
+        val allSources = DownloadSource.entries.toSet()
+        val missing = allSources - sources.toSet()
+        return sources + missing
+    }
 }

@@ -109,6 +109,7 @@ import kotlin.uuid.Uuid
 fun LLMProviderConfig(
     editingProvider: LLMProviderConfigEntity?,
     onEditProvider: (LLMProviderConfigEntity?) -> Unit,
+    onEditAppProvider: (LLMProviderConfigEntity) -> Unit,
     editingModel: Pair<LLMProviderConfigEntity, LLMConfigEntity>?,
     onEditModel: (Pair<LLMProviderConfigEntity, LLMConfigEntity>?) -> Unit,
     onAddModel: (provider: LLMProviderConfigEntity) -> Unit,
@@ -159,10 +160,18 @@ fun LLMProviderConfig(
     )
 
     editingProvider?.let { provider ->
-        LLMProviderConfigEditingDialog(
-            entity = provider,
-            onDismissRequest = { onEditProvider(null) },
-        )
+        val info = SupportedLLMProviders[provider.provider]
+        if (info is App) {
+            LaunchedEffect(Unit) {
+                onEditAppProvider(provider)
+                onEditProvider(null)
+            }
+        } else {
+            LLMProviderConfigEditingDialog(
+                entity = provider,
+                onDismissRequest = { onEditProvider(null) },
+            )
+        }
     }
 
     editingModel?.let { (provider, model) ->

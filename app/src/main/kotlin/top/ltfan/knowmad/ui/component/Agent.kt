@@ -89,6 +89,8 @@ import kotlinx.coroutines.launch
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.data.llm.LLMConfigEntity
 import top.ltfan.knowmad.data.llm.LLMProviderConfigEntity
+import top.ltfan.knowmad.data.llm.SupportedLLMProviders
+import top.ltfan.knowmad.ui.page.OnDeviceModelPage
 import top.ltfan.knowmad.ui.theme.TopAppBarColorsTransparent
 import top.ltfan.knowmad.ui.util.AppWindowInsets
 import top.ltfan.knowmad.ui.util.BackdropEffectsHeavy
@@ -507,6 +509,7 @@ fun AgentConfigScreen(
     contentPadding: PaddingValues,
 ) {
     val viewModel = LocalAgentViewModel.current
+    val appViewModel = LocalAppViewModel.current
 
     val containerColor = ContainerColor.filledContainer
 
@@ -587,6 +590,9 @@ fun AgentConfigScreen(
         LLMProviderConfig(
             editingProvider = editingProvider,
             onEditProvider = { editingProvider = it },
+            onEditAppProvider = { provider ->
+                appViewModel.backStack.add(OnDeviceModelPage(providerConfigId = provider.id))
+            },
             editingModel = editingModel,
             onEditModel = { editingModel = it },
             onAddModel = {
@@ -616,11 +622,19 @@ fun AgentConfigScreen(
     }
 
     creatingProvider?.let { provider ->
-        LLMProviderConfigEditingDialog(
-            entity = provider,
-            onDismissRequest = { creatingProvider = null },
-            isNew = true,
-        )
+        if (SupportedLLMProviders[provider.provider] is App) {
+            LaunchedEffect(provider) {
+                viewModel.editProviderConfig(provider) {}
+                creatingProvider = null
+                appViewModel.backStack.add(OnDeviceModelPage(providerConfigId = provider.id))
+            }
+        } else {
+            LLMProviderConfigEditingDialog(
+                entity = provider,
+                onDismissRequest = { creatingProvider = null },
+                isNew = true,
+            )
+        }
     }
 }
 

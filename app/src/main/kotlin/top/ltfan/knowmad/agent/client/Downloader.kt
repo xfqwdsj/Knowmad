@@ -42,8 +42,7 @@ class Downloader(
         skip: Set<FunctionRole>? = null,
         progressListener: ProgressListener? = null,
     ) {
-        val functions = functions[source]
-            ?: throw IllegalArgumentException("Unsupported download source: $source")
+        val functions = functions[source] ?: throw UnsupportedSourceException(source)
 
         val data = Data.Download(basePath, progressListener)
         functions.fastForEach { (role, download) ->
@@ -168,6 +167,9 @@ class Downloader(
         Tokenizer,
         Model,
     }
+
+    class UnsupportedSourceException(source: DownloadSource) :
+        IllegalArgumentException("Unsupported download source: $source")
 
     companion object {
         operator fun invoke(builderAction: Builder.() -> Unit) =
