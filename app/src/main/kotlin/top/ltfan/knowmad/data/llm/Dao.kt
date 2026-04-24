@@ -125,6 +125,9 @@ interface LLMConfigDao {
     @Query("SELECT * FROM LLMConfigEntity WHERE id = :id")
     suspend fun getModelById(id: Uuid): LLMConfigEntity?
 
+    @Query("SELECT * FROM LLMConfigEntity WHERE id = :id")
+    fun getModelByIdFlow(id: Uuid): Flow<LLMConfigEntity?>
+
     @Query("SELECT COUNT(*) FROM LLMConfigEntity")
     suspend fun getTotalModelCount(): Int
 

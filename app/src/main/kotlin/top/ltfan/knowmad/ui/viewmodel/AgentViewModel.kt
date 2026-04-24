@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -332,7 +333,7 @@ class AgentViewModel(
     )
     val selectedModelEntityFlow = chatDataStateFlow.map { it.selectedModelId }
         .distinctUntilChanged()
-        .map { it?.let { id -> llmConfigDao.getModelById(id) } }
+        .flatMapLatest { it?.let { id -> llmConfigDao.getModelByIdFlow(id) } ?: flowOf(null) }
         .stateIn(
             viewModelScope,
             Eagerly,
