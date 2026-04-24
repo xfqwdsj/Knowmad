@@ -41,7 +41,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -58,10 +60,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SplitButtonDefaults
-import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -162,13 +163,14 @@ fun ChatInput(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(Modifier.width(4.dp))
-                ChatModelSelector(
-                    providers = providers,
-                    getModels = getModels,
-                    selectedModel = selectedModel,
-                    onSelectModel = onSelectModel,
-                )
-                Spacer(Modifier.weight(1f))
+                Row(Modifier.weight(1f)) {
+                    ChatModelSelector(
+                        providers = providers,
+                        getModels = getModels,
+                        selectedModel = selectedModel,
+                        onSelectModel = onSelectModel,
+                    )
+                }
                 IconButton(
                     onClick = if (isRunning) onCancel else onSend,
                     enabled = sendEnabled || isRunning,
@@ -203,63 +205,43 @@ fun ChatModelSelector(
     onSelectModel: (LLMConfigEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val size = SplitButtonDefaults.ExtraSmallContainerHeight
-    val colors = ButtonDefaults.textButtonColors()
-    val border = null
-
     var expanded by remember { mutableStateOf(false) }
 
-    SplitButtonLayout(
-        leadingButton = {
-            SplitButtonDefaults.LeadingButton(
-                onClick = { expanded = true },
-                shapes = SplitButtonDefaults.leadingButtonShapesFor(size),
-                colors = colors,
-                border = border,
-                contentPadding = SplitButtonDefaults.leadingButtonContentPaddingFor(size),
-            ) {
-                SharedTransitionLayout {
-                    Text(
-                        selectedModel?.name
-                            ?: stringResource(R.string.chat_input_model_label_select),
-                        modifier = Modifier
-                            .animateBounds(this)
-                            .skipToLookaheadSize { true },
-                    )
-                }
-            }
+    TextButton(
+        onClick = { expanded = true },
+        shapes = ButtonDefaults.shapesFor(ButtonDefaults.ExtraSmallContainerHeight),
+        modifier = modifier.height(ButtonDefaults.ExtraSmallContainerHeight),
+        contentPadding = ButtonDefaults.ExtraSmallContentPadding,
+    ) {
+        ModelSelectorDropdownMenu(
+            showMenu = expanded,
+            onShowMenuChange = { expanded = it },
+            providers = providers,
+            getModels = getModels,
+            onSelectModel = {
+                onSelectModel(it)
+                expanded = false
+            },
+        )
 
-            ModelSelectorDropdownMenu(
-                showMenu = expanded,
-                onShowMenuChange = { expanded = it },
-                providers = providers,
-                getModels = getModels,
-                onSelectModel = {
-                    onSelectModel(it)
-                    expanded = false
-                },
+        SharedTransitionLayout {
+            Text(
+                selectedModel?.name ?: stringResource(R.string.chat_input_model_label_select),
+                modifier = Modifier
+                    .animateBounds(this)
+                    .skipToLookaheadSize { true },
             )
-        },
-        trailingButton = {
-            SplitButtonDefaults.TrailingButton(
-                checked = expanded,
-                onCheckedChange = { expanded = it },
-                shapes = SplitButtonDefaults.trailingButtonShapesFor(size),
-                colors = colors,
-                border = border,
-                contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(size),
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_drop_down_24px),
-                    contentDescription = stringResource(
-                        if (!expanded) R.string.chat_input_model_label_expand
-                        else R.string.chat_input_model_label_collapse,
-                    ),
-                )
-            }
-        },
-        modifier = modifier,
-    )
+        }
+        Spacer(Modifier.width(ButtonDefaults.ExtraSmallIconSpacing))
+        Icon(
+            painterResource(R.drawable.arrow_drop_down_24px),
+            contentDescription = stringResource(
+                if (!expanded) R.string.chat_input_model_label_expand
+                else R.string.chat_input_model_label_collapse,
+            ),
+            modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize),
+        )
+    }
 }
 
 @Composable
