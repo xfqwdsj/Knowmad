@@ -71,7 +71,15 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download tokenizer: ${response.status}")
                         }
 
-                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
+                        val tempPath = basePath / "$fileName.tmp"
+                        response.bodyAsChannel().copyAndClose(tempPath.toFile().writeChannel())
+
+                        if (fs.exists(path)) {
+                            fs.delete(path)
+                            logger.debug { "Deleted existing tokenizer file at $path before moving new file" }
+                        }
+
+                        fs.atomicMove(tempPath, path)
 
                         logger.debug { "Downloaded tokenizer to $path" }
                     }
@@ -94,7 +102,15 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download tokenizer config: ${response.status}")
                         }
 
-                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
+                        val tempPath = basePath / "$fileName.tmp"
+                        response.bodyAsChannel().copyAndClose(tempPath.toFile().writeChannel())
+
+                        if (fs.exists(path)) {
+                            fs.delete(path)
+                            logger.debug { "Deleted existing tokenizer config file at $path before moving new file" }
+                        }
+
+                        fs.atomicMove(tempPath, path)
 
                         logger.debug { "Downloaded tokenizer config to $path" }
                     }
@@ -247,7 +263,15 @@ object Qwen3Embedding06BModels : LocalModels(), ModelsWithTokenizer {
                             throw RuntimeException("Failed to download model ${model.id}: ${response.status}")
                         }
 
-                        response.bodyAsChannel().copyAndClose(path.toFile().writeChannel())
+                        val tempPath = basePath / "$fileName.tmp"
+                        response.bodyAsChannel().copyAndClose(tempPath.toFile().writeChannel())
+
+                        if (fs.exists(path)) {
+                            fs.delete(path)
+                            logger.debug { "Deleted existing model file at $path before moving new file" }
+                        }
+
+                        fs.atomicMove(tempPath, path)
 
                         logger.debug { "Downloaded model ${model.id} to $path" }
                     }
