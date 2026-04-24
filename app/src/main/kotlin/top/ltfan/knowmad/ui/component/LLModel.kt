@@ -250,9 +250,9 @@ fun ModelSelectorDropdownMenuContent(
                     DropdownMenuGroup(
                         shapes = MenuDefaults.groupThemedShape(0, 1),
                     ) {
-                        val savedModels = models
+                        val tmpModels = models?.filter { it.model.supports(Completion) }
 
-                        if (savedModels.isNullOrEmpty()) {
+                        if (tmpModels.isNullOrEmpty()) {
                             DropdownMenuItem(
                                 onClick = {},
                                 text = { Text(stringResource(R.string.chat_input_model_label_no_models)) },
@@ -261,7 +261,7 @@ fun ModelSelectorDropdownMenuContent(
                             return@DropdownMenuGroup
                         }
 
-                        savedModels.forEachIndexed { modelIndex, model ->
+                        tmpModels.forEachIndexed { modelIndex, model ->
                             DropdownMenuItem(
                                 onClick = {
                                     onSelectModel(model)
@@ -269,7 +269,7 @@ fun ModelSelectorDropdownMenuContent(
                                     onShowMenuChange(false)
                                 },
                                 text = { Text(model.name) },
-                                shape = MenuDefaults.itemThemedShape(modelIndex, savedModels.size),
+                                shape = MenuDefaults.itemThemedShape(modelIndex, tmpModels.size),
                             )
                         }
                     }
