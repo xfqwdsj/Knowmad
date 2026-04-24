@@ -207,40 +207,42 @@ fun ChatModelSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    TextButton(
-        onClick = { expanded = true },
-        shapes = ButtonDefaults.shapesFor(ButtonDefaults.ExtraSmallContainerHeight),
-        modifier = modifier.height(ButtonDefaults.ExtraSmallContainerHeight),
-        contentPadding = ButtonDefaults.ExtraSmallContentPadding,
-    ) {
-        ModelSelectorDropdownMenu(
-            showMenu = expanded,
-            onShowMenuChange = { expanded = it },
-            providers = providers,
-            getModels = getModels,
-            onSelectModel = {
-                onSelectModel(it)
-                expanded = false
-            },
-        )
+    SharedTransitionLayout {
+        TextButton(
+            onClick = { expanded = true },
+            shapes = ButtonDefaults.shapesFor(ButtonDefaults.ExtraSmallContainerHeight),
+            modifier = modifier.height(ButtonDefaults.ExtraSmallContainerHeight),
+            contentPadding = ButtonDefaults.ExtraSmallContentPadding,
+        ) {
+            ModelSelectorDropdownMenu(
+                showMenu = expanded,
+                onShowMenuChange = { expanded = it },
+                providers = providers,
+                getModels = getModels,
+                onSelectModel = {
+                    onSelectModel(it)
+                    expanded = false
+                },
+            )
 
-        SharedTransitionLayout {
             Text(
                 selectedModel?.name ?: stringResource(R.string.chat_input_model_label_select),
                 modifier = Modifier
-                    .animateBounds(this)
+                    .weight(1f, fill = false)
+                    .animateBounds(this@SharedTransitionLayout)
                     .skipToLookaheadSize { true },
+                overflow = Ellipsis,
+            )
+            Spacer(Modifier.width(ButtonDefaults.ExtraSmallIconSpacing))
+            Icon(
+                painterResource(R.drawable.arrow_drop_down_24px),
+                contentDescription = stringResource(
+                    if (!expanded) R.string.chat_input_model_label_expand
+                    else R.string.chat_input_model_label_collapse,
+                ),
+                modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize),
             )
         }
-        Spacer(Modifier.width(ButtonDefaults.ExtraSmallIconSpacing))
-        Icon(
-            painterResource(R.drawable.arrow_drop_down_24px),
-            contentDescription = stringResource(
-                if (!expanded) R.string.chat_input_model_label_expand
-                else R.string.chat_input_model_label_collapse,
-            ),
-            modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize),
-        )
     }
 }
 
