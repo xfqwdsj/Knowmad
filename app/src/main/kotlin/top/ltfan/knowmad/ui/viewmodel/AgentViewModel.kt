@@ -57,6 +57,7 @@ import top.ltfan.knowmad.R
 import top.ltfan.knowmad.accessibility.requestEnableAccessibilityService
 import top.ltfan.knowmad.accessibility.semantic.SemanticAnalysisService
 import top.ltfan.knowmad.agent.ModelService
+import top.ltfan.knowmad.agent.SpecialConversations
 import top.ltfan.knowmad.application.KnowmadApplication
 import top.ltfan.knowmad.data.chat.ChatData
 import top.ltfan.knowmad.data.chat.ChatListMessage
@@ -404,6 +405,11 @@ class AgentViewModel(
     ) {
         if (!allowEmptyUserInput && parts.all { it is ContentPart.Text && it.text.isEmpty() })
             return
+        SpecialConversations[conversationId]?.let { sendMessage ->
+            beforeStart?.invoke()
+            application.sendMessage(parts)
+            return
+        }
         val service = modelService.value ?: return
         service.sendMessage(
             conversationId = conversationId,

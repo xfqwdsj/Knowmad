@@ -22,9 +22,8 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
+import top.ltfan.knowmad.agent.task.suggestion.generateAndShowNextSuggestion
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.resolvePromptForGeneration
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.util.Logger
@@ -51,9 +50,8 @@ class SuggestionRequestWorker(
             return Result.success()
         }
 
-        val request = GenerateNextSuggestionWorker.buildRequest(prompt)
         logger.debug { "Enqueuing suggestion generation work with prompt: $prompt" }
-        WorkManager.getInstance(context).enqueue(request)
+        context.generateAndShowNextSuggestion(prompt)
 
         Result.success()
     } catch (e: Throwable) {

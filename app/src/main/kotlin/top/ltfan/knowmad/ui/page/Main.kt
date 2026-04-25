@@ -59,7 +59,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
-import androidx.work.WorkManager
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
@@ -72,7 +71,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaMonth
 import kotlinx.serialization.Serializable
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionWorker
+import top.ltfan.knowmad.agent.task.suggestion.generateAndShowNextSuggestion
 import top.ltfan.knowmad.data.schedule.syncEvents
 import top.ltfan.knowmad.notification.ClassProgressReceiver.Companion.scheduleClassProgressNotificationScheduling
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
@@ -158,11 +157,7 @@ class MainPage : Page() {
                             stringResource(R.string.llm_task_generate_next_suggestion_prompt_manual)
 
                         GenerateSuggestionIconButton(
-                            onClick = {
-                                val request =
-                                    GenerateNextSuggestionWorker.buildRequest(prompt)
-                                WorkManager.getInstance(context).enqueue(request)
-                            },
+                            onClick = { context.generateAndShowNextSuggestion(prompt) },
                         )
 
                         if (activity != null) {

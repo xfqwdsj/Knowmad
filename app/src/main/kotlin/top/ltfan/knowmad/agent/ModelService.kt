@@ -62,6 +62,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.markdown.ast.ASTNode
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.task.suggestion.suggestionToolsInChat
 import top.ltfan.knowmad.agent.tool.conversationTools
 import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.agent.tool.gatherToolsTool
@@ -149,6 +150,7 @@ class ModelService : LifecycleService() {
                 scheduleToolsExtended(application, scheduleDao) {
                     codeRunnerTools[it.components] = it
                 }
+                suggestionToolsInChat(application)
             }
         }
     }
@@ -446,13 +448,25 @@ class ModelService : LifecycleService() {
     fun sendMessage(
         conversationId: Uuid?,
         parts: List<ContentPart>,
+        getService: suspend () -> ChatAgentService = {
+            chatAgentServiceFlow.filterNotNull().first()
+        },
         tools: ToolRegistry? = chatAgentToolRegistry,
+        appendConversationTools: Boolean = true,
         onNewConversation: ((ConversationEntity) -> Unit)? = null,
         getAllMessages: suspend ChatDao.(
             conversationId: Uuid,
         ) -> List<MessageWithFilesAndBranchInfo> = {
             getAllMessagesByConversation(it).first()
         },
+        getSystemMessage: (hasMessages: Boolean) -> Message.System? = getSystemMessage@{ hasMessages ->
+            if (hasMessages) return@getSystemMessage null
+            Message.System(
+                content = application.resources.chatSystemPrompt,
+                metaInfo = RequestMetaInfo.create(Clock.System),
+            )
+        },
+        insertSystemMessage: Boolean = true,
         includeEnvironmentContext: Boolean = true,
         insertEnvironmentContext: Boolean = includeEnvironmentContext,
         contextMessages: List<UiMessage>? = null,
@@ -468,7 +482,6 @@ class ModelService : LifecycleService() {
             isNewConversation: Boolean,
         ) -> Unit)? = e@{ conversationId, isNewConversation ->
             if (!isNewConversation) return@e
-            val service = chatAgentServiceFlow.value ?: return@e
             defaultScope.launch {
                 val newName = generateConversationName(conversationId) ?: return@launch
                 val conversation = chatDao.getConversationById(conversationId) ?: return@launch
@@ -476,6 +489,7 @@ class ModelService : LifecycleService() {
                 chatDao.updateConversation(updated, application)
             }
         },
+        showNotification: Boolean = true,
     ) = defaultScope.asyncInterruptible task@{
         require(!insertEnvironmentContext || includeEnvironmentContext) {
             "insertEnvironmentContext can only be true if includeEnvironmentContext is also true"
@@ -491,7 +505,8 @@ class ModelService : LifecycleService() {
         } else {
             conversationId
         }
-        val service = chatAgentServiceFlow.filterNotNull().first()
+
+        val service = getService()
 
         scheduleMessageTask(conversationId)
 
@@ -513,12 +528,7 @@ class ModelService : LifecycleService() {
                 val messages = databaseMessages.flatMap { entity ->
                     entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
                 }
-                val system = if (messages.isEmpty()) {
-                    Message.System(
-                        content = application.resources.chatSystemPrompt,
-                        metaInfo = RequestMetaInfo.create(Clock.System),
-                    )
-                } else null
+                val system = getSystemMessage(messages.isNotEmpty())
                 val environmentMessage = Message.User(
                     content = getString(
                         R.string.llm_prompt_environment_context,
@@ -528,11 +538,11 @@ class ModelService : LifecycleService() {
                     metaInfo = RequestMetaInfo.create(Clock.System),
                 )
 
-                system?.let {
+                if (insertSystemMessage && system != null) {
                     chatDao.insertMessage(
                         message = MessageEntity(
                             conversationId = conversationId,
-                            parts = listOf(it.toUiMessage()),
+                            parts = listOf(system.toUiMessage()),
                             role = MessageEntityRole.System,
                             generatedBy = null,
                         ),
@@ -569,7 +579,7 @@ class ModelService : LifecycleService() {
                                     )
                                 }
                             },
-                            role = MessageEntityRole.User,
+                            role = User,
                             generatedBy = null,
                         ),
                         fileIds = tempIds,
@@ -615,19 +625,19 @@ class ModelService : LifecycleService() {
                 };
 
                 {
-                    val conversationToolRegistry = ToolRegistry {
-                        conversationTools(
-                            resources = application.resources,
-                            mutex = conversationMutex,
-                            getConversation = { conversation },
-                            setConversation = { chatDao.updateConversation(it, application) },
-                        )
-                    }
+                    val tools = (tools ?: EMPTY).let { base ->
+                        if (!appendConversationTools) return@let base
 
-                    val tools = if (tools != null) {
-                        tools + conversationToolRegistry
-                    } else {
-                        conversationToolRegistry
+                        val conversationToolRegistry = ToolRegistry {
+                            conversationTools(
+                                resources = application.resources,
+                                mutex = conversationMutex,
+                                getConversation = { conversation },
+                                setConversation = { chatDao.updateConversation(it, application) },
+                            )
+                        }
+
+                        base + conversationToolRegistry
                     }
 
                     logger.debug { "Running agent..." }
@@ -655,7 +665,8 @@ class ModelService : LifecycleService() {
                             tools = tools,
                             buildPrompt = {
                                 system(application.resources.environmentSystemPrompt())
-                                system?.let { message(it) } ?: messages(messages)
+                                system?.let { message(it) }
+                                messages(messages)
                                 if (includeEnvironmentContext) {
                                     message(environmentMessage)
                                 }
@@ -700,7 +711,9 @@ class ModelService : LifecycleService() {
             }.also {
                 initialConversationNameGenerationJob?.cancelAndJoin()
                 onEnd?.invoke(conversationId, isNewConversation)
-                showNotification(conversationId)
+                if (showNotification) {
+                    generateSummaryAndShowNotification(conversationId)
+                }
             }
         }
     }
@@ -765,7 +778,7 @@ class ModelService : LifecycleService() {
         }
     }
 
-    fun showNotification(conversationId: Uuid) {
+    fun generateSummaryAndShowNotification(conversationId: Uuid) {
         lifecycleScope.launch {
             val summary =
                 generateAssistantMessageSummary(conversationId)?.toMutableList() ?: return@launch

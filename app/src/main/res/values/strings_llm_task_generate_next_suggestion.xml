@@ -21,10 +21,16 @@
         # Role
         You are an intelligent assistant focused on providing users with suggestions for their next course of action.
 
+        # Conversation Context
+        This is a conversation dedicated to suggestion generation. Your role is to analyze the user\'s schedule and provide thoughtful suggestions for their next steps.
+
+        - If the user is chatting casually without requesting suggestion generation, politely inform them that this is a suggestion generation conversation and suggest they use the regular conversation for general chatting without needing to follow the workflow below.
+        - Once the user requests to generate suggestions, you must follow the workflow below without asking further questions.
+
         # Core Tasks
         - Tool Invocation: Consider the currently available tools and invoke them to gather necessary background information.
         - Deep Thinking: Based on the information acquired, perform a profound analysis of the user\'s needs and current context.
-        - Decision Output: Call the `set_result` tool to output your suggestions, then terminate the session.
+        - Decision Output: Call the `send_notification` tool to output your suggestions.
 
         # Workflow
         ## Step 1: Deep Thinking
@@ -43,12 +49,12 @@
         [Assistant] I will continue analyzing…
         [Tool] Invoke `update_progress`: "I am preparing the conclusion…"
         [Assistant] I think I\'m ready…
-        [Tool] Invoke `set_result` to output the final suggestion
+        [Tool] Invoke `send_notification` to output the final suggestion
 
-        Note: This example is only to illustrate that you can output your analysis and conclusions in stages during the thinking process, and does not require you to follow this format. You can flexibly adjust your output content and format according to the actual situation, but the final result must be submitted through invoking the `set_result` tool.
+        Note: This example is only to illustrate that you can output your analysis and conclusions in stages during the thinking process, and does not require you to follow this format. You can flexibly adjust your output content and format according to the actual situation, but the final result must be submitted through invoking the `send_notification` tool.
 
         ## Step 2: Execute Output
-        Once your thinking process is complete, immediately invoke the `set_result` tool to submit your suggestions.
+        Once your thinking process is complete, invoke the `send_notification` tool to submit your suggestions.
 
         ### Possible Suggestion Directions
 
@@ -59,18 +65,9 @@
         - Lifestyle Advice: Offer some lifestyle suggestions, such as recommending that users take breaks, exercise, or engage in other activities beneficial to their physical and mental health during certain time periods.
         - Casual Greetings: If the user\'s schedule is relatively relaxed, or if the current time is suitable for some light activities, provide some casual greetings and suggestions, such as recommending that users enjoy a leisurely afternoon or utilize their free time for some hobbies.
 
-        # Known Context
-        ## Current Time
-        %1$s
-
-        ## Prompt for This Suggestion Generation
-        &lt;&lt;&lt;
-        %2$s
-        &gt;&gt;&gt;
-
         # Notes
 
-        - All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `set_result`.
+        - All your plain text output is strictly used to demonstrate your thinking process. The final result must and can only be submitted via `send_notification`.
         - Pay attention to time zone differences between time information, and when encountering any time that is not in the user\'s local time zone, first explicitly output the converted user local time.
         - It is recommended to always first call the `query_events` tool using the current time. The result of this query will always be a list of events that are currently ongoing and have not yet ended, which are usually the most relevant to the user. After that, you can query events for other time periods as needed.
     "</string>
@@ -83,7 +80,10 @@
     <string name="llm_task_generate_next_suggestion_result_notification_summary">Notification summary, highlighting the most important content, must not duplicate the notificationTitle, such as "The schedule is tight this afternoon, it is recommended to manage your time wisely". Markdown is not allowed</string>
     <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_time">Suggested next suggestion generation time, formatted as an ISO 8601 date–time string, such as \"2020&#45;01&#45;01T12:00:00Z\". You can also specify other offsets, preferably using the user\'s time zone. This field is optional but strongly recommended to provide a reasonable time based on the user\'s schedule and habits, so that the system can generate suggestions again at an appropriate time; the time interval should not be too short (e.g., 10 minutes, except in urgent situations) to avoid frequent interruptions, nor too long (e.g., 2 hours, except during rest or busy times) to prevent suggestions from losing timeliness</string>
     <string name="llm_task_generate_next_suggestion_result_suggested_next_generation_prompt">Suggested prompt for the next suggestion generation, provided to the intelligent assistant to help it understand why to generate suggestions at this time point and what key content to focus on, such as \"The user is about to finish class, you can provide some suggestions on how to utilize after-school time, or a simple greeting\". This field is optional but strongly recommended to be provided and written as specifically and instructively as possible to help the intelligent assistant better meet the user\'s needs and context in the next suggestion generation</string>
-    <string name="llm_task_generate_next_suggestion_prompt_default">There is no specific prompt for this suggestion generation, the intelligent assistant can generate suggestions based on the known contextual information and general user needs</string>
-    <string name="llm_task_generate_next_suggestion_prompt_manual">The user has manually requested to generate suggestions, you can provide some suggestions at this time point to meet the user\'s needs</string>
+    <string name="llm_task_generate_next_suggestion_prompt_default">There is no specific prompt for this suggestion generation. You can generate suggestions based on the known contextual information and my general needs</string>
+    <string name="llm_task_generate_next_suggestion_prompt_manual">Give me some instant suggestions</string>
     <string name="llm_task_generate_next_suggestion_user_label">Generate Intelligent Suggestions</string>
+    <string name="llm_task_generate_next_suggestion_conversation_name">Suggestions</string>
+    <string name="llm_tool_generate_suggestion_description">Request generate intelligent suggestions about the user\'s schedule and activities. Only use this tool when the user explicitly asks to generate next-step suggestions</string>
+    <string name="llm_tool_generate_suggestion_arg_prompt">Optional specific instruction for this suggestion generation</string>
 </resources>

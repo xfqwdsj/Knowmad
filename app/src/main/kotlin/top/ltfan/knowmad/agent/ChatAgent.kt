@@ -40,20 +40,28 @@ import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponses
+import android.content.Context
 import android.content.res.Resources
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
+import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionConversationId
+import top.ltfan.knowmad.agent.task.suggestion.generateAndShowNextSuggestion
 import top.ltfan.knowmad.ui.component.AssistantMessageState
 import top.ltfan.knowmad.ui.component.AssistantMessageStreamingEvent
 import top.ltfan.knowmad.util.Logger
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 private val logger = Logger("ChatAgent")
+
+val SpecialConversations: Map<Uuid, Context.(List<ContentPart>) -> Unit> = mapOf(
+    GenerateNextSuggestionConversationId to Context::generateAndShowNextSuggestion,
+)
 
 typealias ChatAgentService = GraphAIAgentService<ChatAgentData<List<ContentPart>>, List<Message.Response>>
 typealias ChatAgent = GraphAIAgent<ChatAgentData<List<ContentPart>>, List<Message.Response>>

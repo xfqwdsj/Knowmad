@@ -18,147 +18,73 @@
 
 package top.ltfan.knowmad.agent.task.suggestion
 
-import ai.koog.agents.core.agent.AIAgent
-import ai.koog.agents.core.agent.config.AIAgentConfig
-import ai.koog.agents.core.dsl.builder.strategy
-import ai.koog.agents.core.dsl.extension.nodeExecuteMultipleTools
-import ai.koog.agents.core.dsl.extension.nodeLLMRequestStreamingAndSendResults
-import ai.koog.agents.core.dsl.extension.nodeLLMSendMultipleToolResults
-import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
-import ai.koog.agents.core.tools.Tool
-import ai.koog.agents.core.tools.ToolDescriptor
-import ai.koog.agents.core.tools.ToolParameterDescriptor
-import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.EventHandler
-import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
-import ai.koog.serialization.kotlinx.toKotlinxJsonElement
-import ai.koog.serialization.typeToken
+import ai.koog.prompt.message.ContentPart
+import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.RequestMetaInfo
 import android.content.Context
 import android.content.pm.ServiceInfo
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.decodeFromJsonElement
 import top.ltfan.knowmad.R
-import top.ltfan.knowmad.agent.environmentSystemPrompt
+import top.ltfan.knowmad.agent.ModelService
 import top.ltfan.knowmad.agent.getChatAgentService
 import top.ltfan.knowmad.agent.tool.ScheduleTools
-import top.ltfan.knowmad.agent.tool.formatAgentTime
 import top.ltfan.knowmad.data.chat.ChatData
+import top.ltfan.knowmad.data.chat.ConversationEntity
+import top.ltfan.knowmad.data.chat.MessageWithFilesAndBranchInfo
 import top.ltfan.knowmad.data.database.AppDatabase.Companion.appDatabase
 import top.ltfan.knowmad.data.llm.LLMData
 import top.ltfan.knowmad.data.llm.toClient
 import top.ltfan.knowmad.data.schedule.ScheduleDao
-import top.ltfan.knowmad.notification.NextSuggestionNotification
 import top.ltfan.knowmad.notification.SuggestionRequestReceiver.Companion.scheduleNextSuggestionGeneration
 import top.ltfan.knowmad.notification.showNextSuggestionNotification
 import top.ltfan.knowmad.notification.withAgentRunningNotification
-import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
+import top.ltfan.knowmad.util.ServiceConnection
+import top.ltfan.knowmad.util.filterConnected
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 private val logger = Logger("GenerateNextSuggestion")
 
-private class UpdateProgress(
-    context: Context,
-    private val onSummary: (String) -> Unit,
-) : Tool<UpdateProgress.Args, String>(
-    argsType = typeToken<Args>(),
-    resultType = typeToken<String>(),
-    descriptor = ToolDescriptor(
-        name = "update_progress",
-        description = context.getString(R.string.llm_task_generate_next_suggestion_tool_update_progress_description),
-        requiredParameters = listOf(
-            ToolParameterDescriptor(
-                name = "summary",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_tool_update_progress_arg_summary_description),
-                type = ToolParameterType.String,
-            ),
-        ),
-        optionalParameters = emptyList(),
-    ),
-) {
-    override suspend fun execute(args: Args): String {
-        onSummary(args.summary)
-        return "OK"
-    }
+val GenerateNextSuggestionConversationId = Uuid.parse("019c0c33-1400-7467-be26-4710cc7f1f7d")
 
-    @Serializable
-    data class Args(
-        val summary: String,
+suspend fun Context.createSuggestionConversationIfNotExists() {
+    val dao = appDatabase.chatDao()
+    if (dao.getConversationById(GenerateNextSuggestionConversationId) == null) {
+        dao.insertConversation(
+            ConversationEntity(
+                id = GenerateNextSuggestionConversationId,
+                name = getString(R.string.llm_task_generate_next_suggestion_conversation_name),
+                isPinned = true,
+            ),
+        )
+    }
+}
+
+fun Context.generateAndShowNextSuggestion(prompt: String) {
+    WorkManager.getInstance(applicationContext)
+        .enqueue(GenerateNextSuggestionWorker.buildRequest(prompt))
+}
+
+fun Context.generateAndShowNextSuggestion(parts: List<ContentPart>) =
+    generateAndShowNextSuggestion(
+        parts.asSequence().filterIsInstance<ContentPart.Text>().joinToString("\n") { it.text },
     )
-}
 
-private class SetResult(
-    context: Context,
-) : Tool<NextSuggestionNotification, NextSuggestionNotification>(
-    argsType = typeToken<NextSuggestionNotification>(),
-    resultType = typeToken<NextSuggestionNotification>(),
-    descriptor = ToolDescriptor(
-        name = "set_result",
-        description = "set_result",
-        requiredParameters = listOf(
-            ToolParameterDescriptor(
-                name = "capsuleTitle",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_capsule_title),
-                type = ToolParameterType.String,
-            ),
-            ToolParameterDescriptor(
-                name = "notificationTitle",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_notification_title),
-                type = ToolParameterType.String,
-            ),
-            ToolParameterDescriptor(
-                name = "notificationContent",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_notification_content),
-                type = ToolParameterType.String,
-            ),
-        ),
-        optionalParameters = listOf(
-            ToolParameterDescriptor(
-                name = "capsuleSubtitle",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_capsule_subtitle),
-                type = ToolParameterType.String,
-            ),
-            ToolParameterDescriptor(
-                name = "notificationSummary",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_notification_summary),
-                type = ToolParameterType.String,
-            ),
-            ToolParameterDescriptor(
-                name = "suggestedNextGenerationTime",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_time),
-                type = ToolParameterType.String,
-            ),
-            ToolParameterDescriptor(
-                name = "suggestedNextGenerationPrompt",
-                description = context.getString(R.string.llm_task_generate_next_suggestion_result_suggested_next_generation_prompt),
-                type = ToolParameterType.String,
-            ),
-        ),
-    ),
-) {
-    override suspend fun execute(args: NextSuggestionNotification): NextSuggestionNotification {
-        val suggestedNextGenerationTime = args.suggestedNextGenerationTime
-        if (suggestedNextGenerationTime != null) {
-            val now = Clock.System.now()
-            require(suggestedNextGenerationTime >= now) { "Suggested next generation time must be in the future" }
-        }
-        return args
-    }
-}
-
-suspend fun Context.generateAndShowNextSuggestion(
+private suspend fun Context.doSuggest(
     prompt: String,
     scheduleDao: ScheduleDao,
     promptExecutor: PromptExecutor,
@@ -166,69 +92,13 @@ suspend fun Context.generateAndShowNextSuggestion(
     maxAgentIterations: Int = 50,
     onSummary: (String) -> Unit,
 ) = coroutineScope {
+    val context = applicationContext
+
+    val modelServiceConnection = context.ServiceConnection<ModelService>()
+
     try {
-        val context = applicationContext
-
-        val strategy = strategy<Unit, NextSuggestionNotification>("generate_next_suggestion") {
-            val nodeLLMRequest by nodeLLMRequestStreamingAndSendResults<Unit>()
-            val nodeExecuteTools by nodeExecuteMultipleTools(parallelTools = true)
-            val nodeLLMSendToolResults by nodeLLMSendMultipleToolResults()
-
-            edge(nodeStart forwardTo nodeLLMRequest)
-            edge(
-                nodeLLMRequest forwardTo nodeExecuteTools
-                        onMultipleToolCalls { true },
-            )
-            edge(
-                nodeExecuteTools forwardTo nodeFinish onCondition {
-                    val singleOrNull = it.singleOrNull() ?: return@onCondition false
-                    if (singleOrNull.resultKind != Success) return@onCondition false
-                    singleOrNull.tool == "set_result"
-                } transformed {
-                    // TODO: use a more robust way to extract the result
-                    it.singleOrNull()?.result?.let { json -> Json.decodeFromJsonElement(json.toKotlinxJsonElement()) }
-                        ?: error("This should never happen")
-                },
-            )
-            edge(nodeExecuteTools forwardTo nodeLLMSendToolResults)
-            edge(
-                nodeLLMSendToolResults forwardTo nodeExecuteTools
-                        onMultipleToolCalls { true },
-            )
-            edge(
-                nodeLLMSendToolResults forwardTo nodeLLMRequest
-                        transformed {},
-            )
-        }
-
-        val agentConfig = AIAgentConfig(
-            prompt = prompt("next-suggestion") {
-                system {
-                    !context.resources.environmentSystemPrompt()
-                    br()
-                    !context.getString(R.string.llm_task_generate_next_suggestion_prompt)
-                        .trimIndent().format(Clock.System.now().formatAgentTime(), prompt)
-                }
-            },
-            model = model,
-            maxAgentIterations = maxAgentIterations,
-        )
-
-        val toolRegistry = ToolRegistry {
-            tool(ScheduleTools.QuerySemestersTool(context.resources, scheduleDao))
-            tool(ScheduleTools.SearchSemestersTool(context.resources, scheduleDao))
-            tool(ScheduleTools.QueryEventsTool(context.resources, scheduleDao))
-            tool(ScheduleTools.SearchCoursesTool(context.resources, scheduleDao))
-            tool(UpdateProgress(context, onSummary))
-            tool(SetResult(context))
-        }
-
-        val agent = AIAgent(
-            promptExecutor = promptExecutor,
-            agentConfig = agentConfig,
-            strategy = strategy,
-            toolRegistry = toolRegistry,
-        ) {
+        val modelService = modelServiceConnection.status.filterConnected().first().service
+        val agentService = getChatAgentService(promptExecutor, model, maxAgentIterations) {
             install(EventHandler) {
                 onLLMCallStarting { logger.debug { "LLM call starting" } }
                 onLLMCallCompleted { logger.debug { "LLM call completed" } }
@@ -236,21 +106,67 @@ suspend fun Context.generateAndShowNextSuggestion(
             }
         }
 
-        val notification = agent.run(Unit)
-        coroutineContext.job.cancelChildren()
+        val toolRegistry = ToolRegistry {
+            tool(ScheduleTools.QuerySemestersTool(context.resources, scheduleDao))
+            tool(ScheduleTools.SearchSemestersTool(context.resources, scheduleDao))
+            tool(ScheduleTools.QueryEventsTool(context.resources, scheduleDao))
+            tool(ScheduleTools.SearchCoursesTool(context.resources, scheduleDao))
+            suggestionTools(context, onSummary) { notification ->
+                coroutineContext.job.cancelChildren()
 
-        logger.debug { "Next suggestion generated: $notification" }
+                logger.debug { "Next suggestion generated: $notification" }
 
-        showNextSuggestionNotification(notification)
+                showNextSuggestionNotification(notification)
 
-        notification.suggestedNextGenerationTime?.let { time ->
-            logger.debug { "Scheduling next suggestion generation at suggested time: $time" }
-            scheduleNextSuggestionGeneration(notification.suggestedNextGenerationPrompt) {
-                timeInMillis = time.toEpochMilliseconds()
+                notification.suggestedNextGenerationTime?.let { time ->
+                    logger.debug { "Scheduling next suggestion generation at suggested time: $time" }
+                    scheduleNextSuggestionGeneration(notification.suggestedNextGenerationPrompt) {
+                        timeInMillis = time.toEpochMilliseconds()
+                    }
+                }
             }
         }
+
+        context.createSuggestionConversationIfNotExists()
+
+        modelService.sendMessage(
+            conversationId = GenerateNextSuggestionConversationId,
+            parts = listOf(ContentPart.Text(prompt)),
+            getService = { agentService },
+            tools = toolRegistry,
+            appendConversationTools = false,
+            getAllMessages = {
+                val messages =
+                    getAllMessagesByConversation(GenerateNextSuggestionConversationId).first()
+                val result = mutableListOf<MessageWithFilesAndBranchInfo>()
+                var rounds = 0
+                for (i in messages.indices.reversed()) {
+                    val message = messages[i]
+                    result.add(0, message)
+                    if (message.message.role == User && (i == 0 || messages[i - 1].message.role != User)) {
+                        rounds++
+                        if (rounds >= 3) {
+                            break
+                        }
+                    }
+                }
+                result
+            },
+            getSystemMessage = {
+                Message.System(
+                    content = context.getString(R.string.llm_task_generate_next_suggestion_prompt),
+                    metaInfo = RequestMetaInfo.create(Clock.System),
+                )
+            },
+            insertSystemMessage = false,
+            generateConversationNameFromInitialInput = false,
+            onEnd = null,
+            showNotification = false,
+        ).join()
     } catch (e: Throwable) {
         logger.error(e) { "Failed to generate and show next suggestion" }
+    } finally {
+        modelServiceConnection.close()
     }
 }
 
@@ -303,7 +219,7 @@ class GenerateNextSuggestionWorker(
 
             logger.debug { "Starting to generate next suggestion with prompt: $prompt" }
 
-            context.generateAndShowNextSuggestion(
+            context.doSuggest(
                 prompt = prompt,
                 scheduleDao = scheduleDao,
                 promptExecutor = service.promptExecutor,
