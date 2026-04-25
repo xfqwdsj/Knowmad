@@ -1,6 +1,6 @@
 /*
  * Knowmad - Knowledge nomad
- * Copyright (C) 2025 LTFan (aka xfqwdsj)
+ * Copyright (C) 2025-2026 LTFan (aka xfqwdsj)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,4 +21,4 @@ package top.ltfan.knowmad.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.ViewModel
 
-open class AndroidViewModel<T : Application>(val application: T) : ViewModel()
+abstract class AndroidViewModel<T : Application>(val application: T) : ViewModel()
