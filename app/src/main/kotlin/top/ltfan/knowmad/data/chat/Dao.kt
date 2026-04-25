@@ -261,20 +261,13 @@ interface ChatDao : FtsDao {
 
         SELECT 
             sp.*,
-            (
-                SELECT COUNT(*) + 1 
-                FROM MessageEntity AS s 
-                WHERE (s.parentId IS sp.parentId)
-                  AND s.createdAt < sp.createdAt
-            ) AS branchIndex,
-
-            (
-                SELECT COUNT(*) 
-                FROM MessageEntity AS s 
-                WHERE (s.parentId IS sp.parentId)
-            ) AS branchCount
-
+            COUNT(CASE WHEN s.createdAt < sp.createdAt THEN 1 END) + 1 AS branchIndex,
+            COUNT(s.id) AS branchCount
         FROM SelectedPath AS sp
+        LEFT JOIN MessageEntity AS s 
+            ON s.conversationId = sp.conversationId
+            AND s.parentId IS sp.parentId
+        GROUP BY sp.id
         ORDER BY sp.depth ASC
     """,
     )
@@ -308,20 +301,14 @@ interface ChatDao : FtsDao {
         """
         SELECT
             m.*,
-            (
-                SELECT COUNT(*) + 1
-                FROM MessageEntity AS s
-                WHERE (s.parentId IS m.parentId)
-                  AND s.createdAt < m.createdAt
-            ) AS branchIndex,
-
-            (
-                SELECT COUNT(*)
-                FROM MessageEntity AS s
-                WHERE (s.parentId IS m.parentId)
-            ) AS branchCount
+            COUNT(CASE WHEN s.createdAt < m.createdAt THEN 1 END) + 1 AS branchIndex,
+            COUNT(s.id) AS branchCount
         FROM MessageEntity AS m
+        LEFT JOIN MessageEntity AS s 
+            ON s.conversationId = m.conversationId 
+            AND s.parentId IS m.parentId
         WHERE m.id = :messageId
+        GROUP BY m.id
     """,
     )
     suspend fun getMessageWithFilesAndBranchInfoById(messageId: Uuid): MessageWithFilesAndBranchInfo?
@@ -372,7 +359,8 @@ interface ChatDao : FtsDao {
     @Query(
         """
         SELECT id FROM MessageEntity 
-        WHERE (parentId IS :parentId) 
+            WHERE conversationId = (SELECT conversationId FROM MessageEntity WHERE id = :parentId OR (id IS NULL AND :parentId IS NULL) LIMIT 1)
+              AND (parentId IS :parentId) 
         ORDER BY createdAt ASC 
         LIMIT 1 OFFSET :targetIndex
     """,
