@@ -40,7 +40,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -82,10 +81,10 @@ import top.ltfan.knowmad.ui.page.AgentSubPage
 import top.ltfan.knowmad.util.Json
 import top.ltfan.knowmad.util.Logger
 import top.ltfan.knowmad.util.ServiceConnection
-import top.ltfan.knowmad.util.ServiceConnectionStatus
 import top.ltfan.knowmad.util.ServiceConnectionStatus.Closed
 import top.ltfan.knowmad.util.SnapshotLruCache
 import top.ltfan.knowmad.util.collectAsState
+import top.ltfan.knowmad.util.filterConnected
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
@@ -230,7 +229,7 @@ class AgentViewModel(
                 modelServiceConnection.bind()
             }
         }
-        .filterIsInstance<ServiceConnectionStatus.Connected<ModelService>>()
+        .filterConnected()
         .map { it.service }
         .stateIn(viewModelScope, Eagerly, null)
 

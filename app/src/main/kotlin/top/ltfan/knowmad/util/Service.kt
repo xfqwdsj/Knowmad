@@ -27,8 +27,10 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -131,3 +133,6 @@ sealed interface ServiceConnectionStatus<T : Service> {
     data class Died<T : Service>(val name: ComponentName?) : Closed<T>
     class Unbounded<T : Service> : Closed<T>
 }
+
+inline fun <reified T : Service> Flow<ServiceConnectionStatus<T>>.filterConnected() =
+    filterIsInstance<ServiceConnectionStatus.Connected<T>>()
