@@ -66,6 +66,7 @@ fun getChatAgentService(
     promptExecutor: PromptExecutor,
     model: LLModel,
     maxAgentIterations: Int = 50,
+    installFeatures: GraphAIAgent.FeatureContext.() -> Unit = {},
 ): ChatAgentService {
     val strategy = strategy("chat") {
         val nodeInitialization by node<ChatAgentData<List<ContentPart>>, ChatAgentData<List<ContentPart>>> { data ->
@@ -252,6 +253,7 @@ fun getChatAgentService(
         promptExecutor = promptExecutor,
         strategy = strategy,
         agentConfig = agentConfig,
+        installFeatures = installFeatures,
     )
 }
 
