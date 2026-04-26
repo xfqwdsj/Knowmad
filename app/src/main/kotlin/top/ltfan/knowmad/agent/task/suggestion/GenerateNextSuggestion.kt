@@ -154,7 +154,8 @@ private suspend fun Context.doSuggest(
             },
             getSystemMessage = {
                 Message.System(
-                    content = context.getString(R.string.llm_task_generate_next_suggestion_prompt),
+                    content = context.getString(R.string.llm_task_generate_next_suggestion_prompt)
+                        .trimIndent(),
                     metaInfo = RequestMetaInfo.create(Clock.System),
                 )
             },
