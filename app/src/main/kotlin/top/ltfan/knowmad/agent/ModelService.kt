@@ -445,6 +445,35 @@ class ModelService : LifecycleService() {
         }
     }
 
+    data class SendMessageParams(
+        val conversationId: Uuid? = null,
+        val parts: List<ContentPart>,
+        val getService: suspend () -> ChatAgentService,
+        val tools: ToolRegistry? = null,
+        val appendConversationTools: Boolean = true,
+        val onNewConversation: ((ConversationEntity) -> Unit)? = null,
+        val getAllMessages: suspend ChatDao.(
+            conversationId: Uuid,
+        ) -> List<MessageWithFilesAndBranchInfo> = {
+            getAllMessagesByConversation(it).first()
+        },
+        val getSystemMessage: ((hasMessages: Boolean) -> Message.System?)? = null,
+        val insertSystemMessage: Boolean = true,
+        val includeEnvironmentContext: Boolean = true,
+        val insertEnvironmentContext: Boolean = includeEnvironmentContext,
+        val contextMessages: List<UiMessage>? = null,
+        val generateConversationNameFromInitialInput: Boolean = true,
+        val insertAssistantMessageAndGet: suspend ChatDao.(
+            message: MessageEntity,
+            fileIds: List<Uuid>,
+            getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
+        ) -> Long = ChatDao::insertMessageAndGet,
+        val refetchMessagesBeforeStart: Boolean = false,
+        val beforeStart: (() -> Unit)? = null,
+        val onEnd: ((conversationId: Uuid, isNewConversation: Boolean) -> Unit)? = null,
+        val showNotification: Boolean = true,
+    )
+
     fun sendMessage(
         conversationId: Uuid?,
         parts: List<ContentPart>,
@@ -459,7 +488,7 @@ class ModelService : LifecycleService() {
         ) -> List<MessageWithFilesAndBranchInfo> = {
             getAllMessagesByConversation(it).first()
         },
-        getSystemMessage: (hasMessages: Boolean) -> Message.System? = getSystemMessage@{ hasMessages ->
+        getSystemMessage: ((hasMessages: Boolean) -> Message.System?)? = getSystemMessage@{ hasMessages ->
             if (hasMessages) return@getSystemMessage null
             Message.System(
                 content = application.resources.chatSystemPrompt,
@@ -491,7 +520,30 @@ class ModelService : LifecycleService() {
             }
         },
         showNotification: Boolean = true,
-    ) = defaultScope.asyncInterruptible task@{
+    ) = SendMessageParams(
+        conversationId = conversationId,
+        parts = parts,
+        getService = getService,
+        tools = tools,
+        appendConversationTools = appendConversationTools,
+        onNewConversation = onNewConversation,
+        getAllMessages = getAllMessages,
+        getSystemMessage = getSystemMessage,
+        insertSystemMessage = insertSystemMessage,
+        includeEnvironmentContext = includeEnvironmentContext,
+        insertEnvironmentContext = insertEnvironmentContext,
+        contextMessages = contextMessages,
+        generateConversationNameFromInitialInput = generateConversationNameFromInitialInput,
+        insertAssistantMessageAndGet = insertAssistantMessageAndGet,
+        refetchMessagesBeforeStart = refetchMessagesBeforeStart,
+        beforeStart = beforeStart,
+        onEnd = onEnd,
+        showNotification = showNotification,
+    ).sendMessageInternal()
+
+    fun sendMessage(params: SendMessageParams) = params.sendMessageInternal()
+
+    private fun SendMessageParams.sendMessageInternal() = defaultScope.asyncInterruptible task@{
         require(!insertEnvironmentContext || includeEnvironmentContext) {
             "insertEnvironmentContext can only be true if includeEnvironmentContext is also true"
         }
@@ -534,7 +586,7 @@ class ModelService : LifecycleService() {
                     chatDao.getConversationById(conversationId) ?: return@bind null
 
                 val (databaseMessages, messages) = fetchMessages()
-                val system = getSystemMessage(messages.isNotEmpty())
+                val system = getSystemMessage?.invoke(messages.isNotEmpty())
                 val environmentMessage = Message.User(
                     content = getString(
                         R.string.llm_prompt_environment_context,
