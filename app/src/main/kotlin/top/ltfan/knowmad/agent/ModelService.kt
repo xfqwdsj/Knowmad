@@ -476,6 +476,7 @@ class ModelService : LifecycleService() {
             fileIds: List<Uuid>,
             getUpdatedEntity: (MessageWithFilesAndBranchInfo?) -> Unit,
         ) -> Long = ChatDao::insertMessageAndGet,
+        refetchMessagesBeforeStart: Boolean = false,
         beforeStart: (() -> Unit)? = null,
         onEnd: ((
             conversationId: Uuid,
@@ -519,15 +520,20 @@ class ModelService : LifecycleService() {
 
         var initialConversationNameGenerationJob: Job? = null
 
+        suspend fun fetchMessages(): Pair<List<MessageWithFilesAndBranchInfo>, List<Message>> {
+            val databaseMessages = chatDao.getAllMessages(conversationId)
+            val messages = databaseMessages.flatMap { entity ->
+                entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
+            }
+            return databaseMessages to messages
+        }
+
         val agentDeferred = appDatabase.withTransaction {
             bind {
                 var conversation =
                     chatDao.getConversationById(conversationId) ?: return@bind null
 
-                val databaseMessages = chatDao.getAllMessages(conversationId)
-                val messages = databaseMessages.flatMap { entity ->
-                    entity.message.parts.filterIsInstance<UiMessage.Koog>().map { it.message }
-                }
+                val (databaseMessages, messages) = fetchMessages()
                 val system = getSystemMessage(messages.isNotEmpty())
                 val environmentMessage = Message.User(
                     content = getString(
@@ -622,9 +628,9 @@ class ModelService : LifecycleService() {
                             branchCount = it.branchCount,
                         )
                     }
-                };
+                }
 
-                {
+                suspend {
                     val tools = (tools ?: EMPTY).let { base ->
                         if (!appendConversationTools) return@let base
 
@@ -653,6 +659,9 @@ class ModelService : LifecycleService() {
                             }
                         }
                     }
+
+                    val messages =
+                        if (refetchMessagesBeforeStart) fetchMessages().second else messages
 
                     this@task.runAgent(
                         state = state,

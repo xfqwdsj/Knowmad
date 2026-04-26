@@ -276,6 +276,7 @@ class AgentViewModel(
                     getUpdatedEntity = getUpdatedEntity,
                 )
             },
+            refetchMessagesBeforeStart = true,
         )
     }
 

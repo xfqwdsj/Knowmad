@@ -271,11 +271,11 @@ val Resources.chatSystemPrompt
         environment = null,
     )
 
-suspend fun ChatAgentService.create(
+suspend inline fun ChatAgentService.create(
     state: AssistantMessageState.Streaming,
     tools: ToolRegistry = EMPTY,
     basePrompt: Prompt = agentConfig.prompt,
-    buildPrompt: PromptBuilder.() -> Unit = {},
+    crossinline buildPrompt: PromptBuilder.() -> Unit = {},
 ) = createAgent(
     id = state.id.toString(),
     additionalToolRegistry = tools,
@@ -290,12 +290,12 @@ suspend fun ChatAgentService.create(
     ),
 )
 
-suspend fun ChatAgentService.run(
+suspend inline fun ChatAgentService.run(
     userParts: List<ContentPart>,
     eventFlow: MutableSharedFlow<AssistantMessageStreamingEvent>,
     state: AssistantMessageState.Streaming,
     tools: ToolRegistry = EMPTY,
-    buildPrompt: PromptBuilder.() -> Unit = {},
+    crossinline buildPrompt: PromptBuilder.() -> Unit = {},
 ) {
     withContext(ChatAgentContext(this)) {
         create(
