@@ -1110,36 +1110,26 @@ sealed interface AssistantMessageState {
                 toolCall: Message.Tool.Call,
             ) -> Unit,
         ) {
+            val completedIds = contents.mapNotNullTo(HashSet()) { content ->
+                ((content.uiMessage as? Koog)?.message as? Message.Tool.Result)?.id
+            }
+
             val iterator = contents.listIterator()
-            var pendingToolCall: Message.Tool.Call? = null
 
             while (iterator.hasNext()) {
                 val content = iterator.next()
-
-                if (pendingToolCall != null) {
-                    val isResult = (content.uiMessage as? Koog)?.message is Message.Tool.Result
-
-                    if (!isResult) {
-                        iterator.previous()
-                        onFound(iterator, pendingToolCall)
-                        iterator.next()
-                        pendingToolCall = null
-                    } else {
-                        pendingToolCall = null
-                    }
-                }
-
                 val uiMessage = content.uiMessage
+
                 if (uiMessage is Koog) {
                     val message = uiMessage.message
-                    if (message is Message.Tool.Call) {
-                        pendingToolCall = message
+                    if (message is Message.Tool.Call && message.id !in completedIds) {
+                        iterator.previous()
+                        onFound(iterator, message)
+                        if (iterator.hasNext()) {
+                            iterator.next()
+                        }
                     }
                 }
-            }
-
-            if (pendingToolCall != null) {
-                onFound(iterator, pendingToolCall)
             }
         }
 
