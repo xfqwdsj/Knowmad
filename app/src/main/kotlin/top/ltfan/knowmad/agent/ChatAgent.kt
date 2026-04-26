@@ -151,7 +151,7 @@ fun getChatAgentService(
                                 }
 
                                 is ToolCallComplete -> {
-                                    if (last != Tool) partIndex++
+                                    partIndex++
                                     last = Tool
                                     val toolCall = Message.Tool.Call(
                                         id = frame.id,
