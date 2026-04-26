@@ -263,8 +263,13 @@ class AgentViewModel(
             conversationId = message.conversationId,
             parts = emptyList(),
             getAllMessages = { conversationId ->
-                getAllMessagesByConversation(conversationId).first()
-                    .dropLastWhile { it.key == message.key }
+                val original = getAllMessagesByConversation(conversationId).first()
+                val filtered = mutableListOf<MessageWithFilesAndBranchInfo>()
+                for (msg in original.asReversed()) {
+                    if (msg.key == message.key) break
+                    filtered.add(msg)
+                }
+                filtered
             },
             includeEnvironmentContext = true,
             insertEnvironmentContext = false,
