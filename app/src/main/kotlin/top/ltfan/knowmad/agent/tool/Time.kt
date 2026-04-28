@@ -116,6 +116,10 @@ class TimeTool(
     }
 }
 
+fun Instant.formatAt(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+) = toLocalDateTime(timeZone).format(LocalDateTime.Formats.ISO) + timeZone.offsetAt(this)
+
 fun Instant.formatAgentTime(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
     locale: Locale = Locale.getDefault(),
@@ -150,8 +154,7 @@ fun formatAgentTime(
         val dateTime = LocalDateTime(date, time)
         val instant = dateTime.toInstant(timeZone)
 
-        append(dateTime.format(LocalDateTime.Formats.ISO))
-        append(timeZone.offsetAt(instant))
+        append(instant.formatAt(timeZone))
     } else {
         append(date.format(LocalDate.Formats.ISO))
     }
