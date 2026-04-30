@@ -42,9 +42,7 @@ import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponses
 import android.content.Context
 import android.content.res.Resources
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.ltfan.knowmad.R
 import top.ltfan.knowmad.agent.task.suggestion.GenerateNextSuggestionConversationId
@@ -105,81 +103,75 @@ fun getChatAgentService(
 
             val frames = mutableListOf<StreamFrame>()
 
-            coroutineScope {
-                val llmRequest = launch {
-                    llm.writeSession {
-                        val stream = requestLLMStreaming()
-                        logger.debug { "Streaming for ${state.id} started." }
+            llm.readSession {
+                val stream = requestLLMStreaming()
+                logger.debug { "Streaming for ${state.id} started." }
 
-                        var last: StreamFrameType? = null
+                var last: StreamFrameType? = null
 
-                        stream.collect { frame ->
-                            frames.add(frame)
-                            when (frame) {
-                                is TextDelta -> {
-                                    if (frame.text.isEmpty()) return@collect
-                                    if (last != Text) partIndex++
-                                    last = Text
-                                    eventFlow.emit(
-                                        AssistantMessageStreamingEvent.AddString(
-                                            partIndex = partIndex,
-                                            content = frame.text,
-                                            messageType = Content,
-                                        ),
-                                    )
-                                }
-
-                                is ReasoningDelta -> {
-                                    val text = frame.text
-                                    val summary = frame.summary
-                                    val content = when {
-                                        text != null && summary != null -> "$summary\n\n$text"
-                                        text != null -> text
-                                        summary != null -> summary
-                                        else -> return@collect
-                                    }
-                                    if (content.isEmpty()) return@collect
-                                    if (last != Reasoning) partIndex++
-                                    last = Reasoning
-                                    eventFlow.emit(
-                                        AssistantMessageStreamingEvent.AddString(
-                                            partIndex = partIndex,
-                                            content = content,
-                                            messageType = Reasoning,
-                                        ),
-                                    )
-                                }
-
-                                is ToolCallComplete -> {
-                                    partIndex++
-                                    last = Tool
-                                    val toolCall = Message.Tool.Call(
-                                        id = frame.id,
-                                        tool = frame.name,
-                                        content = frame.content,
-                                        metaInfo = ResponseMetaInfo.create(Clock.System),
-                                    )
-                                    eventFlow.emit(
-                                        AssistantMessageStreamingEvent.SetMessage(
-                                            partIndex = partIndex,
-                                            message = toolCall,
-                                        ),
-                                    )
-                                }
-
-                                is End -> eventFlow.emit(
-                                    AssistantMessageStreamingEvent.SetMetaInfo(
-                                        metaInfo = frame.metaInfo,
-                                    ),
-                                )
-
-                                else -> {}
-                            }
+                stream.collect { frame ->
+                    frames.add(frame)
+                    when (frame) {
+                        is TextDelta -> {
+                            if (frame.text.isEmpty()) return@collect
+                            if (last != Text) partIndex++
+                            last = Text
+                            eventFlow.emit(
+                                AssistantMessageStreamingEvent.AddString(
+                                    partIndex = partIndex,
+                                    content = frame.text,
+                                    messageType = Content,
+                                ),
+                            )
                         }
+
+                        is ReasoningDelta -> {
+                            val text = frame.text
+                            val summary = frame.summary
+                            val content = when {
+                                text != null && summary != null -> "$summary\n\n$text"
+                                text != null -> text
+                                summary != null -> summary
+                                else -> return@collect
+                            }
+                            if (content.isEmpty()) return@collect
+                            if (last != Reasoning) partIndex++
+                            last = Reasoning
+                            eventFlow.emit(
+                                AssistantMessageStreamingEvent.AddString(
+                                    partIndex = partIndex,
+                                    content = content,
+                                    messageType = Reasoning,
+                                ),
+                            )
+                        }
+
+                        is ToolCallComplete -> {
+                            partIndex++
+                            last = Tool
+                            val toolCall = Message.Tool.Call(
+                                id = frame.id,
+                                tool = frame.name,
+                                content = frame.content,
+                                metaInfo = ResponseMetaInfo.create(Clock.System),
+                            )
+                            eventFlow.emit(
+                                AssistantMessageStreamingEvent.SetMessage(
+                                    partIndex = partIndex,
+                                    message = toolCall,
+                                ),
+                            )
+                        }
+
+                        is End -> eventFlow.emit(
+                            AssistantMessageStreamingEvent.SetMetaInfo(
+                                metaInfo = frame.metaInfo,
+                            ),
+                        )
+
+                        else -> {}
                     }
                 }
-
-                llmRequest.join()
             }
 
             val list = frames.toMessageResponses()
